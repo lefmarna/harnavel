@@ -1,4 +1,4 @@
-FROM php:7.4.13-fpm-buster
+FROM php:8.1.12-fpm-buster
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

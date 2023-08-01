@@ -1,11 +1,11 @@
-FROM php:8.1.12-fpm-buster
+FROM php:8.2.5-fpm-buster
 
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.5.8 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
   # 最新のnodejs(安定版)をインストールできるようにする
-  && curl -sL https://deb.nodesource.com/setup_lts.x | bash - \
+  && curl -sL https://deb.nodesource.com/setup_18.x| bash - \
   && apt-get install -y \
   git \
   nodejs \

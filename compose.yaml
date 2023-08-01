@@ -42,6 +42,13 @@ services:
             MYSQL_DATABASE: ${DB_DATABASE}
             MYSQL_ROOT_PASSWORD: password
 
+    mysql-testing:
+        image: mariadb:10.5
+        container_name: ${APP_NAME}-mysql-testing
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}_testing
+            MYSQL_ROOT_PASSWORD: password
+
     redis:
         image: redis:alpine
         container_name: ${APP_NAME}-redis

@@ -1,7 +1,7 @@
-FROM php:8.3.10-fpm-buster
+FROM php:8.3.10-fpm-bookworm
 
 # Install Composer
-COPY --from=composer:2.8.6 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.8.9 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
   # 最新のnodejs(安定版)をインストールできるようにする

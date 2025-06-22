@@ -57,6 +57,7 @@ services:
 
     phpmyadmin:
         image: phpmyadmin/phpmyadmin
+        platform: linux/amd64
         container_name: ${APP_NAME}-phpmyadmin
         ports:
             - 9090:80

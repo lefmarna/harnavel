@@ -1,11 +1,11 @@
-FROM php:8.3.10-fpm-bookworm
+ FROM php:8.4.12-fpm-bookworm
 
 # Install Composer
-COPY --from=composer:2.8.9 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.9.2 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
   # 最新のnodejs(安定版)をインストールできるようにする
-  && curl -sL https://deb.nodesource.com/setup_22.x| bash - \
+  && curl -sL https://deb.nodesource.com/setup_24.x| bash - \
   && apt-get install -y \
   git \
   nodejs \
@@ -13,6 +13,8 @@ RUN apt-get update \
   libonig-dev \
   libpng-dev \
   libzip-dev \
+  # Install Node.js 24.11.1
+  nodejs=24.11.1-1nodesource1 \
   unzip \
   && git clone https://github.com/phpredis/phpredis.git /usr/src/php/ext/redis \
   # Install Xdebug
@@ -30,5 +32,5 @@ RUN apt-get update \
   zip \
   # Install Laravel
   && composer global require "laravel/installer"
-ENV PATH ~/.composer/vendor/bin:$PATH
+ENV PATH=~/.composer/vendor/bin:$PATH
 WORKDIR /app

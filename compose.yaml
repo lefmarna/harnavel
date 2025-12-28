@@ -1,70 +1,57 @@
-version: "3"
-
 services:
-    nginx:
-        build: "./.docker/nginx"
-        container_name: ${APP_NAME}-nginx
-        ports:
-            - "80:80"
-        volumes:
-            - ./public:/app/public
-            - ./.docker/nginx/nginx.conf:/etc/nginx/nginx.conf
-        depends_on:
-            - app
+  nginx:
+    build: "./.docker/nginx"
+    container_name: ${APP_NAME}-nginx
+    ports:
+      - "8081:80"
+    volumes:
+      - ./public:/app/public
+      - ./.docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app
 
-    app:
-        build: "./.docker/php"
-        container_name: ${APP_NAME}-app
-        working_dir: /app
-        ports:
-            - 9000:9000
-        volumes:
-            - ".:/app"
-            - "./.docker/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
-        # stdin_openとttyで -it オプションと同じ意味を持つ
-        stdin_open: true
-        tty: true
-        # mysqlを立ち上げてからwebを立ち上げる
-        depends_on:
-            - mysql
-            - redis
+  app:
+    build: "./.docker/php"
+    container_name: ${APP_NAME}-app
+    working_dir: /app
+    volumes:
+      - ".:/app"
+      - "./.docker/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+    # stdin_openとttyで -it オプションと同じ意味を持つ
+    stdin_open: true
+    tty: true
+    # mysqlを立ち上げてからwebを立ち上げる
+    depends_on:
+      - mysql
 
-    mysql:
-        image: mariadb:10.5
-        container_name: ${APP_NAME}-mysql
-        # 3306のポートはMySQLが使用しているので、5306を当てている
-        ports:
-            - "5306:3306"
-        volumes:
-            - "./storage/mysql:/var/lib/mysql"
-        # パスワードを設定しておかないと、MySQLのコンテナがUpにならない
-        environment:
-            MYSQL_DATABASE: ${DB_DATABASE}
-            MYSQL_ROOT_PASSWORD: password
+  mysql:
+    image: mariadb:10.5
+    container_name: ${APP_NAME}-mysql
+    # 3306のポートはMySQLが使用しているので、5306を当てている
+    ports:
+      - "5307:3306"
+    volumes:
+      - "./storage/mysql:/var/lib/mysql"
+    # パスワードを設定しておかないと、MySQLのコンテナがUpにならない
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: password
 
-    mysql-testing:
-        image: mariadb:10.5
-        container_name: ${APP_NAME}-mysql-testing
-        environment:
-            MYSQL_DATABASE: ${DB_DATABASE}_testing
-            MYSQL_ROOT_PASSWORD: password
+  mysql-testing:
+    image: mariadb:10.5
+    container_name: ${APP_NAME}-mysql-testing
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}_testing
+      MYSQL_ROOT_PASSWORD: password
 
-    redis:
-        image: redis:alpine
-        container_name: ${APP_NAME}-redis
-        ports:
-            - "6379:6379"
+  # redis:
+  #   image: redis:alpine
+  #   container_name: ${APP_NAME}-redis
+  #   ports:
+  #     - "6379:6379"
 
-    phpmyadmin:
-        image: phpmyadmin/phpmyadmin
-        platform: linux/amd64
-        container_name: ${APP_NAME}-phpmyadmin
-        ports:
-            - 9090:80
-        environment:
-            PMA_ARBITRARY: 1
-            PMA_HOST: mysql
-            PMA_USER: root
-            PMA_PASSWORD: password
-        depends_on:
-            - mysql
+  mailhog:
+    image: mailhog/mailhog
+    container_name: ${APP_NAME}-mailhog
+    ports:
+      - "8026:8025"

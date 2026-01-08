@@ -1,0 +1,10 @@
+{
+  "semi": false,
+  "singleQuote": true,
+  "plugins": [
+    "prettier-plugin-organize-imports",
+    "prettier-plugin-tailwindcss"
+  ],
+  "tailwindFunctions": ["clsx", "cn"],
+  "tailwindStylesheet": "resources/css/app.css"
+}

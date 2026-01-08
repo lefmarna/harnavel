@@ -13,10 +13,9 @@ RUN apt-get update \
   libonig-dev \
   libpng-dev \
   libzip-dev \
-  # Install Node.js 24.11.1
-  nodejs=24.11.1-1nodesource1 \
+  # Install Node.js 24.12.0
+  nodejs=24.12.0-1nodesource1 \
   unzip \
-  && git clone https://github.com/phpredis/phpredis.git /usr/src/php/ext/redis \
   # Install Xdebug
   && pecl install xdebug \
   && docker-php-ext-enable xdebug \
@@ -28,7 +27,6 @@ RUN apt-get update \
   mbstring \
   opcache \
   pdo_mysql \
-  redis \
   zip \
   # Install Laravel
   && composer global require "laravel/installer"

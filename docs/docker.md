@@ -21,8 +21,8 @@
 | `nginx`           | Web server (reverse proxy to PHP) | 8080       |
 | `app`             | PHP-FPM with Laravel              | -          |
 | `mariadb`         | Main database                     | 3306       |
-| `mariadb-testing` | Testing database                  | -          |
-| `mailpit`         | Mail catcher (SMTP + UI)          | 1025, 8025 |
+| `mariadb-testing` | Testing database (isolated)       | -          |
+| `mailpit`         | Mail catcher (SMTP + Web UI)      | 1025, 8025 |
 
 ## Quick Start
 
@@ -36,10 +36,12 @@ docker compose up -d
 # 3. Enter app container
 docker compose exec app bash
 
-# 4. Set up Laravel (if starting fresh)
+# 4. Set up Laravel
 composer install
 php artisan key:generate
 php artisan migrate
+pnpm install
+pnpm run dev
 ```
 
 ## Common Commands
@@ -47,20 +49,27 @@ php artisan migrate
 ### Development
 
 ```bash
-# Run artisan commands
-docker compose exec app php artisan <command>
+# Enter container
+docker compose exec app bash
 
-# Run composer
-docker compose exec app composer <command>
+# Inside container
+php artisan <command>
+composer <command>
+pnpm <command>
 
-# Run npm/pnpm
-docker compose exec app pnpm <command>
+# Run dev server
+pnpm run dev          # Vite dev server only
+composer run dev      # With pail, vite
 
 # Run tests
-docker compose exec app php artisan test
+php artisan test
 
 # Run Pint (code formatter)
-docker compose exec app vendor/bin/pint --dirty
+vendor/bin/pint --dirty
+
+# Run ESLint + Prettier
+pnpm lint
+pnpm format
 ```
 
 ### Database
@@ -98,21 +107,27 @@ Key variables in `.env`:
 | `MAILPIT_SMTP_PORT` | Mailpit SMTP port     | 1025    |
 | `MAILPIT_UI_PORT`   | Mailpit web UI port   | 8025    |
 
-## Directory Structure
+## Directory Structure (After Root Expansion)
 
 ```
 /
-├── .docker/          # Docker configuration files
-│   ├── nginx/        # Nginx config & Dockerfile
-│   └── php/          # PHP config & Dockerfile
-├── app/              # Laravel application code
-├── config/           # Laravel configuration
-├── database/         # Migrations, seeders, factories
-├── public/           # Public assets (Nginx serves this)
-├── resources/        # Views, JS, CSS
-├── routes/           # Route definitions
-├── storage/          # Logs, cache, uploads
-├── tests/            # Test files
-├── compose.yaml      # Docker Compose configuration
-└── .env.example      # Environment template
+├── .docker/              # Docker configuration
+│   ├── nginx/            # Nginx config & Dockerfile
+│   └── php/              # PHP config & Dockerfile
+├── app/                  # Laravel backend code
+│   ├── Http/Controllers/ # Inertia controllers
+│   ├── Actions/Fortify/  # Authentication actions
+│   └── Models/           # Eloquent models
+├── resources/
+│   ├── js/               # React frontend
+│   │   ├── pages/        # Inertia pages
+│   │   ├── components/   # UI components (Radix-based)
+│   │   ├── layouts/      # Layout components
+│   │   └── hooks/        # React hooks
+│   └── css/              # Tailwind styles
+├── routes/               # Route definitions
+├── tests/                # Test files
+├── compose.yaml          # Docker Compose configuration
+└── .env.example          # Environment template
 ```
+

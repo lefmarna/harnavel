@@ -1,61 +1,78 @@
-You are an expert in TypeScript, React, Inertia.js, and Tailwind CSS.
+You are an expert in TypeScript, React 19, Inertia.js v2, and Tailwind CSS v4.
 
-> **Note**: This guide applies after Inertia + React + Tailwind integration.
-> Until then, frontend work uses Laravel Blade views or is minimal.
+# Environment
 
-# Development Environment
+- Use `pnpm` (not npm). Run `pnpm lint` / `pnpm format` after changes.
+- See `docs/agent/boost.md` for Laravel Boost rules.
 
-- **Always use `pnpm`, not `npm`.**
-- **Run `pnpm lint` after code changes** to verify there are no ESLint errors.
+# Stack
 
-# Code Style and Structure
+React 19, TypeScript, Inertia v2, Tailwind v4, Radix UI, Lucide, Wayfinder.
 
-- Write concise, technical TypeScript code with accurate examples.
-- Use functional and declarative programming patterns; avoid classes.
-- Prefer iteration and modularization over code duplication.
-- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
-- Structure files: exported component, subcomponents, helpers, static content, types.
+# Structure
 
-# Project Structure (After Integration)
+```
+resources/js/
+├── pages/          # Inertia pages
+├── components/ui/  # Radix-based UI components
+├── layouts/        # Layout components
+├── hooks/          # Custom hooks
+├── lib/            # Utilities
+├── actions/        # Wayfinder (auto)
+└── routes/         # Wayfinder (auto)
+```
 
-- Pages: `resources/js/pages` (lowercase, resolved via `resources/js/app.tsx`)
-- Components: `resources/js/components`
-- Layouts: `resources/js/layouts`
-- Hooks: `resources/js/hooks`
-- Types: `resources/js/types`
+# Naming
 
-# Naming Conventions
+- Dirs/Files: kebab-case (`auth-wizard/`, `email-input.tsx`)
+- Components: PascalCase (`EmailInput`)
+- Hooks: `use` prefix (`useAppearance`)
+- Use named exports
 
-- Use kebab-case for directories and files (e.g., components/auth-wizard, email-input.tsx).
-- Favor named exports for components.
+# TypeScript
 
-# TypeScript Usage
+- Prefer `interface` over `type`
+- Avoid enums; use `as const`
 
-- Use TypeScript for all code; prefer interfaces over types.
-- Avoid enums; use maps instead.
-- Use functional components with TypeScript interfaces.
+# Navigation & Forms
 
-# UI and Styling
+Use Inertia `<Link>` / `router.visit()` with Wayfinder:
+```tsx
+import { show } from '@/actions/App/Http/Controllers/UserController';
+<Link {...show.link(id)}>View</Link>
+```
 
-- Use Tailwind CSS v4 for styling.
-- Implement responsive design with Tailwind CSS; use a mobile-first approach.
-- Keep Tailwind v4 conventions and existing dark-mode patterns.
-- If existing pages and components support dark mode, new pages must support it too.
+Forms with Wayfinder:
+```tsx
+<Form {...store.form()}>{({ errors, processing }) => (...)}</Form>
+```
 
-# Navigation
+# Tailwind v4
 
-- Use Inertia navigation (`<Link>` or `router.visit`) instead of full page reloads.
-- Use Wayfinder route helpers from `resources/js/actions` and `resources/js/routes` when available.
+- CSS-first config in `resources/css/app.css`
+- Dark mode via `.dark` class
+- Deprecated: `bg-opacity-*` → `bg-black/50`, `flex-shrink-*` → `shrink-*`
 
-# Performance Optimization
+# useEffect Policy
 
-- Minimize 'use client', 'useEffect', and 'setState' where possible.
-- Wrap client components in Suspense with fallback.
-- Use dynamic loading for non-critical components.
-- Optimize images: use WebP format, include size data, implement lazy loading.
+useEffect is **only** for external sync (API, WebSocket, browser APIs, timers).
+
+**Anti-patterns:**
+- Copying props into state
+- Running logic on flag changes
+- Handling user actions in effects
+- Updating derived/validation states
+
+**Principles:**
+- Derive values during render
+- Handle user actions in event handlers
+- Add comment explaining external resource being synced
+
+# Performance
+
+- Minimize `useEffect`/`useState`; prefer Inertia props
+- Use deferred props, `<Suspense>`, dynamic imports
 
 # Tooling
 
-- Use `pnpm` for all frontend tasks.
-- Run `pnpm lint` after code changes.
-- See `docs/agent/boost.md` for hard rules (Tailwind, Inertia, testing).
+`pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm format` / `pnpm types`

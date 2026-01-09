@@ -4,12 +4,13 @@ Laravel + MariaDB の Docker 開発環境テンプレートです。
 
 ## 構成
 
-| Service | Description                     |
-| ------- | ------------------------------- |
-| Nginx   | Web サーバー (リバースプロキシ) |
-| PHP     | Laravel アプリケーション        |
-| MariaDB | データベース                    |
-| Mailpit | メールキャッチャー              |
+| Layer              | Technology                       |
+| ------------------ | -------------------------------- |
+| **Backend**        | Laravel 12, PHP 8.2+, Fortify    |
+| **Frontend**       | React 19, Inertia v2, TypeScript |
+| **Styling**        | Tailwind CSS v4, Radix UI        |
+| **Testing**        | Pest v4                          |
+| **Infrastructure** | Docker (Nginx, MariaDB, Mailpit) |
 
 ## 使い方
 
@@ -23,10 +24,12 @@ docker compose up -d
 # コンテナに入る
 docker compose exec app bash
 
-# Laravel をセットアップ（新規の場合）
+# セットアップ
 composer install
 php artisan key:generate
 php artisan migrate
+pnpm install
+pnpm run dev
 ```
 
 ## ドキュメント
@@ -36,3 +39,4 @@ php artisan migrate
 - [Docker 環境](docs/docker.md)
 - [バックエンド開発ガイド](docs/roles/backend.md)
 - [フロントエンド開発ガイド](docs/roles/frontend.md)
+- [Laravel Boost ルール](docs/agent/boost.md)

@@ -1,38 +1,50 @@
-You are an expert in Laravel, PHP, RESTful API design, and backend development with Inertia.js.
+You are an expert in Laravel, PHP, Inertia.js, and backend development.
 
-# Development Environment
+# Environment
 
-- **Run Laravel/PHP commands via Docker**: `docker compose exec app <command>`
-- **Prefer mise tasks** when available (e.g., `mise run migrate`, `mise run test`).
+- Run via Docker: `docker compose exec app bash`
+- See `docs/agent/boost.md` for Laravel Boost rules
 
-# Key Requirements
+# Requirements
 
-- Use PHP 8.2+ features (typed properties, match expressions, readonly properties)
-- Follow PSR-12 coding standards
-- **Strict typing is recommended**: `declare(strict_types=1);` in new files
-- Prefer iteration and modularization over duplication
-- Use Form Request classes in `app/Http/Requests` for validation
-- Use database transactions (DB::transaction) for operations requiring data integrity
-- Favor dependency injection via service containers
-- Prefer Eloquent models and relationships over raw queries
-- Jobs (`app/Jobs`) are allowed, but assume queue workers may be unavailable
-- When using Jobs, provide a safe synchronous fallback (e.g., `dispatchSync`)
+- PHP 8.2+, PSR-12, `declare(strict_types=1);` in new files
+- Use Form Requests for validation
+- Use `DB::transaction` for data integrity
+- Prefer Eloquent over raw queries
+- Jobs must run synchronously (`dispatchSync`) - no queue workers
 
-# Project Structure (Current)
+# Structure
 
-- Controllers: `app/Http/Controllers`
-- Requests: `app/Http/Requests`
-- Jobs: `app/Jobs`
-- Routes: `routes/web.php`, `routes/api.php`
+```
+app/
+├── Http/Controllers/   # Inertia controllers
+├── Http/Requests/      # Form Request validation
+├── Actions/Fortify/    # Auth actions
+├── Models/             # Eloquent models
+└── Jobs/               # Sync jobs only
+routes/
+├── web.php             # Inertia routes
+├── auth.php            # Auth routes
+└── settings.php        # Settings routes
+tests/
+├── Feature/
+└── Unit/
+```
 
-# Project Structure (After Inertia Integration)
+# Inertia
 
-- Use `Inertia::render()` for server-driven pages (not Blade views)
-- Follow Wayfinder conventions for route generation
+Use `Inertia::render()` for pages. Pages in `resources/js/pages/`.
+```php
+return Inertia::render('dashboard', ['users' => User::paginate(10)]);
+```
+
+# Fortify
+
+Auth actions in `app/Actions/Fortify/`. Config in `config/fortify.php`.
 
 # Tooling
 
-- Use `php artisan make:*` with `--no-interaction` for new files.
-- Run focused tests with `php artisan test --filter=...` or per file.
-- Run `vendor/bin/pint --dirty` before finalizing changes.
-- See `docs/agent/boost.md` for hard rules (testing, Pint, tooling).
+All commands via Docker:
+- `docker compose exec app php artisan make:* --no-interaction`
+- `docker compose exec app php artisan test --filter=...`
+- `docker compose exec app vendor/bin/pint --dirty`

@@ -4,23 +4,25 @@
 
 1. `docs/docker.md` (environment setup)
 2. `docs/roles/backend.md` or `docs/roles/frontend.md`
-3. `docs/agent/boost.md` (hard rules, tools, tests)
+3. `docs/agent/boost.md` (Laravel Boost hard rules, tools, tests)
 4. `docs/specs.md` (spec-driven development only when needed)
 
 ## Scope
 
-- This project is a **Laravel Docker template** for rapid application development.
-- Laravel application is deployed at the project root.
-- Future stack: Laravel 12 + Inertia (React) + Vite + Tailwind CSS v4.
+- This is a **Laravel 12 + Inertia (React) + Tailwind CSS v4** application.
+- Infrastructure is Docker-based (Nginx, MariaDB, Mailpit).
 - `AGENTS.md` is the entry point and table of contents; keep it brief.
 - Detailed rules live under `docs/`.
 
 ## Development Environment
 
-- **Run Laravel/PHP commands via Docker**: `docker compose exec app <command>`
-- **Prefer mise tasks** when available (e.g., `mise run migrate`, `mise run test`).
+- **Run commands via Docker**: `docker compose exec app bash`
+- **Prefer mise tasks** when available (e.g., `mise run migrate`, `mise run test`)
+- **Use pnpm** for all frontend tasks (not npm)
 
 ## Constraints
 
-- Assume queue workers are unavailable in the deployment environment.
-- If you introduce Jobs, provide a synchronous fallback or avoid worker dependency.
+- **Deployment target**: XServer (shared hosting).
+- **No background async processes** (no queue workers, no SSR server).
+- Jobs must run synchronously (`dispatchSync` or `QUEUE_CONNECTION=sync`).
+- **Cron scheduler requires manual setup** via XServer control panel.

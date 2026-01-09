@@ -1,32 +1,29 @@
 # Laravel Docker Template
 
-Laravel + MariaDB + Docker の開発環境雛形です。このリポジトリをクローンして Laravel アプリケーションをルートに展開して使用します。
+Laravel + MariaDB + Docker development environment template.
 
-## Project Snapshot
+## Tech Stack
 
-- **Docker**: Nginx + PHP + MariaDB + Mailpit
-- **Laravel**: プロジェクトルートに展開（将来的に Inertia + React + Tailwind 導入予定）
-- **Purpose**: 新規 Laravel プロジェクトのスターターテンプレート
+- **Backend**: Laravel 12, Fortify, Pest v4
+- **Frontend**: React 19, Inertia v2, Tailwind v4, Radix UI
+- **Infra**: Docker, Nginx, MariaDB, Wayfinder
 
 ## Docs Index (Read in this order)
 
 1. **Environment setup**: `docs/docker.md`
-2. **Role guides**: `docs/roles/backend.md`, `docs/roles/frontend.md` (導入後)
+2. **Role guides**: `docs/roles/backend.md`, `docs/roles/frontend.md`
 3. **Agent rules & tooling**: `docs/agent/overview.md`, `docs/agent/boost.md`
 4. **Spec-driven development** (only when needed): `docs/specs.md`
 
 ## Always-on Project Guides
 
-Use the appropriate guide for your implementation context:
-
 - **Backend work** (Laravel/PHP): `docs/roles/backend.md`
-- **Frontend work** (Inertia/React/TypeScript): `docs/roles/frontend.md` (導入後)
+- **Frontend work** (React/TypeScript): `docs/roles/frontend.md`
+- **Laravel Boost rules**: `docs/agent/boost.md`
 
 ## Specification Phase Only
 
 Spec-driven development (Kiro-style) instructions are loaded only during specification work. When needed, work under `.kiro/specs/` and see `docs/specs.md`.
-
-For day-to-day development, follow the always-on guides above; apply spec-driven development only during the specification phase.
 
 ## Writing Rules
 

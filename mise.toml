@@ -1,3 +1,135 @@
 [tools]
 node = "24.12.0"
 pnpm = "10.27.0"
+
+# =============================================================================
+# セットアップ関連
+# =============================================================================
+
+[tasks.setup]
+description = "Setup entire project from scratch"
+depends = ["setup:tools", "build", "up", "setup:backend", "migrate", "seed"]
+
+[tasks."setup:tools"]
+description = "Install development tools and frontend dependencies"
+run = ["mise install", "pnpm install --frozen-lockfile"]
+
+[tasks."setup:backend"]
+description = "Setup backend (requires running containers)"
+run = """
+docker compose app bash -c "
+  composer install --no-interaction && \
+  php -r \"file_exists('.env') || copy('.env.example', '.env');\" && \
+  php artisan key:generate"
+"""
+
+# =============================================================================
+# Docker 関連
+# =============================================================================
+
+[tasks.build]
+description = "Build docker containers"
+run = "docker compose build --no-cache --force-rm"
+
+[tasks.up]
+description = "Start docker containers"
+run = "docker compose up -d"
+
+[tasks.stop]
+description = "Stop docker containers"
+run = "docker compose stop"
+
+[tasks.down]
+description = "Remove docker containers"
+run = "docker compose down"
+
+[tasks.restart]
+description = "Restart docker containers"
+depends = ["down", "up"]
+
+[tasks.destroy]
+description = "Destroy docker containers and volumes"
+run = "docker compose down --rmi all --volumes"
+
+[tasks.ps]
+description = "List docker containers"
+run = "docker compose ps"
+
+[tasks.logs]
+description = "View app logs"
+run = "docker compose logs -f app"
+
+[tasks.app]
+description = "Access app container"
+run = "docker compose exec app bash"
+
+# =============================================================================
+# PHP/Laravel 関連
+# =============================================================================
+
+[tasks.migrate]
+description = "Run database migrations"
+run = "docker compose app php artisan migrate"
+
+[tasks.seed]
+description = "Run database seeders"
+run = "docker compose app php artisan db:seed"
+
+[tasks.fresh]
+description = "Fresh migration and seed"
+run = "docker compose app php artisan migrate:fresh --seed"
+
+[tasks.status]
+description = "Migration status"
+run = "docker compose app php artisan migrate:status"
+
+[tasks.rollback]
+description = "Rollback migration"
+run = "docker compose app php artisan migrate:rollback"
+
+[tasks.test]
+description = "Run tests"
+run = "docker compose app composer test"
+
+[tasks."composer:install"]
+description = "Composer install"
+run = "docker compose app composer install"
+
+[tasks."composer:update"]
+description = "Composer update"
+run = "docker compose app composer update"
+
+[tasks.clear]
+description = "Clear caches"
+run = """
+docker compose app bash -c "
+  composer dump-autoload && \
+  php artisan cache:clear && \
+  php artisan config:clear && \
+  php artisan route:clear && \
+  php artisan view:clear"
+"""
+
+[tasks.tinker]
+description = "Run tinker"
+run = "docker compose app php artisan tinker"
+
+[tasks.route]
+description = "List routes"
+run = "docker compose app php artisan route:list"
+
+[tasks.openapi]
+description = "Generate OpenAPI spec"
+run = [
+  "docker compose app php artisan openapi:generate > docs/api/openapi.json",
+  "pnpm generate-openapi",
+]
+
+# =============================================================================
+# フロントエンド関連
+# =============================================================================
+
+[tasks.fix]
+description = "Fix code (ESLint + Prettier)"
+run = "pnpm fix"
+quiet = true

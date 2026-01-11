@@ -37,15 +37,36 @@ resources/js/
 # Navigation & Forms
 
 Use Inertia `<Link>` / `router.visit()` with Wayfinder:
+
 ```tsx
-import { show } from '@/actions/App/Http/Controllers/UserController';
-<Link {...show.link(id)}>View</Link>
+import { show } from '@/actions/App/Http/Controllers/UserController'
+;<Link {...show.link(id)}>View</Link>
 ```
 
 Forms with Wayfinder:
+
 ```tsx
 <Form {...store.form()}>{({ errors, processing }) => (...)}</Form>
 ```
+
+# useEffect Policy
+
+useEffect is **only** for external sync (API, WebSocket, browser APIs, timers).
+
+**Anti-patterns:**
+
+- Copying props/derived values into local state
+- Running logic in response to flag changes
+- Handling user actions in effects
+- Updating derived or validation states within effects
+- One-time initialization with empty dependency array (use useMemo instead)
+
+**Principles:**
+
+- Derive values during render
+- Handle user actions in event handlers
+- Keep effects only for real side effects
+- Add comment explaining external resource being synced
 
 # Tailwind v4
 
@@ -55,38 +76,23 @@ Forms with Wayfinder:
 - Dark mode via `.dark` class
 
 **Deprecated v3 → v4 replacements:**
-| v3 (Don't use)      | v4 (Use this)   |
+| v3 (Don't use) | v4 (Use this) |
 | ------------------- | --------------- |
-| `bg-opacity-50`     | `bg-black/50`   |
-| `text-opacity-*`    | `text-black/50` |
-| `flex-shrink-0`     | `shrink-0`      |
-| `flex-grow`         | `grow`          |
+| `bg-opacity-50` | `bg-black/50` |
+| `text-opacity-*` | `text-black/50` |
+| `flex-shrink-0` | `shrink-0` |
+| `flex-grow` | `grow` |
 | `overflow-ellipsis` | `text-ellipsis` |
-
-# useEffect Policy
-
-useEffect is **only** for external sync (API, WebSocket, browser APIs, timers).
-
-**Anti-patterns:**
-- Copying props into state
-- Running logic on flag changes
-- Handling user actions in effects
-- Updating derived/validation states
-
-**Principles:**
-- Derive values during render
-- Handle user actions in event handlers
-- Add comment explaining external resource being synced
 
 # SEO & Meta Tags
 
 Use Inertia's `<Head>` for per-page title/description. Since SSR is disabled (XServer constraint), set critical SEO meta in `app.blade.php` from PHP for reliable crawler indexing.
 
 **Page-level (React):**
+
 ```tsx
 import { Head } from '@inertiajs/react'
-
-<Head title="Dashboard">
+;<Head title="Dashboard">
   <meta name="description" content="User dashboard overview" />
 </Head>
 ```

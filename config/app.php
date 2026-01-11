@@ -24,7 +24,7 @@ return [
     |
     */
 
-    'description' => env('APP_DESCRIPTION', ''),
+    'description' => 'A Laravel application template with Docker support',
 
     /*
     |--------------------------------------------------------------------------
@@ -35,7 +35,7 @@ return [
     |
     */
 
-    'author' => env('APP_AUTHOR', ''),
+    'author' => 'lefmarna',
 
     /*
     |--------------------------------------------------------------------------

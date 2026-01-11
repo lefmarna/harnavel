@@ -6,9 +6,16 @@ Kiro-style Spec Driven Development implementation on AI-DLC (AI Development Life
 
 ### Paths
 
+- Requirements Definition: `.kiro/requirements/` (cc-sdd: 5-step process)
 - Steering: `.kiro/steering/`
 - Specs: `.kiro/specs/`
-- Requirements Definition: `.kiro/requirements/`
+
+### Workflow Relationship
+
+**cc-sdd** (`.kiro/requirements/`) → **Specs** (`.kiro/specs/`)
+
+1. Use cc-sdd for initial requirements discovery (Purpose → Alternatives → Scope → Requirements → UI)
+2. Then use specs for design and implementation (Requirements → Design → Tasks → Implementation)
 
 ### Steering vs Specification
 
@@ -22,20 +29,11 @@ Kiro-style Spec Driven Development implementation on AI-DLC (AI Development Life
 
 ## Development Guidelines
 
-### Language Policy
-
-- **Outputs (user-facing)**: Japanese
-  - Spec outputs: requirements.md, design.md, tasks.md, research.md, validation reports
-  - cc-sdd outputs: 1_purpose.md, 2_alternatives.md, etc., discussion_log.md
-- **Internal docs (AI guides)**: English (for token efficiency)
-  - .kiro/requirements/references/, .kiro/steering/
-  - .agent/workflows/ (except frontmatter description for discoverability)
-- Default spec.json.language: `ja`
+- Think in English, generate responses in English. All Markdown content written to project files (e.g., requirements.md, design.md, tasks.md, research.md, validation reports) MUST be written in the target language configured for this specification (see spec.json.language).
 
 ## Minimal Workflow
 
 - Phase 0 (optional): `/kiro:steering`, `/kiro:steering-custom`
-- Phase 0.5 (optional): `/cc-sdd` - Requirements definition session
 - Phase 1 (Specification):
   - `/kiro:spec-init "description"`
   - `/kiro:spec-requirements {feature}`

@@ -24,80 +24,44 @@
 | `mariadb-testing` | Testing database (isolated)       | -          |
 | `mailpit`         | Mail catcher (SMTP + Web UI)      | 1025, 8025 |
 
-## Quick Start
+## Commands
+
+> **Note:** Prefer `mise run <task>` when available (e.g., `mise run test`, `mise run migrate`). See `mise.toml` for available tasks.
+
+**Local (pnpm):** Run on host machine (Node.js installed locally).
 
 ```bash
-# 1. Copy environment file
-cp .env.example .env
-
-# 2. Start containers
-docker compose up -d
-
-# 3. Enter app container
-docker compose exec app bash
-
-# 4. Set up Laravel
-composer install
-php artisan key:generate
-php artisan migrate
-pnpm install
-pnpm run dev
+pnpm run dev              # Vite dev server
+pnpm lint                 # ESLint
+pnpm format               # Prettier
 ```
 
-## Common Commands
-
-### Development
+**Container (PHP):** `docker compose exec app bash`
 
 ```bash
-# Enter container
-docker compose exec app bash
-
-# Inside container
-php artisan <command>
-composer <command>
-pnpm <command>
-
-# Run dev server
-pnpm run dev          # Vite dev server only
-composer run dev      # With pail, vite
-
-# Run tests
-php artisan test
-
-# Run Pint (code formatter)
-vendor/bin/pint --dirty
-
-# Run ESLint + Prettier
-pnpm lint
-pnpm format
+php artisan test          # Run tests
+vendor/bin/pint --dirty   # PHP formatter
+composer run dev          # With pail, vite
 ```
 
-### Database
+**Database:**
 
 ```bash
-# Access MariaDB CLI
 docker compose exec mariadb mysql -u root -p
-
-# Run migrations
-docker compose exec app php artisan migrate
 ```
 
-### Logs & Debugging
+**Logs:**
 
 ```bash
-# View container logs
 docker compose logs -f app
-
-# View Laravel logs
 docker compose exec app tail -f storage/logs/laravel.log
 
-# Access Mailpit UI
+# Mailpit UI
+# macOS: open / Linux: xdg-open / WSL: explorer.exe
 open http://localhost:8025
 ```
 
 ## Environment Variables
-
-Key variables in `.env`:
 
 | Variable            | Description           | Default |
 | ------------------- | --------------------- | ------- |
@@ -106,28 +70,3 @@ Key variables in `.env`:
 | `MARIADB_PORT`      | MariaDB exposed port  | 3306    |
 | `MAILPIT_SMTP_PORT` | Mailpit SMTP port     | 1025    |
 | `MAILPIT_UI_PORT`   | Mailpit web UI port   | 8025    |
-
-## Directory Structure (After Root Expansion)
-
-```
-/
-├── .docker/              # Docker configuration
-│   ├── nginx/            # Nginx config & Dockerfile
-│   └── php/              # PHP config & Dockerfile
-├── app/                  # Laravel backend code
-│   ├── Http/Controllers/ # Inertia controllers
-│   ├── Actions/Fortify/  # Authentication actions
-│   └── Models/           # Eloquent models
-├── resources/
-│   ├── js/               # React frontend
-│   │   ├── pages/        # Inertia pages
-│   │   ├── components/   # UI components (Radix-based)
-│   │   ├── layouts/      # Layout components
-│   │   └── hooks/        # React hooks
-│   └── css/              # Tailwind styles
-├── routes/               # Route definitions
-├── tests/                # Test files
-├── compose.yaml          # Docker Compose configuration
-└── .env.example          # Environment template
-```
-

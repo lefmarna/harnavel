@@ -17,7 +17,7 @@ run = ["mise install", "pnpm install --frozen-lockfile"]
 [tasks."setup:backend"]
 description = "Setup backend (requires running containers)"
 run = """
-docker compose app bash -c "
+docker compose exec app bash -c "
   composer install --no-interaction && \
   php -r \"file_exists('.env') || copy('.env.example', '.env');\" && \
   php artisan key:generate"
@@ -69,40 +69,40 @@ run = "docker compose exec app bash"
 
 [tasks.migrate]
 description = "Run database migrations"
-run = "docker compose app php artisan migrate"
+run = "docker compose exec app php artisan migrate"
 
 [tasks.seed]
 description = "Run database seeders"
-run = "docker compose app php artisan db:seed"
+run = "docker compose exec app php artisan db:seed"
 
 [tasks.fresh]
 description = "Fresh migration and seed"
-run = "docker compose app php artisan migrate:fresh --seed"
+run = "docker compose exec app php artisan migrate:fresh --seed"
 
 [tasks.status]
 description = "Migration status"
-run = "docker compose app php artisan migrate:status"
+run = "docker compose exec app php artisan migrate:status"
 
 [tasks.rollback]
 description = "Rollback migration"
-run = "docker compose app php artisan migrate:rollback"
+run = "docker compose exec app php artisan migrate:rollback"
 
 [tasks.test]
 description = "Run tests"
-run = "docker compose app composer test"
+run = "docker compose exec app composer test"
 
 [tasks."composer:install"]
 description = "Composer install"
-run = "docker compose app composer install"
+run = "docker compose exec app composer install"
 
 [tasks."composer:update"]
 description = "Composer update"
-run = "docker compose app composer update"
+run = "docker compose exec app composer update"
 
 [tasks.clear]
 description = "Clear caches"
 run = """
-docker compose app bash -c "
+docker compose exec app bash -c "
   composer dump-autoload && \
   php artisan cache:clear && \
   php artisan config:clear && \
@@ -112,16 +112,16 @@ docker compose app bash -c "
 
 [tasks.tinker]
 description = "Run tinker"
-run = "docker compose app php artisan tinker"
+run = "docker compose exec app php artisan tinker"
 
 [tasks.route]
 description = "List routes"
-run = "docker compose app php artisan route:list"
+run = "docker compose exec app php artisan route:list"
 
 [tasks.openapi]
 description = "Generate OpenAPI spec"
 run = [
-  "docker compose app php artisan openapi:generate > docs/api/openapi.json",
+  "docker compose exec app php artisan openapi:generate > docs/api/openapi.json",
   "pnpm generate-openapi",
 ]
 

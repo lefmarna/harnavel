@@ -1,30 +1,25 @@
 # Laravel Docker Template
 
-Laravel + MariaDB + Docker development environment template.
-
-## Tech Stack
-
-- **Backend**: Laravel 12, Fortify, Pest v4
-- **Frontend**: React 19, Inertia v2, Tailwind v4, Radix UI
-- **Infra**: Docker, Nginx, MariaDB, Wayfinder
-
-## Docs Index (Read in this order)
-
-1. **Environment setup**: `docs/docker.md`
-2. **Role guides**: `docs/roles/backend.md`, `docs/roles/frontend.md`
-3. **Agent rules & tooling**: `docs/agent/overview.md`, `docs/agent/boost.md`
-4. **Spec-driven development** (only when needed): `docs/specs.md`
+Laravel 12 + MariaDB + Docker development environment with React/Inertia frontend.
 
 ## Always-on Project Guides
 
+Use the appropriate guide for your implementation context:
+
 - **Backend work** (Laravel/PHP): `docs/roles/backend.md`
 - **Frontend work** (React/TypeScript): `docs/roles/frontend.md`
+- **Environment setup**: `docs/docker.md`
 - **Laravel Boost rules**: `docs/agent/boost.md`
 
 ## Specification Phase Only
 
 Spec-driven development (Kiro-style) instructions are loaded only during specification work. When needed, work under `.kiro/specs/` and see `docs/specs.md`.
 
+For day-to-day development, follow the always-on guides above; apply spec-driven workflow only during the specification phase.
+
 ## Writing Rules
 
 - Default to English in docs.
+- **README.md**: For humans (project overview, setup instructions).
+- **docs/**: For AI agents (guidelines, command references).
+- Apply progressive disclosure: keep entry points brief, details in sub-docs.

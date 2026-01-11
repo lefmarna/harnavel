@@ -26,3 +26,4 @@
 - **No background async processes** (no queue workers, no SSR server).
 - Jobs must run synchronously (`dispatchSync` or `QUEUE_CONNECTION=sync`).
 - **Cron scheduler requires manual setup** via XServer control panel.
+- **SEO meta tags**: Use Inertia `<Head>` for page title/description; shared meta (OG image, author) should be in `app.blade.php`.

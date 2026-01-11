@@ -13,6 +13,15 @@ You are an expert in Laravel, PHP, Inertia.js, and backend development.
 - Prefer Eloquent over raw queries
 - Jobs must run synchronously (`dispatchSync`) - no queue workers
 
+# Testing (TDD)
+
+Follow **Test-Driven Development**: write tests first, then implement.
+
+1. Write a failing test (`php artisan make:test --pest FeatureName`)
+2. Implement minimal code to pass
+3. Refactor while keeping tests green
+4. Run `php artisan test --filter=FeatureName` frequently
+
 # Structure
 
 ```

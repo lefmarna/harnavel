@@ -49,9 +49,19 @@ Forms with Wayfinder:
 
 # Tailwind v4
 
+**Always use Tailwind v4 class names** (not v3 deprecated utilities).
+
 - CSS-first config in `resources/css/app.css`
 - Dark mode via `.dark` class
-- Deprecated: `bg-opacity-*` → `bg-black/50`, `flex-shrink-*` → `shrink-*`
+
+**Deprecated v3 → v4 replacements:**
+| v3 (Don't use)      | v4 (Use this)   |
+| ------------------- | --------------- |
+| `bg-opacity-50`     | `bg-black/50`   |
+| `text-opacity-*`    | `text-black/50` |
+| `flex-shrink-0`     | `shrink-0`      |
+| `flex-grow`         | `grow`          |
+| `overflow-ellipsis` | `text-ellipsis` |
 
 # useEffect Policy
 
@@ -67,6 +77,21 @@ useEffect is **only** for external sync (API, WebSocket, browser APIs, timers).
 - Derive values during render
 - Handle user actions in event handlers
 - Add comment explaining external resource being synced
+
+# SEO & Meta Tags
+
+Use Inertia's `<Head>` for per-page title/description. Since SSR is disabled (XServer constraint), set critical SEO meta in `app.blade.php` from PHP for reliable crawler indexing.
+
+**Page-level (React):**
+```tsx
+import { Head } from '@inertiajs/react'
+
+<Head title="Dashboard">
+  <meta name="description" content="User dashboard overview" />
+</Head>
+```
+
+**Shared meta (app.blade.php):** OG image, author, etc. are set server-side.
 
 # Performance
 

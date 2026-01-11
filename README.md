@@ -12,6 +12,12 @@ Laravel + MariaDB の Docker 開発環境テンプレートです。
 | **Testing**        | Pest v4                          |
 | **Infrastructure** | Docker (Nginx, MariaDB, Mailpit) |
 
+> [!NOTE]
+> **SSRは使用しません。** デプロイ先のXServer共有ホスティングではNode.jsプロセスを常駐できないため、Inertia SSRは無効化しています。SEOメタタグは`app.blade.php`でサーバーサイド設定します。
+
+> [!IMPORTANT]
+> **OGP画像を作成してください。** `public/og-image.png`（推奨: 1200x630px）を各プロジェクトで作成してください。SNSシェア時に使用されます。
+
 ## 使い方
 
 ```bash

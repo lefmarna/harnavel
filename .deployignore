@@ -1,0 +1,69 @@
+# ========================================
+# デプロイ時に除外するファイル・ディレクトリ
+# ========================================
+
+# 依存関係
+node_modules
+vendor
+
+# バージョン管理
+.git
+.gitattributes
+.gitignore
+
+# Docker関連
+.docker
+compose.yaml
+docker-compose.yml
+
+# テスト
+tests
+phpunit.xml
+.phpunit.cache
+.phpunit.result.cache
+
+# エージェント・IDE設定
+.agent
+.claude
+.codex
+.cursor
+.gemini
+.github
+.kiro
+.serena
+.vscode
+.fleet
+.idea
+.nova
+.zed
+
+# ビルド設定
+vite.config.ts
+tsconfig.json
+package.json
+pnpm-lock.yaml
+eslint.config.js
+.prettierrc
+.prettierignore
+.editorconfig
+.mcp.json
+boost.json
+components.json
+
+# ドキュメント
+*.md
+
+# 環境設定（サーバーで別途作成）
+.env
+.env.example
+.env.backup
+.env.production
+
+# デプロイ出力先
+.deploy
+
+# ストレージ（中身のみ除外）
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*

@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'display_name' => env('VITE_APP_NAME', 'Laravel MySQL Docker'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Description

@@ -89,7 +89,8 @@ run = "docker compose exec app php artisan migrate:rollback"
 
 [tasks.test]
 description = "Run tests"
-run = "docker compose exec app composer test"
+run = "docker compose exec app php artisan test $@"
+raw = true
 
 [tasks."composer:install"]
 description = "Composer install"
@@ -133,3 +134,23 @@ run = [
 description = "Fix code (ESLint + Prettier)"
 run = "pnpm fix"
 quiet = true
+
+# =============================================================================
+# デプロイ関連
+# =============================================================================
+
+[tasks."deploy:build"]
+description = "Build for production (frontend assets)"
+run = "pnpm run build"
+
+[tasks."deploy:package"]
+description = "Create deployment package (excludes dev files)"
+run = """
+rm -rf .deploy && mkdir -p .deploy && \
+rsync -av --progress --exclude-from='.deployignore' ./ .deploy/ && \
+echo '✅ Deployment package created in ./.deploy/'
+"""
+
+[tasks."deploy:prepare"]
+description = "Full deployment preparation (build + package)"
+depends = ["deploy:build", "deploy:package"]

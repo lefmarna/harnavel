@@ -1,0 +1,137 @@
+name: test_deploy
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb-testing:
+        image: mariadb:10.5
+        env:
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: app_testing
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          tools: composer:v2
+          coverage: xdebug
+
+      - name: Install Node Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install PHP Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Build Assets
+        run: pnpm run build
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Run Tests
+        run: ./vendor/bin/pest
+        env:
+          DB_HOST: 127.0.0.1
+
+      # デプロイ用にビルド成果物を保存
+      - name: Upload build artifacts
+        if: github.ref_name == 'main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: public/build/
+          retention-days: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref_name == 'main'
+    environment: Production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # テストジョブでビルドした成果物をダウンロード
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: public/build/
+
+      - name: Create deployment package
+        run: |
+          mkdir -p .deploy
+          rsync -av --exclude-from='.deployignore' ./ .deploy/
+
+      # SSH設定（XSERVER_KNOWN_HOSTSを必須にしてknown_hostsへ登録）
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.XSERVER_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          if [ -z "${{ secrets.XSERVER_KNOWN_HOSTS }}" ]; then
+            echo "XSERVER_KNOWN_HOSTS is required" >&2
+            exit 1
+          fi
+          echo "${{ secrets.XSERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+
+      # rsync除外の方針:
+      # - .deployignore: ローカルパッケージ作成時の除外（開発用ファイル等）
+      # - rsync --exclude: サーバー側の既存データ保護（.env, storage, サブドメイン等）
+      - name: Deploy to XServer
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p 10022" \
+            --exclude='.env' \
+            --exclude='/.htaccess' \
+            --exclude='storage/app/**' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='dev.example.com' \
+            .deploy/ ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }}:$DEPLOY_DIRECTORY/
+
+      - name: Run post-deploy commands
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
+        run: |
+          ssh -p 10022 ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+          "cd $DEPLOY_DIRECTORY && \
+          /usr/bin/php8.4 ~/opt/bin/composer install --optimize-autoloader --no-dev && \
+          /usr/bin/php8.4 artisan config:cache && \
+          /usr/bin/php8.4 artisan route:cache && \
+          /usr/bin/php8.4 artisan view:cache && \
+          /usr/bin/php8.4 artisan migrate --force"

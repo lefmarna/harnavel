@@ -1,3 +1,7 @@
 [mcp_servers.php]
 command = "docker"
 args = ["compose", "exec", "app", "php", "artisan", "boost:mcp"]
+
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = ["chrome-devtools-mcp@latest"]

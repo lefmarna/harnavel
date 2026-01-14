@@ -119,13 +119,6 @@ run = "docker compose exec app php artisan tinker"
 description = "List routes"
 run = "docker compose exec app php artisan route:list"
 
-[tasks.openapi]
-description = "Generate OpenAPI spec"
-run = [
-  "docker compose exec app php artisan openapi:generate > docs/api/openapi.json",
-  "pnpm generate-openapi",
-]
-
 # =============================================================================
 # フロントエンド関連
 # =============================================================================

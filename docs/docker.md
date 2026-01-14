@@ -26,39 +26,21 @@
 
 ## Commands
 
-> **Note:** Prefer `mise run <task>` when available (e.g., `mise run test`, `mise run migrate`). See `mise.toml` for available tasks.
+See `docs/commands.md` for the full command reference.
 
-**Local (pnpm):** Run on host machine (Node.js installed locally).
-
-```bash
-pnpm run dev              # Vite dev server
-pnpm lint                 # ESLint
-pnpm format               # Prettier
-```
-
-**Container (PHP):** `docker compose exec app bash`
+**Direct access (when needed):**
 
 ```bash
-php artisan test          # Run tests
-vendor/bin/pint --dirty   # PHP formatter
-composer run dev          # With pail, vite
-```
+# App container shell
+docker compose exec app bash
 
-**Database:**
-
-```bash
+# Database
 docker compose exec mariadb mysql -u root -p
-```
 
-**Logs:**
-
-```bash
-docker compose logs -f app
+# Logs
 docker compose exec app tail -f storage/logs/laravel.log
 
-# Mailpit UI
-# macOS: open / Linux: xdg-open / WSL: explorer.exe
-open http://localhost:8025
+# Mailpit UI: http://localhost:8025
 ```
 
 ## Environment Variables

@@ -1,8 +1,13 @@
-You are an expert in TypeScript, React 19, Inertia.js v2, and Tailwind CSS v4.
+# Code Style
+
+- No magic numbers; use named constants
+- Use early returns to reduce nesting
+- Keep nesting shallow (max 2-3 levels)
+- Test function names in Japanese for readability
 
 # Environment
 
-- Use `pnpm` (not npm). Run `pnpm lint` / `pnpm format` after changes.
+- Use `pnpm` (not npm). Run `pnpm fix` after changes.
 - See `docs/agent/boost.md` for Laravel Boost rules.
 
 # Stack
@@ -32,7 +37,10 @@ resources/js/
 # TypeScript
 
 - Prefer `interface` over `type`
-- Avoid enums; use `as const`
+- Avoid enums; use `as const` or maps
+- Use `const` only; never use `let`
+- Avoid type assertions (`as`) and type guards (`is`); use `instanceof` or design for type inference
+- Use `filter`/`map`/`reduce` instead of `forEach`
 
 # Navigation & Forms
 
@@ -76,13 +84,20 @@ useEffect is **only** for external sync (API, WebSocket, browser APIs, timers).
 - Dark mode via `.dark` class
 
 **Deprecated v3 → v4 replacements:**
-| v3 (Don't use) | v4 (Use this) |
+| v3 (Don't use)      | v4 (Use this)   |
 | ------------------- | --------------- |
-| `bg-opacity-50` | `bg-black/50` |
-| `text-opacity-*` | `text-black/50` |
-| `flex-shrink-0` | `shrink-0` |
-| `flex-grow` | `grow` |
+| `bg-opacity-50`     | `bg-black/50`   |
+| `text-opacity-*`    | `text-black/50` |
+| `flex-shrink-0`     | `shrink-0`      |
+| `flex-grow`         | `grow`          |
 | `overflow-ellipsis` | `text-ellipsis` |
+
+# UI & Styling
+
+- Use Radix UI and Tailwind for components and styling
+- Mobile-first responsive design
+- Avoid `margin-bottom`; use `margin-top` instead
+- Prefer `gap` in Flexbox/Grid containers over margins
 
 # SEO & Meta Tags
 

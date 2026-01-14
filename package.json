@@ -5,10 +5,11 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "format": "prettier --write resources/",
-    "format:check": "prettier --check resources/",
-    "lint": "eslint . --fix",
-    "types": "tsc --noEmit"
+    "fix": "pnpm lint:fix && pnpm format",
+    "format": "prettier --write --log-level warn .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:typecheck": "tsc --pretty --noEmit"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

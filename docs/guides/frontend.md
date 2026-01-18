@@ -36,11 +36,17 @@ resources/js/
 
 # TypeScript
 
+**Prefer functional programming style:**
+
+- Use `const` only; `let` is allowed only for `for` loop indices
+- Use `filter`/`map`/`reduce` instead of `forEach` (use `forEach` only when side effects are needed)
+- Prefer `switch` over `if-else` when branching on discrete values (better readability)
+
+**Type definitions:**
+
 - Prefer `interface` over `type`
 - Avoid enums; use `as const` or maps
-- Use `const` only; never use `let`
 - Avoid type assertions (`as`) and type guards (`is`); use `instanceof` or design for type inference
-- Use `filter`/`map`/`reduce` instead of `forEach`
 
 # Navigation & Forms
 

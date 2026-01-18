@@ -19,8 +19,8 @@ RUN apt-get update \
   libpng-dev \
   libzip-dev \
   mariadb-client \
-  # Install Node.js 24.12.0
-  nodejs=24.12.0-1nodesource1 \
+  # Install Node.js 24.13.0
+  nodejs=24.13.0-1nodesource1 \
   unzip \
   # Install Xdebug
   && pecl install xdebug \

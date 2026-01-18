@@ -6,5 +6,13 @@
     "prettier-plugin-tailwindcss"
   ],
   "tailwindFunctions": ["clsx", "cn"],
-  "tailwindStylesheet": "resources/css/app.css"
+  "tailwindStylesheet": "resources/css/app.css",
+  "overrides": [
+    {
+      "files": "compose.yaml",
+      "options": {
+        "singleQuote": false
+      }
+    }
+  ]
 }

@@ -116,6 +116,7 @@ import { Head } from '@inertiajs/react'
 
 # Performance
 
+- Use `Promise.all` to fetch independent data in parallel.
 - Minimize `useEffect`/`useState`; prefer Inertia props
 - Use deferred props, `<Suspense>`, dynamic imports
 

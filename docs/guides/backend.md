@@ -60,6 +60,24 @@ return Inertia::render('dashboard', ['users' => User::paginate(10)]);
 
 Auth actions in `app/Actions/Fortify/`. Config in `config/fortify.php`.
 
+# XServer Deployment
+
+## .htaccess
+
+The `.htaccess` file in the project root is configured for XServer hosting.
+
+**Prerequisites**:
+- Document root must be project root (not `public/`)
+- `mod_rewrite` must be enabled (access denied if disabled)
+
+**Key settings**:
+- Force HTTPS and redirect www to non-www (single redirect)
+- Route all requests to `public/`
+- Deny access to dotfiles (`.env`, etc.)
+- Allow `.well-known/acme-challenge/` for SSL certificate renewal
+
+**Note**: Review this `.htaccess` when migrating to other hosting environments. If you need XServer cache (`Ngx_Cache_AllCacheMode`), add it with appropriate exclusions for authenticated pages.
+
 # Tooling
 
 All commands via Docker:

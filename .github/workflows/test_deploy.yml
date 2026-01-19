@@ -108,7 +108,7 @@ jobs:
       # rsync除外の方針:
       # - .deployignore: ローカルパッケージ作成時の除外（開発用ファイル等）
       # - rsync --exclude: サーバー側の既存データ保護（.env, storage, サブドメイン等）
-      - name: Deploy to XServer
+      - name: Deploy to XServer via Rsync
         env:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
         run: |
@@ -123,7 +123,7 @@ jobs:
             --exclude='dev.example.com' \
             .deploy/ ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }}:$DEPLOY_DIRECTORY/
 
-      - name: Run post-deploy commands
+      - name: Run Post-Deploy Commands
         env:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
         run: |

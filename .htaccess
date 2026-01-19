@@ -12,7 +12,7 @@
 
   # public/ への転送（ループ防止付き）
   RewriteCond %{REQUEST_URI} !^/public/
-  RewriteRule ^(.*)$ public/$1 [L]
+  RewriteRule ^(.*)$ public/$1 [QSA,L]
 </IfModule>
 
 # mod_rewrite無効時はアクセス拒否（セキュリティ対策）
@@ -20,7 +20,7 @@
   Require all denied
 </IfModule>
 
-# 念のためドットファイルを拒否（.env 等）
-<FilesMatch "^\.">
+# ドットファイルを拒否（.env 等）ただし .well-known は許可
+<FilesMatch "^\.(?!well-known(/|$))">
   Require all denied
 </FilesMatch>

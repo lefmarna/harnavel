@@ -38,9 +38,9 @@ resources/js/
 
 **Prefer functional programming style:**
 
-- Use `const` only; `let` is allowed only for `for` loop indices
-- Use `filter`/`map`/`reduce` instead of `forEach` (use `forEach` only when side effects are needed)
-- Prefer `switch` over `if-else` when branching on discrete values (better readability)
+- Use `const` only; `let` is allowed only for `for` loop indices (exceptions: performance-critical or sequential processing where mutation is necessary)
+- Prefer `map` for transformations, `filter` for filtering, `reduce` for aggregations; use `forEach` only when side effects are needed
+- Prefer `switch` over `if-else` when branching on discrete values; always include `default` (use `never` for exhaustiveness), no fallthrough
 
 **Type definitions:**
 
@@ -102,8 +102,13 @@ useEffect is **only** for external sync (API, WebSocket, browser APIs, timers).
 
 - Use Radix UI and Tailwind for components and styling
 - Mobile-first responsive design
-- Avoid `margin-bottom`; use `margin-top` instead
-- Prefer `gap` in Flexbox/Grid containers over margins
+- **Component Design:**
+  - Components should not have external margins. Accept `className` props for positioning.
+  - Do not design assuming the parent knows the child's internal structure (Separation of layout responsibilities).
+- **Spacing preferences:**
+  - Avoid `margin-bottom` and `margin-right`.
+  - When RTL support is needed, prefer logical `ms-*`/`me-*`; otherwise use `margin-top` and `margin-left`.
+  - Prefer `gap` in Flexbox/Grid containers over margins.
 
 # SEO & Meta Tags
 
@@ -125,6 +130,9 @@ import { Head } from '@inertiajs/react'
 - Use `Promise.all` to fetch independent data in parallel.
 - Minimize `useEffect`/`useState`; prefer Inertia props
 - Use deferred props, `<Suspense>`, dynamic imports
+- **Bundle Optimization:**
+  - Avoid large barrel file imports; prefer direct imports.
+  - Use dynamic loading for heavy non-critical components.
 
 # Tooling
 

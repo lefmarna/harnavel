@@ -1,7 +1,7 @@
 FROM php:8.4.12-fpm-bookworm
 
 # Install Composer
-COPY --from=composer:2.9.3 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.9.4 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
   && apt-get install -y curl \

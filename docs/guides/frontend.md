@@ -110,6 +110,15 @@ useEffect is **only** for external sync (API, WebSocket, browser APIs, timers).
   - When RTL support is needed, prefer logical `ms-*`/`me-*`; otherwise use `margin-top` and `margin-left`.
   - Prefer `gap` in Flexbox/Grid containers over margins.
 
+# Accessibility
+
+- **Icon-only links/buttons:** When a link or button contains only an icon (no visible text), provide an accessible name using one of:
+  - `aria-label` on the `<Link>` or `<button>` element (preferred for interactive elements)
+  - `alt` prop on `<AppLogoIcon>` or `<img>` (for informative images)
+  - `<span className="sr-only">` for visually hidden text
+- **Decorative images:** When an image is purely decorative (meaning is conveyed by adjacent text), use `alt=""` to hide it from screen readers.
+- **`AppLogoIcon` policy:** Defaults to `alt=""` (decorative). When used in icon-only links, add `aria-label` to the parent `<Link>` element.
+
 # SEO & Meta Tags
 
 Use Inertia's `<Head>` for per-page title/description. Since SSR is disabled (XServer constraint), set critical SEO meta in `app.blade.php` from PHP for reliable crawler indexing.
@@ -133,6 +142,41 @@ import { Head } from '@inertiajs/react'
 - **Bundle Optimization:**
   - Avoid large barrel file imports; prefer direct imports.
   - Use dynamic loading for heavy non-critical components.
+
+# E2E Testing
+
+Use Playwright for E2E tests. Tests are located in `e2e/tests/`.
+
+**Prerequisites (Local):**
+
+1. Docker environment running (`mise run up`)
+2. Vite dev server running (`pnpm dev` at port 5173)
+
+```bash
+pnpm test:e2e           # Run all E2E tests
+pnpm test:e2e:ui        # Interactive UI mode
+pnpm test:e2e:headed    # Run with browser visible
+```
+
+**Structure:**
+
+```
+e2e/
+├── pages/        # Page Object Models
+└── tests/        # Test files (*.spec.ts)
+```
+
+**Environment differences:**
+
+| Environment | baseURL | Server |
+|-------------|---------|--------|
+| Local | `http://localhost:8080` | Docker (Nginx) + Vite (5173) |
+| CI | `http://localhost:8000` | `php artisan serve` |
+
+**Guidelines:**
+
+- Test titles in Japanese for readability
+- Use Page Object Model for reusable interactions
 
 # Tooling
 

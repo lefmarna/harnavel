@@ -50,6 +50,14 @@ mise run composer:install  # Composer install
 mise run composer:update   # Composer update
 ```
 
+## E2E Testing
+
+```bash
+pnpm test:e2e           # Run Playwright E2E tests
+pnpm test:e2e:ui        # Run with UI mode (interactive debugging)
+pnpm test:e2e:headed    # Run with browser visible
+```
+
 ## Code Quality
 
 ```bash

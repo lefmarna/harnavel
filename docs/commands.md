@@ -71,16 +71,3 @@ mise run deploy:build   # Build frontend assets
 mise run deploy:package # Create deployment package
 mise run deploy:prepare # Full deployment preparation
 ```
-
-## Verification
-
-```bash
-# Frontend
-pnpm lint && pnpm lint:typecheck
-
-# Backend
-mise run test
-
-# Full
-pnpm lint && pnpm lint:typecheck && mise run test
-```

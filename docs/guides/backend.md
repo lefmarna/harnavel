@@ -18,7 +18,7 @@
 - Use `DB::transaction` for data integrity
 - Prefer Eloquent over raw queries
 - Jobs must run synchronously (`dispatchSync`) - no queue workers
-- Use `array_filter`/`array_map`/`collect()` instead of `foreach` loops
+- Use `collect()` methods (or `array_map`/`array_filter`) for data transformations instead of `foreach` loops
 - **Deployment target**: XServer (shared hosting)
 - **Cron scheduler**: Manual setup via XServer control panel
 

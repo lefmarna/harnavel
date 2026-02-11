@@ -42,8 +42,8 @@ pnpm run dev
 
 詳細は `docs/` を参照してください。
 
-- [Docker 環境](docs/01_development_docs/97_docker_architecture.md)
-- [バックエンド開発ガイド](docs/01_development_docs/91_backend_implementation_guide.md)
-- [フロントエンド開発ガイド](docs/01_development_docs/90_frontend_implementation_guide.md)
-- [コマンドリファレンス](docs/01_development_docs/98_commands_reference.md)
-- [Laravel Boost ルール](docs/01_development_docs/99_laravel_boost_guidelines.md)
+- [Docker 環境](docs/infrastructure/docker.md)
+- [バックエンド開発ガイド](docs/backend/implementation.md)
+- [フロントエンド開発ガイド](docs/frontend/implementation.md)
+- [コマンドリファレンス](docs/infrastructure/commands.md)
+- [Laravel Boost ルール](docs/backend/coding_rules.md)

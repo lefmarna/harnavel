@@ -9,7 +9,7 @@
 
 - Run via Docker: `docker compose exec app bash`
 - Prefer mise tasks when available (e.g., `mise run migrate`, `mise run test`)
-- See `docs/01_development_docs/99_laravel_boost_guidelines.md` for Laravel Boost rules
+- See `docs/backend/coding_rules.md` for Laravel Boost rules
 
 # Requirements
 
@@ -33,7 +33,7 @@ Follow **Test-Driven Development**: write tests first, then implement.
 
 # 3-Layer Architecture
 
-> **Detailed Guide**: See [`docs/01_development_docs/01_architecture_design.md`](../01_development_docs/01_architecture_design.md) for implementation rules and code templates.
+> **Detailed Guide**: See [`architecture.md`](architecture.md) for implementation rules and code templates.
 
 **Repository** (`app/Repositories/`) - Data access only. **Never query models directly in controllers/services.**
 

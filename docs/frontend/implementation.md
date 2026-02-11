@@ -8,7 +8,7 @@
 # Environment
 
 - Use `pnpm` (not npm). Run `pnpm fix` after changes.
-- See `docs/01_development_docs/99_laravel_boost_guidelines.md` for Laravel Boost rules.
+- See `docs/backend/coding_rules.md` for Laravel Boost rules.
 
 # Stack
 

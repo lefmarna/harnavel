@@ -1,7 +1,6 @@
 ---
 name: 'demand-definition'
 description: 'A skill to pressure-test new feature ideas and identify the truly necessary requirements. Progress is managed step-by-step in JSON. Triggers: 「壁打ちしたい」「機能を考えたい」「要件を整理したい」「この機能について相談」「新機能のアイデア」「要求定義」「要件定義」'
-allowed-tools: 'Read, Write, Edit, Glob, Grep, Task, mcp__serena__find_file, mcp__serena__get_symbols_overview, mcp__serena__find_symbol, mcp__serena__search_for_pattern, mcp__serena__list_dir'
 ---
 
 # Demand Definition - Requirements Discovery & Specification

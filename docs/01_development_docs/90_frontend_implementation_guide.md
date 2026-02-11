@@ -8,7 +8,7 @@
 # Environment
 
 - Use `pnpm` (not npm). Run `pnpm fix` after changes.
-- See `docs/agent/boost.md` for Laravel Boost rules.
+- See `docs/01_development_docs/99_laravel_boost_guidelines.md` for Laravel Boost rules.
 
 # Stack
 
@@ -180,4 +180,4 @@ e2e/
 
 # Tooling
 
-`pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm format` / `pnpm types`
+`pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm lint:typecheck`

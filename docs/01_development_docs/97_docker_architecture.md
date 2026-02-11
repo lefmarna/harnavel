@@ -26,7 +26,7 @@
 
 ## Commands
 
-See `docs/commands.md` for the full command reference.
+See `docs/01_development_docs/98_commands_reference.md` for the full command reference.
 
 **Direct access (when needed):**
 

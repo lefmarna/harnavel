@@ -9,7 +9,7 @@
 
 - Run via Docker: `docker compose exec app bash`
 - Prefer mise tasks when available (e.g., `mise run migrate`, `mise run test`)
-- See `docs/agent/boost.md` for Laravel Boost rules
+- See `docs/01_development_docs/99_laravel_boost_guidelines.md` for Laravel Boost rules
 
 # Requirements
 
@@ -30,6 +30,24 @@ Follow **Test-Driven Development**: write tests first, then implement.
 2. Implement minimal code to pass
 3. Refactor while keeping tests green
 4. Run `php artisan test --filter=FeatureName` frequently
+
+# 3-Layer Architecture
+
+> **Detailed Guide**: See [`docs/01_development_docs/01_architecture_design.md`](../01_development_docs/01_architecture_design.md) for implementation rules and code templates.
+
+**Repository** (`app/Repositories/`) - Data access only. **Never query models directly in controllers/services.**
+
+- Pattern: `{Domain}RepositoryContract` + `Eloquent{Domain}Repository`
+
+**Service** (`app/Services/`) - Business logic. Coordinates repositories and controllers.
+
+- Pattern: `{Domain}ServiceContract` + `{Domain}Service`
+
+**Controller** (`app/Http/Controllers/`) - Thin layer. Delegates to services.
+
+- Use Form Requests for validation
+- Return API Resources for responses
+- Include OpenAPI documentation attributes
 
 # Structure
 
@@ -60,6 +78,14 @@ return Inertia::render('dashboard', ['users' => User::paginate(10)]);
 
 Auth actions in `app/Actions/Fortify/`. Config in `config/fortify.php`.
 
+# Tooling
+
+All commands via Docker:
+
+- `docker compose exec app php artisan make:* --no-interaction`
+- `docker compose exec app php artisan test --filter=...`
+- `docker compose exec app vendor/bin/pint --dirty`
+
 # XServer Deployment
 
 ## .htaccess
@@ -77,10 +103,3 @@ The `.htaccess` file in the project root is configured for XServer hosting.
 - Allow `.well-known/acme-challenge/` for SSL certificate renewal
 
 **Note**: Review this `.htaccess` when migrating to other hosting environments. If you need XServer cache (`Ngx_Cache_AllCacheMode`), add it with appropriate exclusions for authenticated pages.
-
-# Tooling
-
-All commands via Docker:
-- `docker compose exec app php artisan make:* --no-interaction`
-- `docker compose exec app php artisan test --filter=...`
-- `docker compose exec app vendor/bin/pint --dirty`

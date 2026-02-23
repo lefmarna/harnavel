@@ -6,7 +6,7 @@
 
 | Route | Page    | Layout  |
 | ----- | ------- | ------- |
-| `/`   | Welcome | Sidebar |
+| `/`   | Welcome | Standalone |
 
 ### Auth
 

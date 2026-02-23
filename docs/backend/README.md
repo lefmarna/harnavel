@@ -1,6 +1,6 @@
 # Backend Documentation
 
-Laravel 12 + PHP 8.3+ + MariaDB 10.5 + Pest 4 + Fortify.
+Laravel 12 + PHP 8.2+ + MariaDB 10.5 + Pest 4 + Fortify.
 
 ## Architecture & Design
 

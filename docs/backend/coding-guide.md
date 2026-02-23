@@ -12,7 +12,7 @@
 
 # Requirements
 
-- PHP 8.3+, PSR-12, `declare(strict_types=1);` in all files
+- PHP 8.2+, PSR-12, `declare(strict_types=1);` in all files
 - Use `DB::transaction` for data integrity
 - **Deployment target**: XServer (shared hosting)
 - **Cron scheduler**: Manual setup via XServer control panel

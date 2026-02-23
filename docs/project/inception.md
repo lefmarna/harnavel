@@ -20,7 +20,7 @@ Project constraints, architectural trade-offs, and risk assessment. For what the
 ## Technical Constraints
 
 1.  **XServer** - No queue workers (Sync jobs only), `.htaccess` routing.
-2.  **Stack** - PHP 8.3+, TypeScript Strict Mode.
+2.  **Stack** - PHP 8.2+, TypeScript Strict Mode.
 3.  **Monolith** - Single repo, simple deployment.
 
 ## Trade-offs

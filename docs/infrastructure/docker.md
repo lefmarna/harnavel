@@ -26,7 +26,7 @@
 
 ## Commands
 
-See `commands.md` for the full command reference.
+See [commands.md](commands.md) for the full command reference.
 
 **Direct access (when needed):**
 

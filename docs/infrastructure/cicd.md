@@ -1,58 +1,32 @@
-# CI/CD Design
+# CI/CD Pipeline
 
-This document defines the Continuous Integration and Continuous Deployment pipeline.
-It ensures code quality and automates deployment.
+## Flow
 
-## 1. Pipeline Diagram
-
-```mermaid
-graph TD
-    Start((Push)) --> CI[CI Pipeline]
-    CI --> Lint[Lint (PHP/JS) ✅]
-    CI --> Test[Tests (Pest/Vitest/Playwright) ✅]
-    CI --> Build[Build (Vite) ✅]
-    
-    Test --> Deploy[Deployment Pipeline (Main Branch)]
-    Deploy --> Envoyer[Envoyer/Ploi/Forge]
-    Envoyer --> ZeroDowntime[Atomic Deployment 🚀]
-    ZeroDowntime --> Migration[DB Migration 🗄️]
+```
+Push (develop/main) → GitHub Actions
+                         │
+                         ├── Lint (Pint + ESLint + Prettier)
+                         ├── Test (Pest + Playwright)
+                         └── Deploy (if main)
 ```
 
-## 2. GitHub Actions Workflows
+## Configuration Files
 
-### A. `.github/workflows/lint.yml` (Pull Request)
+| File                                       | Purpose                        |
+| ------------------------------------------ | ------------------------------ |
+| `.github/workflows/lint.yml`               | PHP/JS linting & formatting    |
+| `.github/workflows/test_deploy.yml`        | Test + deploy pipeline         |
 
-- **Triggers**: `pull_request`, `push` to `main`.
-- **Jobs**:
-  - `php-lint`: PHP CS Fixer, PHPStan.
-  - `js-lint`: ESLint, Prettier.
-  - `type-check`: TSC (`npm run type-check`).
+## Deployment Targets
 
-### B. `.github/workflows/test.yml` (Pull Request)
+| Component | Target           | Method                                       |
+| --------- | ---------------- | -------------------------------------------- |
+| Frontend  | XServer (shared) | Built via Vite on CI, rsync to server        |
+| Backend   | XServer (shared) | `mise run deploy:prepare` → deployment package |
 
-- **Triggers**: `pull_request`, `push` to `main`.
-- **Jobs**:
-  - `phpunit`: Pest (Unit/Feature tests).
-  - `playwright`: E2E tests (Chrome/Firefox).
+**Auth**: SSH key via GitHub Encrypted Secrets. `XSERVER_KNOWN_HOSTS` required (no `ssh-keyscan`).
 
-### C. `.github/workflows/deploy.yml` (Push to Main)
+## Branching & Commits
 
-- **Triggers**: `push` to `main` (if tests pass).
-- **Jobs**:
-  - `deploy`: Trigger webhook (Envoyer/Forge).
-  - `notify`: Slack/Discord notification.
-
-## 3. Deployment Strategy
-
-- **Zero Downtime**: Use atomic deployments (symlink swap).
-- **Database Migrations**: Run safely *after* code deployment (or with caution).
-- **Assets**: Build frontend assets (Vite) on CI or build server.
-- **Cache**: Clear/cache config, routes, and views post-deployment (`php artisan optimize`).
-
-## Verification Checklist
-
-- [ ] **Linting**: Do `lint.yml` checks pass locally (`npm run lint`, `vendor/bin/php-cs-fixer fix`)?
-- [ ] **Tests**: Do `test.yml` checks pass locally (`npm test`, `php artisan test`)?
-- [ ] **Secrets**: Are `APP_KEY`, `DB_PASSWORD`, `DEPLOY_WEBHOOK` set in GitHub Secrets?
-- [ ] **Permissions**: Does the deployment user have SSH access?
-- [ ] **Rollback**: Is rollback possible via the deployment tool (Envoyer)?
+- Feature branches off `develop`, merge to `main` for production
+- PR required: CI green before merge

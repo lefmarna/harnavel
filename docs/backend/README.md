@@ -1,42 +1,27 @@
-# Backend Development
+# Backend Documentation
 
-This directory contains documentation for backend development, including architecture, database design, API design, and security.
+Laravel 12 + PHP 8.3+ + MariaDB 10.5 + Pest 4 + Fortify.
 
-## Technical Design Documents
+## Architecture & Design
 
-### System Architecture
-- **[`implementation.md`](implementation.md)** - **Detailed Backend Implementation Guide (Must Read)**.
-- **[`architecture.md`](architecture.md)** - DDD & Clean Architecture details.
-- **[`coding_rules.md`](coding_rules.md)** - Auto-generated Laravel/PHP coding rules.
-- **Use when**: Understanding layers, adding features, refactoring.
+- **[architecture.md](architecture.md)** - 3-layer pattern, directory structure, layer rules
+- **[api.md](api.md)** - RESTful & Internal API endpoints
+- **[database.md](database.md)** - Data strategy, migration gotchas
+- **[repository-pattern.md](repository-pattern.md)** - Implementation templates for Service/Repository
 
-### Database Design
-- **[`database.md`](database.md)** - ER diagrams and table definitions.
-- **Use when**: Writing migrations, adding tables/columns.
+## Security & Error Handling
 
-### API Design
-- **[`api.md`](api.md)** - RESTful & Internal API endpoints.
-- **Use when**: Implementing endpoints, understanding request/response formats.
-
-### Error Handling
-- **[`error_handling.md`](error_handling.md)** - Error handling patterns.
-- **Use when**: Implementing error responses, custom exceptions.
-
-### Type Definitions
-- **[`types.md`](types.md)** - PHP & TypeScript type system.
-- **Use when**: Creating new types, understanding domain models.
-
-### Security
-- **[`security.md`](security.md)** - Auth, Policies, CSRF, XSS.
-- **Use when**: Implementing security, auth, file uploads.
-
-### Performance
-- **[`performance.md`](performance.md)** - Caching, Query optimization.
-- **[`monitoring.md`](monitoring.md)** - Monitoring & Observability.
-- **Use when**: Optimizing speed, setting up monitoring.
+- **[security.md](security.md)** - Auth, rate limiting, validation
+- **[error-handling.md](error-handling.md)** - Error handling patterns and response formats
 
 ## Testing
 
-- **[`testing.md`](testing.md)** - Testing approach (Pest, Playwright).
-- **[`pest_patterns.md`](pest_patterns.md)** - Pest testing patterns.
-- **Use when**: Writing Unit/Feature tests, mocking dependencies.
+- **[testing.md](testing.md)** - Test layers, TDD workflow, Pest/Playwright
+
+## Implementation
+
+- **[coding-guide.md](coding-guide.md)** - Day-to-day rules: PHP, testing, XServer deployment
+
+**Commands**: `mise run test` / `mise run migrate` / `mise run fresh` ([full list](../infrastructure/commands.md))
+
+**Reference**: [Database schema spec](schema-design-spec.md) | [Laravel Boost rules](boost.md)

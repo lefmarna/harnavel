@@ -14,7 +14,7 @@ mise run setup:backend  # Setup backend (requires containers)
 mise run build          # Build containers (no cache)
 mise run up             # Start containers
 mise run stop           # Stop containers
-mise run down           # Remove containers
+mise run down           # Stop and remove containers
 mise run restart        # Restart containers
 mise run ps             # List containers
 mise run logs           # View app logs
@@ -58,10 +58,10 @@ pnpm test:e2e:ui        # Run with UI mode (interactive debugging)
 pnpm test:e2e:headed    # Run with browser visible
 ```
 
-## Code Quality
+## Documentation
 
 ```bash
-mise run fix            # Fix code (ESLint + Prettier)
+pnpm lint:docs          # Validate internal markdown links in docs/
 ```
 
 ## Deployment

@@ -1,40 +1,23 @@
-# Frontend Development
+# Frontend Documentation
 
-This directory contains documentation for frontend development, including UI implementation, design system, and component libraries.
+React 19 + Inertia v2 + TypeScript (strict) + Tailwind v4 + Radix UI + Shadcn UI.
 
-## Technical Design Documents
+## Architecture & Design
 
-### Frontend Design
-- **[`implementation.md`](implementation.md)** - **Detailed Frontend Implementation Guide (Must Read)** (Wayfinder, Tailwind v4).
-- **[`transitions.md`](transitions.md)** - Screen flows and UI structure.
-- **[`design.md`](design.md)** - Component patterns and frontend architecture.
-- **Use when**: Creating pages, implementing UI components, navigation.
+- **[design.md](design.md)** - Architecture decisions, state management, data fetching
+- **[components.md](components.md)** - Component taxonomy, placement rules, styling conventions
+- **[design-system.md](design-system.md)** - Colors, typography, animations, layout
+- **[screen-transitions.md](screen-transitions.md)** - Page map, navigation structure, layout switching, middleware
 
-### SEO Requirements
-- **[`seo.md`](seo.md)** - SEO strategy (Meta tags, Sitemap).
-- **Use when**: Implementing public pages, meta tags.
+## Implementation
 
-### Type Definitions
-- **[`../backend/types.md`](../backend/types.md)** - PHP & TypeScript type system.
-- **Use when**: Creating new types, understanding domain models.
+- **[type-definitions.md](type-definitions.md)** - Type organization, domain types
+- **[seo.md](seo.md)** - Meta tags, OGP, sitemap, robots.txt, structured data
+- **[performance.md](performance.md)** - Image optimization, code splitting, memoization
+- **[coding-guide.md](coding-guide.md)** - Day-to-day rules: TypeScript, Tailwind v4, useEffect
 
-## Testing & QA
+## Testing
 
-- **[`e2e.md`](e2e.md)** - E2E scenarios & implementation.
-- **[`../backend/testing.md`](../backend/testing.md)** - Testing approach (Pest, Playwright).
-- **Use when**: Implementing E2E tests, verifying features.
+- **[e2e-testing.md](e2e-testing.md)** - Playwright config, test patterns, browser matrix
 
-## Design System
-
-- **[`design-system/README.md`](design-system/README.md)** - Overview & Quick Start.
-- **[`design-system/principles.md`](design-system/principles.md)** - Principles, Colors, Typography.
-- **[`design-system/components.md`](design-system/components.md)** - Component usage (Shadcn UI).
-- **[`design-system/animations.md`](design-system/animations.md)** - Animation patterns.
-- **[`design-system/layouts.md`](design-system/layouts.md)** - Layout & Grid system.
-- **Use when**: UI implementation, styling, animation.
-
-## Library Docs
-
-- **[`radix_patterns.md`](radix_patterns.md)** - Radix UI patterns.
-- **[`inertia_patterns.md`](inertia_patterns.md)** - Inertia.js patterns.
-- **Use when**: Using specific library features.
+**Commands**: `pnpm dev` / `pnpm fix` / `pnpm lint:typecheck` / `pnpm test:e2e --project=chromium` ([full list](../infrastructure/commands.md))

@@ -1,44 +1,49 @@
 # Frontend Design
 
-This document defines the frontend component design and architecture.
-It ensures code organization and state management consistency.
+## Contents
 
-## 1. Architecture (SPA + Inertia.js)
+- [Key Decisions](#key-decisions)
+- [Directory Structure](#directory-structure)
+- [State Management](#state-management)
 
-- **Entry Point**: `resources/js/app.tsx`.
-- **Components**: Functional components only (No class components).
-- **Hooks**: Use custom hooks for shared logic (`useForm`, `useUser`).
-- **Layouts**: Use Inertia Layouts for shared UI (`AppLayout.tsx`).
+## Key Decisions
 
-## 2. Component Structure
+These are the project-specific choices that differ from defaults:
 
-- **Atomic Design** (Simplified):
-  - **ui/**: Basic UI elements (Button, Input, Card). No domain logic.
-  - **features/**: Complex components with business logic (LoginForm, UserTable).
-  - **layouts/**: Page shells (Sidebar, Navbar).
-  - **pages/**: Inertia page components (connected to routes).
+| Decision         | Chose                            | Rationale                                                            |
+| ---------------- | -------------------------------- | -------------------------------------------------------------------- |
+| Architecture     | SPA + Inertia.js                 | Classic monolithic convenience with modern SPA feel                  |
+| State management | Inertia (Server) + React (Local) | Single source of truth from server; minimal client-side global state |
+| Styling          | Tailwind CSS v4                  | Utility-first, design tokens in CSS variables                        |
+| UI primitives    | Shadcn/ui + Radix UI             | Accessible, composable, customizable                                 |
 
-## 3. State Management
+## Directory Structure
 
-- **Inertia (Server State)**: Primary source of truth.
-  - Passed via props (`user`, `errors`, `flash`).
-- **React (Local State)**: UI-specific state.
-  - Use `useState` for simple UI state (modal open/close).
-  - Use `useReducer` for complex form logic.
-- **Global State (Avoid)**:
-  - Avoid Redux/Zustand unless absolutely necessary for cross-component state.
-  - Use React Context for theme/user preferences.
+```
+resources/js/
+├── app.tsx               # Entry point
+├── components/           # Shared UI (see components.md)
+│   └── ui/               # Shadcn/Radix primitives
+├── layouts/              # Page shells (Sidebar, Navbar)
+├── pages/                # Inertia page components
+├── hooks/                # Custom React hooks
+├── lib/                  # Utilities
+└── types/                # Type definitions
+```
 
-## 4. Styling (Tailwind CSS)
+**Naming**: kebab-case files/dirs, PascalCase components, `use` prefix for hooks, named exports.
 
-- **Utility-First**: Use Tailwind classes directly.
-- **Consistency**: Use design tokens (colors, spacing) defined in `tailwind.config.js`.
-- **Optimization**: Use `@apply` sparingly.
+## State Management
+
+- **Inertia (Server State)**: Passed via props (`user`, `errors`, `flash`). Primary source of truth.
+- **React (Local State)**: `useState` for UI (e.g., modals), `useReducer` for complex forms.
+- **Global State**: Avoided. Use Context only for theme/user preferences if needed.
 
 ## Verification Checklist
 
-- [ ] **Component Logic**: Is business logic separated from UI (hooks)?
-- [ ] **Prop Drilling**: Is prop drilling minimal (< 3 levels)? (Use Context or Composition).
-- [ ] **Reusability**: Are UI components generic and reusable?
-- [ ] **Performance**: Are heavy components lazy-loaded (`React.lazy`)?
-- [ ] **Accessibility**: Are semantic HTML tags used (`<button>`, `<nav>`, `<main>`)?
+- [ ] **Component Logic**: Business logic extracted to custom hooks
+- [ ] **Prop Drilling**: Max 3 levels (use Composition or Context otherwise)
+- [ ] **Reusability**: UI components are generic and domain-agnostic
+- [ ] **Performance**: Heavy components lazy-loaded (`React.lazy`)
+- [ ] **Accessibility**: Semantic HTML (`<button>`, `<nav>`, `<main>`) used
+- [ ] **State**: Server state (Inertia) used over client-side fetching where possible

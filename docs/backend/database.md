@@ -1,31 +1,27 @@
 # Database Design
 
-This document defines schema design rules and best practices for creating database tables.
+MariaDB 10.5 via Eloquent. Full ER diagrams and table definitions: [schema-design-spec.md](schema-design-spec.md)
 
-## 1. Naming Conventions
+## Migration Gotcha (Laravel 12)
 
-- **Tables**: Plural `snake_case` (e.g., `user_profiles`).
-- **Columns**: `snake_case`. Boolean uses `is_` or `has_` prefix.
-- **Foreign Keys**: `resource_id` (e.g., `user_id` in `orders` table).
-- **Indexes**: Describe index usage (e.g., `idx_user_email`).
+When modifying a column, the migration **must include ALL attributes** previously defined on the column. Laravel 12 drops any unspecified attributes.
 
-## 2. Constraints & Integrity
+```php
+// Bad - will drop the default value
+$table->string('name')->nullable()->change();
 
-- **Foreign Keys**: ALWAYS enforce at database level (`constrained()`).
-  - Use `onDelete('cascade')` carefully. Prefer `restrict` for critical data.
-- **Nullability**: Columns are NOT NULL by default unless explicitly `nullable()`.
-- **Soft Deletes**: Use `deleted_at` only for recoverable entities (e.g., User, Project).
+// Good - preserves all attributes
+$table->string('name')->default('')->nullable()->change();
+```
 
-## 3. Migrations
+## Test Database
 
-- **Down Method**: ALWAYS implement rollback logic.
-- **Atomicity**: Changes should be atomic. Do not mix schema changes and data seeding.
-- **Type**: Use `ulid()` or `uuid()` for primary keys if distributed system scaling is expected (default to `id()`/BigInt for simplicity).
+Separate `mariadb-testing` Docker container. Feature tests use `RefreshDatabase` trait with factories for consistent data.
 
 ## Verification Checklist
 
-- [ ] **Naming**: Are table/column names `snake_case`?
-- [ ] **Indexes**: Are frequently queried columns indexed?
-- [ ] **Foreign Keys**: Is `constrained()` used? Is `onDelete` behavior defined?
-- [ ] **Down Method**: Can `migrate:rollback` run without errors?
-- [ ] **Comment**: Is column purpose clear (use `->comment()` if needed)?
+- [ ] **Migration**: Column modification includes ALL existing attributes
+- [ ] **Factory**: Created/updated for new/modified models
+- [ ] **Transaction**: `DB::transaction` wraps multi-step write operations
+- [ ] **Eager loading**: Used (no N+1 patterns)
+- [ ] **Query**: `Model::query()` used instead of `DB::` facade (except `DB::transaction`)

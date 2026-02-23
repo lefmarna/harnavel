@@ -1,52 +1,37 @@
 # API Design
 
-This document defines the RESTful and Internal API design standards.
+## Routing
 
-## 1. RESTful Endpoints
+- Current version: `/api/v1` (Public) or `/app` (Inertia)
+- Route file: `routes/api.php` or `routes/web.php`
+- Controllers: `app/Http/Controllers/`
 
-- **Naming**: Resource-based (e.g., `POST /api/v1/users`).
-- **Verbs**: Use HTTP methods correctly (GET, POST, PUT, DELETE).
-- **Versioning**: Always include version prefix `/v1/`.
-- **Query Params**: Use `?include=posts` for Eager Loading, `?sort=-created_at` for sorting.
+## OpenAPI Workflow
 
-## 2. Response Format (JSON)
+This is the source-of-truth for Public API types.
 
-Standardized structure for consistency.
+**Modify API schema:**
 
-```json
-{
-  "success": true,
-  "data": { ... },
-  "meta": { "pagination": { ... } } // If needed
-}
-```
+1. Add OpenAPI attributes to controller methods
+2. Run `mise run openapi` (if available) to generate docs
 
-## 3. Error Responses
+**Internal API (Inertia):**
 
-- **Status Code**: Use semantic HTTP codes (400, 401, 403, 404, 422, 500).
-- **Body**:
+Props are typed via TypeScript interfaces and validated via Wayfinder.
 
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "The email field is required.",
-    "errors": { "email": ["Required"] } // For 422
-  }
-}
-```
+## Auth
 
-## 4. Internal API (Inertia Props)
+Sanctum with stateful cookies (Inertia) + token-based (API). CSRF protection enabled.
 
-- **Naming**: Props should match Model attributes or DTO fields.
-- **Typing**: Use Typescript Interfaces for all props.
-- **Structure**: Avoid deep nesting. Flatten data if possible.
+## Validation & Responses
+
+- Input: Form Request classes (`app/Http/Requests/`), never inline
+- Output: API Resources (`app/Http/Resources/`) or `Inertia::render()`
+- Errors: See [error-handling.md](error-handling.md) for response formats and status code mapping
 
 ## Verification Checklist
 
-- [ ] **Method**: Is the correct HTTP verb used?
-- [ ] **Status**: Are 201 (Created) and 204 (No Content) used correctly?
-- [ ] **Format**: Does the response follow the standard JSON structure?
-- [ ] **Validation**: Are request inputs validated using FormRequest?
-- [ ] **Error Handling**: Are exceptions caught and returned as JSON errors?
+- [ ] **OpenAPI**: Attributes present on all controller methods
+- [ ] **Input**: Form Request class for validation
+- [ ] **Output**: API Resource or Inertia Props for formatting
+- [ ] **Auth**: Endpoints consistently protected (see [security.md](security.md))

@@ -1,38 +1,40 @@
 # Inception Deck
 
-This document defines the project vision, elevator pitch, and scope boundaries.
-It ensures all team members and AI agents align on "why we are here" and "what we are NOT doing".
+Project constraints, architectural trade-offs, and risk assessment. For what the product does, see [concept.md](concept.md).
 
-## 1. Why are we here?
+## Scope Boundaries
 
-To provide a high-quality, pre-configured development environment that reduces setup time and enforces best practices for Laravel + React (Inertia) applications.
+| In Scope              | Out of Scope        | Unresolved      |
+| --------------------- | ------------------- | --------------- |
+| Auth (Login/Register) | CMS / Blog features | 3rd Party OAuth |
+| User Dashboard        | Microservices       |                 |
+| Profile Management    | Static Site Gen     |                 |
 
-## 2. Elevator Pitch
+## System Boundaries
 
-For developers who want to build modern web applications,
-This template is a **starting point**
-That provides a **fully integrated Laravel + React stack**
-Unlike starting from scratch or using separate repositories,
-Our product offers a **cohesive, dockerized, and opinionated setup**.
+- **Frontend**: React 19 + Inertia v2 (Monorepo-ish structure)
+- **Backend**: Laravel 12 (API + Auth)
+- **Database**: MariaDB 10.5
+- **Deploy**: XServer (Shared Hosting)
 
-## 3. The NOT List (Out of Scope)
+## Technical Constraints
 
-Defining what we will **NOT** do is crucial for focus.
+1.  **XServer** - No queue workers (Sync jobs only), `.htaccess` routing.
+2.  **Stack** - PHP 8.3+, TypeScript Strict Mode.
+3.  **Monolith** - Single repo, simple deployment.
 
-- **NOT a CMS**: We focus on custom application logic, not generic content management.
-- **NOT a Microservices Architecture**: Monolithic by default (easier to maintain).
-- **NOT a Static Site Generator**: Dynamic application logic is the core.
-- **NO Complex Authorization (Initially)**: Simple roles (User/Admin) suffice for MVP.
-- **NO Third-party OAuth (Initially)**: Stick to email/password for simplicity.
+## Trade-offs
 
-## 4. Technical Constraints
+| Decision     | Chose              | Over      | Rationale                             |
+| ------------ | ------------------ | --------- | ------------------------------------- |
+| Architecture | Monolith (Inertia) | API + SPA | Simplicity, no API design overhead    |
+| Hosting      | XServer            | Cloud/VPS | Cost efficiency                       |
+| Auth         | Session/Cookie     | JWT       | Native security, less complexity      |
 
-- **Stack**: Laravel 12 (PHP 8.2+), React 19 (Inertia v2), Tailwind CSS v4.
-- **Database**: MariaDB 10.11+ (MySQL compatible).
-- **Environment**: Docker (Compose) based.
+## Risks
 
-## Verification Checklist
-
-- [ ] **Alignment**: Does the proposed feature align with the "Why"?
-- [ ] **Scope Creep**: Is the feature on the "NOT List"? (If yes, reject or re-evaluate).
-- [ ] **Simplicity**: Are we over-engineering for problems we don't have yet?
+| Risk                  | Impact | Mitigation                    |
+| --------------------- | ------ | ----------------------------- |
+| Shared Hosting Limits | High   | Sync jobs, Optimize queries   |
+| Asset compilation     | Medium | Local build / Github Actions  |
+| SEO (SPA)             | Medium | Server-side metadata in Blade |

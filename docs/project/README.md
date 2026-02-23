@@ -1,13 +1,14 @@
-# Project Overview & Requirements
+# Project Documentation
 
-This directory contains project-level documentation, including concepts, requirements, and functional specifications.
+Project-level context shared across all stakeholders.
 
-## Project Concept & Requirements
+## Overview
 
-- **[`concept.md`](concept.md)** - Business requirements and functional specs.
-- **[`inception.md`](inception.md)** - Project vision and goals.
-- **Use when**: Understanding business logic, features, or project goals.
+- **[concept.md](concept.md)** - What this project is, who it's for, what it does
+- **[inception.md](inception.md)** - Technical constraints, trade-offs, risks
+
+For technical implementation, see [frontend/](../frontend/) or [backend/](../backend/).
 
 ## Specification Phase Only
 
-Spec-driven development instructions are loaded only during specification work. Use `.kiro/requirements/` for cc-sdd (requirements definition) and `.kiro/specs/` for design/implementation specs. See **[`sdd_guide.md`](sdd_guide.md)**.
+Spec-driven development instructions are loaded only during specification work. Use `.kiro/requirements/` for cc-sdd (requirements definition) and `.kiro/specs/` for design/implementation specs. See **[specs.md](specs.md)**.

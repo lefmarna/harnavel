@@ -1,48 +1,68 @@
 # Test Strategy
 
-This document defines the testing strategy for ensuring quality and reliability.
-Use this guide when creating new features or fixing bugs.
+## Test Layers
 
-## 1. Test Layers
+| Layer   | Tool       | Scope                             | Speed    | Location         |
+| ------- | ---------- | --------------------------------- | -------- | ---------------- |
+| Unit    | Pest       | Pure logic, helpers, calculations | Fast     | `tests/Unit/`    |
+| Feature | Pest       | API endpoints, DB, auth flows     | Moderate | `tests/Feature/` |
+| E2E     | Playwright | Full user flows (browser)         | Slow     | `e2e/tests/`     |
 
-### A. Unit Tests (Pest)
-**Purpose**: Verify isolated logic.
-- **Speed**: Very fast (<10ms).
-- **Scope**: Domain objects, utility functions, single methods.
-- **Dependencies**: Mocked (Mockery/Interfaces).
-- **Command**: `php artisan test --filter Unit`
+## TDD Workflow
 
-### B. Feature/Integration Tests (Pest)
-**Purpose**: Verify component interactions (DB, API).
-- **Speed**: Moderate.
-- **Scope**: Controllers, Repositories, Jobs, Events.
-- **Dependencies**: Real DB (SQLite/MariaDB), Fake external services (`Http::fake()`).
-- **Command**: `php artisan test --filter Feature`
+1. Write a failing test: `php artisan make:test --pest FeatureName`
+2. Implement minimal code to pass
+3. Refactor while keeping tests green
+4. Run `php artisan test --filter=FeatureName` frequently
 
-### C. E2E Tests (Playwright)
-**Purpose**: Verify critical user flows.
-- **Speed**: Slow.
-- **Scope**: Full application stack (Login -> Checkout).
-- **Dependencies**: Real environment.
-- **Command**: `pnpm test:e2e`
+## Pest Conventions
 
-## 2. Coverage Goals
+**Test names in Japanese** for readability in test output:
 
-- **Business Logic (Domain)**: >90%
-- **Controllers**: >80% (Happy path + Error cases)
-- **Critical Paths**: 100% (E2E)
+```php
+test('ユーザーが新規登録できること', function () {
+    // Arrange
+    $user = User::factory()->make();
 
-## 3. Best Practices (Pest)
+    // Act
+    $response = $this->post('/register', $user->toArray());
 
-- **Datasets**: Use `with(...)` for parameterized tests.
-- **Assertions**: Use expressive assertions (`expect($user)->toBeInstanceOf(User::class)`).
-- **Factories**: Use Model Factories for test data setup.
-- **Mocking**: Minimize mocking in Feature tests; maximize in Unit tests.
+    // Assert
+    $response->assertOk();
+});
+```
+
+**Base setup** (`tests/Pest.php`):
+
+- All Feature tests use `RefreshDatabase` (DB reset per test)
+
+**Patterns**:
+
+- Use `Mail::fake()`, `Notification::fake()` for mail/notification assertions
+- Use factories for test data (`User::factory()->create()`)
+- Use datasets (`->with([...])`) for parameterized validation tests
+
+## E2E Testing (Playwright)
+
+Tests in `e2e/tests/`. Run against the Docker backend.
+
+```bash
+pnpm test:e2e                    # All tests
+pnpm test:e2e --project=chromium # Chromium only (CI default)
+pnpm test:e2e:ui                 # Interactive UI mode
+```
+
+**Guidelines**:
+
+- Test titles in Japanese
+- Semantic locators (`getByRole`, `getByLabel`) over CSS selectors
+- Each test file self-contained (no shared mutable state)
 
 ## Verification Checklist
 
-- [ ] **Unit Tests**: Does logic handle edge cases (null, empty, limits)?
-- [ ] **Feature Tests**: Does DB state change correctly? Are events fired?
-- [ ] **E2E Tests**: Does the critical path work end-to-end?
-- [ ] **Performance**: Do tests run efficiently (minimize sleep)?
-- [ ] **Cleanup**: Does test data clean up after execution (`RefreshDatabase`)?
+- [ ] **Naming**: Test names describe behavior in Japanese
+- [ ] **Factory**: Used for test data (no manual model creation)
+- [ ] **Mocking**: `Mail::fake()` / `Notification::fake()` for side effect assertions
+- [ ] **Coverage**: Feature tests cover happy path + error cases + edge cases
+- [ ] **Performance**: No `sleep()` in tests (use retrying assertions in E2E)
+- [ ] **Isolation**: Tests pass independently (no order dependency)

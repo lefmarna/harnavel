@@ -1,19 +1,20 @@
-# Infrastructure
+# Infrastructure Documentation
 
-This directory contains documentation for infrastructure setup, testing strategies, CI/CD, and development workflows.
+Docker + mise + pnpm + GitHub Actions.
 
-## Technical Design Documents
+## Environment
 
-### Development Setup
-- **[`setup.md`](setup.md)** - Environment setup & workflow.
-- **[`docker.md`](docker.md)** - Docker services & environment variables.
-- **[`commands.md`](commands.md)** - Full CLI command reference (mise, pnpm, docker).
-- **Use when**: Setting up local environment, understanding commands.
+- **[setup.md](setup.md)** - Development environment prerequisites and setup
+- **[docker.md](docker.md)** - Docker architecture and service details
 
-### Test Strategy
-- **[`../backend/testing.md`](../backend/testing.md)** - Testing approach (Pest, Playwright).
-- **Use when**: Understanding overall test structure and CI execution.
+## Development
 
-### CI/CD
-- **[`cicd.md`](cicd.md)** - GitHub Actions & Deployment.
-- **Use when**: Modifying workflows, understanding deployment.
+- **[commands.md](commands.md)** - All available CLI commands
+
+## Deployment
+
+- **[cicd.md](cicd.md)** - CI/CD pipeline, deployment, branching strategy
+
+**Quick start**: `cp .env.example .env && mise run setup && pnpm dev`
+
+App: http://localhost:8080 | Mailpit: http://localhost:8025

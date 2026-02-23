@@ -1,62 +1,71 @@
-# Development Setup
+# Development Environment Setup
 
-This document defines the standard procedure for setting up the development environment.
-It ensures a consistent and reproducible development workflow.
+## Prerequisites
 
-## 1. Prerequisites
+| Tool                                      | Purpose                                              | Install                                                |
+| ----------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
+| [mise](https://mise.jdx.dev/)             | Task runner + manages Node.js 24.13.0 + pnpm 10.28.1 | [mise docs](https://mise.jdx.dev/getting-started.html) |
+| [Docker Desktop](https://www.docker.com/) | Backend container runtime                            | docker.com                                             |
 
-- **Docker Desktop**: Running.
-- **Node.js**: Latest LTS (v20+).
-- **Composer**: v2.x.
-- **PNPM**: v9+.
+## Quick Setup
 
-## 2. Setup Commands (Step-by-Step)
+```bash
+cp .env.example .env
+mise run setup    # Installs everything, builds containers, runs migrations + seed
+pnpm dev          # Start frontend dev server
+```
 
-1.  **Clone Repository**:
-    ```bash
-    git clone <repo-url>
-    cd <repo-dir>
-    ```
+## Manual Setup
 
-2.  **Environment Configuration**:
-    ```bash
-    cp .env.example .env
-    # Edit .env if needed (APP_NAME, DB_PASSWORD)
-    ```
+Use if you need fine-grained control over each step:
 
-3.  **Start Docker Containers**:
-    ```bash
-    docker compose up -d
-    ```
+```bash
+# 1. Environment variables
+cp .env.example .env
 
-4.  **Install Dependencies**:
-    ```bash
-    docker compose exec app composer install
-    pnpm install
-    ```
+# 2. Frontend dependencies
+pnpm install
 
-5.  **Initialize Database**:
-    ```bash
-    docker compose exec app php artisan key:generate
-    docker compose exec app php artisan migrate:fresh --seed
-    ```
+# 3. Backend containers
+docker compose up -d
 
-6.  **Start Frontend Dev Server**:
-    ```bash
-    pnpm dev
-    ```
+# 4. Backend dependencies
+docker compose exec app composer install
 
-## 3. Troubleshooting
+# 5. Database
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate:fresh --seed
 
-- **Container Conflicts**: Run `docker compose down --volumes` and retry `up`.
-- **Permission Issues**: Check `storage/` and `bootstrap/cache` permissions (`chmod -R 777`).
-- **NPM Modules**: Delete `node_modules` and run `pnpm install` again.
-- **Composer Autoload**: Run `composer dump-autoload` if classes are not found.
+# 6. Frontend dev server
+pnpm dev
+```
 
-## Verification Checklist
+## Access Points
 
-- [ ] **Containers**: Are `app`, `nginx`, `mariadb` running (`docker compose ps`)?
-- [ ] **Database**: Can you access the database (`docker compose exec mariadb mysql -u root -p`)?
-- [ ] **Frontend**: Is `localhost:5173` (Vite) accessible?
-- [ ] **Backend**: Is `localhost` accessible (Laravel)?
-- [ ] **Tests**: Do `php artisan test` and `pnpm test` pass?
+| Service | URL                   |
+| ------- | --------------------- |
+| App     | http://localhost:8080 |
+| Mailpit | http://localhost:8025 |
+
+Docker service details: [docker.md](docker.md). Full command reference: [commands.md](commands.md).
+
+## Troubleshooting
+
+**Port conflicts** - Modify `.env`:
+
+```
+NGINX_PORT=9080
+MARIADB_PORT=5306
+```
+
+**Container issues** - Full rebuild:
+
+```bash
+mise run destroy && mise run build && mise run up
+```
+
+**Database reset**:
+
+```bash
+mise run fresh
+```

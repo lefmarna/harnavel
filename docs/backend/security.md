@@ -1,56 +1,37 @@
 # Security Design
 
-This document defines the application security strategy and implementation.
-It ensures protection against common web vulnerabilities.
+## Authentication
 
-## 1. Authentication (AuthN)
+Laravel Fortify with session cookies. Session-based via `web` guard.
 
-- **Mechanisms**: Laravel Fortify (Session-based).
-- **Passwords**: Hashed with Argon2id (`config/hashing.php`).
-- **Rate Limiting**: Applied to login/register endpoints (60/min).
-- **2FA**: Optional (Totp, Backup codes).
+- **CSRF**: Handled automatically via Inertia. Session expiry (419) returns user-friendly error.
+- **Password**: Argon2id hashing (`config/hashing.php`).
+- **2FA**: TOTP-based two-factor authentication via Fortify.
 
-## 2. Authorization (AuthZ)
+## Rate Limiting
 
-- **Policies**: Use Laravel Policies (`UserPolicy`, `PostPolicy`) for resource access.
-- **Middleware**: Use `auth:sanctum` or `auth` middleware for protected routes.
-- **Roles/Permissions**: (e.g., Spatie Permission) if complex role hierarchy is needed.
+Defined in `FortifyServiceProvider`:
 
-## 3. Vulnerability Protection
+| Limiter      | Scope                  | Limit  |
+| ------------ | ---------------------- | ------ |
+| `login`      | email + IP             | 5/min  |
+| `two-factor` | session login ID       | 5/min  |
 
-### CSRF (Cross-Site Request Forgery)
+## Validation
 
-- **Protection**: Laravel `VerifyCsrfToken` middleware enabled.
-- **Frontend**: Include `@csrf` token in meta tags or use Inertia form helpers (automatic).
+- **Always Form Request classes** (`app/Http/Requests/`), never inline
+- Custom rules in `app/Rules/`
+- Validation errors: 422 with `{ message, errors: { field: [...] } }`
 
-### XSS (Cross-Site Scripting)
+## Sensitive Data
 
-- **Protection**: Blade `{{ $var }}` escapes HTML by default.
-- **Frontend**: React escapes variables by default.
-- **Allowed HTML**: Use `Purifier` (HTMLPurifier) for rich text input.
-
-### SQL Injection
-
-- **Protection**: Use Eloquent/PDO parameterized queries.
-- **Raw SQL**: Avoid `DB::raw()` with user input.
-
-### File Uploads
-
-- **Protection**: Validate file types (MIME), size (max 10MB), and extension.
-- **Storage**: Store outside `public/` directory (use `Storage::disk('private')`).
-- **Scan**: Scan uploaded files for malware (ClamAV) if possible.
-
-## 4. Sensitive Data
-
-- **Environment**: Store secrets in `.env` (API keys, DB password).
-- **Logs**: Do not log sensitive data (passwords, tokens).
-- **Encryption**: Encrypt sensitive columns (`encrypted` cast).
+- Secrets in `.env` only, accessed via `config()` (see also [architecture constraints](architecture.md#project-specific-constraints))
+- **Never log**: passwords, tokens, or sensitive user data
 
 ## Verification Checklist
 
-- [ ] **CSRF**: Test form submission without token (should fail 419).
-- [ ] **XSS**: Test input `<script>alert(1)</script>` (should be escaped).
-- [ ] **SQL Injection**: Test input `' OR 1=1 --` (should not break query).
-- [ ] **File Upload**: Test uploading executable file (`.php`, `.exe`) (should be rejected).
-- [ ] **Permissions**: Test accessing admin route as user (should be 403 Forbidden).
-- [ ] **Secrets**: Check for hardcoded secrets (`grep -r "SECRET" src/`).
+- [ ] **CSRF**: Form submission fails without token (419)
+- [ ] **Rate limit**: Applied to all auth-related endpoints
+- [ ] **Validation**: Form Request used (no inline validation in controller)
+- [ ] **Secrets**: No secrets in committed files
+- [ ] **Logging**: Passwords excluded from session flash and log context

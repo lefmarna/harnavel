@@ -1,54 +1,44 @@
 # SEO Requirements
 
-This document defines the SEO strategy, including meta tags, sitemaps, and structured data.
-It ensures the application is discoverable and optimized for search engines.
+## Core Strategy
 
-For implementation details and code examples, please refer to the **`seo-optimization` skill**.
+**Hybrid Approach** (Laravel Blade + Inertia):
+- **Server-Side (Blade)**: Default meta tags set in `app.blade.php`. Ensures visibility to bots without JS.
+- **Client-Side (Inertia)**: `<Head>` component updates tags on navigation.
 
-## 1. Core Strategy (Hybrid Approach)
+## Required Meta Tags
 
-To support both modern browsers and legacy crawlers (Twitter/LINE bots), we use a hybrid approach:
+| Tag         | Requirement          | Format                 |
+| ----------- | -------------------- | ---------------------- |
+| Title       | Unique, < 60 chars   | `Page Name - App Name` |
+| Description | Concise, < 160 chars | Summary of content     |
+| Canonical   | Self-referencing     | Absolute URL           |
+| Robots      | `index, follow`      | Unless restricted      |
 
-- **Server-Side (Blade)**: Set default meta tags in `app.blade.php` using `withViewData` from controllers. This ensures OGP tags are visible to bots that don't execute JavaScript.
-- **Client-Side (Inertia)**: Use `<Head>` component (via `SeoHead`) to update tags dynamically on client-side navigation.
+## Open Graph & Twitter Card
 
-## 2. Required Meta Tags
+| Property         | Value                 | Note         |
+| ---------------- | --------------------- | ------------ |
+| `og:type`        | `website` / `article` |              |
+| `og:url`         | Canonical URL         |              |
+| `og:title`       | Page Title            |              |
+| `og:description` | Page Description      |              |
+| `og:image`       | 1200x630px            | Absolute URL |
+| `twitter:card`   | `summary_large_image` |              |
 
-All pages MUST include:
+## Technical Implementation
 
-- [ ] **Title**: Unique, descriptive, < 60 chars. Format: `Page Name - App Name`.
-- [ ] **Description**: Concise summary, < 160 chars.
-- [ ] **Canonical URL**: Self-referencing URL to prevent duplicate content issues.
-- [ ] **Robots**: `index, follow` (unless restricted).
+- **Component**: Shared `SeoHead` component (see `seo-optimization` skill).
+- **Sitemap**: `spatie/laravel-sitemap` (Daily generation).
+- **Robots.txt**: Served via `routes/web.php` (Dynamic per env).
+- **Structured Data**: JSON-LD in `<Head>`.
 
-## 3. Open Graph (OG) & Twitter Card
-
-For social sharing correctness (tested via Facebook Debugger):
-
-- [ ] **og:type**: `website` or `article`.
-- [ ] **og:url**: Full canonical URL.
-- [ ] **og:title**: Same as page title.
-- [ ] **og:description**: Same as meta description.
-- [ ] **og:image**: High-quality image (1200x630px recommended). Absolute URL.
-- [ ] **twitter:card**: `summary_large_image`.
-
-## 4. Technical Implementation Requirements
-
-- **Component**: Use the shared `SeoHead` component (see `seo-optimization` skill).
-- **Sitemap**: Generated daily via `spatie/laravel-sitemap`.
-- **Robots.txt**: Serve dynamically via `routes/web.php` to handle environment differences.
-- **Structured Data**: JSON-LD embedded in `<Head>` for rich snippets.
-
-## 5. Performance (Core Web Vitals)
-
-- **LCP (Largest Contentful Paint)**: < 2.5s
-- **FID (First Input Delay)**: < 100ms
-- **CLS (Cumulative Layout Shift)**: < 0.1
 
 ## Verification Checklist
 
-- [ ] **Lighthouse**: Run `npm run lighthouse` (or Chrome DevTools) -> SEO score > 90.
-- [ ] **SSR Fallback**: View Page Source (`Cmd+Opt+U`) -> Are title/desc/OGP tags present in raw HTML? (Critical for Bots).
-- [ ] **Client Update**: Click internal links -> Does the browser tab title update?
-- [ ] **OGP**: Use Facebook Sharing Debugger / Twitter Card Validator.
-- [ ] **Sitemap**: Is `sitemap.xml` accessible and valid?
+- [ ] **Lighthouse**: SEO score > 90
+- [ ] **Blade output**: View Source shows meta tags (for bots)
+- [ ] **Client Update**: Tab title updates on navigation
+- [ ] **OGP**: Validated with Facebook Debugger / Twitter Validator
+- [ ] **Sitemap**: XML valid and accessible
+

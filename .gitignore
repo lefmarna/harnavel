@@ -4,12 +4,12 @@
 /public/build
 /public/hot
 /public/storage
+/storage/*.key
+/storage/pail
+/storage/mariadb
 /resources/js/actions
 /resources/js/routes
 /resources/js/wayfinder
-/storage/mariadb
-/storage/*.key
-/storage/pail
 /vendor
 /.deploy
 .DS_Store

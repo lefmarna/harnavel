@@ -6,7 +6,7 @@ const isCI = !!process.env.CI
 const envFile = fs.existsSync('.env') ? fs.readFileSync('.env', 'utf8') : ''
 const envPort = envFile.match(/^NGINX_PORT=(\d+)$/m)?.[1] ?? '8080'
 const localPort = Number.parseInt(envPort, 10)
-const PORT = isCI ? 8000 : (Number.isNaN(localPort) ? 8080 : localPort)
+const PORT = isCI ? 8000 : Number.isNaN(localPort) ? 8080 : localPort
 
 export default defineConfig({
   testDir: './e2e',

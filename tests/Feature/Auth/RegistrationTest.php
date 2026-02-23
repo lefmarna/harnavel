@@ -3,7 +3,7 @@
 test('registration screen can be rendered', function () {
     $response = $this->get(route('register'));
 
-    $response->assertStatus(200);
+    $response->assertOk();
 });
 
 test('new users can register', function () {

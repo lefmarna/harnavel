@@ -1,11 +1,10 @@
 {
   "semi": false,
   "singleQuote": true,
-  "plugins": [
-    "prettier-plugin-organize-imports",
-    "prettier-plugin-tailwindcss"
-  ],
-  "tailwindFunctions": ["clsx", "cn"],
+  "singleAttributePerLine": false,
+  "htmlWhitespaceSensitivity": "css",
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tailwindFunctions": ["clsx", "cn", "cva"],
   "tailwindStylesheet": "resources/css/app.css",
   "overrides": [
     {

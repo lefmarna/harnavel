@@ -1,4 +1,4 @@
-[mcp_servers.php]
+[mcp_servers.laravel-boost]
 command = "docker"
 args = ["compose", "exec", "app", "php", "artisan", "boost:mcp"]
 

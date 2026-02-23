@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -24,13 +25,23 @@ class PasswordController extends Controller
      */
     public function update(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        $request->user()->update([
-            'password' => $validated['password'],
+        $user = $request->user();
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        $password = $request->input('password');
+        if (! is_string($password)) {
+            abort(422);
+        }
+
+        $user->update([
+            'password' => $password,
         ]);
 
         return back();

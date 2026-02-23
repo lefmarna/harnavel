@@ -5,7 +5,7 @@
 ```
 Push (develop/main) → GitHub Actions
                          │
-                         ├── Lint (Pint + ESLint + Prettier)
+                         ├── Lint (Pint + Larastan/PHPStan + ESLint + Prettier)
                          ├── Test (Pest + Playwright)
                          └── Deploy (if main)
 ```

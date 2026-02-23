@@ -43,6 +43,7 @@ mise run fresh          # Fresh migration with seed
 mise run rollback       # Rollback last migration
 mise run status         # Migration status
 mise run test           # Run Pest tests
+mise run analyse        # Run Larastan/PHPStan static analysis
 mise run tinker         # Laravel tinker
 mise run route          # List routes
 mise run clear          # Clear all caches

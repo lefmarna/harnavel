@@ -92,6 +92,10 @@ description = "Run tests"
 run = "docker compose exec app php artisan test $@"
 raw = true
 
+[tasks.analyse]
+description = "Run static analysis (Larastan/PHPStan)"
+run = "docker compose exec app composer analyse"
+
 [tasks."composer:install"]
 description = "Composer install"
 run = "docker compose exec app composer install"

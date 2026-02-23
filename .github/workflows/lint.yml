@@ -35,6 +35,9 @@ jobs:
       - name: Run Pint
         run: vendor/bin/pint
 
+      - name: Run Static Analysis
+        run: composer analyse
+
       - name: Format Frontend
         run: pnpm run format
 

@@ -1,11 +1,8 @@
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController'
-import { send } from '@/routes/verification'
-import { type BreadcrumbItem, type SharedData } from '@/types'
 import { Transition } from '@headlessui/react'
 import { Form, Head, Link, usePage } from '@inertiajs/react'
-
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController'
 import DeleteUser from '@/components/delete-user'
-import HeadingSmall from '@/components/heading-small'
+import Heading from '@/components/heading'
 import InputError from '@/components/input-error'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +10,8 @@ import { Label } from '@/components/ui/label'
 import AppLayout from '@/layouts/app-layout'
 import SettingsLayout from '@/layouts/settings/layout'
 import { edit } from '@/routes/profile'
+import { send } from '@/routes/verification'
+import type { BreadcrumbItem, SharedData } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -29,6 +28,11 @@ export default function Profile({
   status?: string
 }) {
   const { auth } = usePage<SharedData>().props
+  const user = auth.user
+
+  if (!user) {
+    return null
+  }
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -38,7 +42,8 @@ export default function Profile({
 
       <SettingsLayout>
         <div className="space-y-6">
-          <HeadingSmall
+          <Heading
+            variant="small"
             title="Profile information"
             description="Update your name and email address"
           />
@@ -58,7 +63,7 @@ export default function Profile({
                   <Input
                     id="name"
                     className="mt-1 block w-full"
-                    defaultValue={auth.user.name}
+                    defaultValue={user.name}
                     name="name"
                     required
                     autoComplete="name"
@@ -75,7 +80,7 @@ export default function Profile({
                     id="email"
                     type="email"
                     className="mt-1 block w-full"
-                    defaultValue={auth.user.email}
+                    defaultValue={user.email}
                     name="email"
                     required
                     autoComplete="username"
@@ -85,7 +90,7 @@ export default function Profile({
                   <InputError className="mt-2" message={errors.email} />
                 </div>
 
-                {mustVerifyEmail && auth.user.email_verified_at === null && (
+                {mustVerifyEmail && user.email_verified_at === null && (
                   <div>
                     <p className="-mt-4 text-sm text-muted-foreground">
                       Your email address is unverified.{' '}

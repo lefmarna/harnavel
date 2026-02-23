@@ -1,4 +1,7 @@
-import HeadingSmall from '@/components/heading-small'
+import { Form, Head } from '@inertiajs/react'
+import { ShieldBan, ShieldCheck } from 'lucide-react'
+import { useState } from 'react'
+import Heading from '@/components/heading'
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes'
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal'
 import { Badge } from '@/components/ui/badge'
@@ -7,12 +10,9 @@ import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth'
 import AppLayout from '@/layouts/app-layout'
 import SettingsLayout from '@/layouts/settings/layout'
 import { disable, enable, show } from '@/routes/two-factor'
-import { type BreadcrumbItem } from '@/types'
-import { Form, Head } from '@inertiajs/react'
-import { ShieldBan, ShieldCheck } from 'lucide-react'
-import { useState } from 'react'
+import type { BreadcrumbItem } from '@/types'
 
-interface TwoFactorProps {
+type Props = {
   requiresConfirmation?: boolean
   twoFactorEnabled?: boolean
 }
@@ -27,7 +27,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function TwoFactor({
   requiresConfirmation = false,
   twoFactorEnabled = false,
-}: TwoFactorProps) {
+}: Props) {
   const {
     qrCodeSvg,
     hasSetupData,
@@ -48,7 +48,8 @@ export default function TwoFactor({
 
       <SettingsLayout>
         <div className="space-y-6">
-          <HeadingSmall
+          <Heading
+            variant="small"
             title="Two-Factor Authentication"
             description="Manage your two-factor authentication settings"
           />

@@ -1,4 +1,4 @@
-import { Icon } from '@/components/icon'
+import type { ComponentPropsWithoutRef } from 'react'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -7,8 +7,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { toUrl } from '@/lib/utils'
-import { type NavItem } from '@/types'
-import { type ComponentPropsWithoutRef } from 'react'
+import type { NavItem } from '@/types'
 
 export function NavFooter({
   items,
@@ -35,9 +34,7 @@ export function NavFooter({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {item.icon && (
-                    <Icon iconNode={item.icon} className="h-5 w-5" />
-                  )}
+                  {item.icon && <item.icon className="h-5 w-5" />}
                   <span>{item.title}</span>
                 </a>
               </SidebarMenuButton>

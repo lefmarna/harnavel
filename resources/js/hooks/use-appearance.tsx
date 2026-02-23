@@ -3,6 +3,12 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react'
 export type ResolvedAppearance = 'light' | 'dark'
 export type Appearance = ResolvedAppearance | 'system'
 
+export type UseAppearanceReturn = {
+  readonly appearance: Appearance
+  readonly resolvedAppearance: ResolvedAppearance
+  readonly updateAppearance: (mode: Appearance) => void
+}
+
 const listeners = new Set<() => void>()
 let currentAppearance: Appearance = 'system'
 
@@ -51,10 +57,7 @@ const mediaQuery = (): MediaQueryList | null => {
   return window.matchMedia('(prefers-color-scheme: dark)')
 }
 
-const handleSystemThemeChange = (): void => {
-  applyTheme(currentAppearance)
-  notify()
-}
+const handleSystemThemeChange = (): void => applyTheme(currentAppearance)
 
 export function initializeTheme(): void {
   if (typeof window === 'undefined') return
@@ -71,7 +74,7 @@ export function initializeTheme(): void {
   mediaQuery()?.addEventListener('change', handleSystemThemeChange)
 }
 
-export function useAppearance() {
+export function useAppearance(): UseAppearanceReturn {
   const appearance: Appearance = useSyncExternalStore(
     subscribe,
     () => currentAppearance,

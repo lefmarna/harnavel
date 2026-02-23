@@ -28,10 +28,11 @@ Follow TDD with Pest. Test conventions and workflow: [testing.md](testing.md).
 All commands via Docker. Full reference: [commands.md](../infrastructure/commands.md).
 
 ```bash
+mise run verify:backend
+mise run pint
+mise run analyse
+mise run test -- --filter=...
 docker compose exec app php artisan make:* --no-interaction
-docker compose exec app php artisan test --filter=...
-docker compose exec app composer analyse
-docker compose exec app vendor/bin/pint --dirty
 ```
 
 # XServer Deployment

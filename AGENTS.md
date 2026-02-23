@@ -29,10 +29,10 @@ Run checks based on what you changed (see [docs/infrastructure/commands.md](docs
 pnpm fix && pnpm lint:typecheck && pnpm test:e2e --project=chromium
 
 # Backend changes
-mise run test && pnpm test:e2e --project=chromium
+mise run verify:backend && pnpm test:e2e --project=chromium
 
 # Both
-pnpm fix && pnpm lint:typecheck && mise run test && pnpm test:e2e --project=chromium
+pnpm fix && pnpm lint:typecheck && mise run verify:backend && pnpm test:e2e --project=chromium
 
 # Documentation changes
 # Verify internal links are valid and version/config references match source code

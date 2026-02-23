@@ -17,6 +17,7 @@ class DomainServiceProvider extends ServiceProvider
     /**
      * バインド対象のサービス名プレフィックスリスト
      * 例: 'User' -> UserServiceContract / UserService
+     *
      * @var array<string>
      */
     private const PREFIXES = [
@@ -25,8 +26,6 @@ class DomainServiceProvider extends ServiceProvider
 
     /**
      * Register any application services.
-     *
-     * @return void
      */
     public function register(): void
     {

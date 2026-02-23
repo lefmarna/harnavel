@@ -96,6 +96,27 @@ raw = true
 description = "Run static analysis (Larastan/PHPStan)"
 run = "docker compose exec app composer analyse"
 
+[tasks.pint]
+description = "Run Laravel Pint formatter on changed PHP files"
+run = "docker compose exec app vendor/bin/pint --dirty --format=agent"
+
+[tasks."verify:backend"]
+description = "Run backend quality checks (Pint + Larastan + Pest)"
+run = """
+docker compose exec app vendor/bin/pint --dirty --format=agent && \
+docker compose exec app composer analyse && \
+docker compose exec app php artisan test
+"""
+
+[tasks."verify:backend:full"]
+description = "Run backend quality checks plus Chromium E2E"
+run = """
+docker compose exec app vendor/bin/pint --dirty --format=agent && \
+docker compose exec app composer analyse && \
+docker compose exec app php artisan test && \
+pnpm test:e2e --project=chromium
+"""
+
 [tasks."composer:install"]
 description = "Composer install"
 run = "docker compose exec app composer install"

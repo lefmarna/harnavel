@@ -78,7 +78,7 @@ export default [
       'public',
       'bootstrap/ssr',
       'tailwind.config.js',
-      'vite.config.ts',
+      'vite.config.js',
     ],
   },
   prettier, // Turn off all rules that might conflict with Prettier

@@ -43,8 +43,12 @@ This is intended to be the baseline for new tables and migration reviews.
 
 ## 4. Data Type Policy
 
-- Entity primary keys: `bigint unsigned` auto-increment (default)
-- Foreign keys: `bigint unsigned` matching referenced PK type
+- Primary key strategy for new application domain models/tables: UUIDv7
+  - Migration: `uuid('id')->primary()`
+  - Model: `HasUuids` (Laravel 12 generates UUIDv7-compatible IDs)
+- Existing tables (including `users` and framework-managed/auth tables) keep current key types until an explicit migration plan exists
+- Pure pivot tables may use composite keys when no dedicated Eloquent model is required
+- Foreign keys must match the referenced primary key type exactly
 - Text:
   - bounded text: `varchar(n)`
   - unbounded/free-form: `text` / `longtext`
@@ -209,7 +213,7 @@ Indexes/constraints:
 ## 9. Migration Design Checklist (For New Tables)
 
 1. Table/column names follow `snake_case` and domain vocabulary.
-2. PK/FK types match referenced tables exactly (`bigint unsigned`).
+2. PK/FK types match referenced tables exactly (`uuid`, `bigint`, or composite policy as designed).
 3. `ON DELETE` action is explicitly chosen and justified.
 4. Indexes are tied to query patterns and FK/unique requirements.
 5. Nullable columns are intentional and explained in PR description.
@@ -219,11 +223,12 @@ Indexes/constraints:
 
 ## 10. Verification Commands
 
-When schema-related code changes are made (`.php` migrations/models/repositories):
+When schema-related code changes are made (`.php` migrations/models/repositories),
+follow the verification source of truth in `AGENTS.md` and `docs/references/commands.md`.
 
 ```bash
-mise run test
+mise run verify:backend
 pnpm test:e2e --project=chromium
 ```
 
-If frontend is also modified, use the full combined verification set from `docs/infrastructure/commands.md`.
+If frontend is also modified, run the combined frontend + backend verification set defined in `AGENTS.md`.

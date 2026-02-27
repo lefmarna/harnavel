@@ -1,28 +1,27 @@
 # Laravel Docker Template Guide Index
 
-Laravel 12 + MariaDB + Docker development environment with React/Inertia frontend.
+Laravel 12 + MariaDB + Docker development environment with Inertia React frontend.
 
-## Navigate by Task
+## Start Here
 
-**What are you working on?**
+Read `docs/README.md` first, then open the task guide:
 
-- **Frontend** (`.ts`, `.tsx`, `.css`) → Read [docs/frontend/](docs/frontend/README.md)
-- **Backend** (`.php`) → Read [docs/backend/](docs/backend/README.md)
-- **Infrastructure** (Docker, setup) → Read [docs/infrastructure/](docs/infrastructure/README.md)
-- **Understanding the project** → Read [docs/project/](docs/project/README.md)
-- **Specification work** → Read [docs/project/specs.md](docs/project/specs.md), use `.kiro/specs/` and `.kiro/requirements/`
+- Frontend work (`.ts`, `.tsx`, `.css`) -> `docs/guides/frontend.md`
+- Backend work (`.php`) -> `docs/guides/backend.md`
+- Infrastructure/setup work -> `docs/guides/infrastructure.md`
+- Project context -> `docs/context/project.md`
+- Specification work -> `docs/generated/specs.md` + `.kiro/specs/` + `.kiro/requirements/`
 
-**Reference lookup:**
+## Source-of-Truth Quick Links
 
-- [docs/infrastructure/commands.md](docs/infrastructure/commands.md) - All available CLI commands
-- [docs/backend/coding-guide.md](docs/backend/coding-guide.md) - Project-specific rules
-- [docs/backend/schema-design-spec.md](docs/backend/schema-design-spec.md) - ER diagrams, table definitions
-- [docs/backend/boost.md](docs/backend/boost.md) - Laravel Boost MCP rules
-- [docs/review-gate/](docs/review-gate/README.md) - Review criteria and checklists
+- Boost generated rules: `docs/generated/boost.md` (do not edit manually)
+- Command reference: `docs/references/commands.md`
+- Schema reference: `docs/references/schema-design-spec.md`
+- Review gate: `docs/review-gate/README.md`
 
 ## Verification (Required After Every Implementation)
 
-Run checks based on what you changed (see [docs/infrastructure/commands.md](docs/infrastructure/commands.md) for details). **If any check fails, fix the issue and re-run until clean.**
+Run checks based on changed scope. If a check fails, fix and re-run until clean.
 
 ```bash
 # Frontend changes
@@ -31,34 +30,36 @@ pnpm fix && pnpm lint:typecheck && pnpm test:e2e --project=chromium
 # Backend changes
 mise run verify:backend && pnpm test:e2e --project=chromium
 
-# Both
+# Both frontend and backend
 pnpm fix && pnpm lint:typecheck && mise run verify:backend && pnpm test:e2e --project=chromium
 
 # Documentation changes
-# Verify internal links are valid and version/config references match source code
 pnpm lint:docs
 ```
 
 ## Review Gate
 
-Run the `codex-review` SKILL and iterate review → fix → re-review until `ok: true` at these milestones:
+Run the `codex-review` skill and iterate review -> fix -> re-review until `ok: true`:
 
-- After updating specs or plans
-- After major steps (>= 5 files / public API / infra-config changes)
-- Before commit, PR, or release
+- after spec/plan updates
+- after major steps (>= 5 files / public API / infra-config changes)
+- before commit, PR, or release
 
 ## Writing Rules
 
-- English in `docs/`. Japanese in `README.md`.
-- **`README.md`**: For humans (project overview, setup instructions).
-- **`docs/`**: For AI agents (guidelines, command references).
-- Progressive disclosure: entry points brief, details in sub-docs.
-- **Plan mode only**: `docs/plans/` with date-based filenames.
-- **Default mode**: long-lived docs under domain directories (e.g., `docs/backend/`).
-- Never create files in `docs/plans/` outside Plan mode.
+- English in `docs/`. Japanese in top-level `README.md`.
+- Exception: files under `docs/plans/` may be written in Japanese or English.
+- Exception: `docs/review-gate/*_summary.md` may contain Japanese review JSON/logs.
+- `README.md`: for humans (overview, setup).
+- `docs/`: for AI agents and engineering operations.
+- Progressive disclosure: short entry docs, detailed references behind links.
+- Plan mode only: `docs/plans/` with date-based filenames.
+- Never manually edit generated files:
+- `docs/generated/boost.md`
+- `docs/generated/specs.md`
 
 ## Deep Context (Load Only When Needed)
 
-- `.kiro/steering/product.md` - Product vision
-- `.kiro/steering/tech.md` - Technical guardrails
-- `.kiro/steering/structure.md` - Repository layout conventions
+- `.kiro/steering/product.md` - product vision
+- `.kiro/steering/tech.md` - technical guardrails
+- `.kiro/steering/structure.md` - repository conventions

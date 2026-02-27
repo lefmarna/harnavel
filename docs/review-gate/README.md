@@ -2,11 +2,13 @@
 
 ## Workflow
 
-```
-codex-review SKILL → findings → fix → re-run → ok: true
+```text
+codex-review SKILL -> findings -> fix -> re-run -> ok: true
 ```
 
 **When to run**: After spec/plan updates, after major steps (>= 5 files / public API / infra-config), before commit/PR/release.
+
+Note: saved review JSON/log files (`*_summary.md`) may contain Japanese text depending on reviewer output requirements.
 
 ## Manual Review Checklist
 
@@ -14,7 +16,7 @@ These items require human/AI judgment (automated checks like ESLint, Pint, and T
 
 ### Architecture
 
-- [ ] **Layers**: 3-layer pattern followed (Controller → Service → Repository)
+- [ ] **Layers**: 3-layer pattern followed (Controller -> Service -> Repository)
 - [ ] **Data access**: No direct model queries outside repositories
 - [ ] **Controller**: Form Request + API Resource or Inertia render
 
@@ -29,7 +31,13 @@ These items require human/AI judgment (automated checks like ESLint, Pint, and T
 - [ ] **Tailwind**: v4 syntax (not v3)
 - [ ] **Factory**: Used for all models in tests
 - [ ] **Docs**: Updated for public API changes
+- [ ] Generated files are not manually edited (`docs/generated/boost.md`, `docs/generated/specs.md`)
 
-### Deep-dive References
+### Deep-Dive References
 
-Per-document checklists for focused review: [architecture](../backend/architecture.md#verification-checklist), [api](../backend/api.md#verification-checklist), [database](../backend/database.md#verification-checklist), [security](../backend/security.md#verification-checklist), [testing](../backend/testing.md#verification-checklist), [error handling](../backend/error-handling.md#verification-checklist), [design](../frontend/design.md#verification-checklist), [SEO](../frontend/seo.md#verification-checklist), [E2E testing](../frontend/e2e-testing.md#verification-checklist).
+- [Architecture](../context/architecture.md)
+- [Backend rules](../guides/backend.md)
+- [Frontend rules](../guides/frontend.md)
+- [Infrastructure rules](../guides/infrastructure.md)
+- [Commands](../references/commands.md)
+- [Schema reference](../references/schema-design-spec.md)

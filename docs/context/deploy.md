@@ -21,30 +21,6 @@ Queue note:
 - Do not introduce queue workers or async queue architecture in this template lineage.
 - Keep background-like behavior in synchronous application flow.
 
-## Build and Release Flow
-
-Typical path:
-
-1. `test_deploy` runs on `develop/main` push and PR, then executes build + tests + Chromium E2E.
-2. On `main` only, build artifacts (`public/build`) are uploaded.
-3. Deploy job (`needs: test`) downloads artifact, packages `.deploy`, and deploys via SSH/rsync.
-4. Remote post-deploy commands run: `composer install --no-dev`, cache warmup, and `artisan migrate --force`.
-
-Workflow note:
-- Lint runs in a separate `linter` workflow.
-- Current deploy gate is tied to `test_deploy` success, not directly to `linter`.
-
-Branch policy baseline:
-- Develop on feature branches from `develop`.
-- Merge to `main` only after PR review and green CI checks.
-
-Workflow ownership:
-
-| Workflow file | Responsibility |
-| --- | --- |
-| `.github/workflows/lint.yml` | formatting + lint + static analysis |
-| `.github/workflows/test_deploy.yml` | tests + build artifacts + production deploy job |
-
 ## Required Deployment Artifacts
 
 - Production-ready `public/build` assets
@@ -83,10 +59,3 @@ When migrating away from XServer:
 - re-evaluate SSR feasibility
 - replace `.htaccess` specifics with target-native routing
 - keep this file as the deployment source of truth
-
-## Verification Checklist
-
-- [ ] Build and packaging steps match the current deployment profile
-- [ ] Host constraints are reflected in runtime architecture decisions
-- [ ] Deployment secrets and host keys are managed outside git
-- [ ] CI status interpretation is explicit (`test_deploy` gate vs separate `linter`)

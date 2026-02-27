@@ -74,10 +74,3 @@ Container shell and logs:
 mise run app
 mise run logs
 ```
-
-## Verification Checklist
-
-- [ ] Local services start cleanly with expected ports
-- [ ] App and Mailpit are reachable
-- [ ] Required `mise` tasks run successfully
-- [ ] Troubleshooting steps are documented for any new infra behavior

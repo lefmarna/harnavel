@@ -35,7 +35,6 @@ These items require human/AI judgment (automated checks like ESLint, Pint, and T
 
 ### Deep-Dive References
 
-- [Architecture](../context/architecture.md)
 - [Backend rules](../guides/backend.md)
 - [Frontend rules](../guides/frontend.md)
 - [Infrastructure rules](../guides/infrastructure.md)

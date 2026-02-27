@@ -23,14 +23,6 @@ These decisions were fixed to remove ambiguity for AI and human contributors:
 | Test title language | Japanese |
 | Migration `after()` | Required when adding columns to existing tables |
 
-## Coding Baseline
-
-- Use `declare(strict_types=1);` in PHP source files.
-- Use constructor property promotion with `private readonly` for injected dependencies.
-- Do not keep commented-out code in commits.
-- Prefer early returns and shallow nesting.
-- Prefer `collect()` / collection methods (or `array_map` / `array_filter`) over `foreach` loops.
-
 ## Architecture Contract
 
 Application flow is fixed:
@@ -48,216 +40,6 @@ Rules:
 Service and repository interfaces are required:
 - `{Domain}ServiceContract` + `{Domain}Service`
 - `{Domain}RepositoryContract` + `Eloquent{Domain}Repository`
-
-Directory structure baseline:
-
-```text
-app/
-├── Http/
-│   ├── Controllers/      # Controllers
-│   ├── Requests/         # Form Request validation
-│   └── Resources/        # API Resource responses
-├── Services/
-│   └── {Domain}/
-│       └── Contracts/    # {Domain}ServiceContract
-├── Repositories/
-│   └── {Domain}/
-│       └── Contracts/    # {Domain}RepositoryContract
-└── Providers/            # RepositoryServiceProvider / DomainServiceProvider
-```
-
-Service provider bindings:
-- Register repository bindings in `RepositoryServiceProvider`.
-- Register service bindings in `DomainServiceProvider` (or equivalent domain provider).
-
-### Implementation Templates
-
-**Repository Interface** (`app/Repositories/User/UserRepositoryContract.php`):
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Repositories\User;
-
-use App\Models\User;
-use App\Params\User\StoreUserParams;
-
-interface UserRepositoryContract
-{
-    public function updateOrCreate(StoreUserParams $params): User;
-
-    public function find(int $id): ?User;
-}
-```
-
-**Repository Implementation** (`app/Repositories/User/EloquentUserRepository.php`):
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Repositories\User;
-
-use App\Models\User;
-use App\Params\User\StoreUserParams;
-
-class EloquentUserRepository implements UserRepositoryContract
-{
-    /** @inheritDoc */
-    public function updateOrCreate(StoreUserParams $params): User
-    {
-        return User::updateOrCreate(
-            ['email' => $params->email],
-            $params->toArray()
-        );
-    }
-
-    /** @inheritDoc */
-    public function find(int $id): ?User
-    {
-        return User::find($id);
-    }
-}
-```
-
-**Service with DI** (`app/Services/User/UserService.php`):
-
-```php
-<?php
-
-declare(strict_types=1);
-
-namespace App\Services\User;
-
-use App\Params\User\StoreUserParams;
-use App\Repositories\User\UserRepositoryContract;
-
-class UserService implements UserServiceContract
-{
-    public function __construct(
-        private readonly UserRepositoryContract $userRepository
-    ) {}
-
-    public function someBusinessLogic(StoreUserParams $params): void
-    {
-        $user = $this->userRepository->updateOrCreate($params);
-        // ... business logic
-    }
-}
-```
-
-**RepositoryServiceProvider** (`app/Providers/RepositoryServiceProvider.php`):
-
-```php
-class RepositoryServiceProvider extends ServiceProvider
-{
-    private const MODELS = [
-        'User',
-        'Post', // add new entity here
-    ];
-
-    public function register(): void
-    {
-        foreach (self::MODELS as $model) {
-            $this->app->singleton(
-                "App\Repositories\{$model}\{$model}RepositoryContract",
-                "App\Repositories\{$model}\Eloquent{$model}Repository"
-            );
-        }
-    }
-}
-```
-
-**DomainServiceProvider** (`app/Providers/DomainServiceProvider.php`):
-
-```php
-class DomainServiceProvider extends ServiceProvider
-{
-    private const PREFIXES = [
-        'User',
-        'Auth', // add new service here
-    ];
-
-    public function register(): void
-    {
-        foreach (self::PREFIXES as $prefix) {
-            $this->app->singleton(
-                "App\Services\{$prefix}\{$prefix}ServiceContract",
-                "App\Services\{$prefix}\{$prefix}Service"
-            );
-        }
-    }
-}
-```
-
-## Routing and Naming
-
-- Use Laravel resource-style action naming:
-- `index`, `show`, `store`, `update`, `destroy`
-- Use descriptive domain names for classes and methods.
-- Prefer route path nouns and consistent domain vocabulary.
-
-## Validation and Response
-
-- Input: Form Request classes (`app/Http/Requests/`), never inline.
-- Output: API Resources (`app/Http/Resources/`) or `Inertia::render()`.
-- Keep status codes explicit and consistent with error type.
-- JSON responses should use `Symfony\Component\HttpFoundation\Response` constants.
-
-Exception-to-status baseline:
-
-| Exception | Status | When |
-| --- | --- | --- |
-| `ValidationException` | `422` | Form Request validation fails |
-| `AuthenticationException` | `401` | Unauthenticated |
-| `AuthorizationException` | `403` | Policy denies access |
-| `ModelNotFoundException` | `404` | Resource not found |
-| `DomainException` | `400` | Business rule violation |
-| `Throwable` | `500` | Server error |
-
-Logging rules:
-- ALWAYS include identifiers (`user_id`, `request_id`) in log context.
-- Never log passwords, tokens, or PII.
-
-```php
-Log::error('Payment failed', [
-    'user_id' => $user->id,
-    'order_id' => $order->id,
-    'reason' => $e->getMessage(),
-]);
-```
-
-## API Error Contract (JSON Endpoints)
-
-For JSON endpoints, keep a stable error shape:
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Human readable message",
-    "errors": {
-      "field": ["detail"]
-    }
-  }
-}
-```
-
-Rules:
-- Keep `code` machine-readable and stable.
-- Keep `message` user-facing.
-- Include `errors` for validation-like field issues.
-
-## Authentication and Security Baseline
-
-- Laravel Fortify with session cookies. Session-based via `web` guard.
-- CSRF/session expiration (`419`) for Inertia requests must return a user-recoverable response (see `bootstrap/app.php` exception response handling).
-- Two-factor authentication is enabled in `config/fortify.php` with confirmation enabled.
-- Login and two-factor throttling are defined in `FortifyServiceProvider` with `5/min` limits.
 
 ## Model and Identifier Policy
 
@@ -303,48 +85,25 @@ $table->string('name')->default('')->nullable()->change();
 - Keep FK type exactly aligned with referenced PK type (`uuid`, `bigint`, etc).
 - Use column/index/constraint naming from `docs/references/schema-design-spec.md`.
 
-## Testing Rules
+## Logging Safety
 
-- Use Pest for unit/feature tests and Playwright for E2E.
-- Write or update tests in the same change as implementation.
-- Test names in Japanese for readability in test output.
-- Use factories for model data.
-- Feature tests should be isolated and deterministic (`RefreshDatabase` where applicable).
-- Use `Mail::fake()` / `Notification::fake()` for mail/notification assertions.
-- Use datasets (`->with([...])`) for parameterized validation tests.
-- Do not use fixed sleeps in tests.
-- Base setup (`tests/Pest.php`): all Feature tests use `RefreshDatabase` (DB reset per test).
+- Never log passwords, tokens, or PII.
+- Always include identifiers (`user_id`, `request_id`) in log context.
 
-Layer responsibilities:
+## API Error Contract (JSON Endpoints)
 
-| Layer | Tool | Scope | Speed | Location |
-| --- | --- | --- | --- | --- |
-| Unit | Pest | Pure logic, helpers, calculations | Fast | `tests/Unit/` |
-| Feature | Pest | API endpoints, DB, auth flows | Moderate | `tests/Feature/` |
-| E2E | Playwright | Full user flows (browser) | Slow | `e2e/tests/` |
+Stable error shape for JSON responses:
 
-TDD baseline loop:
-1. Write a failing test: `php artisan make:test --pest FeatureName`
-2. Implement minimal code to pass
-3. Refactor while keeping tests green
-4. Run `php artisan test --filter=FeatureName` frequently
+```json
+{ "success": false, "error": { "code": "MACHINE_READABLE", "message": "Human readable", "errors": { "field": ["detail"] } } }
+```
 
-Minimum coverage expectation:
-- happy path
-- representative error path
-- at least one boundary/edge case for branching logic
+Exception-to-status baseline:
 
-## Verification Checklist
-
-- [ ] Layer boundaries (Controller/Service/Repository) are respected
-- [ ] Service/Repository contracts are present
-- [ ] Form Request + Resource response path is used
-- [ ] JSON API error responses follow the standard contract
-- [ ] Auth/rate-limit/CSRF security baseline remains aligned with Fortify settings
-- [ ] UUIDv7 policy is applied for new application models
-- [ ] `fillable` policy is followed
-- [ ] DB changes include transaction, modifier preservation, and `after()` policy
-- [ ] Public methods include intent-revealing PHPDoc
-- [ ] Unit/Feature/E2E responsibilities are covered at the right layer
-- [ ] Tests cover happy path, error path, and boundary case
-- [ ] Tests were added/updated and pass
+| Exception | Status |
+| --- | --- |
+| `ValidationException` | `422` |
+| `AuthenticationException` | `401` |
+| `AuthorizationException` | `403` |
+| `ModelNotFoundException` | `404` |
+| `Throwable` | `500` |

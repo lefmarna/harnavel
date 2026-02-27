@@ -43,7 +43,7 @@ description: 'テンプレートから展開した新規プロジェクトのdoc
 
 | ファイル | 更新内容 |
 | --- | --- |
-| `docs/context/project.md` | プロジェクト概要、スコープ、リスク、未決定事項をプロジェクト固有の内容で置換 |
+| `docs/context/project.md` | プロジェクト概要、スコープをプロジェクト固有の内容で置換 |
 | `docs/guides/frontend.md` | Screen Map セクション（ルート一覧、Layout definitions、Middleware）をプロジェクトのページ構成に合わせて更新 |
 | `docs/guides/infrastructure.md` | ポート番号を指定値に更新 |
 | `.env.example` | ポート番号のデフォルト値を更新 |
@@ -53,7 +53,6 @@ description: 'テンプレートから展開した新規プロジェクトのdoc
 - `docs/guides/backend.md` - アーキテクチャ・コーディングルール
 - `docs/guides/frontend.md`（Screen Map 以外） - フロントエンドルール
 - `docs/guides/common.md` - 共通コーディングスタイル
-- `docs/context/architecture.md` - アーキテクチャ設計思想
 - `docs/context/deploy.md` - デプロイ制約
 - `docs/generated/boost.md` - 自動生成（編集禁止）
 - `docs/generated/specs.md` - 自動生成（編集禁止）
@@ -64,15 +63,11 @@ description: 'テンプレートから展開した新規プロジェクトのdoc
 
 **プロジェクト固有で書き換えるセクション:**
 
-- Template Purpose + Intended Use → プロジェクトの概要・目的に書き換え（セクション名も「Project Overview」等に変更）
+- Template Purpose → プロジェクトの概要・目的に書き換え（セクション名も「Project Overview」等に変更）
 - Default Scope Assumptions → コンテキストから In scope / Out of scope を生成
-- Risks and Mitigation → 共通リスク3行を維持しつつ、プロジェクト固有リスクを追加
-- Unresolved → コンテキストから未決定事項を抽出して記入
 
 **維持するセクション（テンプレート共通）:**
 
-- System Boundaries → そのまま維持（技術スタック・環境は同一）
-- Design Trade-Offs → そのまま維持（アーキテクチャ判断は共通）
 - Specification Workflow Entry → そのまま維持
 
 ### Step 4: Screen Map の更新

@@ -42,7 +42,7 @@ pnpm run dev
 
 詳細は `docs/` を参照してください。
 
-- [ドキュメント入口](docs/README.md)
+- [ドキュメント入口](AGENTS.md)
 - [インフラ運用ガイド](docs/guides/infrastructure.md)
 - [バックエンド開発ガイド](docs/guides/backend.md)
 - [フロントエンド開発ガイド](docs/guides/frontend.md)

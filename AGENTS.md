@@ -4,7 +4,7 @@ Laravel 12 + MariaDB + Docker development environment with Inertia React fronten
 
 ## Start Here
 
-Read `docs/README.md` first, then open the task guide:
+Open the task guide for your scope:
 
 - Frontend work (`.ts`, `.tsx`, `.css`) -> `docs/guides/frontend.md`
 - Backend work (`.php`) -> `docs/guides/backend.md`
@@ -47,6 +47,8 @@ Run the `codex-review` skill and iterate review -> fix -> re-review until `ok: t
 
 ## Writing Rules
 
+- One topic, one source of truth. Do not duplicate full rules across files.
+- In non-source files, keep only short summaries and links.
 - English in `docs/`. Japanese in top-level `README.md`.
 - Exception: files under `docs/plans/` may be written in Japanese or English.
 - Exception: `docs/review-gate/*_summary.md` may contain Japanese review JSON/logs.
@@ -55,11 +57,6 @@ Run the `codex-review` skill and iterate review -> fix -> re-review until `ok: t
 - Progressive disclosure: short entry docs, detailed references behind links.
 - Plan mode only: `docs/plans/` with date-based filenames.
 - Never manually edit generated files:
-- `docs/generated/boost.md`
-- `docs/generated/specs.md`
-
-## Deep Context (Load Only When Needed)
-
-- `.kiro/steering/product.md` - product vision
-- `.kiro/steering/tech.md` - technical guardrails
-- `.kiro/steering/structure.md` - repository conventions
+  - `docs/generated/boost.md`
+  - `docs/generated/specs.md`
+- Update links whenever files are moved. Run `pnpm lint:docs` after doc changes.

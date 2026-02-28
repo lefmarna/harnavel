@@ -17,8 +17,13 @@ class ProfileDeleteRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'password' => $this->currentPasswordRules(),
-        ];
+        $user = $this->user();
+
+        // Google認証のみのユーザーはパスワードがないのでスキップ
+        if ($user === null || $user->password === null) {
+            return [];
+        }
+
+        return ['password' => $this->currentPasswordRules()];
     }
 }

@@ -1,0 +1,64 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Repositories\User;
+
+use App\Models\User;
+use Illuminate\Support\Collection;
+
+class EloquentUserRepository implements UserRepositoryContract
+{
+    /**
+     * {@inheritDoc}
+     */
+    public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
+    {
+        $query = User::query()
+            ->where('google_id', $googleId)
+            ->orWhere('email', $email)
+            ->orderBy('id');
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findByGoogleId(string $googleId, bool $lock = false): ?User
+    {
+        $query = User::query()->where('google_id', $googleId);
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findByEmail(string $email, bool $lock = false): ?User
+    {
+        $query = User::query()->where('email', $email);
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function save(User $user): void
+    {
+        $user->save();
+    }
+}

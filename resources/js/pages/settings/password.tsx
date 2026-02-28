@@ -1,5 +1,5 @@
 import { Transition } from '@headlessui/react'
-import { Form, Head } from '@inertiajs/react'
+import { Form, Head, usePage } from '@inertiajs/react'
 import { useRef } from 'react'
 import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController'
 import Heading from '@/components/heading'
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import AppLayout from '@/layouts/app-layout'
 import SettingsLayout from '@/layouts/settings/layout'
 import { edit } from '@/routes/user-password'
-import type { BreadcrumbItem } from '@/types'
+import type { BreadcrumbItem, SharedData } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
@@ -20,6 +20,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 export default function Password() {
+  const { auth } = usePage<SharedData>().props
+  const hasPassword = auth.hasPassword
   const passwordInput = useRef<HTMLInputElement>(null)
   const currentPasswordInput = useRef<HTMLInputElement>(null)
 
@@ -61,21 +63,23 @@ export default function Password() {
           >
             {({ errors, processing, recentlySuccessful }) => (
               <>
-                <div className="grid gap-2">
-                  <Label htmlFor="current_password">Current password</Label>
+                {hasPassword && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="current_password">Current password</Label>
 
-                  <Input
-                    id="current_password"
-                    ref={currentPasswordInput}
-                    name="current_password"
-                    type="password"
-                    className="mt-1 block w-full"
-                    autoComplete="current-password"
-                    placeholder="Current password"
-                  />
+                    <Input
+                      id="current_password"
+                      ref={currentPasswordInput}
+                      name="current_password"
+                      type="password"
+                      className="mt-1 block w-full"
+                      autoComplete="current-password"
+                      placeholder="Current password"
+                    />
 
-                  <InputError message={errors.current_password} />
-                </div>
+                    <InputError message={errors.current_password} />
+                  </div>
+                )}
 
                 <div className="grid gap-2">
                   <Label htmlFor="password">New password</Label>

@@ -14,6 +14,7 @@ Open the task guide for your scope:
 
 ## Source-of-Truth Quick Links
 
+- Common cross-stack rules: `docs/guides/common.md`
 - Boost generated rules: `docs/generated/boost.md` (do not edit manually)
 - Command reference: `docs/references/commands.md`
 - Schema reference: `docs/references/schema-design-spec.md`

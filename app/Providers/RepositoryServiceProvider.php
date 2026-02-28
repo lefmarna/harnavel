@@ -18,7 +18,7 @@ class RepositoryServiceProvider extends ServiceProvider
      * @var array<string>
      */
     private const MODELS = [
-        // 'User', // 初回はコメントアウトか、User実装後に有効化
+        'User',
     ];
 
     /**

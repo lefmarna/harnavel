@@ -40,4 +40,10 @@ return [
         'model' => env('GEMINI_MODEL', env('GEMINI_MODEL_NAME', 'gemini-2.5-flash')),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
 ];

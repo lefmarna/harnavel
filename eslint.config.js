@@ -50,6 +50,13 @@ export default [
             'sibling',
             'index',
           ],
+          pathGroups: [
+            {
+              pattern: '@/**',
+              group: 'internal',
+            },
+          ],
+          pathGroupsExcludedImportTypes: ['builtin', 'external', 'object'],
           alphabetize: {
             order: 'asc',
             caseInsensitive: true,
@@ -79,6 +86,9 @@ export default [
       'bootstrap/ssr',
       'tailwind.config.js',
       'vite.config.js',
+      // Wayfinder generated artifacts
+      'resources/js/actions',
+      'resources/js/routes',
     ],
   },
   prettier, // Turn off all rules that might conflict with Prettier

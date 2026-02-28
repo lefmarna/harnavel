@@ -4,6 +4,12 @@ import react from '@vitejs/plugin-react'
 import laravel from 'laravel-vite-plugin'
 import { defineConfig } from 'vite'
 
+const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
+
+const wayfinderCommand = isGitHubActions
+  ? 'php artisan wayfinder:generate'
+  : 'docker compose exec -T app php artisan wayfinder:generate'
+
 export default defineConfig({
   server: {
     port: 5173,
@@ -22,7 +28,7 @@ export default defineConfig({
     tailwindcss(),
     wayfinder({
       formVariants: true,
-      command: 'docker compose exec -T app php artisan wayfinder:generate',
+      command: wayfinderCommand,
     }),
   ],
   esbuild: {

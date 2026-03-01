@@ -1,16 +1,16 @@
-# Laravel Docker Template
+# Laravel App Template
 
 Laravel 12 + Inertia React + MariaDB を Docker で開発するためのテンプレートです。
 複数案件へ横展開しやすいように、認証・基本画面・開発コマンド・運用ルールを初期状態で揃えています。
 
 ## 技術構成
 
-| Layer | Technology |
-| --- | --- |
-| Backend | Laravel 12, PHP 8.4, Fortify |
-| Frontend | React 19, Inertia v2, TypeScript |
-| Styling | Tailwind CSS v4, Radix UI |
-| Testing | Pest v4, Playwright |
+| Layer          | Technology                       |
+| -------------- | -------------------------------- |
+| Backend        | Laravel 12, PHP 8.4, Fortify     |
+| Frontend       | React 19, Inertia v2, TypeScript |
+| Styling        | Tailwind CSS v4, Radix UI        |
+| Testing        | Pest v4, Playwright              |
 | Infrastructure | Docker (Nginx, MariaDB, Mailpit) |
 
 > [!NOTE]

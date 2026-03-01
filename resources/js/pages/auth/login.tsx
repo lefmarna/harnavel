@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react'
+import { Form } from '@inertiajs/react'
 import InputError from '@/components/input-error'
 import TextLink from '@/components/text-link'
 import { Button } from '@/components/ui/button'
@@ -32,8 +32,6 @@ export default function Login({
       title="Log in to your account"
       description="Enter your email and password below to log in"
     >
-      <Head title="Log in" />
-
       <Form
         {...store.form()}
         resetOnSuccess={['password']}

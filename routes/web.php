@@ -8,11 +8,19 @@ use Laravel\Fortify\Features;
 Route::get('/', function () {
     return Inertia::render('welcome', [
         'canRegister' => Features::enabled(Features::registration()),
+        'seo' => [
+            'title' => 'Welcome',
+            'description' => config('app.description', ''),
+        ],
     ]);
 })->name('home');
 
 Route::get('dashboard', function () {
-    return Inertia::render('dashboard');
+    return Inertia::render('dashboard', [
+        'seo' => [
+            'title' => 'Dashboard',
+        ],
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // Google OAuth認証ルート（ゲスト専用）

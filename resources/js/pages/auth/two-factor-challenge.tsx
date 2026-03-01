@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react'
+import { Form } from '@inertiajs/react'
 import { REGEXP_ONLY_DIGITS } from 'input-otp'
 import { useMemo, useState } from 'react'
 import InputError from '@/components/input-error'
@@ -50,8 +50,6 @@ export default function TwoFactorChallenge() {
       title={authConfigContent.title}
       description={authConfigContent.description}
     >
-      <Head title="Two-Factor Authentication" />
-
       <div className="space-y-6">
         <Form
           {...store.form()}

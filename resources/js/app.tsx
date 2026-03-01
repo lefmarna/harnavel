@@ -1,19 +1,35 @@
 import { createInertiaApp } from '@inertiajs/react'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
-import { StrictMode } from 'react'
+import { type ReactNode, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import SeoHead from './components/seo-head'
 import '../css/app.css'
 import { initializeTheme } from './hooks/use-appearance'
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel'
+const seoLayout = (children: ReactNode) => (
+  <>
+    <SeoHead />
+    {children}
+  </>
+)
 
 createInertiaApp({
-  title: (title) => (title ? `${title} - ${appName}` : appName),
-  resolve: (name) =>
-    resolvePageComponent(
+  resolve: (name) => {
+    const page = resolvePageComponent(
       `./pages/${name}.tsx`,
       import.meta.glob('./pages/**/*.tsx'),
-    ),
+    ) as Promise<{
+      default: { layout?: (page: ReactNode) => ReactNode }
+    }>
+
+    page.then((module) => {
+      if (!module.default.layout) {
+        module.default.layout = seoLayout
+      }
+    })
+
+    return page
+  },
   setup({ el, App, props }) {
     const root = createRoot(el)
 

@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react'
+import { Form } from '@inertiajs/react'
 import InputError from '@/components/input-error'
 import TextLink from '@/components/text-link'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,6 @@ export default function Register() {
       title="Create an account"
       description="Enter your details below to create your account"
     >
-      <Head title="Register" />
       <Form
         {...store.form()}
         resetOnSuccess={['password', 'password_confirmation']}

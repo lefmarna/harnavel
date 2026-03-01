@@ -55,26 +55,55 @@ class FortifyServiceProvider extends ServiceProvider
                 && config('services.google.redirect') !== null && config('services.google.redirect') !== '',
             'error' => $request->session()->get('error'),
             'status' => $request->session()->get('status'),
+            'seo' => [
+                'title' => 'Log in',
+                'description' => 'Log in to your account.',
+            ],
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
             'email' => $request->email,
             'token' => $request->route('token'),
+            'seo' => [
+                'title' => 'Reset password',
+                'description' => 'Set a new password for your account.',
+            ],
         ]));
 
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/forgot-password', [
             'status' => $request->session()->get('status'),
+            'seo' => [
+                'title' => 'Forgot password',
+                'description' => 'Enter your email to receive a password reset link.',
+            ],
         ]));
 
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
             'status' => $request->session()->get('status'),
+            'seo' => [
+                'title' => 'Email verification',
+            ],
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/register'));
+        Fortify::registerView(fn () => Inertia::render('auth/register', [
+            'seo' => [
+                'title' => 'Register',
+                'description' => 'Create a new account.',
+            ],
+        ]));
 
-        Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
+        Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge', [
+            'seo' => [
+                'title' => 'Two-Factor Authentication',
+                'description' => 'Enter your authentication code to continue.',
+            ],
+        ]));
 
-        Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
+        Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password', [
+            'seo' => [
+                'title' => 'Confirm password',
+            ],
+        ]));
     }
 
     /**

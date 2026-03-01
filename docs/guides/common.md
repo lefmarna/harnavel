@@ -28,6 +28,44 @@ If a rule conflicts with `docs/generated/boost.md`, follow the explicit project 
 - Do not copy full rule blocks across files; link to the source-of-truth file.
 - For new rules, record them once in the most specific file that owns the topic.
 
+## SEO Meta Tags
+
+SSR is not available. SEO data is managed as Inertia props (`seo`), which both Blade and React read from a single source.
+
+1. **Backend** — every `Inertia::render()` passes a `seo` array with at least `title`
+2. **Blade (`app.blade.php`)** — reads `$page['props']['seo']` to output meta tags in the initial HTML (all crawlers see this without JS)
+3. **React (`<SeoHead>`)** — reads `usePage().props.seo` to update meta tags on SPA navigation
+
+### Backend (routes / controllers)
+
+Every page must pass `seo` with at least `title`. `description` is optional.
+
+```php
+return Inertia::render('welcome', [
+    'seo' => [
+        'title' => 'Welcome',
+        'description' => 'Site description',
+    ],
+]);
+```
+
+### Frontend (page components)
+
+`<SeoHead />` is automatically applied to all pages via `app.tsx` resolve. No per-page import or usage is needed.
+
+### Title/description formatting
+
+Both Blade and `<SeoHead />` independently format `seo.title` into `PageTitle - AppName`.
+The site name (`appDisplayName`) and default description (`appDescription`) are shared via `HandleInertiaRequests`,
+ensuring Blade and React always use the same values from `config()`.
+
+### Key files
+
+- `resources/views/app.blade.php` — reads `$page['props']['seo']` with `inertia` attributes (server-side rendering for crawlers)
+- `resources/js/components/seo-head.tsx` — reads `usePage().props.seo` via `<Head>` (client-side update on SPA navigation)
+- `resources/js/app.tsx` — injects `<SeoHead />` via resolve layout wrapper
+- `app/Http/Middleware/HandleInertiaRequests.php` — shares `appDisplayName` and `appDescription` as common props
+
 ## Verification Baseline
 
 After any implementation, run the appropriate checks from `docs/references/commands.md`.

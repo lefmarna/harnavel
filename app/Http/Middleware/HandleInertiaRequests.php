@@ -43,6 +43,8 @@ class HandleInertiaRequests extends Middleware
                 'hasPassword' => $request->user()?->password !== null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'appDisplayName' => config('app.display_name', config('app.name', 'Laravel')),
+            'appDescription' => config('app.description', ''),
         ];
     }
 }

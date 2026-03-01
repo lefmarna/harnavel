@@ -1,5 +1,5 @@
 import { Transition } from '@headlessui/react'
-import { Form, Head, usePage } from '@inertiajs/react'
+import { Form, usePage } from '@inertiajs/react'
 import { useRef } from 'react'
 import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController'
 import Heading from '@/components/heading'
@@ -27,8 +27,6 @@ export default function Password() {
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Password settings" />
-
       <h1 className="sr-only">Password Settings</h1>
 
       <SettingsLayout>

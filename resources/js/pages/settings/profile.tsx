@@ -1,5 +1,5 @@
 import { Transition } from '@headlessui/react'
-import { Form, Head, Link, usePage } from '@inertiajs/react'
+import { Form, Link, usePage } from '@inertiajs/react'
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController'
 import DeleteUser from '@/components/delete-user'
 import Heading from '@/components/heading'
@@ -36,8 +36,6 @@ export default function Profile({
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <Head title="Profile settings" />
-
       <h1 className="sr-only">Profile Settings</h1>
 
       <SettingsLayout>

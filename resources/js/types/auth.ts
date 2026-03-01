@@ -15,10 +15,18 @@ export type Auth = {
   hasPassword: boolean
 }
 
+export type SeoData = {
+  title?: string
+  description?: string
+}
+
 export type SharedData = {
   name: string
   auth: Auth
   sidebarOpen: boolean
+  appDisplayName: string
+  appDescription: string
+  seo?: SeoData
   [key: string]: unknown
 }
 

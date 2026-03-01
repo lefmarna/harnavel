@@ -1,23 +1,22 @@
 # Project Context
 
-## Template Purpose
+## Purpose
 
 This repository is a reusable Laravel + Inertia + Docker starter template.
-Its primary objective is to provide a consistent baseline that can be cloned for multiple projects.
+In a cloned project, this file is the main place to replace the default assumptions with project-specific context.
 
-## Default Scope Assumptions
+## Default In-Scope Features
 
-In scope by default (template provides):
 - Auth (Login/Register)
 - User Dashboard
 - Profile Management
 
-Out of scope by default (add per project):
+## Default Out of Scope
+
+Replace this section in cloned projects.
+
 <!-- Replace with project-specific out-of-scope items -->
 
 ## Specification Workflow Entry
 
-For feature specification work, use:
-- `docs/generated/specs.md`
-- `.kiro/requirements/`
-- `.kiro/specs/`
+For feature specification work, use `docs/generated/specs.md`, `.kiro/requirements/`, and `.kiro/specs/`.

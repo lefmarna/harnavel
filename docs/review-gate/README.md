@@ -8,32 +8,48 @@ codex-review SKILL -> findings -> fix -> re-run -> ok: true
 
 **When to run**: After spec/plan updates, after major steps (>= 5 files / public API / infra-config), before commit/PR/release.
 
-Note: saved review JSON/log files (`*_summary.md`) may contain Japanese text depending on reviewer output requirements.
+## Documentation Exception
+
+For docs-only changes, do not request `codex-review` immediately after editing.
+First, wait for explicit user confirmation that the documentation draft is ready for review.
+
+Recommended flow for docs-only work:
+
+```text
+edit docs -> user confirms content -> codex-review SKILL -> findings -> fix -> re-run -> ok: true
+```
+
+Saved review JSON/log files (`*_summary.md`) may contain Japanese text depending on reviewer output requirements.
+
+## Review Focus
+
+- Respect architecture boundaries from the task-specific guides.
+- Check for security regressions and missing validation.
+- Check for missing tests and missing docs updates.
+- Confirm generated files were not edited manually.
 
 ## Manual Review Checklist
 
-These items require human/AI judgment (automated checks like ESLint, Pint, and TypeScript are handled by [verification commands](../../AGENTS.md#verification-required-after-every-implementation)).
+Use this checklist to define review-ready status before or alongside `codex-review`.
 
 ### Architecture
 
-- [ ] **Layers**: 3-layer pattern followed (Controller -> Service -> Repository)
-- [ ] **Data access**: No direct model queries outside repositories
-- [ ] **Controller**: Form Request + API Resource or Inertia render
+- [ ] The change respects the architecture and responsibility boundaries in the relevant task guide.
+- [ ] No new direct data-access or routing shortcuts bypass the documented project rules.
 
 ### Security
 
-- [ ] **Secrets**: No secrets in committed files
-- [ ] **Validation**: Form Requests for all validation (no inline)
-- [ ] **N+1**: No N+1 query patterns introduced
+- [ ] Validation, authorization, and secret handling did not regress.
+- [ ] No obvious N+1 or unsafe data exposure was introduced.
 
 ### Quality
 
-- [ ] **Tailwind**: v4 syntax (not v3)
-- [ ] **Factory**: Used for all models in tests
-- [ ] **Docs**: Updated for public API changes
-- [ ] Generated files are not manually edited (`docs/generated/boost.md`, `docs/generated/specs.md`)
+- [ ] Required tests were added or updated, or the omission is intentional and understood.
+- [ ] Required docs were updated when behavior, API, or workflow changed.
+- [ ] Generated files were not edited manually (`docs/generated/boost.md`, `docs/generated/specs.md`).
+- [ ] For docs-only changes, user confirmation was obtained before running `codex-review`.
 
-### Deep-Dive References
+## References
 
 - [Backend rules](../guides/backend.md)
 - [Frontend rules](../guides/frontend.md)

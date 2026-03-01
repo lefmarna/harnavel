@@ -2,12 +2,11 @@
 
 ## Scope
 
-Use this file for local environment setup, runtime operations, and CI-oriented troubleshooting.
-For canonical command syntax, use `docs/references/commands.md`.
+Use this file for local runtime facts that are specific to this template. For exact commands, use `docs/references/commands.md`.
 
 ## Setup
 
-Prerequisites and setup steps are in the top-level `README.md`.
+Human-facing setup steps live in `README.md`.
 
 ## Local Runtime Topology
 
@@ -33,44 +32,16 @@ Default local endpoints:
 | `MAILPIT_SMTP_PORT` | Mailpit SMTP port | `1025` |
 | `MAILPIT_UI_PORT` | Mailpit web UI port | `8025` |
 
-## Operations
+Keep this file and `.env.example` aligned when project-specific ports change.
 
-Typical daily operations:
-- Start/stop containers via `mise run up|stop|down`
-- Access app shell via `mise run app`
-- Run migrations/tests via `mise` tasks
+## Deployment Reference
 
-Use `docs/references/commands.md` as the source of truth for exact commands.
-
-## CI/CD Context
-
-- CI runs lint + tests before merge.
-- Playwright on CI runs Chromium by default for speed.
-- Deployment profile and hosting constraints are documented in `docs/context/deploy.md`.
-- Workflow-level deployment details (build/package/release) are in `docs/context/deploy.md` and command-level details are in `docs/references/commands.md`.
+- Hosting constraints live in `docs/context/deploy.md`.
+- Build, packaging, and local commands live in `docs/references/commands.md`.
 
 ## Troubleshooting
 
-Port conflicts:
-- adjust `NGINX_PORT` and `MARIADB_PORT` in `.env`
-
-Broken container state:
-
-```bash
-mise run destroy
-mise run build
-mise run up
-```
-
-Database reset:
-
-```bash
-mise run fresh
-```
-
-Container shell and logs:
-
-```bash
-mise run app
-mise run logs
-```
+- Port conflicts: update `NGINX_PORT` and `MARIADB_PORT` in `.env`.
+- Broken containers: `mise run destroy`, then `mise run build`, then `mise run up`.
+- Reset database: `mise run fresh`.
+- Inspect runtime: `mise run app` and `mise run logs`.

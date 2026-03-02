@@ -56,7 +56,7 @@ Do not introduce deprecated v3-style utilities:
 
 ## Screen Map and Access Guards
 
-This is the default navigation contract for the template. Update this section when a cloned project changes page structure.
+Use this map as the current GET-route navigation and guard contract. Update this section whenever page structure changes.
 
 | Area | Route | Layout | Guard |
 | --- | --- | --- | --- |

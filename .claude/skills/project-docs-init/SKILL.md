@@ -96,7 +96,7 @@ description: 'テンプレートから展開した新規プロジェクトのdoc
 **プロジェクト固有で書き換えるセクション:**
 
 - Purpose → プロジェクトの概要・目的に書き換え（必要なら「Project Overview」等へ変更）
-- Default In-Scope Features / Default Out of Scope → コンテキストから置き換え
+- In-Scope Features / Out of Scope → コンテキストから置き換え
 
 **維持するセクション（テンプレート共通）:**
 

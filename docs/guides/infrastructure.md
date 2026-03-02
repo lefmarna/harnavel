@@ -2,7 +2,7 @@
 
 ## Scope
 
-Use this file for local runtime facts that are specific to this template. For exact commands, use `docs/references/commands.md`.
+Use this file for local runtime facts that are specific to this project. For exact commands, use `docs/references/commands.md`.
 
 ## Setup
 

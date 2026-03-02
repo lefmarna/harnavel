@@ -14,10 +14,10 @@ Laravel 12 + Inertia React + MariaDB を Docker で開発するためのテン�
 | Infrastructure | Docker (Nginx, MariaDB, Mailpit) |
 
 > [!NOTE]
-> **SSR は使用しません。** 既定のデプロイ先である XServer 共有ホスティングでは Node.js プロセスを常駐できないため、Inertia SSR は無効化しています。SEO メタタグは `app.blade.php` 側で初期 HTML に出力します。
+> **SSR は使用しません。** デプロイ先の XServer 共有ホスティングでは Node.js プロセスを常駐できないため、Inertia SSR は無効化しています。SEO メタタグは `app.blade.php` 側で初期 HTML に出力します。
 
 > [!IMPORTANT]
-> **OGP 画像はプロジェクトごとに追加してください。** `public/og-image.png`（推奨: 1200x630px）はテンプレートに含めていないため、SNS シェアが必要な案件では必ず作成してください。
+> **OGP 画像はプロジェクトごとに追加してください。** `public/og-image.png`（推奨: 1200x630px）はリポジトリに含まれていないため、SNS シェアが必要な場合は必ず作成してください。
 
 ## 前提環境
 

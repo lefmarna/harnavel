@@ -1,6 +1,6 @@
 # Deployment Context
 
-## Default Hosting Profile
+## Hosting Profile
 
 This project targets XServer shared hosting.
 
@@ -10,11 +10,11 @@ This project targets XServer shared hosting.
 - PHP app served via `.htaccess` rewrite strategy
 - Cron batch files are plain PHP files that run under the project's PHP version. The cron entry itself is registered via XServer control panel (direct path execution, not via artisan).
 
-## Default Implications
+## Implications
 
 - Inertia SSR is disabled (`config/inertia.php`: `ssr.enabled=false`)
 - Queue execution is fixed to synchronous mode (`config/queue.php`: `QUEUE_CONNECTION=sync`)
-- Queue worker based asynchronous processing is out of scope for this template
+- Queue worker based asynchronous processing is out of scope under this hosting profile
 - Build assets before deployment
 - Do not introduce queue workers unless the hosting model is intentionally changed.
 

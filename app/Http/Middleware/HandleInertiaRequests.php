@@ -35,16 +35,38 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'auth' => [
-                'user' => $request->user(),
-                'hasPassword' => $request->user()?->password !== null,
-            ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'url' => $request->root(),
+            'currentUrl' => $request->url(),
             'appDisplayName' => config('app.display_name', config('app.name', 'Laravel')),
             'appDescription' => config('app.description', ''),
+            'seo' => [
+                'title' => null,
+                'description' => null,
+                'robots' => null,
+            ],
+            'auth' => [
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => null,
+                    'email_verified_at' => $user->email_verified_at,
+                    'two_factor_enabled' => $user->hasEnabledTwoFactorAuthentication(),
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ] : null,
+                'hasPassword' => $user?->password !== null,
+            ],
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'flash' => [
+                'status' => $request->session()->get('status'),
+                'error' => $request->session()->get('error'),
+            ],
         ];
     }
 }

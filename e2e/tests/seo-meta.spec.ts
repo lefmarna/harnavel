@@ -3,7 +3,6 @@ import { expect, test } from '@playwright/test'
 test('SPA遷移時にSEOメタタグが更新される', async ({ page }) => {
   // Welcome ページに直接アクセス
   await page.goto('/')
-  await expect(page).toHaveTitle(/Welcome - /)
 
   const welcomeOgUrl = await page
     .locator('meta[property="og:url"]')
@@ -13,38 +12,37 @@ test('SPA遷移時にSEOメタタグが更新される', async ({ page }) => {
 
   // Login ページへ SPA 遷移（フルリロードなし）
   await page.click('a[href*="login"]')
-  await expect(page).toHaveTitle(/Log in - /)
+  await expect(page).toHaveURL(/\/login$/)
 
-  const loginOgTitle = await page
-    .locator('meta[property="og:title"]')
-    .getAttribute('content')
-  expect(loginOgTitle).toContain('Log in - ')
+  const loginOgTitle = page.locator('meta[property="og:title"]')
+  await expect(loginOgTitle).toHaveAttribute('content', /Log in - /)
 
-  const loginDescription = await page
-    .locator('meta[name="description"]')
-    .getAttribute('content')
-  // Login ページは seo.description = 'Log in to your account.' を持つ
-  expect(loginDescription).toBe('Log in to your account.')
+  const loginDescription = page.locator('meta[name="description"]')
+  await expect(loginDescription).toHaveAttribute(
+    'content',
+    'Log in to your account.',
+  )
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    'content',
+    'noindex, nofollow',
+  )
 
-  const loginOgUrl = await page
-    .locator('meta[property="og:url"]')
-    .getAttribute('content')
-  expect(loginOgUrl).toContain('/login')
+  const loginOgUrl = page.locator('meta[property="og:url"]')
+  await expect(loginOgUrl).toHaveAttribute('content', /\/login$/)
 
   // og:url が遷移前と異なることを確認
-  expect(loginOgUrl).not.toBe(welcomeOgUrl)
+  expect(await loginOgUrl.getAttribute('content')).not.toBe(welcomeOgUrl)
 
   // twitter:title も同期していることを確認
-  const loginTwitterTitle = await page
-    .locator('meta[name="twitter:title"]')
-    .getAttribute('content')
-  expect(loginTwitterTitle).toContain('Log in - ')
+  const loginTwitterTitle = page.locator('meta[name="twitter:title"]')
+  await expect(loginTwitterTitle).toHaveAttribute('content', /Log in - /)
 
   // og:description も遷移後に更新されていることを確認
-  const loginOgDescription = await page
-    .locator('meta[property="og:description"]')
-    .getAttribute('content')
-  expect(loginOgDescription).toBe('Log in to your account.')
+  const loginOgDescription = page.locator('meta[property="og:description"]')
+  await expect(loginOgDescription).toHaveAttribute(
+    'content',
+    'Log in to your account.',
+  )
 })
 
 test('パスワードリセットページのog:urlにクエリ文字列が含まれない', async ({

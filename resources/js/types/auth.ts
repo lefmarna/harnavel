@@ -2,9 +2,9 @@ export type User = {
   id: number
   name: string
   email: string
-  avatar?: string
+  avatar: string | null
   email_verified_at: string | null
-  two_factor_enabled?: boolean
+  two_factor_enabled: boolean
   created_at: string
   updated_at: string
   [key: string]: unknown
@@ -18,15 +18,25 @@ export type Auth = {
 export type SeoData = {
   title?: string
   description?: string
+  robots?: string
+  image?: string
+  url?: string
+  type?: 'website' | 'article'
 }
 
 export type SharedData = {
   name: string
-  auth: Auth
-  sidebarOpen: boolean
+  url: string
+  currentUrl: string
   appDisplayName: string
   appDescription: string
-  seo?: SeoData
+  seo: SeoData
+  auth: Auth
+  sidebarOpen: boolean
+  flash: {
+    status: string | null
+    error: string | null
+  }
   [key: string]: unknown
 }
 

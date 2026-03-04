@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
+use App\Exceptions\GoogleAuthException;
 use App\Http\Controllers\Controller;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use Illuminate\Database\QueryException;
@@ -11,7 +12,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
+use Laravel\Fortify\Features;
 use Laravel\Socialite\Facades\Socialite;
+use Throwable;
 
 class GoogleAuthController extends Controller
 {
@@ -32,7 +36,7 @@ class GoogleAuthController extends Controller
             $driver = Socialite::driver('google');
             /** @var \Laravel\Socialite\Two\User $googleUser */
             $googleUser = $driver->user();
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::warning('Google OAuth callback failed.', ['exception' => $e]);
 
             return redirect()->route('login')
@@ -69,8 +73,25 @@ class GoogleAuthController extends Controller
 
             return redirect()->route('login')
                 ->with('error', 'Google認証に失敗しました。もう一度お試しください。');
-        } catch (\RuntimeException $e) {
-            return redirect()->route('login')->with('error', $e->getMessage());
+        } catch (GoogleAuthException $e) {
+            return redirect()->route('login')
+                ->with('error', $e->getMessage());
+        } catch (Throwable $e) {
+            Log::warning('Google OAuth unexpected error.', ['exception' => $e]);
+
+            return redirect()->route('login')
+                ->with('error', 'Google認証に失敗しました。もう一度お試しください。');
+        }
+
+        if (Features::canManageTwoFactorAuthentication() && $user->hasEnabledTwoFactorAuthentication()) {
+            $request->session()->put([
+                'login.id' => $user->getKey(),
+                'login.remember' => false,
+            ]);
+
+            TwoFactorAuthenticationChallenged::dispatch($user);
+
+            return redirect()->route('two-factor.login');
         }
 
         Auth::login($user);

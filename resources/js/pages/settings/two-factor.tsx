@@ -56,8 +56,9 @@ export default function TwoFactor({
               <Badge variant="default">Enabled</Badge>
               <p className="text-muted-foreground">
                 With two-factor authentication enabled, you will be prompted for
-                a secure, random pin during login, which you can retrieve from
-                the TOTP-supported application on your phone.
+                a secure, random pin during login, regardless of whether you
+                sign in with your password or Google. You can retrieve this code
+                from the TOTP-supported application on your phone.
               </p>
 
               <TwoFactorRecoveryCodes
@@ -84,8 +85,9 @@ export default function TwoFactor({
             <div className="flex flex-col items-start justify-start space-y-4">
               <Badge variant="destructive">Disabled</Badge>
               <p className="text-muted-foreground">
-                When you enable two-factor authentication, you will be prompted
-                for a secure pin during login. This pin can be retrieved from a
+                When you enable two-factor authentication, it will be required
+                during login for all sign-in methods, including your password
+                and Google. This secure pin can be retrieved from a
                 TOTP-supported application on your phone.
               </p>
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\GoogleAuth;
 
+use App\Exceptions\GoogleAuthException;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -24,7 +25,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
                 // google_id 一致ユーザーとメール一致ユーザーが異なるレコードの場合は衝突エラー
                 if ($userByGoogleId && $userByEmail && ! $userByGoogleId->is($userByEmail)) {
-                    throw new \RuntimeException('このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+                    throw new GoogleAuthException('このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
                 }
 
                 $user = $userByGoogleId ?? $userByEmail;
@@ -32,7 +33,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
                 if ($user) {
                     // 別の Google アカウントがすでに紐付いている場合はエラー
                     if ($user->google_id !== null && $user->google_id !== $googleId) {
-                        throw new \RuntimeException('このメールアドレスは別のGoogleアカウントに連携済みです。');
+                        throw new GoogleAuthException('このメールアドレスは別のGoogleアカウントに連携済みです。');
                     }
 
                     if ($user->google_id === null) {
@@ -66,7 +67,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
             // フォールバック時も衝突判定を再実行する
             // （別トランザクションが google_id 側と email 側それぞれを別々に作成した場合）
             if ($userByGoogleId && $userByEmail && ! $userByGoogleId->is($userByEmail)) {
-                throw new \RuntimeException('このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+                throw new GoogleAuthException('このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
             }
 
             $user = $userByGoogleId ?? $userByEmail;
@@ -76,11 +77,11 @@ class GoogleAuthService implements GoogleAuthServiceContract
                     'google_id' => $googleId,
                 ]);
 
-                throw new \RuntimeException('Google認証に失敗しました。もう一度お試しください。');
+                throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。');
             }
 
             if ($user->google_id !== null && $user->google_id !== $googleId) {
-                throw new \RuntimeException('このメールアドレスは別のGoogleアカウントに連携済みです。');
+                throw new GoogleAuthException('このメールアドレスは別のGoogleアカウントに連携済みです。');
             }
 
             if ($user->google_id === null) {

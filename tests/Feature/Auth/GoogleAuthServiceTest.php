@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\GoogleAuthException;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Services\GoogleAuth\GoogleAuthService;
@@ -65,7 +66,7 @@ test('既存ユーザーの email_verified_at が null なら自動設定する'
     expect(User::find($existing->id)?->email_verified_at)->not->toBeNull();
 });
 
-test('google_id ユーザーとメールユーザーが別レコードの場合 RuntimeException を投げる', function () {
+test('google_id ユーザーとメールユーザーが別レコードの場合 GoogleAuthException を投げる', function () {
     User::factory()->create([
         'google_id' => 'google-aaa',
         'email' => 'aaa@example.com',
@@ -78,10 +79,10 @@ test('google_id ユーザーとメールユーザーが別レコードの場合 
     $service = app(GoogleAuthService::class);
 
     expect(fn () => $service->findOrCreate('google-aaa', 'bbb@example.com', 'User'))
-        ->toThrow(\RuntimeException::class);
+        ->toThrow(GoogleAuthException::class);
 });
 
-test('別の google_id がすでに連携済みの場合 RuntimeException を投げる', function () {
+test('別の google_id がすでに連携済みの場合 GoogleAuthException を投げる', function () {
     User::factory()->create([
         'email' => 'linked@example.com',
         'google_id' => 'old-google-id',
@@ -90,10 +91,26 @@ test('別の google_id がすでに連携済みの場合 RuntimeException を投
     $service = app(GoogleAuthService::class);
 
     expect(fn () => $service->findOrCreate('new-google-id', 'linked@example.com', 'User'))
-        ->toThrow(\RuntimeException::class, 'このメールアドレスは別のGoogleアカウントに連携済みです。');
+        ->toThrow(GoogleAuthException::class, 'このメールアドレスは別のGoogleアカウントに連携済みです。');
 });
 
-test('交差入力（google_id と email が別ユーザーに対応）で衝突 RuntimeException を投げる', function () {
+test('二段階認証が有効な既存ユーザーもサービス層では返却する', function () {
+    $existing = User::factory()->create([
+        'email' => 'two-factor@example.com',
+        'google_id' => 'google-2fa',
+        'two_factor_secret' => encrypt('test-secret'),
+        'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $service = app(GoogleAuthService::class);
+
+    $user = $service->findOrCreate('google-2fa', 'two-factor@example.com', 'Two Factor User');
+
+    expect($user->is($existing))->toBeTrue();
+});
+
+test('交差入力（google_id と email が別ユーザーに対応）で衝突 GoogleAuthException を投げる', function () {
     // findCandidates が 2 ユーザーを返し、衝突判定を発動することを確認するテスト
     // ※並行ロック順序の正確性は統合テストで検証する必要がある
     User::factory()->create([
@@ -109,7 +126,7 @@ test('交差入力（google_id と email が別ユーザーに対応）で衝突
 
     // google_id が userX を、email が userY を指す「交差入力」
     expect(fn () => $service->findOrCreate('google-X', 'y@example.com', 'User'))
-        ->toThrow(\RuntimeException::class, 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+        ->toThrow(GoogleAuthException::class, 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
 });
 
 test('UniqueConstraintViolationException 発生時にフォールバックで既存ユーザーを返す', function () {
@@ -215,7 +232,7 @@ test('UniqueConstraintViolationException 後に findByEmail でユーザーを�
         ->and($user->email_verified_at)->not->toBeNull();
 });
 
-test('UniqueConstraintViolationException 後のフォールバックでも別レコード衝突なら RuntimeException を投げる', function () {
+test('UniqueConstraintViolationException 後のフォールバックでも別レコード衝突なら GoogleAuthException を投げる', function () {
     $userA = User::factory()->create([
         'google_id' => 'google-A',
         'email' => 'a@example.com',
@@ -264,5 +281,5 @@ test('UniqueConstraintViolationException 後のフォールバックでも別レ
     $service = app(GoogleAuthService::class);
 
     expect(fn () => $service->findOrCreate('google-A', 'b@example.com', 'User'))
-        ->toThrow(\RuntimeException::class, 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+        ->toThrow(GoogleAuthException::class, 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
 });

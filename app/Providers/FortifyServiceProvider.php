@@ -47,6 +47,8 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
+        $noIndexRobots = 'noindex, nofollow';
+
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
             'canRegister' => Features::enabled(Features::registration()),
@@ -58,6 +60,7 @@ class FortifyServiceProvider extends ServiceProvider
             'seo' => [
                 'title' => 'Log in',
                 'description' => 'Log in to your account.',
+                'robots' => $noIndexRobots,
             ],
         ]));
 
@@ -67,6 +70,7 @@ class FortifyServiceProvider extends ServiceProvider
             'seo' => [
                 'title' => 'Reset password',
                 'description' => 'Set a new password for your account.',
+                'robots' => $noIndexRobots,
             ],
         ]));
 
@@ -75,6 +79,7 @@ class FortifyServiceProvider extends ServiceProvider
             'seo' => [
                 'title' => 'Forgot password',
                 'description' => 'Enter your email to receive a password reset link.',
+                'robots' => $noIndexRobots,
             ],
         ]));
 
@@ -82,6 +87,7 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
             'seo' => [
                 'title' => 'Email verification',
+                'robots' => $noIndexRobots,
             ],
         ]));
 
@@ -89,6 +95,7 @@ class FortifyServiceProvider extends ServiceProvider
             'seo' => [
                 'title' => 'Register',
                 'description' => 'Create a new account.',
+                'robots' => $noIndexRobots,
             ],
         ]));
 
@@ -96,12 +103,14 @@ class FortifyServiceProvider extends ServiceProvider
             'seo' => [
                 'title' => 'Two-Factor Authentication',
                 'description' => 'Enter your authentication code to continue.',
+                'robots' => $noIndexRobots,
             ],
         ]));
 
         Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password', [
             'seo' => [
                 'title' => 'Confirm password',
+                'robots' => $noIndexRobots,
             ],
         ]));
     }

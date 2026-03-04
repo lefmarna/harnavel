@@ -24,8 +24,10 @@ Minimum requirement: every plan must state both `Intent` and `Selection Rational
 
 SSR is disabled. SEO is managed from a shared Inertia `seo` prop.
 
+- Treat the Inertia `seo` prop as the only standard SEO input path; do not introduce Blade-only `withViewData()` SEO overrides unless a page has a documented exception.
 - Every `Inertia::render()` must pass `seo.title`. `seo.description` is optional.
 - `resources/views/app.blade.php` outputs initial meta tags from the shared props.
+- Authentication-flow and token-driven pages must set `seo.robots` to `noindex, nofollow` unless there is an explicit documented reason to expose them to search crawlers.
 - `resources/js/components/seo-head.tsx` updates meta tags during SPA navigation.
 - `resources/js/app.tsx` applies `<SeoHead />` globally.
 - `app/Http/Middleware/HandleInertiaRequests.php` is the source of shared site defaults (`appDisplayName`, `appDescription`).

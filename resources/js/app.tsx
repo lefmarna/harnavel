@@ -1,12 +1,24 @@
 import { createInertiaApp } from '@inertiajs/react'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
-import { type ReactNode, StrictMode } from 'react'
+import { type ComponentType, type ReactNode, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import SeoHead from './components/seo-head'
 import '../css/app.css'
 import { initializeTheme } from './hooks/use-appearance'
 
-const seoLayout = (children: ReactNode) => (
+const appName = import.meta.env.VITE_APP_NAME || 'Laravel App Template'
+
+type PageComponent = ComponentType & {
+  layout?: (children: ReactNode) => ReactNode
+  originalLayout?: (children: ReactNode) => ReactNode
+  seoWrapped?: boolean
+}
+
+type PageModule = {
+  default: PageComponent
+}
+
+const withSeoLayout = (children: ReactNode) => (
   <>
     <SeoHead />
     {children}
@@ -14,22 +26,28 @@ const seoLayout = (children: ReactNode) => (
 )
 
 createInertiaApp({
-  resolve: (name) => {
-    const page = resolvePageComponent(
+  title: (title) => (title ? `${title} - ${appName}` : appName),
+  resolve: (name) =>
+    resolvePageComponent(
       `./pages/${name}.tsx`,
       import.meta.glob('./pages/**/*.tsx'),
-    ) as Promise<{
-      default: { layout?: (page: ReactNode) => ReactNode }
-    }>
+    ).then((module) => {
+      const page = (module as PageModule).default
 
-    page.then((module) => {
-      if (!module.default.layout) {
-        module.default.layout = seoLayout
+      if (!page.seoWrapped) {
+        page.originalLayout = page.layout
+        page.layout = (children: ReactNode) => {
+          const content = page.originalLayout
+            ? page.originalLayout(children)
+            : children
+
+          return withSeoLayout(content)
+        }
+        page.seoWrapped = true
       }
-    })
 
-    return page
-  },
+      return module
+    }),
   setup({ el, App, props }) {
     const root = createRoot(el)
 

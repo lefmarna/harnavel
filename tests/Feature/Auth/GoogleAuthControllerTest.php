@@ -1,9 +1,12 @@
 <?php
 
+use App\Exceptions\GoogleAuthException;
 use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Event;
+use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
 use Laravel\Socialite\Facades\Socialite;
 
 use function Pest\Laravel\mock;
@@ -17,7 +20,7 @@ test('redirect() でゲストを Google OAuth にリダイレクトする', func
         ->assertRedirect('https://accounts.google.com/auth');
 });
 
-test('callback() で正常ログインしてホームへリダイレクトする', function () {
+test('callback() で二段階認証が無効ならそのままログイン完了してホームへリダイレクトする', function () {
     $existingUser = User::factory()->create(['email' => 'test@example.com']);
 
     $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
@@ -36,9 +39,88 @@ test('callback() で正常ログインしてホームへリダイレクトする
         ->andReturn($existingUser);
 
     $this->get(route('auth.google.callback'))
-        ->assertRedirect(route('home'));
+        ->assertRedirect(route('home'))
+        ->assertSessionMissing('login.id')
+        ->assertSessionMissing('login.remember');
 
     $this->assertAuthenticatedAs($existingUser);
+});
+
+test('callback() で二段階認証が有効ならチャレンジ画面へリダイレクトする', function () {
+    Event::fake([TwoFactorAuthenticationChallenged::class]);
+
+    $existingUser = User::factory()->create([
+        'email' => 'test@example.com',
+        'two_factor_secret' => encrypt('test-secret'),
+        'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
+    $googleUser->allows('getId')->andReturn('google-123');
+    $googleUser->allows('getEmail')->andReturn('test@example.com');
+    $googleUser->allows('getName')->andReturn('Test User');
+    $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+    $driver = Mockery::mock(\Laravel\Socialite\Two\GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+    mock(GoogleAuthServiceContract::class)
+        ->shouldReceive('findOrCreate')
+        ->with('google-123', 'test@example.com', 'Test User')
+        ->andReturn($existingUser);
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(route('two-factor.login'))
+        ->assertSessionHas('login.id', $existingUser->getKey())
+        ->assertSessionHas('login.remember', false);
+
+    $this->assertGuest();
+
+    Event::assertDispatched(TwoFactorAuthenticationChallenged::class);
+});
+
+test('callback() で二段階認証 feature が無効なら二段階認証設定が残っていてもそのままログイン完了する', function () {
+    Event::fake([TwoFactorAuthenticationChallenged::class]);
+
+    config([
+        'fortify.features' => array_values(array_filter(
+            config('fortify.features', []),
+            fn (string $feature): bool => $feature !== \Laravel\Fortify\Features::twoFactorAuthentication(),
+        )),
+    ]);
+
+    $existingUser = User::factory()->create([
+        'email' => 'feature-disabled@example.com',
+        'two_factor_secret' => encrypt('test-secret'),
+        'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+        'two_factor_confirmed_at' => now(),
+    ]);
+
+    $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
+    $googleUser->allows('getId')->andReturn('google-feature-disabled');
+    $googleUser->allows('getEmail')->andReturn('feature-disabled@example.com');
+    $googleUser->allows('getName')->andReturn('Feature Disabled User');
+    $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+    $driver = Mockery::mock(\Laravel\Socialite\Two\GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+    mock(GoogleAuthServiceContract::class)
+        ->shouldReceive('findOrCreate')
+        ->with('google-feature-disabled', 'feature-disabled@example.com', 'Feature Disabled User')
+        ->andReturn($existingUser);
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(route('home'))
+        ->assertSessionMissing('login.id')
+        ->assertSessionMissing('login.remember');
+
+    $this->assertAuthenticatedAs($existingUser);
+
+    Event::assertNotDispatched(TwoFactorAuthenticationChallenged::class);
 });
 
 test('callback() で Socialite が例外を投げたらログイン画面にリダイレクトする', function () {
@@ -92,7 +174,7 @@ test('callback() で QueryException が発生してもセッションエラー�
     expect(session('error'))->not->toContain($secretSql);
 });
 
-test('callback() で RuntimeException のビジネスメッセージがセッションに設定される', function () {
+test('callback() で GoogleAuthException のビジネスメッセージがセッションに設定される', function () {
     $errorMessage = 'このメールアドレスは別のGoogleアカウントに連携済みです。';
 
     $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
@@ -107,9 +189,29 @@ test('callback() で RuntimeException のビジネスメッセージがセッシ
 
     mock(GoogleAuthServiceContract::class)
         ->shouldReceive('findOrCreate')
-        ->andThrow(new \RuntimeException($errorMessage));
+        ->andThrow(new GoogleAuthException($errorMessage));
 
     $this->get(route('auth.google.callback'))
         ->assertRedirect(route('login'))
         ->assertSessionHas('error', $errorMessage);
+});
+
+test('callback() で想定外例外が発生しても安全なメッセージでログイン画面に戻す', function () {
+    $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
+    $googleUser->allows('getId')->andReturn('google-123');
+    $googleUser->allows('getEmail')->andReturn('test@example.com');
+    $googleUser->allows('getName')->andReturn('Test User');
+    $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+    $driver = Mockery::mock(\Laravel\Socialite\Two\GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+    mock(GoogleAuthServiceContract::class)
+        ->shouldReceive('findOrCreate')
+        ->andThrow(new \LogicException('unexpected failure'));
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('error', 'Google認証に失敗しました。もう一度お試しください。');
 });

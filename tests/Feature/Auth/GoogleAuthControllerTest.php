@@ -36,6 +36,51 @@ test('callback() は Google OAuth 未設定時にログイン画面へ戻す', f
         ->assertSessionHas('error', 'Googleログインは現在利用できません。');
 });
 
+test('callback() は google id が null の場合にログインせずログイン画面へ戻す', function () {
+    $existingUser = User::factory()->create(['google_id' => null]);
+
+    $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
+    $googleUser->allows('getId')->andReturn(null);
+    $googleUser->allows('getEmail')->andReturn('any@example.com');
+    $googleUser->allows('getName')->andReturn('Any User');
+    $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+    $driver = Mockery::mock(\Laravel\Socialite\Two\GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+    mock(GoogleAuthServiceContract::class)
+        ->shouldNotReceive('findOrCreate');
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('error', 'Googleアカウント情報の取得に失敗しました。もう一度お試しください。');
+
+    $this->assertGuest();
+    expect($existingUser->fresh()->google_id)->toBeNull();
+});
+
+test('callback() は google id が空文字の場合にログインせずログイン画面へ戻す', function () {
+    $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
+    $googleUser->allows('getId')->andReturn('');
+    $googleUser->allows('getEmail')->andReturn('any@example.com');
+    $googleUser->allows('getName')->andReturn('Any User');
+    $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+    $driver = Mockery::mock(\Laravel\Socialite\Two\GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+    mock(GoogleAuthServiceContract::class)
+        ->shouldNotReceive('findOrCreate');
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('error', 'Googleアカウント情報の取得に失敗しました。もう一度お試しください。');
+
+    $this->assertGuest();
+});
+
 test('login view は Google OAuth 設定不足時に canGoogleLogin=false を返す', function () {
     config(['services.google.redirect' => null]);
 
@@ -275,4 +320,22 @@ test('callback() で想定外例外が発生しても安全なメッセージで
     $this->get(route('auth.google.callback'))
         ->assertRedirect(route('login'))
         ->assertSessionHas('error', 'Google認証に失敗しました。もう一度お試しください。');
+});
+
+test('shared auth data は google_id と認証機密情報をフロントへ公開しない', function () {
+    $user = User::factory()->create([
+        'google_id' => 'secret-google-id-12345',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('profile.edit'))
+        ->assertInertia(fn ($page) => $page
+            ->has('auth.user')
+            ->missing('auth.user.google_id')
+            ->missing('auth.user.password')
+            ->missing('auth.user.two_factor_secret')
+            ->missing('auth.user.two_factor_recovery_codes')
+            ->missing('auth.user.remember_token')
+            ->where('auth.hasPassword', true)
+        );
 });

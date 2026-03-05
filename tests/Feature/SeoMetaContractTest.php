@@ -44,11 +44,9 @@ test('og:url excludes query string for sensitive routes', function () {
     $response = $this->get($url);
     $content = $response->getContent();
 
-    // Extract og:url value from meta tag
     preg_match('/property="og:url"\s+content="([^"]*)"/', $content, $matches);
     $ogUrl = $matches[1] ?? '';
 
-    // Query string params (email) should be excluded; path params (token) are part of the canonical URL
     expect($ogUrl)->not->toBeEmpty()
         ->and($ogUrl)->not->toContain('email=')
         ->and($ogUrl)->not->toContain('?')
@@ -59,7 +57,6 @@ test('og:url contains canonical path without query string', function () {
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
-    // Extract og:url value from meta tag
     preg_match('/property="og:url"\s+content="([^"]*)"/', $content, $matches);
     $ogUrl = $matches[1] ?? '';
 
@@ -93,6 +90,7 @@ test('shared auth user exposes stable optional fields', function () {
         ->has('auth.user')
         ->where('auth.user.avatar', null)
         ->where('auth.user.two_factor_enabled', false)
+        ->where('auth.hasPassword', true)
     );
 });
 
@@ -137,8 +135,7 @@ test('public pages keep indexable robots meta', function () {
     expect($content)->toContain('<meta inertia="robots" name="robots" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1">');
 });
 
-// Guest pages
-test('guest pages have seo.title', function (string $routeName, string $expectedTitle, array $routeParams = []) {
+test('pages expose seo.title', function (string $routeName, string $expectedTitle, array $routeParams = []) {
     $response = $this->get(route($routeName, $routeParams));
 
     $response->assertOk();
@@ -154,8 +151,7 @@ test('guest pages have seo.title', function (string $routeName, string $expected
     'reset-password' => ['password.reset', 'Reset password', ['token' => 'test-token']],
 ]);
 
-// Auth-required pages
-test('auth pages have seo.title', function (string $routeName, string $expectedTitle) {
+test('authenticated pages have seo.title', function (string $routeName, string $expectedTitle) {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route($routeName));
@@ -172,7 +168,6 @@ test('auth pages have seo.title', function (string $routeName, string $expectedT
     'appearance' => ['appearance.edit', 'Appearance settings'],
 ]);
 
-// Auth pages requiring specific state
 test('two-factor settings page has seo.title', function () {
     $user = User::factory()->create();
 
@@ -231,7 +226,6 @@ test('two-factor-challenge page has seo.title', function () {
         'two_factor_confirmed_at' => now(),
     ])->save();
 
-    // Simulate the two-factor challenge session state
     $this->post(route('login'), [
         'email' => $user->email,
         'password' => 'password',

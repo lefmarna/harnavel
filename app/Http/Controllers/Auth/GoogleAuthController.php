@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\GoogleAuthException;
 use App\Http\Controllers\Controller;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
+use App\Support\GoogleOAuth;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,11 @@ class GoogleAuthController extends Controller
 
     public function redirect(): RedirectResponse
     {
+        if (! GoogleOAuth::isConfigured()) {
+            return redirect()->route('login')
+                ->with('error', 'Googleログインは現在利用できません。');
+        }
+
         /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
         $driver = Socialite::driver('google');
 
@@ -31,6 +37,11 @@ class GoogleAuthController extends Controller
 
     public function callback(Request $request): RedirectResponse
     {
+        if (! GoogleOAuth::isConfigured()) {
+            return redirect()->route('login')
+                ->with('error', 'Googleログインは現在利用できません。');
+        }
+
         try {
             /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
             $driver = Socialite::driver('google');
@@ -58,8 +69,9 @@ class GoogleAuthController extends Controller
                 ->with('error', 'Googleアカウントのメールアドレスが取得できませんでした。別のアカウントでお試しください。');
         }
 
+        /** @var mixed $googleId */
         $googleId = $googleUser->getId();
-        if ($googleId === '') {
+        if (! is_string($googleId) || $googleId === '') {
             return redirect()->route('login')
                 ->with('error', 'Googleアカウント情報の取得に失敗しました。もう一度お試しください。');
         }
@@ -97,6 +109,6 @@ class GoogleAuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('home');
+        return redirect()->intended(config('fortify.home'));
     }
 }

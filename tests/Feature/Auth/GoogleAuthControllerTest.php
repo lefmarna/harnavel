@@ -20,7 +20,41 @@ test('redirect() でゲストを Google OAuth にリダイレクトする', func
         ->assertRedirect('https://accounts.google.com/auth');
 });
 
-test('callback() で二段階認証が無効ならそのままログイン完了してホームへリダイレクトする', function () {
+test('redirect() は Google OAuth 未設定時にログイン画面へ戻す', function () {
+    config(['services.google.client_id' => null]);
+
+    $this->get(route('auth.google'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('error', 'Googleログインは現在利用できません。');
+});
+
+test('callback() は Google OAuth 未設定時にログイン画面へ戻す', function () {
+    config(['services.google.client_secret' => null]);
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('error', 'Googleログインは現在利用できません。');
+});
+
+test('login view は Google OAuth 設定不足時に canGoogleLogin=false を返す', function () {
+    config(['services.google.redirect' => null]);
+
+    $this->get(route('login'))
+        ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('auth/login')
+            ->where('canGoogleLogin', false));
+});
+
+test('login view は Google OAuth 設定完備時に canGoogleLogin=true を返す', function () {
+    config(['services.google.client_id' => 'id', 'services.google.client_secret' => 'secret', 'services.google.redirect' => 'https://example.com/callback']);
+
+    $this->get(route('login'))
+        ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('auth/login')
+            ->where('canGoogleLogin', true));
+});
+
+test('callback() で二段階認証が無効ならそのままログイン完了して fortify.home へリダイレクトする', function () {
     $existingUser = User::factory()->create(['email' => 'test@example.com']);
 
     $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
@@ -39,9 +73,36 @@ test('callback() で二段階認証が無効ならそのままログイン完了
         ->andReturn($existingUser);
 
     $this->get(route('auth.google.callback'))
-        ->assertRedirect(route('home'))
+        ->assertRedirect(config('fortify.home'))
         ->assertSessionMissing('login.id')
         ->assertSessionMissing('login.remember');
+
+    $this->assertAuthenticatedAs($existingUser);
+});
+
+test('callback() は intended URL があれば fortify.home より優先してリダイレクトする', function () {
+    $existingUser = User::factory()->create(['email' => 'test@example.com']);
+
+    $googleUser = Mockery::mock(\Laravel\Socialite\Two\User::class);
+    $googleUser->allows('getId')->andReturn('google-123');
+    $googleUser->allows('getEmail')->andReturn('test@example.com');
+    $googleUser->allows('getName')->andReturn('Test User');
+    $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+    $driver = Mockery::mock(\Laravel\Socialite\Two\GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+    mock(GoogleAuthServiceContract::class)
+        ->shouldReceive('findOrCreate')
+        ->with('google-123', 'test@example.com', 'Test User')
+        ->andReturn($existingUser);
+
+    $intended = route('profile.edit');
+
+    $this->withSession(['url.intended' => $intended])
+        ->get(route('auth.google.callback'))
+        ->assertRedirect($intended);
 
     $this->assertAuthenticatedAs($existingUser);
 });
@@ -114,7 +175,7 @@ test('callback() で二段階認証 feature が無効なら二段階認証設定
         ->andReturn($existingUser);
 
     $this->get(route('auth.google.callback'))
-        ->assertRedirect(route('home'))
+        ->assertRedirect(config('fortify.home'))
         ->assertSessionMissing('login.id')
         ->assertSessionMissing('login.remember');
 

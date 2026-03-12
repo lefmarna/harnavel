@@ -17,7 +17,7 @@ Laravel 12 + Inertia React + MariaDB を Docker で開発するためのテン�
 > **SSR は使用しません。** デプロイ先の XServer 共有ホスティングでは Node.js プロセスを常駐できないため、Inertia SSR は無効化しています。SEO メタタグは `app.blade.php` 側で初期 HTML に出力します。
 
 > [!IMPORTANT]
-> **OGP 画像はプロジェクトごとに追加してください。** `public/og-image.png`（推奨: 1200x630px）はリポジトリに含まれていないため、SNS シェアが必要な場合は必ず作成してください。
+> **OGP 画像はプロジェクトごとに追加してください。** `public/opengraph-image.png`（推奨: 1200x630px）はリポジトリに含まれていないため、SNS シェアが必要な場合は必ず作成してください。
 
 ## 前提環境
 
@@ -42,7 +42,7 @@ pnpm dev
 セットアップ完了後の既定 URL:
 
 - アプリ: `http://localhost:8080`
-- Mailpit: `http://localhost:8025`
+- Mailpit: `http://localhost:8028`
 
 ## 日常的によく使うコマンド
 

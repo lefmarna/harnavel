@@ -37,7 +37,7 @@ export default function SeoHead({
     'index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1'
   const metaUrl = new URL(url ?? sharedSeo.url ?? currentUrl, appUrl).toString()
   const metaImage = new URL(
-    image ?? sharedSeo.image ?? '/og-image.png',
+    image ?? sharedSeo.image ?? '/opengraph-image.png',
     appUrl,
   ).toString()
   const pageTitle = resolvedTitle ? `${resolvedTitle} - ${siteName}` : siteName

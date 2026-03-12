@@ -37,6 +37,21 @@ test('welcome page initial HTML contains inertia-managed seo tags', function () 
         ->and($content)->toContain('<meta inertia="twitter:title" name="twitter:title"')
         ->and($content)->toContain('<meta inertia="twitter:description" name="twitter:description"')
         ->and($content)->toContain('<meta inertia="twitter:image" name="twitter:image"');
+
+    preg_match('/property="og:image"\s+content="([^"]*)"/', $content, $ogImageMatches);
+    preg_match('/name="twitter:image"\s+content="([^"]*)"/', $content, $twitterImageMatches);
+
+    expect($ogImageMatches[1] ?? '')->toEndWith('/opengraph-image.png')
+        ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.png');
+});
+
+test('testing responses do not inject debugbar assets', function () {
+    $response = $this->get(route('home'));
+    $content = $response->getContent();
+
+    expect($content)->not->toContain('id="phpdebugbar"')
+        ->and($content)->not->toContain('phpdebugbar.addDataSet')
+        ->and($content)->not->toContain('/_debugbar/');
 });
 
 test('og:url excludes query string for sensitive routes', function () {

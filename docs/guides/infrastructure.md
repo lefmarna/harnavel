@@ -16,11 +16,11 @@ Human-facing setup steps live in `README.md`.
 | `app` | PHP-FPM with Laravel | - |
 | `mariadb` | Main database | `3306` |
 | `mariadb-testing` | Testing database (isolated) | - |
-| `mailpit` | Mail catcher (SMTP + Web UI) | `1025`, `8025` |
+| `mailpit` | Mail catcher (SMTP + Web UI) | `1028`, `8028` |
 
 Default local endpoints:
 - App: `http://localhost:8080`
-- Mailpit: `http://localhost:8025`
+- Mailpit: `http://localhost:8028`
 
 ## Environment Variables
 
@@ -29,8 +29,8 @@ Default local endpoints:
 | `APP_NAME` | Container name prefix | `app` |
 | `NGINX_PORT` | Nginx exposed port | `8080` |
 | `MARIADB_PORT` | MariaDB exposed port | `3306` |
-| `MAILPIT_SMTP_PORT` | Mailpit SMTP port | `1025` |
-| `MAILPIT_UI_PORT` | Mailpit web UI port | `8025` |
+| `MAILPIT_SMTP_PORT` | Mailpit SMTP port | `1028` |
+| `MAILPIT_UI_PORT` | Mailpit web UI port | `8028` |
 
 Keep this file and `.env.example` aligned when project-specific ports change.
 

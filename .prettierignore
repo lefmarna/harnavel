@@ -3,3 +3,6 @@ resources/views/mail/*
 
 # Agent/workflow files (XML tags must start at line beginning)
 *.md
+
+# Lock files
+pnpm-lock.yaml

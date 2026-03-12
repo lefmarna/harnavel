@@ -41,7 +41,7 @@
 
         $title = $seoTitle ? "{$seoTitle} - {$displayName}" : $displayName;
         $description = $pageSeo['description'] ?? ($pageProps['appDescription'] ?? config('app.description'));
-        $rawImage = $pageSeo['image'] ?? 'og-image.png';
+        $rawImage = $pageSeo['image'] ?? 'opengraph-image.png';
         $image = \Illuminate\Support\Str::startsWith($rawImage, ['http://', 'https://']) ? $rawImage : asset($rawImage);
         $rawUrl = $pageSeo['url'] ?? url()->current();
         $url = \Illuminate\Support\Str::startsWith($rawUrl, ['http://', 'https://']) ? $rawUrl : url($rawUrl);

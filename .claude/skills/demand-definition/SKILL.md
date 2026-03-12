@@ -109,3 +109,36 @@ Detailed guides are in `.kiro/requirements/references/`.
 - Log all discussions to `discussion_log.md` per `discussion_logger.md`
 - Update `session.json` on each step completion (see `session_progress.md`)
 - Show progress display at each step start
+
+## Completing a Session (kiro Integration)
+
+After Step 5 is complete, **always propose kiro spec integration**:
+
+1. **Initialize the spec properly**
+   - Run `/kiro:spec-init "{feature description}"` first so `.kiro/specs/{feature-name}/spec.json` and the initial `requirements.md` are created
+
+2. **Generate normalized requirements**
+   - Run `/kiro:spec-requirements {feature-name}`
+   - Merge the distilled content from `4_requirements.md` into the generated requirements document instead of skipping this phase
+   - Confirm the resulting `requirements.md` follows the current kiro requirements structure before proceeding
+
+3. **Guide user to next steps**
+   - `/kiro:spec-design {feature-name}` - Generate technical design
+   - `/kiro:spec-tasks {feature-name}` - Generate implementation tasks
+   - `/kiro:spec-impl {feature-name}` - Execute implementation
+
+4. **Keep session metadata docs in sync**
+   - If you add new `session.json` fields, update `.kiro/requirements/references/session_progress.md` in the same change
+
+**Workflow relationship:**
+
+```
+cc-sdd (demand-definition)          kiro specs
+─────────────────────────────────────────────────
+.kiro/requirements/sessions/   →   .kiro/specs/
+├── 1_purpose.md                   ├── requirements.md
+├── 2_alternatives.md              ├── design.md (spec-design)
+├── 3_scope.md                     ├── tasks.md (spec-tasks)
+├── 4_requirements.md         →    └── (implementation)
+└── 5_ui_prompt.md
+```

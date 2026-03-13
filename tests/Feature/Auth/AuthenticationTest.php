@@ -4,13 +4,13 @@ use App\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
 
-test('login screen can be rendered', function () {
+test('ログイン画面を表示できる', function () {
     $response = $this->get(route('login'));
 
     $response->assertOk();
 });
 
-test('users without two factor enabled can authenticate using the login screen', function () {
+test('二段階認証未設定ユーザーはログイン画面から認証できる', function () {
     $user = User::factory()->create();
 
     $response = $this->post(route('login.store'), [
@@ -22,7 +22,7 @@ test('users without two factor enabled can authenticate using the login screen',
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
-test('users with two factor enabled are redirected to two factor challenge', function () {
+test('二段階認証有効ユーザーは二段階認証チャレンジへリダイレクトされる', function () {
     if (! Features::canManageTwoFactorAuthentication()) {
         $this->markTestSkipped('Two-factor authentication is not enabled.');
     }
@@ -50,7 +50,7 @@ test('users with two factor enabled are redirected to two factor challenge', fun
     $this->assertGuest();
 });
 
-test('users can not authenticate with invalid password', function () {
+test('無効なパスワードでは認証できない', function () {
     $user = User::factory()->create();
 
     $this->post(route('login.store'), [
@@ -61,7 +61,7 @@ test('users can not authenticate with invalid password', function () {
     $this->assertGuest();
 });
 
-test('users can logout', function () {
+test('ログアウトできる', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('logout'));
@@ -70,7 +70,7 @@ test('users can logout', function () {
     $response->assertRedirect(route('home'));
 });
 
-test('users are rate limited', function () {
+test('レート制限される', function () {
     $user = User::factory()->create();
 
     RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);

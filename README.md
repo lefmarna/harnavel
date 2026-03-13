@@ -61,6 +61,6 @@ pnpm test:e2e --project=chromium
 
 - [README](README.md): 人間向けの概要とセットアップ
 - [AGENTS.md](AGENTS.md): AI エージェント向けの起点
-- [docs/references/commands.md](docs/references/commands.md): コマンドのソースオブトゥルース
+- [docs/commands.md](docs/commands.md): コマンドのソースオブトゥルース
 
-実装ルール、設計ガイド、レビュー運用は `docs/` 配下を参照してください。
+repo 固有ルールは `AGENTS.md`、参照情報は `docs/` を確認してください。

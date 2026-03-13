@@ -48,23 +48,15 @@ description: 'テンプレートから展開した新規プロジェクトのdoc
 
 | ファイル | 更新内容 |
 | --- | --- |
-| `AGENTS.md` | タイトルと冒頭のリード文を、展開先プロジェクト前提の文言へ更新 |
-| `docs/context/project.md` | プロジェクト概要、スコープをプロジェクト固有の内容で置換 |
-| `docs/guides/frontend.md` | Screen Map セクション（ルート一覧とレイアウト/ガード方針）をプロジェクトのページ構成に合わせて更新 |
-| `docs/guides/infrastructure.md` | ポート番号を指定値に更新 |
+| `AGENTS.md` | プロジェクトの目的、非自明な慣習、運用ルールを展開先前提の内容へ更新 |
+| `docs/infrastructure.md` | ポート番号、ローカル runtime 事実、必要ならデプロイ前提を更新 |
 | `.env.example` | ポート番号のデフォルト値を更新 |
 | `README.md` | タイトル、冒頭のリード文、概要、セットアップをプロジェクト固有の文言へ更新 |
 
 以下のファイルはテンプレート共通のため**原則変更しない**:
 
-- `docs/guides/backend.md` - アーキテクチャ・コーディングルール
-- `docs/guides/frontend.md`（Screen Map 以外） - フロントエンドルール
-- `docs/guides/common.md` - 共通の横断ルール
-- `docs/guides/planning.md` - `docs/plans/` 用の共通ガイド
-- `docs/context/deploy.md` - デプロイ制約
-- `docs/references/commands.md` - コマンドのソースオブトゥルース
-- `docs/references/schema-design-spec.md` - スキーマポリシー
-- `docs/review-gate/README.md` - レビュー運用
+- `docs/planning.md` - `docs/plans/` 用の共通ガイド
+- `docs/commands.md` - コマンドのソースオブトゥルース
 - `docs/generated/boost.md` - 自動生成（編集禁止）
 - `docs/generated/specs.md` - 自動生成（編集禁止）
 
@@ -85,46 +77,38 @@ description: 'テンプレートから展開した新規プロジェクトのdoc
 
 **`AGENTS.md`**
 
-- タイトルは必要ならプロジェクトに合う運用名へ調整する
-- 冒頭のリード文や導入指示に、展開前提・テンプレート前提の言い回しを残さない
-- 必読順・ generated 編集禁止・ review ルールなど、運用上の強制事項は維持する
+- プロジェクトの目的、守るべき非自明ルール、確認コマンドを展開先前提で更新する
+- テンプレート前提の表現を残さない
+- generated 編集禁止・ review ルール・ docs の責務分離など、運用上の強制事項は維持する
 
-### Step 4: project.md の更新
+### Step 4: AGENTS.md のプロジェクト文脈更新
 
-`docs/context/project.md` を以下の方針で更新する:
+`AGENTS.md` の `Repository Intent` と関連セクションを以下の方針で更新する:
 
-**プロジェクト固有で書き換えるセクション:**
+**プロジェクト固有で書き換える要素:**
 
-- Purpose → プロジェクトの概要・目的に書き換え（必要なら「Project Overview」等へ変更）
-- In-Scope Features / Out of Scope → コンテキストから置き換え
+- このアプリが何者で、誰に何を提供するか
+- 何が初期スコープで、何が out of scope か
+- コードだけでは伝わりにくい運用ルールや制約
+- プロジェクト固有の review / verification の判断基準
 
-**維持するセクション（テンプレート共通）:**
+**維持する要素（テンプレート共通）:**
 
-- Specification Workflow Entry → そのまま維持
+- docs の責務分離
+- generated ファイル編集禁止
+- docs / README の言語ルール
 
-### Step 5: Screen Map の更新
+必要なら、画面構成やアクセス制御のような補足は専用 doc を増やさず、まず `AGENTS.md` に短く要約して済ませる。
 
-`docs/guides/frontend.md` の Screen Map and Access Guards セクションをプロジェクトのページ構成に合わせて更新する。
-
-このステップはユーザーとの対話で進める:
-
-1. テンプレートの初期 Screen Map（Auth 系ルート、Dashboard、Settings）を提示する
-2. プロジェクトで追加/削除するページをユーザーに確認する
-3. Settings Layout（サブナビ付きネストレイアウト）を使うかどうかを確認する
-4. 各ページのレイアウトとガード（auth, verified, guest）の割り当てをユーザーに確認する
-5. 確認結果に基づいてルートテーブルと、その直下のレイアウト/ガード方針を更新する
-
-Auth 関連ルート（login, register, forgot-password 等）はテンプレートの Fortify 基盤が提供するため、原則維持する。
-
-### Step 6: ポート設定の更新
+### Step 5: ポート設定の更新
 
 ユーザー指定のポート番号で以下を更新:
 
-- `docs/guides/infrastructure.md` の Local Runtime Topology テーブルと Default local endpoints
-- `docs/guides/infrastructure.md` の Environment Variables テーブルの Default 列
+- `docs/infrastructure.md` の Local Runtime Topology テーブルと Default local endpoints
+- `docs/infrastructure.md` の Environment Variables テーブルの Default 列
 - `.env.example` の該当変数
 
-### Step 7: 確認と検証
+### Step 6: 確認と検証
 
 1. 更新内容をユーザーに提示して承認を得る
 2. `pnpm lint:docs` を実行して `docs/` 配下のリンク整合性を確認する
@@ -137,15 +121,14 @@ Auth 関連ルート（login, register, forgot-password 等）はテンプレー
 
 - 更新したファイルの一覧と変更概要
 - `README.md` と `AGENTS.md` のタイトル / リード文をどう更新したか
-- コンテキストから抽出したが反映先が不明だった情報（あれば）
+- コンテキストから抽出したが `AGENTS.md` / `README.md` / `docs/infrastructure.md` のいずれにも自然に置けなかった情報（あれば）
 - 次のアクション推奨（追加確認が必要な項目があれば）
 
 ## Notes
 
-- テンプレートの docs 構成（ディレクトリ構造、ファイル命名、役割分担）は変更しない
+- テンプレートの docs 構成は最小限を維持し、不要なファイルを増やさない
 - 生成ファイル（`docs/generated/`）は絶対に編集しない
 - `docs/` 内は英語、`README.md` は日本語のルールを維持する
-- 既存のコーディングルールやアーキテクチャルールは上書きしない
 - 追加情報は「これを削除すると AI が誤るか」で判断し、不要なら追加しない
-- ルールの重複を避け、既存ファイルにリンクできる内容はリンクで済ませる
+- ルールの重複を避け、永続ルールは `AGENTS.md`、参照情報は `docs/` に寄せる
 - 展開先では「テンプレートの説明」ではなく「このプロジェクトの説明」として読める文面にする

@@ -72,8 +72,6 @@ pnpm lint:docs          # Validate internal markdown links in docs/
 
 `pnpm lint:docs` checks `docs/` only. If `README.md` or `AGENTS.md` changed, review those top-level Markdown files separately.
 
-For backend verification, use `mise run verify:backend` in this order: `Pint -> Larastan -> Pest`.
-
 ## Deployment
 
 ```bash

@@ -1,18 +1,27 @@
 <?php
 
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
-test('profile page is displayed', function () {
+test('プロフィール設定画面を表示できる', function () {
     $user = User::factory()->create();
 
     $response = $this
         ->actingAs($user)
         ->get(route('profile.edit'));
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('settings/profile')
+                ->where('mustVerifyEmail', false)
+                ->where('status', null)
+                ->where('seo.title', 'Profile settings')
+        );
 });
 
-test('profile information can be updated', function () {
+test('プロフィール情報を更新できる', function () {
     $user = User::factory()->create();
 
     $response = $this
@@ -33,7 +42,27 @@ test('profile information can be updated', function () {
     expect($user->email_verified_at)->toBeNull();
 });
 
-test('email verification status is unchanged when the email address is unchanged', function () {
+test('プロフィール更新時のメールアドレスは小文字で保存される', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => 'Test User',
+            'email' => 'Test.User@Example.COM',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
+
+    $user->refresh();
+
+    expect($user->email)->toBe('test.user@example.com');
+    expect($user->email_verified_at)->toBeNull();
+});
+
+test('メールアドレスが変わらない場合はメール認証状態を維持する', function () {
     $user = User::factory()->create();
 
     $response = $this
@@ -50,7 +79,7 @@ test('email verification status is unchanged when the email address is unchanged
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
-test('user can delete their account', function () {
+test('アカウントを削除できる', function () {
     $user = User::factory()->create();
 
     $response = $this
@@ -67,7 +96,7 @@ test('user can delete their account', function () {
     expect($user->fresh())->toBeNull();
 });
 
-test('correct password must be provided to delete account', function () {
+test('アカウント削除には正しいパスワードが必要', function () {
     $user = User::factory()->create();
 
     $response = $this

@@ -4,7 +4,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Notification;
 
-test('sends verification notification', function () {
+test('認証通知を送信する', function () {
     Notification::fake();
 
     $user = User::factory()->unverified()->create();
@@ -16,7 +16,7 @@ test('sends verification notification', function () {
     Notification::assertSentTo($user, VerifyEmail::class);
 });
 
-test('does not send verification notification if email is verified', function () {
+test('メール認証済みなら認証通知を送信しない', function () {
     Notification::fake();
 
     $user = User::factory()->create();

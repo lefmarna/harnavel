@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
+use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,14 +22,15 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         $user = $this->currentUser($request);
+        $status = $request->session()->get('status');
 
-        return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
-            'status' => $request->session()->get('status'),
-            'seo' => [
-                'title' => 'Profile settings',
-            ],
-        ]);
+        return Inertia::render(
+            'settings/profile',
+            new ProfilePageViewModel(
+                mustVerifyEmail: $user instanceof MustVerifyEmail,
+                status: is_string($status) ? $status : null,
+            )->toArray(),
+        );
     }
 
     /**

@@ -1,12 +1,7 @@
-# Infrastructure Guide
+# Infrastructure Reference
 
-## Scope
-
-Use this file for local runtime facts that are specific to this project. For exact commands, use `docs/references/commands.md`.
-
-## Setup
-
-Human-facing setup steps live in `README.md`.
+Use this file for concrete runtime facts: ports, local services, and deployment constraints.
+For exact commands, use `docs/commands.md`.
 
 ## Local Runtime Topology
 
@@ -18,7 +13,8 @@ Human-facing setup steps live in `README.md`.
 | `mariadb-testing` | Testing database (isolated) | - |
 | `mailpit` | Mail catcher (SMTP + Web UI) | `1028`, `8028` |
 
-Default local endpoints:
+## Default Local Endpoints
+
 - App: `http://localhost:8080`
 - Mailpit: `http://localhost:8028`
 
@@ -34,10 +30,12 @@ Default local endpoints:
 
 Keep this file and `.env.example` aligned when project-specific ports change.
 
-## Deployment Reference
+## Deployment Profile
 
-- Hosting constraints live in `docs/context/deploy.md`.
-- Build, packaging, and local commands live in `docs/references/commands.md`.
+- Target hosting is XServer shared hosting.
+- The app is served with `.htaccess` front-controller rewrites.
+- Shared-hosting constraints drive two repo-wide rules documented in `AGENTS.md`: no long-running Node.js / queue workers, and no SSR.
+- Build frontend assets before deployment. `public/build` must exist in deployment artifacts.
 
 ## Troubleshooting
 

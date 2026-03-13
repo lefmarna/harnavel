@@ -5,7 +5,7 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 
-test('email verification screen can be rendered', function () {
+test('メール認証画面を表示できる', function () {
     $user = User::factory()->unverified()->create();
 
     $response = $this->actingAs($user)->get(route('verification.notice'));
@@ -13,7 +13,7 @@ test('email verification screen can be rendered', function () {
     $response->assertOk();
 });
 
-test('email can be verified', function () {
+test('メール認証できる', function () {
     $user = User::factory()->unverified()->create();
 
     Event::fake();
@@ -31,7 +31,7 @@ test('email can be verified', function () {
     $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
 });
 
-test('email is not verified with invalid hash', function () {
+test('無効なハッシュではメール認証されない', function () {
     $user = User::factory()->unverified()->create();
 
     Event::fake();
@@ -48,7 +48,7 @@ test('email is not verified with invalid hash', function () {
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
 });
 
-test('email is not verified with invalid user id', function () {
+test('無効なユーザーIDではメール認証されない', function () {
     $user = User::factory()->unverified()->create();
 
     Event::fake();
@@ -65,7 +65,7 @@ test('email is not verified with invalid user id', function () {
     expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
 });
 
-test('verified user is redirected to dashboard from verification prompt', function () {
+test('認証済みユーザーはメール認証案内からダッシュボードへリダイレクトされる', function () {
     $user = User::factory()->create();
 
     Event::fake();
@@ -76,7 +76,7 @@ test('verified user is redirected to dashboard from verification prompt', functi
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
-test('already verified user visiting verification link is redirected without firing event again', function () {
+test('既に認証済みのユーザーが認証リンクを開いても再度イベントを発火せずにリダイレクトされる', function () {
     $user = User::factory()->create();
 
     Event::fake();

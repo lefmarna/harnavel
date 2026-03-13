@@ -4,7 +4,7 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Features;
 
-test('welcome page has seo props with title and description', function () {
+test('welcomeページはtitleとdescriptionを含むseo propsを返す', function () {
     $response = $this->get(route('home'));
 
     $response->assertOk();
@@ -16,7 +16,7 @@ test('welcome page has seo props with title and description', function () {
     );
 });
 
-test('welcome page initial HTML contains inertia-managed seo tags', function () {
+test('welcomeページの初期HTMLにはInertia管理のSEOタグが含まれる', function () {
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
@@ -45,7 +45,7 @@ test('welcome page initial HTML contains inertia-managed seo tags', function () 
         ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.png');
 });
 
-test('testing responses do not inject debugbar assets', function () {
+test('テスト環境のレスポンスにはdebugbarアセットが混入しない', function () {
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
@@ -54,7 +54,7 @@ test('testing responses do not inject debugbar assets', function () {
         ->and($content)->not->toContain('/_debugbar/');
 });
 
-test('og:url excludes query string for sensitive routes', function () {
+test('機微なルートのog:urlはクエリ文字列を含まない', function () {
     $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
     $response = $this->get($url);
     $content = $response->getContent();
@@ -68,7 +68,7 @@ test('og:url excludes query string for sensitive routes', function () {
         ->and($ogUrl)->toContain('reset-password');
 });
 
-test('og:url contains canonical path without query string', function () {
+test('og:urlはクエリ文字列を含まないcanonical pathを持つ', function () {
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
@@ -79,7 +79,7 @@ test('og:url contains canonical path without query string', function () {
         ->and($ogUrl)->not->toContain('?');
 });
 
-test('shared props include appDisplayName, appDescription, seo, urls, and flash', function () {
+test('shared propsにはappDisplayName・appDescription・seo・urls・flashが含まれる', function () {
     $response = $this->get(route('home'));
 
     $response->assertOk();
@@ -95,7 +95,7 @@ test('shared props include appDisplayName, appDescription, seo, urls, and flash'
     );
 });
 
-test('shared auth user exposes stable optional fields', function () {
+test('shared auth userは安定した任意フィールドを公開する', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route('dashboard'));
@@ -109,7 +109,7 @@ test('shared auth user exposes stable optional fields', function () {
     );
 });
 
-test('shared auth user reports enabled two factor state', function () {
+test('shared auth userは二段階認証の有効状態を返す', function () {
     $user = User::factory()->create();
     $user->forceFill([
         'two_factor_secret' => encrypt('test-secret'),
@@ -126,7 +126,7 @@ test('shared auth user reports enabled two factor state', function () {
     );
 });
 
-test('guest auth pages use noindex robots meta and seo', function (string $routeName, array $routeParams = []) {
+test('guest authページはnoindex robots metaとseoを使う', function (string $routeName, array $routeParams = []) {
     $response = $this->get(route($routeName, $routeParams));
 
     $response->assertOk();
@@ -143,14 +143,14 @@ test('guest auth pages use noindex robots meta and seo', function (string $route
     'reset-password' => ['password.reset', ['token' => 'test-token']],
 ]);
 
-test('public pages keep indexable robots meta', function () {
+test('publicページはindexableなrobots metaを維持する', function () {
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
     expect($content)->toContain('<meta inertia="robots" name="robots" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1">');
 });
 
-test('pages expose seo.title', function (string $routeName, string $expectedTitle, array $routeParams = []) {
+test('各ページはseo.titleを公開する', function (string $routeName, string $expectedTitle, array $routeParams = []) {
     $response = $this->get(route($routeName, $routeParams));
 
     $response->assertOk();
@@ -166,7 +166,7 @@ test('pages expose seo.title', function (string $routeName, string $expectedTitl
     'reset-password' => ['password.reset', 'Reset password', ['token' => 'test-token']],
 ]);
 
-test('authenticated pages have seo.title', function (string $routeName, string $expectedTitle) {
+test('認証済みページはseo.titleを持つ', function (string $routeName, string $expectedTitle) {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route($routeName));
@@ -183,7 +183,7 @@ test('authenticated pages have seo.title', function (string $routeName, string $
     'appearance' => ['appearance.edit', 'Appearance settings'],
 ]);
 
-test('two-factor settings page has seo.title', function () {
+test('二段階認証設定ページはseo.titleを持つ', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)
@@ -197,7 +197,7 @@ test('two-factor settings page has seo.title', function () {
     );
 });
 
-test('verify-email page has seo.title', function () {
+test('メール認証ページはseo.titleを持つ', function () {
     $user = User::factory()->create(['email_verified_at' => null]);
 
     $response = $this->actingAs($user)->get(route('verification.notice'));
@@ -213,7 +213,7 @@ test('verify-email page has seo.title', function () {
     expect($content)->toContain('<meta inertia="robots" name="robots" content="noindex, nofollow">');
 });
 
-test('confirm-password page has seo.title', function () {
+test('パスワード確認ページはseo.titleを持つ', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route('password.confirm'));
@@ -229,7 +229,7 @@ test('confirm-password page has seo.title', function () {
     expect($content)->toContain('<meta inertia="robots" name="robots" content="noindex, nofollow">');
 });
 
-test('two-factor-challenge page has seo.title', function () {
+test('二段階認証チャレンジページはseo.titleを持つ', function () {
     if (! Features::canManageTwoFactorAuthentication()) {
         $this->markTestSkipped('Two-factor authentication is not enabled.');
     }

@@ -17,6 +17,7 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 - `e2e/` — Playwright E2E tests
 - `.docker/` — Docker config (nginx, PHP)
 - `docs/` — agent and engineering docs
+- `storage/logs/laravel.log` — Laravel log
 
 ## Architecture
 

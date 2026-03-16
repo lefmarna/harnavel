@@ -105,7 +105,7 @@ description = "Run backend quality checks (Pint + Larastan + Pest)"
 run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
 docker compose exec app composer analyse && \
-docker compose exec app php artisan test
+docker compose exec app php artisan test --compact
 """
 
 [tasks."verify:backend:full"]
@@ -113,7 +113,7 @@ description = "Run backend quality checks plus Chromium E2E"
 run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
 docker compose exec app composer analyse && \
-docker compose exec app php artisan test && \
+docker compose exec app php artisan test --compact && \
 pnpm test:e2e --project=chromium
 """
 

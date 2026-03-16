@@ -1,63 +1,48 @@
-# Agent Operating Guide
+# Project Context
 
-This file is the primary source of repo-specific instructions.
-Prefer code and tests over extra rules. Keep docs minimal and repo-specific.
+A starter template built with Laravel 12 + Inertia.js v2 (React 19) + Tailwind CSS v4.
+Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is XServer shared hosting.
 
-## Repository Intent
+## Tech Stack
 
-- This repository is a reusable Laravel + Inertia + Docker starter.
-- Current starter scope: auth, dashboard, profile/settings, two-factor auth, and Google login.
-- Current deployment target is XServer shared hosting.
-- Replace these starter assumptions when the repository is initialized into a real product.
+- PHP 8.4 / Laravel 12 / Fortify v1 / Socialite v5
+- Inertia.js v2 (React 19) / Tailwind CSS v4 / Wayfinder
+- Pest v4 / Larastan v3 / Pint v1
+- MariaDB / Docker Compose / mise
 
-## Core Principles
+## Layout (non-standard directories)
 
-- Simplicity first. Prefer the smallest change that solves the problem cleanly.
-- Minimal impact. Touch only what is necessary and preserve existing behavior unless the change intentionally alters it.
+- `app/Params/`, `app/Repositories/`, `app/Services/`, `app/ViewModels/` — backend layer objects
+- `app/Concerns/`, `app/Support/` — shared traits and helpers
+- `e2e/` — Playwright E2E tests
+- `.docker/` — Docker config (nginx, PHP)
+- `docs/` — agent and engineering docs
 
-## Read Order
+## Architecture
 
-Before planning, implementation, or review:
-
-1. Read `AGENTS.md`.
-2. Read extra references only when relevant:
-   - Laravel/package/version specifics: `docs/generated/boost.md`
-   - Repository commands and verification: `docs/commands.md`
-   - Local runtime, ports, mail, and deployment profile: `docs/infrastructure.md`
-   - Plan files under `docs/plans/`: `docs/planning.md`
-   - Specification workflow: `docs/generated/specs.md`, `.kiro/requirements/`, `.kiro/specs/`
-3. If a task spans multiple areas, read every relevant reference before editing.
-
-## Documentation Policy
-
-- `README.md` is for humans. `docs/` is for agents and engineering operations.
-- Never manually edit generated files: `docs/generated/boost.md`, `docs/generated/specs.md`.
-- `docs/` uses English by default. `README.md` uses Japanese. `docs/plans/` may use Japanese or English. Review logs may be Japanese or JSON.
-
-## Non-Obvious Project Rules
-
-- Backend flow is fixed: `Controller -> Service -> Repository`.
-- Use `Params` objects when they make grouped input contracts explicit across layers, including typing, normalization, or structure that would otherwise stay implicit. Avoid them for obvious one-off pass-through input.
-- Use `ViewModels` when they make Inertia response contracts explicit, especially for reused or non-trivial props. Avoid them for obvious one-off single-value responses.
-- XServer shared-hosting constraints mean queue workers and SSR are out of scope.
-- New pages require at least a smoke E2E test.
-- Test titles are written in Japanese.
+- Queue workers and SSR are unavailable due to XServer shared-hosting constraints.
 
 ## Verification
 
-If you changed implementation, run the relevant verification commands before finishing:
+- Backend: `mise run verify:backend`
+- Frontend: `pnpm format`, `pnpm lint`, `pnpm lint:typecheck`, `pnpm test:e2e --reporter=dot`
+- Docs: `pnpm lint:docs` (covers `docs/` only)
+- Done when all relevant checks above pass.
 
-- Backend code: `mise run verify:backend`
-- Frontend code: `pnpm format`, `pnpm lint`, `pnpm lint:typecheck`, plus relevant `pnpm test:e2e`
-- Docs-only: `pnpm lint:docs`
-- If a change spans multiple areas, run every relevant verification set.
-- If `README.md` or `AGENTS.md` changed, manually verify their links and opening text because `pnpm lint:docs` checks `docs/` only.
+## Testing
 
-## Review Gate
+- Test titles are written in Japanese.
+- New pages require at least a smoke E2E test.
 
-- Run the `codex-review` skill after spec or plan updates, after major steps (`>= 5` files, public API changes, or infra/config changes), and before commit, PR, merge, or release.
-- For docs-only changes, wait for explicit user confirmation before requesting `codex-review`.
+## Reference Docs
 
-## Planning
+- Laravel Boost guidelines: `docs/generated/boost.md`
+- Commands: `docs/commands.md`
+- Infrastructure: `docs/infrastructure.md`
+- Planning: `docs/planning.md`
+- Spec workflow: `docs/generated/specs.md`
 
-- `docs/plans/` is plan-mode only. Follow `docs/planning.md`.
+## Documentation
+
+- `README.md` is in Japanese. `docs/` is in English. `docs/plans/` may use either.
+- Files under `docs/generated/` are auto-generated; do not edit manually.

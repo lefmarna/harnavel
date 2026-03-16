@@ -10,14 +10,14 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 - Pest v4 / Larastan v3 / Pint v1
 - MariaDB / Docker Compose / mise
 
-## Layout (non-standard directories)
+## Layout / operational files
 
 - `app/Params/`, `app/Repositories/`, `app/Services/`, `app/ViewModels/` — backend layer objects
 - `app/Concerns/`, `app/Support/` — shared traits and helpers
 - `e2e/` — Playwright E2E tests
 - `.docker/` — Docker config (nginx, PHP)
 - `docs/` — agent and engineering docs
-- `storage/logs/laravel.log` — Laravel log
+- `storage/logs/laravel.log` — Laravel log; inspect only recent entries (for example, `tail -n 200 storage/logs/laravel.log`) because it can grow large
 
 ## Architecture
 

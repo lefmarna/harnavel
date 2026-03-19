@@ -38,11 +38,17 @@ jobs:
       - name: Run Static Analysis
         run: composer analyse
 
-      - name: Format Frontend
-        run: pnpm run format
+      - name: Check Frontend Formatting
+        run: pnpm run format:check
 
       - name: Lint Frontend
         run: pnpm run lint
+
+      - name: Type Check Frontend
+        run: pnpm run lint:typecheck
+
+      - name: Lint Markdown Links
+        run: pnpm run lint:docs
 
       # - name: Commit Changes
       #   uses: stefanzweifel/git-auto-commit-action@v7

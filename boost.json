@@ -7,10 +7,11 @@
   "packages": ["laravel/fortify"],
   "sail": false,
   "skills": [
+    "socialite-development",
     "wayfinder-development",
     "pest-testing",
     "inertia-react-development",
     "tailwindcss-development",
-    "developing-with-fortify"
+    "fortify-development"
   ]
 }

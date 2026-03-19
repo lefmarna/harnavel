@@ -32,7 +32,7 @@ Laravel 12 + Inertia React + MariaDB を Docker で開発するためのテン�
 # 任意: デフォルト値を調整したい場合だけ先に作成
 cp .env.example .env
 
-# ツール導入、依存関係、コンテナ構築、起動、Laravel初期化、migrate、seed まで実行
+# ツール導入、依存関係、Git hooks、コンテナ構築、起動、Laravel初期化、migrate、seed まで実行
 mise run setup
 
 # フロントエンド開発サーバーを起動
@@ -52,10 +52,14 @@ mise run stop           # コンテナ停止
 mise run down           # コンテナ停止 + 削除
 mise run app            # app コンテナへ入る
 mise run verify:backend # Pint -> Larastan -> Pest
+pnpm format:check       # Prettier チェックのみ
 pnpm fix                # ESLint + Prettier 自動修正
 pnpm lint:typecheck     # TypeScript 型チェック
+pnpm lint:docs          # docs/ + README/AGENTS/CLAUDE のリンク検証
 pnpm test:e2e --project=chromium
 ```
+
+`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。無効化している環境では `pnpm exec lefthook install` を一度実行してください。ローカル hook は format/lint/typecheck/docs に加えて Docker 前提の Larastan を実行し、テスト実行は CI に寄せています。
 
 ## ドキュメントの見方
 

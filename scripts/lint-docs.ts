@@ -1,5 +1,5 @@
 /**
- * Validates internal markdown links in docs/ directory.
+ * Validates internal markdown links in repository markdown files.
  * Checks that relative links resolve to actual files.
  */
 import fs from 'node:fs'
@@ -30,8 +30,8 @@ async function findMarkdownFiles(dir: string): Promise<string[]> {
     if (REPORT_RE.test(path.basename(entry))) continue
     files.push(path.join(dir, entry))
   }
-  // Also check root AGENTS.md and CLAUDE.md
-  for (const name of ['AGENTS.md', 'CLAUDE.md']) {
+  // Also check key root markdown files that act as agent entry points.
+  for (const name of ['AGENTS.md', 'CLAUDE.md', 'README.md']) {
     const p = path.join(ROOT, name)
     if (fs.existsSync(p)) files.push(p)
   }

@@ -1,0 +1,12 @@
+pre-commit:
+  commands:
+    format-check:
+      run: pnpm format:check
+    frontend-lint:
+      run: pnpm lint
+    frontend-typecheck:
+      run: pnpm lint:typecheck
+    markdown-links:
+      run: pnpm lint:docs
+    backend-analysis:
+      run: mise run analyse

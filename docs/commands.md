@@ -8,6 +8,7 @@ Use this file when you need the repository's actual command names instead of gue
 mise run setup          # Full project setup
 mise run setup:tools    # Install tools & pnpm dependencies
 mise run setup:backend  # Setup backend (requires containers)
+pnpm exec lefthook install # Install Git hooks manually if prepare is skipped
 ```
 
 ## Docker
@@ -29,6 +30,7 @@ mise run destroy        # Remove all containers and volumes
 ```bash
 pnpm dev                # Start Vite dev server
 pnpm build              # Build for production
+pnpm format:check       # Check Prettier formatting
 pnpm lint               # Run ESLint (check only)
 pnpm lint:fix           # Run ESLint with auto-fix
 pnpm lint:typecheck     # TypeScript type check
@@ -67,10 +69,16 @@ pnpm test:e2e:headed    # Run with browser visible
 ## Documentation
 
 ```bash
-pnpm lint:docs          # Validate internal markdown links in docs/
+pnpm lint:docs          # Validate internal markdown links in docs/ + root markdown entrypoints
 ```
 
-`pnpm lint:docs` checks `docs/` only. If `README.md` or `AGENTS.md` changed, review those top-level Markdown files separately.
+`pnpm lint:docs` includes `docs/`, `README.md`, `AGENTS.md`, and `CLAUDE.md` when present.
+
+## Git Hooks
+
+```bash
+pnpm exec lefthook run pre-commit # Run local checks (includes Docker-backed backend analysis)
+```
 
 ## Deployment
 

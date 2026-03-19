@@ -26,8 +26,8 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 ## Verification
 
 - Backend: `mise run verify:backend`
-- Frontend: `pnpm format`, `pnpm lint`, `pnpm lint:typecheck`, `pnpm test:e2e --reporter=dot`
-- Docs: `pnpm lint:docs` (covers `docs/` only)
+- Frontend: `pnpm format:check`, `pnpm lint`, `pnpm lint:typecheck`, `pnpm test:e2e --reporter=dot`
+- Docs: `pnpm lint:docs` (covers `docs/` and root markdown entrypoints)
 - Done when all relevant checks above pass.
 
 ## Testing

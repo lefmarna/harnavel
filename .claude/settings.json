@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "mise run fix || true"
+            "command": "bash .claude/hooks/post-edit.sh"
           }
         ]
       }

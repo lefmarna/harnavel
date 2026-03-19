@@ -18,18 +18,26 @@ docker-compose.yml
 
 # テスト
 tests
+e2e
 phpunit.xml
 .phpunit.cache
 .phpunit.result.cache
+playwright.config.ts
+playwright-report
+test-results
 
 # エージェント・IDE設定
 .agent
+.agents
+.ai
 .claude
 .codex
 .cursor
+.DS_Store
 .gemini
 .github
 .kiro
+.pnpm-store
 .serena
 .vscode
 .fleet
@@ -38,7 +46,9 @@ phpunit.xml
 .zed
 
 # ビルド設定
-vite.config.ts
+vite.config.js
+lefthook.yml
+mise.toml
 tsconfig.json
 package.json
 pnpm-lock.yaml
@@ -62,8 +72,11 @@ components.json
 # デプロイ出力先
 .deploy
 
-# ストレージ（中身のみ除外）
+# ストレージ（開発用/生成物を除外）
+storage/mariadb
 storage/logs/*
 storage/framework/cache/data/*
+storage/framework/cache/phpstan/*
 storage/framework/sessions/*
+storage/framework/testing/*
 storage/framework/views/*

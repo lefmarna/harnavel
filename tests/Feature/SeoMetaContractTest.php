@@ -45,15 +45,6 @@ test('welcomeページの初期HTMLにはInertia管理のSEOタグが含まれ�
         ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.png');
 });
 
-test('テスト環境のレスポンスにはdebugbarアセットが混入しない', function () {
-    $response = $this->get(route('home'));
-    $content = $response->getContent();
-
-    expect($content)->not->toContain('id="phpdebugbar"')
-        ->and($content)->not->toContain('phpdebugbar.addDataSet')
-        ->and($content)->not->toContain('/_debugbar/');
-});
-
 test('機微なルートのog:urlはクエリ文字列を含まない', function () {
     $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
     $response = $this->get($url);

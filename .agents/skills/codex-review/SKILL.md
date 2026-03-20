@@ -193,6 +193,9 @@ This skill is designed so the **report is the single source of truth**.
 codex exec --sandbox read-only "<PROMPT_REVIEW>"
 ```
 
+- In Codex environments, `codex exec` should be launched with **escalated permissions**. Do not assume sandboxed execution will work.
+- If you are using an execution tool such as `functions.exec_command`, set `sandbox_permissions: "require_escalated"` and include a short `justification`.
+- If the first attempt fails due to sandbox / network / TTY restrictions, immediately retry with escalation. Treat that as an execution-environment issue, not as a review failure.
 - Pass the final prompt (including the JSON schema)
 - The orchestrator must explicitly list the relevant file paths
 - Wait for completion (mandatory): do not start other tasks while `codex exec` is running

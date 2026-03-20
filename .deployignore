@@ -59,9 +59,13 @@ eslint.config.js
 .mcp.json
 boost.json
 components.json
+phpstan.neon.dist
+pint.json
+.deployignore
 
 # ドキュメント
 *.md
+docs
 
 # 環境設定（サーバーで別途作成）
 .env
@@ -71,6 +75,16 @@ components.json
 
 # デプロイ出力先
 .deploy
+
+# 開発用スクリプト
+scripts
+
+# フロントエンドのソースコード（deploy:build 済みであることが前提。本番では public/build を使用）
+resources/css
+resources/js
+
+# 開発用DB・テスト補助
+database/database.sqlite
 
 # ストレージ（開発用/生成物を除外）
 storage/mariadb

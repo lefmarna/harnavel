@@ -112,6 +112,7 @@ jobs:
 
       - name: Create deployment package
         run: |
+          test -f public/build/manifest.json || { echo 'public/build/manifest.json is missing. Build artifact was not downloaded correctly.' >&2; exit 1; }
           mkdir -p .deploy
           rsync -av --exclude-from='.deployignore' ./ .deploy/
 

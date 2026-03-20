@@ -164,6 +164,7 @@ run = "pnpm run build"
 [tasks."deploy:package"]
 description = "Create deployment package (excludes dev files)"
 run = """
+test -f public/build/manifest.json || { echo 'public/build/manifest.json is missing. Run `mise run deploy:build` first.' >&2; exit 1; } && \
 rm -rf .deploy && mkdir -p .deploy && \
 rsync -av --progress --exclude-from='.deployignore' ./ .deploy/ && \
 echo '✅ Deployment package created in ./.deploy/'

@@ -1,13 +1,26 @@
 pre-commit:
-  parallel: true
-  commands:
-    frontend-lint:
-      run: pnpm lint
-    format-check:
-      run: pnpm format:check
-    frontend-typecheck:
-      run: pnpm lint:typecheck
-    markdown-links:
-      run: pnpm lint:docs
-    backend-analysis:
-      run: mise run analyse
+  jobs:
+    - name: fix staged frontend files with eslint
+      glob: '*.{js,jsx,ts,tsx}'
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
+    - name: format staged frontend files
+      glob: '*.{css,html,js,json,jsx,md,ts,tsx,yaml,yml}'
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+    - name: format staged php files
+      glob: '*.php'
+      run: docker compose exec app vendor/bin/pint --format=agent {staged_files}
+      stage_fixed: true
+    - name: run checks
+      group:
+        parallel: true
+        jobs:
+          - name: lint frontend
+            run: pnpm lint
+          - name: type check frontend
+            run: pnpm lint:typecheck
+          - name: lint markdown links
+            run: pnpm lint:docs
+          - name: run backend analysis
+            run: mise run analyse

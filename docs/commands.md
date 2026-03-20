@@ -77,7 +77,7 @@ pnpm lint:docs          # Validate internal markdown links in docs/ + root markd
 ## Git Hooks
 
 ```bash
-pnpm exec lefthook run pre-commit # Run local checks (includes Docker-backed backend analysis)
+pnpm exec lefthook run pre-commit # Fix/format staged files, then run local checks (includes Docker-backed backend analysis)
 ```
 
 ## Deployment

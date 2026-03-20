@@ -59,7 +59,7 @@ pnpm lint:docs          # docs/ + README/AGENTS/CLAUDE のリンク検証
 pnpm test:e2e --project=chromium
 ```
 
-`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。無効化している環境では `pnpm exec lefthook install` を一度実行してください。ローカル hook は format/lint/typecheck/docs に加えて Docker 前提の Larastan を実行し、テスト実行は CI に寄せています。
+`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。無効化している環境では `pnpm exec lefthook install` を一度実行してください。ローカル hook は pre-commit で staged files に `ESLint --fix`、Prettier、Pint を順に適用してから、lint/typecheck/docs と Docker 前提の Larastan を実行します。テスト実行は CI に寄せています。
 
 ## ドキュメントの見方
 

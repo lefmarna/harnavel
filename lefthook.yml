@@ -1,9 +1,10 @@
 pre-commit:
+  parallel: true
   commands:
-    format-check:
-      run: pnpm format:check
     frontend-lint:
       run: pnpm lint
+    format-check:
+      run: pnpm format:check
     frontend-typecheck:
       run: pnpm lint:typecheck
     markdown-links:

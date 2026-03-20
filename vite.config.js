@@ -7,7 +7,7 @@ import { defineConfig } from 'vite'
 const isGitHubActions = process.env.GITHUB_ACTIONS === 'true'
 
 const wayfinderCommand = isGitHubActions
-  ? 'php artisan wayfinder:generate'
+  ? 'php artisan wayfinder:generate --with-form'
   : 'docker compose exec -T app php artisan wayfinder:generate'
 
 export default defineConfig({

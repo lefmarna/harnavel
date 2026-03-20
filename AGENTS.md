@@ -3,38 +3,43 @@
 A starter template built with Laravel 12 + Inertia.js v2 (React 19) + Tailwind CSS v4.
 Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is XServer shared hosting.
 
-## Tech Stack
+## Architecture
 
-- PHP 8.4 / Laravel 12 / Fortify v1 / Socialite v5
-- Inertia.js v2 (React 19) / Tailwind CSS v4 / Wayfinder
-- Pest v4 / Larastan v3 / Pint v1
-- MariaDB / Docker Compose / mise
+- Stack: PHP 8.4 / Laravel 12 / Inertia.js v2 (React 19) / Tailwind CSS v4 / Pest v4 / Larastan v3 / Pint v1 / MariaDB / mise
+- Queue workers and SSR are unavailable due to XServer shared-hosting constraints. Do not introduce long-running background workers.
+- Prefer solutions that work in both Docker local dev and XServer shared hosting.
+- For multi-file or ambiguous changes, explore and plan before editing. Small, clear changes can be implemented directly.
 
-## Layout / operational files
+## Layout
 
 - `app/Params/`, `app/Repositories/`, `app/Services/`, `app/ViewModels/` — backend layer objects
 - `app/Concerns/`, `app/Support/` — shared traits and helpers
 - `e2e/` — Playwright E2E tests
 - `.docker/` — Docker config (nginx, PHP)
 - `docs/` — agent and engineering docs
-- `storage/logs/laravel.log` — Laravel log; inspect only recent entries (for example, `tail -n 200 storage/logs/laravel.log`) because it can grow large
-
-## Architecture
-
-- Queue workers and SSR are unavailable due to XServer shared-hosting constraints.
+- `storage/logs/laravel.log` — inspect only recent entries (`tail -n 200`) because it can grow large
 
 ## Verification
 
+- Start with the narrowest relevant check for the changed area, then run broader checks before finishing.
 - Backend: `mise run verify:backend`
 - Frontend: `pnpm format:check`, `pnpm lint`, `pnpm lint:typecheck`, `pnpm test:e2e --reporter=dot`
 - Docs: `pnpm lint:docs` (covers `docs/` and root markdown entrypoints)
-- Browser: Use Playwright CLI (`npx @playwright/cli`) for interactive page verification when available. Requires npm registry access or a prior global/cached install. Snapshots are saved to `.playwright-cli/` under the working directory (gitignored).
-- Done when all relevant checks above pass.
+- Browser: Use Playwright CLI (`npx @playwright/cli`) for interactive page verification when available. Requires npm registry access or a prior global/cached install. Snapshots saved to `.playwright-cli/` (gitignored).
+- For bug fixes, prefer adding a test that reproduces the issue.
+- Before finishing, review the diff for regressions and unnecessary changes.
+- Done when all relevant checks pass and the requested behavior is confirmed.
 
 ## Testing
 
 - Test titles are written in Japanese.
+- Write tests first, then implement to make them pass.
 - New pages require at least a smoke E2E test.
+
+## Documentation
+
+- `README.md` is in Japanese. `docs/` is in English. `docs/plans/` may use either.
+- Files under `docs/generated/` are auto-generated; do not edit manually.
 
 ## Reference Docs
 
@@ -43,8 +48,3 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 - Infrastructure: `docs/infrastructure.md`
 - Planning: `docs/planning.md`
 - Spec workflow: `docs/generated/specs.md`
-
-## Documentation
-
-- `README.md` is in Japanese. `docs/` is in English. `docs/plans/` may use either.
-- Files under `docs/generated/` are auto-generated; do not edit manually.

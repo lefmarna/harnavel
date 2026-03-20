@@ -81,7 +81,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 
 ## Step 5: AGENTS.md のプロジェクト文脈更新
 
-`AGENTS.md` の `Repository Intent` と関連セクションを以下の方針で更新する:
+`AGENTS.md` の `Project Context` と関連セクションを以下の方針で更新する:
 
 **プロジェクト固有で書き換える要素:**
 

@@ -17,7 +17,8 @@ test('プロフィール設定画面を表示できる', function () {
                 ->component('settings/profile')
                 ->where('mustVerifyEmail', false)
                 ->where('status', null)
-                ->where('seo.title', 'Profile settings')
+                ->where('seo.title', 'プロフィール設定')
+                ->where('seo.description', '名前とメールアドレスを管理します。')
         );
 });
 
@@ -59,6 +60,26 @@ test('プロフィール更新時のメールアドレスは小文字で保存�
     $user->refresh();
 
     expect($user->email)->toBe('test.user@example.com');
+    expect($user->email_verified_at)->toBeNull();
+});
+
+test('lowercase usernamesが無効ならプロフィール更新時にメールアドレスの大文字小文字を維持する', function () {
+    config(['fortify.lowercase_usernames' => false]);
+
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => 'Test User',
+            'email' => 'Test.User@Example.COM',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->refresh()->email)->toBe('Test.User@Example.COM');
     expect($user->email_verified_at)->toBeNull();
 });
 

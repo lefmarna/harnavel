@@ -10,6 +10,7 @@ use App\Repositories\User\UserRepositoryContract;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class GoogleAuthService implements GoogleAuthServiceContract
 {
@@ -17,6 +18,10 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     public function findOrCreate(string $googleId, string $email, string $name): User
     {
+        if (config('fortify.lowercase_usernames')) {
+            $email = Str::lower($email);
+        }
+
         try {
             return DB::transaction(function () use ($googleId, $email, $name): User {
                 $candidates = $this->userRepository->findCandidates($googleId, $email, lock: true);

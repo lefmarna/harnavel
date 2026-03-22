@@ -23,6 +23,8 @@ test('二段階認証設定画面を表示できる', function () {
             fn (Assert $page) => $page
                 ->component('settings/two-factor')
                 ->where('twoFactorEnabled', false)
+                ->where('seo.title', '二段階認証設定')
+                ->where('seo.description', '二段階認証の設定を管理します。')
         );
 });
 

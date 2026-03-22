@@ -1,26 +1,34 @@
 <?php
 
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\ViewModels\PageViewModel;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
 Route::get('/', function () {
-    return Inertia::render('welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-        'seo' => [
-            'title' => 'Welcome',
-            'description' => config('app.description', ''),
-        ],
-    ]);
+    $appDescription = config('app.description');
+
+    return Inertia::render(
+        'welcome',
+        new PageViewModel(
+            title: 'ホーム',
+            description: is_string($appDescription) ? $appDescription : '',
+            props: [
+                'canRegister' => Features::enabled(Features::registration()),
+            ],
+        )->toArray(),
+    );
 })->name('home');
 
 Route::get('dashboard', function () {
-    return Inertia::render('dashboard', [
-        'seo' => [
-            'title' => 'Dashboard',
-        ],
-    ]);
+    return Inertia::render(
+        'dashboard',
+        new PageViewModel(
+            title: 'ダッシュボード',
+            description: 'アプリケーションの利用状況や設定への導線を確認できます。',
+        )->toArray(),
+    );
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // Google OAuth認証ルート（ゲスト専用）

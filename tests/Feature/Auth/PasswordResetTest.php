@@ -3,11 +3,19 @@
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('パスワード再設定リンク画面を表示できる', function () {
     $response = $this->get(route('password.request'));
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('auth/forgot-password')
+                ->where('seo.title', 'パスワードをお忘れの方')
+                ->where('seo.description', 'メールアドレスを入力してパスワード再設定リンクを受け取ります。')
+        );
 });
 
 test('パスワード再設定リンクをリクエストできる', function () {
@@ -30,7 +38,14 @@ test('パスワード再設定画面を表示できる', function () {
     Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
         $response = $this->get(route('password.reset', $notification->token));
 
-        $response->assertOk();
+        $response
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page) => $page
+                    ->component('auth/reset-password')
+                    ->where('seo.title', 'パスワード再設定')
+                    ->where('seo.description', 'アカウントの新しいパスワードを設定します。')
+            );
 
         return true;
     });

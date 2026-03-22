@@ -42,5 +42,7 @@ test('二段階認証チャレンジ画面を表示できる', function () {
         ->assertInertia(
             fn (Assert $page) => $page
                 ->component('auth/two-factor-challenge')
+                ->where('seo.title', '二段階認証')
+                ->where('seo.description', '認証アプリのコードを入力して続行します。')
         );
 });

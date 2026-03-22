@@ -11,6 +11,14 @@ class PasswordUpdateRequest extends FormRequest
     use PasswordValidationRules;
 
     /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -25,6 +33,33 @@ class PasswordUpdateRequest extends FormRequest
                 'current_password' => $this->currentPasswordRules(),
             ]),
             'password' => $this->passwordRules(),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'current_password.required' => '現在のパスワードを入力してください。',
+            'current_password.string' => '現在のパスワードは文字列で入力してください。',
+            'current_password.current_password' => '現在のパスワードが正しくありません。',
+            'password.required' => '新しいパスワードを入力してください。',
+            'password.string' => '新しいパスワードは文字列で入力してください。',
+            'password.confirmed' => 'パスワード確認が一致しません。',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'current_password' => '現在のパスワード',
+            'password' => '新しいパスワード',
+            'password_confirmation' => 'パスワード確認',
         ];
     }
 }

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
+use App\Params\UpdatePasswordParams;
+use App\ViewModels\PageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,11 +18,13 @@ class PasswordController extends Controller
      */
     public function edit(): Response
     {
-        return Inertia::render('settings/password', [
-            'seo' => [
-                'title' => 'Password settings',
-            ],
-        ]);
+        return Inertia::render(
+            'settings/password',
+            new PageViewModel(
+                title: 'パスワード設定',
+                description: 'アカウントのパスワードを更新します。',
+            )->toArray(),
+        );
     }
 
     /**
@@ -33,9 +37,11 @@ class PasswordController extends Controller
             abort(403);
         }
 
-        $user->update([
-            'password' => $request->password,
-        ]);
+        /** @var array{password: string} $validated */
+        $validated = $request->validated();
+        $params = UpdatePasswordParams::fromInput($validated);
+
+        $user->update($params->toArray());
 
         return back();
     }

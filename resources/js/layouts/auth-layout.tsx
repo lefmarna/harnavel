@@ -1,4 +1,6 @@
+import { usePage } from '@inertiajs/react'
 import AuthLayoutTemplate from '@/layouts/auth/auth-simple-layout'
+import type { SharedData } from '@/types'
 
 export default function AuthLayout({
   children,
@@ -7,11 +9,19 @@ export default function AuthLayout({
   ...props
 }: {
   children: React.ReactNode
-  title: string
-  description: string
+  title?: string
+  description?: string
 }) {
+  const { appDisplayName, seo } = usePage<SharedData>().props
+  const resolvedTitle = title ?? seo.title ?? appDisplayName
+  const resolvedDescription = description ?? seo.description ?? ''
+
   return (
-    <AuthLayoutTemplate title={title} description={description} {...props}>
+    <AuthLayoutTemplate
+      title={resolvedTitle}
+      description={resolvedDescription}
+      {...props}
+    >
       {children}
     </AuthLayoutTemplate>
   )

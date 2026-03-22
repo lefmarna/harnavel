@@ -14,10 +14,7 @@ type Props = {
 
 export default function ResetPassword({ token, email }: Props) {
   return (
-    <AuthLayout
-      title="Reset password"
-      description="Please enter your new password below"
-    >
+    <AuthLayout>
       <Form
         {...update.form()}
         transform={(data) => ({ ...data, token, email })}
@@ -26,7 +23,7 @@ export default function ResetPassword({ token, email }: Props) {
         {({ processing, errors }) => (
           <div className="grid gap-6">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">メールアドレス</Label>
               <Input
                 id="email"
                 type="email"
@@ -40,7 +37,7 @@ export default function ResetPassword({ token, email }: Props) {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">新しいパスワード</Label>
               <Input
                 id="password"
                 type="password"
@@ -48,20 +45,20 @@ export default function ResetPassword({ token, email }: Props) {
                 autoComplete="new-password"
                 className="mt-1 block w-full"
                 autoFocus
-                placeholder="Password"
+                placeholder="新しいパスワード"
               />
               <InputError message={errors.password} />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="password_confirmation">Confirm password</Label>
+              <Label htmlFor="password_confirmation">パスワード確認</Label>
               <Input
                 id="password_confirmation"
                 type="password"
                 name="password_confirmation"
                 autoComplete="new-password"
                 className="mt-1 block w-full"
-                placeholder="Confirm password"
+                placeholder="もう一度入力してください"
               />
               <InputError
                 message={errors.password_confirmation}
@@ -76,7 +73,7 @@ export default function ResetPassword({ token, email }: Props) {
               data-test="reset-password-button"
             >
               {processing && <Spinner />}
-              Reset password
+              パスワードを再設定
             </Button>
           </div>
         )}

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Support\GoogleOAuth;
+use App\ViewModels\PageViewModel;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -50,68 +51,99 @@ class FortifyServiceProvider extends ServiceProvider
     {
         $noIndexRobots = 'noindex, nofollow';
 
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
-            'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'canRegister' => Features::enabled(Features::registration()),
-            'canGoogleLogin' => GoogleOAuth::isConfigured(),
-            'error' => $request->session()->get('error'),
-            'status' => $request->session()->get('status'),
-            'seo' => [
-                'title' => 'Log in',
-                'description' => 'Log in to your account.',
-                'robots' => $noIndexRobots,
-            ],
-        ]));
+        Fortify::loginView(fn (Request $request) => Inertia::render(
+            'auth/login',
+            new PageViewModel(
+                title: 'ログイン',
+                description: 'メールアドレスとパスワードを入力してログインします。',
+                props: [
+                    'canResetPassword' => Features::enabled(Features::resetPasswords()),
+                    'canRegister' => Features::enabled(Features::registration()),
+                    'canGoogleLogin' => GoogleOAuth::isConfigured(),
+                    'error' => $request->session()->get('error'),
+                    'status' => $request->session()->get('status'),
+                ],
+                seo: [
+                    'robots' => $noIndexRobots,
+                ],
+            )->toArray(),
+        ));
 
-        Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
-            'email' => $request->email,
-            'token' => $request->route('token'),
-            'seo' => [
-                'title' => 'Reset password',
-                'description' => 'Set a new password for your account.',
-                'robots' => $noIndexRobots,
-            ],
-        ]));
+        Fortify::resetPasswordView(fn (Request $request) => Inertia::render(
+            'auth/reset-password',
+            new PageViewModel(
+                title: 'パスワード再設定',
+                description: 'アカウントの新しいパスワードを設定します。',
+                props: [
+                    'email' => $request->email,
+                    'token' => $request->route('token'),
+                ],
+                seo: [
+                    'robots' => $noIndexRobots,
+                ],
+            )->toArray(),
+        ));
 
-        Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/forgot-password', [
-            'status' => $request->session()->get('status'),
-            'seo' => [
-                'title' => 'Forgot password',
-                'description' => 'Enter your email to receive a password reset link.',
-                'robots' => $noIndexRobots,
-            ],
-        ]));
+        Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render(
+            'auth/forgot-password',
+            new PageViewModel(
+                title: 'パスワードをお忘れの方',
+                description: 'メールアドレスを入力してパスワード再設定リンクを受け取ります。',
+                props: [
+                    'status' => $request->session()->get('status'),
+                ],
+                seo: [
+                    'robots' => $noIndexRobots,
+                ],
+            )->toArray(),
+        ));
 
-        Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
-            'status' => $request->session()->get('status'),
-            'seo' => [
-                'title' => 'Email verification',
-                'robots' => $noIndexRobots,
-            ],
-        ]));
+        Fortify::verifyEmailView(fn (Request $request) => Inertia::render(
+            'auth/verify-email',
+            new PageViewModel(
+                title: 'メール認証',
+                description: 'メールアドレスの認証を完了してください。',
+                props: [
+                    'status' => $request->session()->get('status'),
+                ],
+                seo: [
+                    'robots' => $noIndexRobots,
+                ],
+            )->toArray(),
+        ));
 
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
-            'seo' => [
-                'title' => 'Register',
-                'description' => 'Create a new account.',
-                'robots' => $noIndexRobots,
-            ],
-        ]));
+        Fortify::registerView(fn () => Inertia::render(
+            'auth/register',
+            new PageViewModel(
+                title: '新規登録',
+                description: '必要事項を入力して新しいアカウントを作成します。',
+                seo: [
+                    'robots' => $noIndexRobots,
+                ],
+            )->toArray(),
+        ));
 
-        Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge', [
-            'seo' => [
-                'title' => 'Two-Factor Authentication',
-                'description' => 'Enter your authentication code to continue.',
-                'robots' => $noIndexRobots,
-            ],
-        ]));
+        Fortify::twoFactorChallengeView(fn () => Inertia::render(
+            'auth/two-factor-challenge',
+            new PageViewModel(
+                title: '二段階認証',
+                description: '認証アプリのコードを入力して続行します。',
+                seo: [
+                    'robots' => $noIndexRobots,
+                ],
+            )->toArray(),
+        ));
 
-        Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password', [
-            'seo' => [
-                'title' => 'Confirm password',
-                'robots' => $noIndexRobots,
-            ],
-        ]));
+        Fortify::confirmPasswordView(fn () => Inertia::render(
+            'auth/confirm-password',
+            new PageViewModel(
+                title: 'パスワード確認',
+                description: '続行するには現在のパスワードを入力してください。',
+                seo: [
+                    'robots' => $noIndexRobots,
+                ],
+            )->toArray(),
+        ));
     }
 
     /**

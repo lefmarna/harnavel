@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
+use App\Params\UpdateProfileParams;
 use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -39,8 +40,11 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $this->currentUser($request);
+        /** @var array{name: string, email: string} $validated */
+        $validated = $request->validated();
+        $params = UpdateProfileParams::fromInput($validated);
 
-        $user->fill($request->validated());
+        $user->fill($params->toArray());
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;

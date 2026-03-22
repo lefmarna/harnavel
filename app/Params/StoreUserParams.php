@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Params;
 
-use Illuminate\Support\Str;
-
 final readonly class StoreUserParams
 {
     public function __construct(
@@ -24,7 +22,7 @@ final readonly class StoreUserParams
     {
         return new self(
             name: $input['name'],
-            email: Str::lower($input['email']),
+            email: $input['email'],
             password: $input['password'],
         );
     }

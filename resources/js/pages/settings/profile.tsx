@@ -15,7 +15,7 @@ import type { BreadcrumbItem, SharedData } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'Profile settings',
+    title: 'プロフィール設定',
     href: edit().url,
   },
 ]
@@ -36,14 +36,14 @@ export default function Profile({
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <h1 className="sr-only">Profile Settings</h1>
+      <h1 className="sr-only">プロフィール設定</h1>
 
       <SettingsLayout>
         <div className="space-y-6">
           <Heading
             variant="small"
-            title="Profile information"
-            description="Update your name and email address"
+            title="プロフィール情報"
+            description="名前とメールアドレスを更新します"
           />
 
           <Form
@@ -56,7 +56,7 @@ export default function Profile({
             {({ processing, recentlySuccessful, errors }) => (
               <>
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name">名前</Label>
 
                   <Input
                     id="name"
@@ -65,14 +65,14 @@ export default function Profile({
                     name="name"
                     required
                     autoComplete="name"
-                    placeholder="Full name"
+                    placeholder="山田 太郎"
                   />
 
                   <InputError className="mt-2" message={errors.name} />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email address</Label>
+                  <Label htmlFor="email">メールアドレス</Label>
 
                   <Input
                     id="email"
@@ -82,7 +82,7 @@ export default function Profile({
                     name="email"
                     required
                     autoComplete="username"
-                    placeholder="Email address"
+                    placeholder="you@example.com"
                   />
 
                   <InputError className="mt-2" message={errors.email} />
@@ -91,20 +91,19 @@ export default function Profile({
                 {mustVerifyEmail && user.email_verified_at === null && (
                   <div>
                     <p className="-mt-4 text-sm text-muted-foreground">
-                      Your email address is unverified.{' '}
+                      メールアドレスが未認証です。{' '}
                       <Link
                         href={send()}
                         as="button"
                         className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
                       >
-                        Click here to resend the verification email.
+                        認証メールを再送する
                       </Link>
                     </p>
 
                     {status === 'verification-link-sent' && (
                       <div className="mt-2 text-sm font-medium text-green-600">
-                        A new verification link has been sent to your email
-                        address.
+                        メールアドレス宛に新しい認証リンクを送信しました。
                       </div>
                     )}
                   </div>
@@ -115,7 +114,7 @@ export default function Profile({
                     disabled={processing}
                     data-test="update-profile-button"
                   >
-                    Save
+                    保存
                   </Button>
 
                   <Transition
@@ -125,7 +124,7 @@ export default function Profile({
                     leave="transition ease-in-out"
                     leaveTo="opacity-0"
                   >
-                    <p className="text-sm text-neutral-600">Saved</p>
+                    <p className="text-sm text-neutral-600">保存しました</p>
                   </Transition>
                 </div>
               </>

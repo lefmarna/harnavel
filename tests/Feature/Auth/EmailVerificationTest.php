@@ -4,13 +4,21 @@ use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('メール認証画面を表示できる', function () {
     $user = User::factory()->unverified()->create();
 
     $response = $this->actingAs($user)->get(route('verification.notice'));
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('auth/verify-email')
+                ->where('seo.title', 'メール認証')
+                ->where('seo.description', 'メールアドレスの認証を完了してください。')
+        );
 });
 
 test('メール認証できる', function () {

@@ -40,6 +40,22 @@ test('既存メールユーザーに google_id を連携する', function () {
     ]);
 });
 
+test('lowercase usernamesが無効なら mixed-case メールの既存ユーザーをGoogleログインで再利用する', function () {
+    config(['fortify.lowercase_usernames' => false]);
+
+    $existing = User::factory()->create([
+        'email' => 'Test.User@Example.COM',
+        'google_id' => null,
+    ]);
+
+    $service = app(GoogleAuthService::class);
+    $user = $service->findOrCreate('google-mixed-case', 'Test.User@Example.COM', 'Existing User');
+
+    expect($user->id)->toBe($existing->id)
+        ->and($user->google_id)->toBe('google-mixed-case')
+        ->and(User::query()->count())->toBe(1);
+});
+
 test('既存 google_id ユーザーをそのまま返す', function () {
     $existing = User::factory()->create([
         'google_id' => 'google-789',
@@ -164,7 +180,7 @@ test('UniqueConstraintViolationException 発生時にフォールバックで既
                 'testing',
                 'INSERT INTO `users`',
                 [],
-                new \PDOException('Integrity constraint violation')
+                new PDOException('Integrity constraint violation')
             );
         }
     };
@@ -215,7 +231,7 @@ test('UniqueConstraintViolationException 後に findByEmail でユーザーを�
                     'testing',
                     'INSERT INTO `users`',
                     [],
-                    new \PDOException('Integrity constraint violation')
+                    new PDOException('Integrity constraint violation')
                 );
             }
             // 2 回目（フォールバック内の更新保存）は成功させる
@@ -272,7 +288,7 @@ test('UniqueConstraintViolationException 後のフォールバックでも別レ
                 'testing',
                 'INSERT INTO `users`',
                 [],
-                new \PDOException('Integrity constraint violation')
+                new PDOException('Integrity constraint violation')
             );
         }
     };

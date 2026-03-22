@@ -26,7 +26,7 @@ return [
     |
     */
 
-    'description' => 'A Laravel application template with Docker support',
+    'description' => 'Laravel・Inertia・Docker を備えたアプリケーションテンプレートです。',
 
     /*
     |--------------------------------------------------------------------------

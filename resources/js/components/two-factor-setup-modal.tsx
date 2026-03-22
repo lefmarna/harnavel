@@ -104,7 +104,7 @@ function TwoFactorSetupStep({
           <div className="relative flex w-full items-center justify-center">
             <div className="absolute inset-0 top-1/2 h-px w-full bg-border" />
             <span className="relative bg-card px-2 py-1">
-              or, enter the code manually
+              または、手動でセットアップキーを入力
             </span>
           </div>
 
@@ -198,14 +198,14 @@ function TwoFactorVerificationStep({
                 onClick={onBack}
                 disabled={processing}
               >
-                Back
+                戻る
               </Button>
               <Button
                 type="submit"
                 className="flex-1"
                 disabled={processing || code.length < OTP_MAX_LENGTH}
               >
-                Confirm
+                確認する
               </Button>
             </div>
           </div>
@@ -248,28 +248,29 @@ export default function TwoFactorSetupModal({
   }>(() => {
     if (twoFactorEnabled) {
       return {
-        title: 'Two-Factor Authentication Enabled',
+        title: '二段階認証を有効化しました',
         description:
-          'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-        buttonText: 'Close',
+          '二段階認証が有効になりました。QRコードを読み取るか、セットアップキーを認証アプリへ入力してください。',
+        buttonText: '閉じる',
       }
     }
 
     if (showVerificationStep) {
       return {
-        title: 'Verify Authentication Code',
-        description: 'Enter the 6-digit code from your authenticator app',
-        buttonText: 'Continue',
+        title: '認証コードを確認',
+        description:
+          '設定を完了するには、認証アプリに表示されている6桁のコードを入力してください。',
+        buttonText: '確認する',
       }
     }
 
     return {
-      title: 'Enable Two-Factor Authentication',
+      title: '二段階認証を設定',
       description:
-        'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
-      buttonText: 'Continue',
+        '認証アプリでこのQRコードを読み取り、必要に応じて認証コードを入力して設定を完了してください。',
+      buttonText: requiresConfirmation ? '次へ' : '設定を完了する',
     }
-  }, [twoFactorEnabled, showVerificationStep])
+  }, [requiresConfirmation, showVerificationStep, twoFactorEnabled])
 
   const handleModalNextStep = useCallback(() => {
     if (requiresConfirmation) {

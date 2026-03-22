@@ -4,24 +4,24 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Features;
 
-test('welcomeページはtitleとdescriptionを含むseo propsを返す', function () {
+test('ホームページはtitleとdescriptionを含むseo propsを返す', function () {
     $response = $this->get(route('home'));
 
     $response->assertOk();
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->component('welcome')
         ->has('seo')
-        ->where('seo.title', 'Welcome')
-        ->has('seo.description')
+        ->where('seo.title', 'ホーム')
+        ->where('seo.description', config('app.description'))
     );
 });
 
-test('welcomeページの初期HTMLにはInertia管理のSEOタグが含まれる', function () {
+test('ホームページの初期HTMLにはInertia管理のSEOタグが含まれる', function () {
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
     expect($content)->toContain('<link rel="canonical" inertia="canonical"')
-        ->and($content)->toContain('<title inertia>Welcome - ')
+        ->and($content)->toContain('<title inertia>ホーム - ')
         ->and($content)->toContain('<meta inertia="description" name="description"')
         ->and($content)->toContain('<meta inertia="robots" name="robots"')
         ->and($content)->toContain('<meta inertia="og:type" property="og:type" content="website">')
@@ -150,14 +150,14 @@ test('各ページはseo.titleを公開する', function (string $routeName, str
         ->where('seo.title', $expectedTitle)
     );
 })->with([
-    'welcome' => ['home', 'Welcome'],
-    'login' => ['login', 'Log in'],
-    'register' => ['register', 'Register'],
-    'forgot-password' => ['password.request', 'Forgot password'],
-    'reset-password' => ['password.reset', 'Reset password', ['token' => 'test-token']],
+    'home' => ['home', 'ホーム'],
+    'login' => ['login', 'ログイン'],
+    'register' => ['register', '新規登録'],
+    'forgot-password' => ['password.request', 'パスワードをお忘れの方'],
+    'reset-password' => ['password.reset', 'パスワード再設定', ['token' => 'test-token']],
 ]);
 
-test('認証済みページはseo.titleを持つ', function (string $routeName, string $expectedTitle) {
+test('認証済みページはseo.titleとdescriptionを持つ', function (string $routeName, string $expectedTitle, string $expectedDescription) {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route($routeName));
@@ -166,15 +166,16 @@ test('認証済みページはseo.titleを持つ', function (string $routeName, 
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->has('seo')
         ->where('seo.title', $expectedTitle)
+        ->where('seo.description', $expectedDescription)
     );
 })->with([
-    'dashboard' => ['dashboard', 'Dashboard'],
-    'profile' => ['profile.edit', 'Profile settings'],
-    'password' => ['user-password.edit', 'Password settings'],
-    'appearance' => ['appearance.edit', 'Appearance settings'],
+    'dashboard' => ['dashboard', 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。'],
+    'profile' => ['profile.edit', 'プロフィール設定', '名前とメールアドレスを管理します。'],
+    'password' => ['user-password.edit', 'パスワード設定', 'アカウントのパスワードを更新します。'],
+    'appearance' => ['appearance.edit', '表示設定', 'アカウントの表示設定を変更します。'],
 ]);
 
-test('二段階認証設定ページはseo.titleを持つ', function () {
+test('二段階認証設定ページはseo.titleとdescriptionを持つ', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)
@@ -184,11 +185,12 @@ test('二段階認証設定ページはseo.titleを持つ', function () {
     $response->assertOk();
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->has('seo')
-        ->where('seo.title', 'Two-Factor Authentication')
+        ->where('seo.title', '二段階認証設定')
+        ->where('seo.description', '二段階認証の設定を管理します。')
     );
 });
 
-test('メール認証ページはseo.titleを持つ', function () {
+test('メール認証ページはseo.titleとdescriptionを持つ', function () {
     $user = User::factory()->create(['email_verified_at' => null]);
 
     $response = $this->actingAs($user)->get(route('verification.notice'));
@@ -197,14 +199,15 @@ test('メール認証ページはseo.titleを持つ', function () {
     $response->assertOk();
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->has('seo')
-        ->where('seo.title', 'Email verification')
+        ->where('seo.title', 'メール認証')
+        ->where('seo.description', 'メールアドレスの認証を完了してください。')
         ->where('seo.robots', 'noindex, nofollow')
     );
 
     expect($content)->toContain('<meta inertia="robots" name="robots" content="noindex, nofollow">');
 });
 
-test('パスワード確認ページはseo.titleを持つ', function () {
+test('パスワード確認ページはseo.titleとdescriptionを持つ', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get(route('password.confirm'));
@@ -213,14 +216,15 @@ test('パスワード確認ページはseo.titleを持つ', function () {
     $response->assertOk();
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->has('seo')
-        ->where('seo.title', 'Confirm password')
+        ->where('seo.title', 'パスワード確認')
+        ->where('seo.description', '続行するには現在のパスワードを入力してください。')
         ->where('seo.robots', 'noindex, nofollow')
     );
 
     expect($content)->toContain('<meta inertia="robots" name="robots" content="noindex, nofollow">');
 });
 
-test('二段階認証チャレンジページはseo.titleを持つ', function () {
+test('二段階認証チャレンジページはseo.titleとdescriptionを持つ', function () {
     if (! Features::canManageTwoFactorAuthentication()) {
         $this->markTestSkipped('Two-factor authentication is not enabled.');
     }
@@ -243,7 +247,8 @@ test('二段階認証チャレンジページはseo.titleを持つ', function ()
     $response->assertOk();
     $response->assertInertia(fn (AssertableInertia $page) => $page
         ->has('seo')
-        ->where('seo.title', 'Two-Factor Authentication')
+        ->where('seo.title', '二段階認証')
+        ->where('seo.description', '認証アプリのコードを入力して続行します。')
         ->where('seo.robots', 'noindex, nofollow')
     );
 

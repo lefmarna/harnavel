@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('パスワード更新画面を表示できる', function () {
     $user = User::factory()->create();
@@ -10,7 +11,14 @@ test('パスワード更新画面を表示できる', function () {
         ->actingAs($user)
         ->get(route('user-password.edit'));
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('settings/password')
+                ->where('seo.title', 'パスワード設定')
+                ->where('seo.description', 'アカウントのパスワードを更新します。')
+        );
 });
 
 test('パスワードを更新できる', function () {

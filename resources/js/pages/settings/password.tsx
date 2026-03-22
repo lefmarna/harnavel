@@ -14,7 +14,7 @@ import type { BreadcrumbItem, SharedData } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'Password settings',
+    title: 'パスワード設定',
     href: edit().url,
   },
 ]
@@ -27,14 +27,14 @@ export default function Password() {
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <h1 className="sr-only">Password Settings</h1>
+      <h1 className="sr-only">パスワード設定</h1>
 
       <SettingsLayout>
         <div className="space-y-6">
           <Heading
             variant="small"
-            title="Update password"
-            description="Ensure your account is using a long, random password to stay secure"
+            title="パスワード更新"
+            description="安全のため、十分に強いパスワードへ更新してください"
           />
 
           <Form
@@ -63,7 +63,7 @@ export default function Password() {
               <>
                 {hasPassword && (
                   <div className="grid gap-2">
-                    <Label htmlFor="current_password">Current password</Label>
+                    <Label htmlFor="current_password">現在のパスワード</Label>
 
                     <Input
                       id="current_password"
@@ -72,7 +72,7 @@ export default function Password() {
                       type="password"
                       className="mt-1 block w-full"
                       autoComplete="current-password"
-                      placeholder="Current password"
+                      placeholder="現在のパスワード"
                     />
 
                     <InputError message={errors.current_password} />
@@ -80,7 +80,7 @@ export default function Password() {
                 )}
 
                 <div className="grid gap-2">
-                  <Label htmlFor="password">New password</Label>
+                  <Label htmlFor="password">新しいパスワード</Label>
 
                   <Input
                     id="password"
@@ -89,16 +89,14 @@ export default function Password() {
                     type="password"
                     className="mt-1 block w-full"
                     autoComplete="new-password"
-                    placeholder="New password"
+                    placeholder="新しいパスワード"
                   />
 
                   <InputError message={errors.password} />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="password_confirmation">
-                    Confirm password
-                  </Label>
+                  <Label htmlFor="password_confirmation">パスワード確認</Label>
 
                   <Input
                     id="password_confirmation"
@@ -106,7 +104,7 @@ export default function Password() {
                     type="password"
                     className="mt-1 block w-full"
                     autoComplete="new-password"
-                    placeholder="Confirm password"
+                    placeholder="もう一度入力してください"
                   />
 
                   <InputError message={errors.password_confirmation} />
@@ -117,7 +115,7 @@ export default function Password() {
                     disabled={processing}
                     data-test="update-password-button"
                   >
-                    Save password
+                    パスワードを保存
                   </Button>
 
                   <Transition
@@ -127,7 +125,7 @@ export default function Password() {
                     leave="transition ease-in-out"
                     leaveTo="opacity-0"
                   >
-                    <p className="text-sm text-neutral-600">Saved</p>
+                    <p className="text-sm text-neutral-600">保存しました</p>
                   </Transition>
                 </div>
               </>

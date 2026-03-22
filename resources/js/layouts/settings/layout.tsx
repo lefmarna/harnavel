@@ -13,22 +13,22 @@ import type { NavItem } from '@/types'
 
 const sidebarNavItems: NavItem[] = [
   {
-    title: 'Profile',
+    title: 'プロフィール',
     href: edit(),
     icon: null,
   },
   {
-    title: 'Password',
+    title: 'パスワード',
     href: editPassword(),
     icon: null,
   },
   {
-    title: 'Two-Factor Auth',
+    title: '二段階認証',
     href: show(),
     icon: null,
   },
   {
-    title: 'Appearance',
+    title: '表示設定',
     href: editAppearance(),
     icon: null,
   },
@@ -45,16 +45,13 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
   return (
     <div className="px-4 py-6">
       <Heading
-        title="Settings"
-        description="Manage your profile and account settings"
+        title="設定"
+        description="プロフィールとアカウント設定を管理します"
       />
 
       <div className="flex flex-col lg:flex-row lg:space-x-12">
         <aside className="w-full max-w-xl lg:w-48">
-          <nav
-            className="flex flex-col space-y-1 space-x-0"
-            aria-label="Settings"
-          >
+          <nav className="flex flex-col space-y-1 space-x-0" aria-label="設定">
             {sidebarNavItems.map((item, index) => (
               <Button
                 key={`${toUrl(item.href)}-${index}`}

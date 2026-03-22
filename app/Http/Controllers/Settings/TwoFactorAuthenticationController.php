@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\TwoFactorAuthenticationRequest;
 use App\Models\User;
+use App\ViewModels\PageViewModel;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Inertia\Inertia;
@@ -34,12 +35,16 @@ class TwoFactorAuthenticationController extends Controller implements HasMiddlew
             abort(403);
         }
 
-        return Inertia::render('settings/two-factor', [
-            'twoFactorEnabled' => $user->hasEnabledTwoFactorAuthentication(),
-            'requiresConfirmation' => Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm'),
-            'seo' => [
-                'title' => 'Two-Factor Authentication',
-            ],
-        ]);
+        return Inertia::render(
+            'settings/two-factor',
+            new PageViewModel(
+                title: '二段階認証設定',
+                description: '二段階認証の設定を管理します。',
+                props: [
+                    'twoFactorEnabled' => $user->hasEnabledTwoFactorAuthentication(),
+                    'requiresConfirmation' => Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm'),
+                ],
+            )->toArray(),
+        );
     }
 }

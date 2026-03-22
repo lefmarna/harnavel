@@ -19,7 +19,7 @@ type Props = {
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'Two-Factor Authentication',
+    title: '二段階認証設定',
     href: show.url(),
   },
 ]
@@ -42,23 +42,22 @@ export default function TwoFactor({
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
-      <h1 className="sr-only">Two-Factor Authentication Settings</h1>
+      <h1 className="sr-only">二段階認証設定</h1>
 
       <SettingsLayout>
         <div className="space-y-6">
           <Heading
             variant="small"
-            title="Two-Factor Authentication"
-            description="Manage your two-factor authentication settings"
+            title="二段階認証"
+            description="二段階認証の設定を管理します"
           />
           {twoFactorEnabled ? (
             <div className="flex flex-col items-start justify-start space-y-4">
-              <Badge variant="default">Enabled</Badge>
+              <Badge variant="default">有効</Badge>
               <p className="text-muted-foreground">
-                With two-factor authentication enabled, you will be prompted for
-                a secure, random pin during login, regardless of whether you
-                sign in with your password or Google. You can retrieve this code
-                from the TOTP-supported application on your phone.
+                二段階認証を有効にすると、パスワードログインでも Google
+                ログインでも、ログイン時に安全な確認コードの入力が必要になります。コードはスマートフォンの
+                TOTP 対応アプリで確認できます。
               </p>
 
               <TwoFactorRecoveryCodes
@@ -83,19 +82,18 @@ export default function TwoFactor({
             </div>
           ) : (
             <div className="flex flex-col items-start justify-start space-y-4">
-              <Badge variant="destructive">Disabled</Badge>
+              <Badge variant="destructive">無効</Badge>
               <p className="text-muted-foreground">
-                When you enable two-factor authentication, it will be required
-                during login for all sign-in methods, including your password
-                and Google. This secure pin can be retrieved from a
-                TOTP-supported application on your phone.
+                二段階認証を有効にすると、パスワードと Google
+                のどちらのログイン方法でも確認コードの入力が必要になります。コードはスマートフォンの
+                TOTP 対応アプリで確認できます。
               </p>
 
               <div>
                 {hasSetupData ? (
                   <Button onClick={() => setShowSetupModal(true)}>
                     <ShieldCheck />
-                    Continue Setup
+                    設定を続ける
                   </Button>
                 ) : (
                   <Form
@@ -105,7 +103,7 @@ export default function TwoFactor({
                     {({ processing }) => (
                       <Button type="submit" disabled={processing}>
                         <ShieldCheck />
-                        Enable 2FA
+                        二段階認証を有効にする
                       </Button>
                     )}
                   </Form>

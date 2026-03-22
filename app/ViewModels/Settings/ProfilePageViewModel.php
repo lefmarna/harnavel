@@ -15,7 +15,7 @@ final readonly class ProfilePageViewModel
      * @return array{
      *     mustVerifyEmail: bool,
      *     status: string|null,
-     *     seo: array{title: string}
+     *     seo: array{title: string, description: string}
      * }
      */
     public function toArray(): array
@@ -24,7 +24,8 @@ final readonly class ProfilePageViewModel
             'mustVerifyEmail' => $this->mustVerifyEmail,
             'status' => $this->status,
             'seo' => [
-                'title' => 'Profile settings',
+                'title' => 'プロフィール設定',
+                'description' => '名前とメールアドレスを管理します。',
             ],
         ];
     }

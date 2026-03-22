@@ -2,12 +2,20 @@
 
 use App\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
+use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 
 test('ログイン画面を表示できる', function () {
     $response = $this->get(route('login'));
 
-    $response->assertOk();
+    $response
+        ->assertOk()
+        ->assertInertia(
+            fn (Assert $page) => $page
+                ->component('auth/login')
+                ->where('seo.title', 'ログイン')
+                ->where('seo.description', 'メールアドレスとパスワードを入力してログインします。')
+        );
 });
 
 test('二段階認証未設定ユーザーはログイン画面から認証できる', function () {

@@ -8,9 +8,16 @@ import { initializeTheme } from './hooks/use-appearance'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel App Template'
 
+type LayoutComponent = ComponentType<{
+  children: ReactNode
+  [key: string]: unknown
+}>
+
+type LayoutFunction = (children: ReactNode) => ReactNode
+
 type PageComponent = ComponentType & {
-  layout?: (children: ReactNode) => ReactNode
-  originalLayout?: (children: ReactNode) => ReactNode
+  layout?: LayoutFunction | LayoutComponent[]
+  originalLayout?: LayoutFunction | LayoutComponent[]
   seoWrapped?: boolean
 }
 
@@ -18,31 +25,41 @@ type PageModule = {
   default: PageComponent
 }
 
-const withSeoLayout = (children: ReactNode) => (
-  <>
-    <SeoHead />
-    {children}
-  </>
-)
+function SeoLayout({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <SeoHead />
+      {children}
+    </>
+  )
+}
+
+const wrapLayoutWithSeo = (
+  layout?: LayoutFunction | LayoutComponent[],
+): LayoutFunction | LayoutComponent[] => {
+  if (Array.isArray(layout)) {
+    return [SeoLayout, ...layout]
+  }
+
+  return (children: ReactNode) => {
+    const content = typeof layout === 'function' ? layout(children) : children
+
+    return <SeoLayout>{content}</SeoLayout>
+  }
+}
 
 createInertiaApp({
   title: (title) => (title ? `${title} - ${appName}` : appName),
   resolve: (name) =>
-    resolvePageComponent(
+    resolvePageComponent<PageModule>(
       `./pages/${name}.tsx`,
-      import.meta.glob('./pages/**/*.tsx'),
+      import.meta.glob<PageModule>('./pages/**/*.tsx'),
     ).then((module) => {
-      const page = (module as PageModule).default
+      const page = module.default
 
       if (!page.seoWrapped) {
         page.originalLayout = page.layout
-        page.layout = (children: ReactNode) => {
-          const content = page.originalLayout
-            ? page.originalLayout(children)
-            : children
-
-          return withSeoLayout(content)
-        }
+        page.layout = wrapLayoutWithSeo(page.originalLayout)
         page.seoWrapped = true
       }
 

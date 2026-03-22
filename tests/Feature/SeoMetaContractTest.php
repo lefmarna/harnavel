@@ -4,6 +4,30 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Features;
 
+function extractHeadAttribute(string $html, string $tag, array $requiredAttributes, string $targetAttribute): string
+{
+    $lookaheads = '';
+
+    foreach ($requiredAttributes as $name => $value) {
+        $lookaheads .= sprintf(
+            '(?=[^>]*\b%s="%s")',
+            preg_quote($name, '/'),
+            preg_quote($value, '/'),
+        );
+    }
+
+    $pattern = sprintf(
+        '/<%s\b%s(?=[^>]*\b%s="([^"]*)")[^>]*>/',
+        preg_quote($tag, '/'),
+        $lookaheads,
+        preg_quote($targetAttribute, '/'),
+    );
+
+    preg_match($pattern, $html, $matches);
+
+    return $matches[1] ?? '';
+}
+
 test('ホームページはtitleとdescriptionを含むseo propsを返す', function () {
     $response = $this->get(route('home'));
 
@@ -45,6 +69,21 @@ test('ホームページの初期HTMLにはInertia管理のSEOタグが含まれ
         ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.png');
 });
 
+test('初期HTMLのtitle canonical og:url robotsは期待値を満たす', function () {
+    $response = $this->get(route('home'));
+    $content = $response->getContent();
+
+    preg_match('/<title inertia>([^<]*)<\/title>/', $content, $titleMatches);
+    $canonicalUrl = extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href');
+    $ogUrl = extractHeadAttribute($content, 'meta', ['property' => 'og:url'], 'content');
+    $robots = extractHeadAttribute($content, 'meta', ['name' => 'robots'], 'content');
+
+    expect($titleMatches[1] ?? '')->toBe('ホーム - '.config('app.display_name'))
+        ->and($canonicalUrl)->toBe(route('home'))
+        ->and($ogUrl)->toBe(route('home'))
+        ->and($robots)->toBe('index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1');
+});
+
 test('機微なルートのog:urlはクエリ文字列を含まない', function () {
     $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
     $response = $this->get($url);
@@ -57,6 +96,19 @@ test('機微なルートのog:urlはクエリ文字列を含まない', function
         ->and($ogUrl)->not->toContain('email=')
         ->and($ogUrl)->not->toContain('?')
         ->and($ogUrl)->toContain('reset-password');
+});
+
+test('機微なルートのcanonicalはクエリ文字列を含まない', function () {
+    $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
+    $response = $this->get($url);
+    $content = $response->getContent();
+
+    $canonicalUrl = extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href');
+
+    expect($canonicalUrl)->not->toBeEmpty()
+        ->and($canonicalUrl)->not->toContain('email=')
+        ->and($canonicalUrl)->not->toContain('?')
+        ->and($canonicalUrl)->toContain('reset-password');
 });
 
 test('og:urlはクエリ文字列を含まないcanonical pathを持つ', function () {

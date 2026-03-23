@@ -8,6 +8,7 @@ use App\Exceptions\GoogleAuthException;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -18,15 +19,22 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     public function findOrCreate(string $googleId, string $email, string $name): User
     {
-        if (config('fortify.lowercase_usernames')) {
+        $lowercaseUsernames = (bool) config('fortify.lowercase_usernames');
+        $caseInsensitiveEmail = ! $lowercaseUsernames;
+
+        if ($lowercaseUsernames) {
             $email = Str::lower($email);
         }
 
         try {
-            return DB::transaction(function () use ($googleId, $email, $name): User {
-                $candidates = $this->userRepository->findCandidates($googleId, $email, lock: true);
+            return DB::transaction(function () use ($googleId, $email, $name, $lowercaseUsernames, $caseInsensitiveEmail): User {
+                $candidates = $this->userRepository->findCandidates(
+                    $googleId,
+                    $email,
+                    lock: true,
+                );
                 $userByGoogleId = $candidates->firstWhere('google_id', $googleId);
-                $userByEmail = $candidates->firstWhere('email', $email);
+                $userByEmail = $this->findCandidateByEmail($candidates, $email, $caseInsensitiveEmail);
 
                 // google_id 一致ユーザーとメール一致ユーザーが異なるレコードの場合は衝突エラー
                 if ($userByGoogleId && $userByEmail && ! $userByGoogleId->is($userByEmail)) {
@@ -47,6 +55,10 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
                     if ($user->email_verified_at === null) {
                         $user->forceFill(['email_verified_at' => now()]);
+                    }
+
+                    if ($lowercaseUsernames && $user->email !== $email) {
+                        $user->email = $email;
                     }
 
                     if ($user->isDirty()) {
@@ -97,11 +109,29 @@ class GoogleAuthService implements GoogleAuthServiceContract
                 $user->forceFill(['email_verified_at' => now()]);
             }
 
+            if ($lowercaseUsernames && $user->email !== $email) {
+                $user->email = $email;
+            }
+
             if ($user->isDirty()) {
                 $this->userRepository->save($user);
             }
 
             return $user;
         }
+    }
+
+    /**
+     * @param  Collection<int, User>  $candidates
+     */
+    private function findCandidateByEmail(Collection $candidates, string $email, bool $caseInsensitiveEmail): ?User
+    {
+        if (! $caseInsensitiveEmail) {
+            /** @var User|null */
+            return $candidates->firstWhere('email', $email);
+        }
+
+        /** @var User|null */
+        return $candidates->first(fn (User $user): bool => Str::lower($user->email) === Str::lower($email));
     }
 }

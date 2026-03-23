@@ -40,7 +40,7 @@ test('既存メールユーザーに google_id を連携する', function () {
     ]);
 });
 
-test('lowercase usernamesが無効なら mixed-case メールの既存ユーザーをGoogleログインで再利用する', function () {
+test('lowercase usernamesが無効なら lowercase のGoogleメールでも mixed-case メールの既存ユーザーを再利用し casing を維持する', function () {
     config(['fortify.lowercase_usernames' => false]);
 
     $existing = User::factory()->create([
@@ -49,10 +49,12 @@ test('lowercase usernamesが無効なら mixed-case メールの既存ユーザ�
     ]);
 
     $service = app(GoogleAuthService::class);
-    $user = $service->findOrCreate('google-mixed-case', 'Test.User@Example.COM', 'Existing User');
+    $user = $service->findOrCreate('google-mixed-case', 'test.user@example.com', 'Existing User');
 
     expect($user->id)->toBe($existing->id)
-        ->and($user->google_id)->toBe('google-mixed-case')
+        ->and($user->google_id)->toBe('google-mixed-case');
+
+    expect(User::query()->sole()->email)->toBe('Test.User@Example.COM')
         ->and(User::query()->count())->toBe(1);
 });
 
@@ -298,4 +300,60 @@ test('UniqueConstraintViolationException 後のフォールバックでも別レ
 
     expect(fn () => $service->findOrCreate('google-A', 'b@example.com', 'User'))
         ->toThrow(GoogleAuthException::class, 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+});
+
+test('lowercase usernamesが無効なら UniqueConstraintViolationException 後も mixed-case メールの既存ユーザーを再利用し casing を維持する', function () {
+    config(['fortify.lowercase_usernames' => false]);
+
+    $existing = User::factory()->unverified()->create([
+        'email' => 'Test.User@Example.COM',
+        'google_id' => null,
+    ]);
+
+    $saveCount = 0;
+    $fakeRepo = new class($existing, $saveCount) implements UserRepositoryContract
+    {
+        public function __construct(
+            private readonly User $existingUser,
+            private int $saveCount,
+        ) {}
+
+        public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
+        {
+            return collect();
+        }
+
+        public function findByGoogleId(string $googleId, bool $lock = false): ?User
+        {
+            return null;
+        }
+
+        public function findByEmail(string $email, bool $lock = false): ?User
+        {
+            return $this->existingUser;
+        }
+
+        public function save(User $user): void
+        {
+            if ($this->saveCount === 0) {
+                $this->saveCount++;
+                throw new UniqueConstraintViolationException(
+                    'testing',
+                    'INSERT INTO `users`',
+                    [],
+                    new PDOException('Integrity constraint violation')
+                );
+            }
+        }
+    };
+
+    app()->instance(UserRepositoryContract::class, $fakeRepo);
+    $service = app(GoogleAuthService::class);
+
+    $user = $service->findOrCreate('new-google', 'test.user@example.com', 'Fallback User');
+
+    expect($user->id)->toBe($existing->id)
+        ->and($user->google_id)->toBe('new-google')
+        ->and($user->email)->toBe('Test.User@Example.COM')
+        ->and($user->email_verified_at)->not->toBeNull();
 });

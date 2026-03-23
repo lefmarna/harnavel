@@ -12,6 +12,8 @@ interface UserRepositoryContract
     /**
      * google_id または email に一致する候補ユーザーをまとめて取得する。
      * $lock = true のとき id 昇順で SELECT ... FOR UPDATE を行う（デッドロック防止）。
+     * このリポジトリでは、email の大小文字非依存性は MariaDB の
+     * case-insensitive collation 前提で通常比較に委ねる。
      *
      * @return Collection<int, User>
      */
@@ -24,6 +26,8 @@ interface UserRepositoryContract
 
     /**
      * email でユーザーを検索する（フォールバック再取得用）。
+     * このリポジトリでは、email の大小文字非依存性は MariaDB の
+     * case-insensitive collation 前提で通常比較に委ねる。
      */
     public function findByEmail(string $email, bool $lock = false): ?User;
 

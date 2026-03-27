@@ -84,6 +84,9 @@ export default [
       'node_modules',
       'public',
       'bootstrap/ssr',
+      'playwright-report',
+      'test-results',
+      '.playwright-cli',
       'tailwind.config.js',
       'vite.config.js',
       // Wayfinder generated artifacts

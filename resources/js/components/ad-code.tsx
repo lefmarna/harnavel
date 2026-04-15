@@ -1,0 +1,64 @@
+import { usePage } from '@inertiajs/react'
+import { useLayoutEffect } from 'react'
+import type { CSSProperties } from 'react'
+import type { SharedData } from '@/types'
+
+interface AdCodeProps {
+  slot: string
+  style?: CSSProperties
+  format?: string
+  responsive?: string
+  layoutKey?: string
+}
+
+declare global {
+  interface Window {
+    adsbygoogle: unknown[]
+  }
+}
+
+export const AdCode = (props: AdCodeProps) => {
+  const { tracking } = usePage<SharedData>().props
+  const {
+    slot,
+    style = { display: 'block' },
+    format = undefined,
+    responsive = undefined,
+    layoutKey = undefined,
+  } = props
+
+  useLayoutEffect(() => {
+    // 開発環境では何もしない
+    if (import.meta.env.DEV) return
+    if (typeof window === 'undefined') return
+    if (!tracking.adsEnabled || !tracking.adsensePublisherId) return
+
+    try {
+      ;(window.adsbygoogle = window.adsbygoogle || []).push({})
+    } catch (e) {
+      console.error(e)
+    }
+  }, [])
+
+  // 開発環境では何も表示しない
+  if (import.meta.env.DEV) {
+    return null
+  }
+
+  if (!tracking.adsEnabled || !tracking.adsensePublisherId) {
+    return null
+  }
+
+  return (
+    <ins
+      className="adsbygoogle"
+      style={style}
+      data-ad-client={tracking.adsensePublisherId}
+      data-ad-slot={slot}
+      data-ad-format={format}
+      data-ad-layout-key={layoutKey}
+      data-adtest={import.meta.env.PROD ? 'off' : 'on'}
+      data-full-width-responsive={responsive}
+    />
+  )
+}

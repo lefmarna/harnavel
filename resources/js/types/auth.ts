@@ -15,10 +15,17 @@ export type Auth = {
   hasPassword: boolean
 }
 
+export type Tracking = {
+  trackingEnabled: boolean
+  adsEnabled: boolean
+  adsensePublisherId: string | null
+}
+
 export type SeoData = {
   title?: string
   description?: string
   robots?: string
+  googlebot?: string
   image?: string
   url?: string
   type?: 'website' | 'article'
@@ -30,8 +37,10 @@ export type SharedData = {
   currentUrl: string
   appDisplayName: string
   appDescription: string
+  defaultRobots?: string | null
   seo: SeoData
   auth: Auth
+  tracking: Tracking
   sidebarOpen: boolean
   flash: {
     status: string | null

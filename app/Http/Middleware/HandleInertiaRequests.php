@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\View;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -37,6 +38,22 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
+        $consent = $request->cookie('tracking_consent');
+        $analyticsTrackingId = config('services.google.analytics_tracking_id');
+        $adsensePublisherId = config('services.google.adsense_publisher_id');
+        $consentGranted = app()->environment('production') && $consent === 'accepted';
+
+        $tracking = [
+            'trackingEnabled' => $consentGranted && is_string($analyticsTrackingId) && $analyticsTrackingId !== '',
+            'adsEnabled' => $consentGranted && is_string($adsensePublisherId) && $adsensePublisherId !== '',
+            'adsensePublisherId' => is_string($adsensePublisherId) && $adsensePublisherId !== '' ? $adsensePublisherId : null,
+        ];
+        $defaultRobots = app()->environment('production')
+            ? 'max-image-preview:large'
+            : 'noindex, nofollow';
+
+        View::share('tracking', $tracking);
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -44,10 +61,10 @@ class HandleInertiaRequests extends Middleware
             'currentUrl' => $request->url(),
             'appDisplayName' => config('app.display_name', config('app.name', 'Laravel')),
             'appDescription' => config('app.description', ''),
+            'defaultRobots' => $defaultRobots,
             'seo' => [
                 'title' => null,
                 'description' => null,
-                'robots' => null,
             ],
             'auth' => [
                 'user' => $user ? [
@@ -62,6 +79,7 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
                 'hasPassword' => $user?->password !== null,
             ],
+            'tracking' => $tracking,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
                 'status' => $request->session()->get('status'),

@@ -2,6 +2,7 @@ import { createInertiaApp } from '@inertiajs/react'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { type ComponentType, type ReactNode, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { GoogleAnalyticsTracker } from './components/functional'
 import SeoHead from './components/seo-head'
 import '../css/app.css'
 import { initializeTheme } from './hooks/use-appearance'
@@ -29,6 +30,7 @@ function SeoLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <SeoHead />
+      <GoogleAnalyticsTracker />
       {children}
     </>
   )

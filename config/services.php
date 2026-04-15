@@ -44,6 +44,8 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'analytics_tracking_id' => env('GA_TRACKING_ID', env('VITE_GA_TRACKING_ID')),
+        'adsense_publisher_id' => env('ADSENSE_PUBLISHER_ID'),
     ],
 
 ];

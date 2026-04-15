@@ -5,6 +5,7 @@ interface SeoProps {
   title?: string
   description?: string
   robots?: string
+  googlebot?: string
   image?: string
   url?: string
   type?: 'website' | 'article'
@@ -14,6 +15,7 @@ export default function SeoHead({
   title,
   description,
   robots,
+  googlebot,
   image,
   url,
   type,
@@ -22,6 +24,7 @@ export default function SeoHead({
     seo,
     appDisplayName,
     appDescription,
+    defaultRobots,
     url: appUrl,
     currentUrl,
   } = usePage<SharedData>().props
@@ -31,16 +34,15 @@ export default function SeoHead({
   const metaType = type ?? sharedSeo.type ?? 'website'
   const metaDescription =
     description ?? sharedSeo.description ?? appDescription ?? ''
-  const metaRobots =
-    robots ??
-    sharedSeo.robots ??
-    'index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1'
+  const metaRobots = robots ?? sharedSeo.robots ?? defaultRobots ?? undefined
+  const metaGooglebot =
+    googlebot ?? sharedSeo.googlebot ?? 'max-image-preview:large'
   const metaUrl = new URL(url ?? sharedSeo.url ?? currentUrl, appUrl).toString()
   const metaImage = new URL(
     image ?? sharedSeo.image ?? '/opengraph-image.png',
     appUrl,
   ).toString()
-  const pageTitle = resolvedTitle ? `${resolvedTitle} - ${siteName}` : siteName
+  const pageTitle = resolvedTitle ? `${resolvedTitle} | ${siteName}` : siteName
 
   return (
     <Head title={resolvedTitle}>
@@ -49,7 +51,15 @@ export default function SeoHead({
         name="description"
         content={metaDescription}
       />
-      <meta head-key="robots" name="robots" content={metaRobots} />
+      {metaRobots ? (
+        <meta head-key="robots" name="robots" content={metaRobots} />
+      ) : null}
+      <meta head-key="googlebot" name="googlebot" content={metaGooglebot} />
+      <meta
+        head-key="format-detection"
+        name="format-detection"
+        content="telephone=no, email=no"
+      />
       <link head-key="canonical" rel="canonical" href={metaUrl} />
 
       <meta head-key="og:url" property="og:url" content={metaUrl} />

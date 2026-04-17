@@ -38,15 +38,16 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
-        $consent = $request->cookie('tracking_consent');
         $analyticsTrackingId = config('services.google.analytics_tracking_id');
         $adsensePublisherId = config('services.google.adsense_publisher_id');
-        $consentGranted = app()->environment('production') && $consent === 'accepted';
+        $trackingAllowed = app()->environment(['production', 'develop']);
+        $adsTestMode = app()->environment('develop');
 
         $tracking = [
-            'trackingEnabled' => $consentGranted && is_string($analyticsTrackingId) && $analyticsTrackingId !== '',
-            'adsEnabled' => $consentGranted && is_string($adsensePublisherId) && $adsensePublisherId !== '',
+            'trackingEnabled' => $trackingAllowed && is_string($analyticsTrackingId) && $analyticsTrackingId !== '',
+            'adsEnabled' => $trackingAllowed && is_string($adsensePublisherId) && $adsensePublisherId !== '',
             'adsensePublisherId' => is_string($adsensePublisherId) && $adsensePublisherId !== '' ? $adsensePublisherId : null,
+            'adsTestMode' => $adsTestMode,
         ];
         $defaultRobots = app()->environment('production')
             ? 'max-image-preview:large'

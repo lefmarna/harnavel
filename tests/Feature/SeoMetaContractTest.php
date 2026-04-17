@@ -28,6 +28,30 @@ function extractHeadAttribute(string $html, string $tag, array $requiredAttribut
     return $matches[1] ?? '';
 }
 
+/**
+ * @return list<array<string, mixed>>
+ */
+function extractStructuredDataItems(string $html): array
+{
+    preg_match_all('/<script type="application\/ld\+json">\s*(.*?)\s*<\/script>/s', $html, $matches);
+
+    return collect($matches[1] ?? [])
+        ->map(fn (string $json): mixed => json_decode($json, true))
+        ->filter(fn (mixed $schema): bool => is_array($schema))
+        ->values()
+        ->all();
+}
+
+/**
+ * @param  list<array<string, mixed>>  $schemas
+ * @return array<string, mixed>
+ */
+function findStructuredDataByType(array $schemas, string $type): array
+{
+    return collect($schemas)
+        ->first(fn (array $schema): bool => ($schema['@type'] ?? null) === $type, []);
+}
+
 test('ホームページはtitleとdescriptionを含むseo propsを返す', function () {
     $response = $this->get(route('home'));
 
@@ -67,6 +91,42 @@ test('ホームページの初期HTMLにはInertia管理のSEOタグが含まれ
 
     expect($ogImageMatches[1] ?? '')->toEndWith('/opengraph-image.png')
         ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.png');
+});
+
+test('ホームページの初期HTMLにはサイト用とページ用の構造化データが含まれる', function () {
+    $response = $this->get(route('home'));
+    $schemas = extractStructuredDataItems($response->getContent());
+
+    $websiteSchema = findStructuredDataByType($schemas, 'WebSite');
+    $webApplicationSchema = findStructuredDataByType($schemas, 'WebApplication');
+    $webPageSchema = findStructuredDataByType($schemas, 'WebPage');
+
+    expect($websiteSchema)
+        ->toMatchArray([
+            '@type' => 'WebSite',
+            '@id' => rtrim(config('app.url', url('/')), '/').'/#website',
+            'name' => config('app.display_name'),
+            'description' => config('app.description'),
+            'url' => rtrim(config('app.url', url('/')), '/'),
+        ])
+        ->and($webApplicationSchema)
+        ->toMatchArray([
+            '@type' => 'WebApplication',
+            '@id' => rtrim(config('app.url', url('/')), '/').'/#webapplication',
+            'name' => config('app.display_name'),
+            'description' => config('app.description'),
+            'url' => rtrim(config('app.url', url('/')), '/'),
+        ])
+        ->and($webPageSchema)
+        ->toMatchArray([
+            '@type' => 'WebPage',
+            '@id' => route('home').'#webpage',
+            'name' => 'ホーム - '.config('app.display_name'),
+            'description' => config('app.description'),
+            'url' => route('home'),
+        ])
+        ->and($webPageSchema['isPartOf']['@id'] ?? null)->toBe($websiteSchema['@id'])
+        ->and($webPageSchema['about']['@id'] ?? null)->toBe($webApplicationSchema['@id']);
 });
 
 test('初期HTMLのtitle canonical og:url robotsは期待値を満たす', function () {
@@ -191,6 +251,28 @@ test('publicページはindexableなrobots metaを維持する', function () {
     $content = $response->getContent();
 
     expect($content)->toContain('<meta inertia="robots" name="robots" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1">');
+});
+
+test('ページ固有のdescriptionはWebPage構造化データにだけ反映される', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get(route('profile.edit'));
+    $schemas = extractStructuredDataItems($response->getContent());
+
+    $websiteSchema = findStructuredDataByType($schemas, 'WebSite');
+    $webApplicationSchema = findStructuredDataByType($schemas, 'WebApplication');
+    $webPageSchema = findStructuredDataByType($schemas, 'WebPage');
+
+    expect($websiteSchema['description'] ?? null)->toBe(config('app.description'))
+        ->and($webApplicationSchema['description'] ?? null)->toBe(config('app.description'))
+        ->and($webPageSchema)
+        ->toMatchArray([
+            '@type' => 'WebPage',
+            '@id' => route('profile.edit').'#webpage',
+            'name' => 'プロフィール設定 - '.config('app.display_name'),
+            'description' => '名前とメールアドレスを管理します。',
+            'url' => route('profile.edit'),
+        ]);
 });
 
 test('各ページはseo.titleを公開する', function (string $routeName, string $expectedTitle, array $routeParams = []) {

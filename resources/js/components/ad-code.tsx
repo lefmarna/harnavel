@@ -49,6 +49,8 @@ export const AdCode = (props: AdCodeProps) => {
     return null
   }
 
+  const adTestMode = tracking.adsTestMode ? 'on' : 'off'
+
   return (
     <ins
       className="adsbygoogle"
@@ -57,7 +59,7 @@ export const AdCode = (props: AdCodeProps) => {
       data-ad-slot={slot}
       data-ad-format={format}
       data-ad-layout-key={layoutKey}
-      data-adtest={import.meta.env.PROD ? 'off' : 'on'}
+      data-adtest={adTestMode}
       data-full-width-responsive={responsive}
     />
   )

@@ -19,6 +19,7 @@ export type Tracking = {
   trackingEnabled: boolean
   adsEnabled: boolean
   adsensePublisherId: string | null
+  adsTestMode: boolean
 }
 
 export type SeoData = {

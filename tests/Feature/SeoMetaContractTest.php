@@ -68,23 +68,23 @@ test('ホームページの初期HTMLにはInertia管理のSEOタグが含まれ
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
-    expect($content)->toContain('<link rel="canonical" inertia="canonical"')
-        ->and($content)->toContain('<title inertia>ホーム - ')
-        ->and($content)->toContain('<meta inertia="description" name="description"')
-        ->and($content)->toContain('<meta inertia="robots" name="robots"')
-        ->and($content)->toContain('<meta inertia="og:type" property="og:type" content="website">')
-        ->and($content)->toContain('<meta inertia="og:url" property="og:url"')
-        ->and($content)->toContain('<meta inertia="og:site_name" property="og:site_name"')
-        ->and($content)->toContain('<meta inertia="og:title" property="og:title"')
-        ->and($content)->toContain('<meta inertia="og:description" property="og:description"')
-        ->and($content)->toContain('<meta inertia="og:image" property="og:image"')
-        ->and($content)->toContain('<meta inertia="twitter:card" name="twitter:card" content="summary_large_image">')
-        ->and($content)->toContain('<meta inertia="twitter:url" name="twitter:url"')
+    expect($content)->toContain('<link rel="canonical" data-inertia="canonical"')
+        ->and($content)->toContain('<title data-inertia>ホーム - ')
+        ->and($content)->toContain('<meta data-inertia="description" name="description"')
+        ->and($content)->toContain('<meta data-inertia="robots" name="robots"')
+        ->and($content)->toContain('<meta data-inertia="og:type" property="og:type" content="website">')
+        ->and($content)->toContain('<meta data-inertia="og:url" property="og:url"')
+        ->and($content)->toContain('<meta data-inertia="og:site_name" property="og:site_name"')
+        ->and($content)->toContain('<meta data-inertia="og:title" property="og:title"')
+        ->and($content)->toContain('<meta data-inertia="og:description" property="og:description"')
+        ->and($content)->toContain('<meta data-inertia="og:image" property="og:image"')
+        ->and($content)->toContain('<meta data-inertia="twitter:card" name="twitter:card" content="summary_large_image">')
+        ->and($content)->toContain('<meta data-inertia="twitter:url" name="twitter:url"')
         ->and($content)->toContain('<meta name="twitter:site" content="@lefmarna">')
         ->and($content)->toContain('<meta name="twitter:creator" content="@lefmarna">')
-        ->and($content)->toContain('<meta inertia="twitter:title" name="twitter:title"')
-        ->and($content)->toContain('<meta inertia="twitter:description" name="twitter:description"')
-        ->and($content)->toContain('<meta inertia="twitter:image" name="twitter:image"');
+        ->and($content)->toContain('<meta data-inertia="twitter:title" name="twitter:title"')
+        ->and($content)->toContain('<meta data-inertia="twitter:description" name="twitter:description"')
+        ->and($content)->toContain('<meta data-inertia="twitter:image" name="twitter:image"');
 
     preg_match('/property="og:image"\s+content="([^"]*)"/', $content, $ogImageMatches);
     preg_match('/name="twitter:image"\s+content="([^"]*)"/', $content, $twitterImageMatches);
@@ -133,7 +133,7 @@ test('初期HTMLのtitle canonical og:url robotsは期待値を満たす', funct
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
-    preg_match('/<title inertia>([^<]*)<\/title>/', $content, $titleMatches);
+    preg_match('/<title data-inertia>([^<]*)<\/title>/', $content, $titleMatches);
     $canonicalUrl = extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href');
     $ogUrl = extractHeadAttribute($content, 'meta', ['property' => 'og:url'], 'content');
     $robots = extractHeadAttribute($content, 'meta', ['name' => 'robots'], 'content');
@@ -141,7 +141,7 @@ test('初期HTMLのtitle canonical og:url robotsは期待値を満たす', funct
     expect($titleMatches[1] ?? '')->toBe('ホーム - '.config('app.display_name'))
         ->and($canonicalUrl)->toBe(route('home'))
         ->and($ogUrl)->toBe(route('home'))
-        ->and($robots)->toBe('index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1');
+        ->and($robots)->toBe('noindex, nofollow');
 });
 
 test('機微なルートのog:urlはクエリ文字列を含まない', function () {
@@ -238,7 +238,7 @@ test('guest authページはnoindex robots metaとseoを使う', function (strin
         ->where('seo.robots', 'noindex, nofollow')
     );
 
-    expect($response->getContent())->toContain('<meta inertia="robots" name="robots" content="noindex, nofollow">');
+    expect($response->getContent())->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
 })->with([
     'login' => ['login'],
     'register' => ['register'],
@@ -246,11 +246,11 @@ test('guest authページはnoindex robots metaとseoを使う', function (strin
     'reset-password' => ['password.reset', ['token' => 'test-token']],
 ]);
 
-test('publicページはindexableなrobots metaを維持する', function () {
+test('publicページは非本番環境でnoindexなrobots metaを使う', function () {
     $response = $this->get(route('home'));
     $content = $response->getContent();
 
-    expect($content)->toContain('<meta inertia="robots" name="robots" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1">');
+    expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
 });
 
 test('ページ固有のdescriptionはWebPage構造化データにだけ反映される', function () {
@@ -338,7 +338,7 @@ test('メール認証ページはseo.titleとdescriptionを持つ', function () 
         ->where('seo.robots', 'noindex, nofollow')
     );
 
-    expect($content)->toContain('<meta inertia="robots" name="robots" content="noindex, nofollow">');
+    expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
 });
 
 test('パスワード確認ページはseo.titleとdescriptionを持つ', function () {
@@ -355,7 +355,7 @@ test('パスワード確認ページはseo.titleとdescriptionを持つ', functi
         ->where('seo.robots', 'noindex, nofollow')
     );
 
-    expect($content)->toContain('<meta inertia="robots" name="robots" content="noindex, nofollow">');
+    expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
 });
 
 test('二段階認証チャレンジページはseo.titleとdescriptionを持つ', function () {
@@ -386,5 +386,5 @@ test('二段階認証チャレンジページはseo.titleとdescriptionを持つ
         ->where('seo.robots', 'noindex, nofollow')
     );
 
-    expect($content)->toContain('<meta inertia="robots" name="robots" content="noindex, nofollow">');
+    expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
 });

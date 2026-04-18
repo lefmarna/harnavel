@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Log;
 use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
 use Laravel\Fortify\Features;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\GoogleProvider;
+use Laravel\Socialite\Two\User;
 use Throwable;
 
 class GoogleAuthController extends Controller
@@ -29,7 +31,7 @@ class GoogleAuthController extends Controller
                 ->with('error', 'Googleログインは現在利用できません。');
         }
 
-        /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
+        /** @var GoogleProvider $driver */
         $driver = Socialite::driver('google');
 
         return $driver->redirect();
@@ -43,9 +45,9 @@ class GoogleAuthController extends Controller
         }
 
         try {
-            /** @var \Laravel\Socialite\Two\GoogleProvider $driver */
+            /** @var GoogleProvider $driver */
             $driver = Socialite::driver('google');
-            /** @var \Laravel\Socialite\Two\User $googleUser */
+            /** @var User $googleUser */
             $googleUser = $driver->user();
         } catch (Throwable $e) {
             Log::warning('Google OAuth callback failed.', ['exception' => $e]);

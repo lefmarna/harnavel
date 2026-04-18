@@ -52,35 +52,35 @@
         $locale = app()->getLocale() === 'ja' ? 'ja_JP' : 'en_US';
     @endphp
 
-    <link rel="canonical" inertia="canonical" href="{{ $url }}">
+    <link rel="canonical" data-inertia="canonical" href="{{ $url }}">
 
-    <title inertia>{{ $title }}</title>
+    <title data-inertia>{{ $title }}</title>
 
-    <meta inertia="description" name="description" content="{{ $description }}">
+    <meta data-inertia="description" name="description" content="{{ $description }}">
     <meta name="author" content="lefmarna">
-    <meta inertia="format-detection" name="format-detection" content="telephone=no, email=no">
+    <meta data-inertia="format-detection" name="format-detection" content="telephone=no, email=no">
     @if (is_string($robots) && $robots !== '')
-        <meta inertia="robots" name="robots" content="{{ $robots }}">
+        <meta data-inertia="robots" name="robots" content="{{ $robots }}">
     @endif
-    <meta inertia="googlebot" name="googlebot" content="{{ $googlebot }}">
+    <meta data-inertia="googlebot" name="googlebot" content="{{ $googlebot }}">
 
-    <meta inertia="og:type" property="og:type" content="{{ $type }}">
-    <meta inertia="og:url" property="og:url" content="{{ $url }}">
-    <meta inertia="og:title" property="og:title" content="{{ $title }}">
-    <meta inertia="og:description" property="og:description" content="{{ $description }}">
-    <meta inertia="og:image" property="og:image" content="{{ $image }}">
+    <meta data-inertia="og:type" property="og:type" content="{{ $type }}">
+    <meta data-inertia="og:url" property="og:url" content="{{ $url }}">
+    <meta data-inertia="og:title" property="og:title" content="{{ $title }}">
+    <meta data-inertia="og:description" property="og:description" content="{{ $description }}">
+    <meta data-inertia="og:image" property="og:image" content="{{ $image }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:locale" content="{{ $locale }}">
-    <meta inertia="og:site_name" property="og:site_name" content="{{ $displayName }}">
+    <meta data-inertia="og:site_name" property="og:site_name" content="{{ $displayName }}">
 
-    <meta inertia="twitter:card" name="twitter:card" content="summary_large_image">
-    <meta inertia="twitter:url" name="twitter:url" content="{{ $url }}">
+    <meta data-inertia="twitter:card" name="twitter:card" content="summary_large_image">
+    <meta data-inertia="twitter:url" name="twitter:url" content="{{ $url }}">
     <meta name="twitter:site" content="@lefmarna">
     <meta name="twitter:creator" content="@lefmarna">
-    <meta inertia="twitter:title" name="twitter:title" content="{{ $title }}">
-    <meta inertia="twitter:description" name="twitter:description" content="{{ $description }}">
-    <meta inertia="twitter:image" name="twitter:image" content="{{ $image }}">
+    <meta data-inertia="twitter:title" name="twitter:title" content="{{ $title }}">
+    <meta data-inertia="twitter:description" name="twitter:description" content="{{ $description }}">
+    <meta data-inertia="twitter:image" name="twitter:image" content="{{ $image }}">
 
     <link rel="shortcut icon" href="/icon.ico">
     <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png">

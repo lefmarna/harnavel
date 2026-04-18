@@ -1,7 +1,7 @@
-FROM php:8.4.12-fpm-bookworm
+FROM php:8.5.2-fpm-bookworm
 
 # Install Composer
-COPY --from=composer:2.9.4 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.9.7 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
   && apt-get install -y curl \
@@ -19,8 +19,11 @@ RUN apt-get update \
   libpng-dev \
   libzip-dev \
   mariadb-client \
-  # Install Node.js 24.15.0
-  nodejs=24.15.0-1nodesource1 \
+  # Install Node.js from the NodeSource 24.x channel.
+  # The exact package version is intentionally not pinned because the latest
+  # candidate was unavailable when this image was updated.
+  # nodejs=24.15.0-1nodesource1 \
+  nodejs \
   unzip \
   # Install Xdebug
   && pecl install xdebug \
@@ -31,7 +34,6 @@ RUN apt-get update \
   gd \
   intl \
   mbstring \
-  opcache \
   pdo_mysql \
   zip \
   # Install Laravel
@@ -40,5 +42,5 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-ENV PATH=~/.composer/vendor/bin:$PATH
+ENV PATH=/root/.composer/vendor/bin:$PATH
 WORKDIR /app

@@ -27,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         // Inertiaリクエストに対するHTTPエラーをハンドリング
         // セッション切れ(419)やサーバーエラー(500)などをユーザーフレンドリーに処理
-        $exceptions->respond(function (Response $response, \Throwable $e, Request $request) {
+        $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             // Inertiaリクエストでない場合はデフォルトのレスポンスを返す
             if (! $request->header('X-Inertia')) {
                 return $response;

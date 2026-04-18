@@ -1,8 +1,13 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\DomainServiceProvider;
+use App\Providers\FortifyServiceProvider;
+use App\Providers\RepositoryServiceProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\FortifyServiceProvider::class,
-    App\Providers\DomainServiceProvider::class,
-    App\Providers\RepositoryServiceProvider::class,
+    AppServiceProvider::class,
+    FortifyServiceProvider::class,
+    DomainServiceProvider::class,
+    RepositoryServiceProvider::class,
 ];

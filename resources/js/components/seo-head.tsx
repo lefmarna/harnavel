@@ -1,5 +1,5 @@
 import { Head, usePage } from '@inertiajs/react'
-import { type SeoData, type SharedData } from '@/types'
+import type { SeoData, SharedData } from '@/types'
 
 interface SeoProps {
   title?: string

@@ -29,9 +29,17 @@ export const AdCode = (props: AdCodeProps) => {
 
   useLayoutEffect(() => {
     // 開発環境では何もしない
-    if (import.meta.env.DEV) return
-    if (typeof window === 'undefined') return
-    if (!tracking.adsEnabled || !tracking.adsensePublisherId) return
+    if (import.meta.env.DEV) {
+      return
+    }
+
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (!tracking.adsEnabled || !tracking.adsensePublisherId) {
+      return
+    }
 
     try {
       ;(window.adsbygoogle = window.adsbygoogle || []).push({})

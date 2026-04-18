@@ -17,9 +17,9 @@ pre-commit:
         parallel: true
         jobs:
           - name: lint frontend
-            run: pnpm lint
+            run: pnpm lint:check
           - name: type check frontend
-            run: pnpm lint:typecheck
+            run: pnpm types:check
           - name: lint markdown links
             run: pnpm lint:docs
           - name: run backend analysis

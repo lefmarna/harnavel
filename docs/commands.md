@@ -31,11 +31,11 @@ mise run destroy        # Remove all containers and volumes
 pnpm dev                # Start Vite dev server
 pnpm build              # Build for production
 pnpm format:check       # Check Prettier formatting
-pnpm lint               # Run ESLint (check only)
-pnpm lint:fix           # Run ESLint with auto-fix
-pnpm lint:typecheck     # TypeScript type check
+pnpm lint               # Run ESLint with auto-fix
+pnpm lint:check         # Run ESLint (check only)
+pnpm types:check        # TypeScript type check
 pnpm format             # Format with Prettier
-pnpm fix                # Run lint:fix + format
+pnpm fix                # Run lint + format
 ```
 
 ## Backend Development

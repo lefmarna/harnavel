@@ -54,7 +54,7 @@ mise run app            # app コンテナへ入る
 mise run verify:backend # Pint -> Larastan -> Pest
 pnpm format:check       # Prettier チェックのみ
 pnpm fix                # ESLint + Prettier 自動修正
-pnpm lint:typecheck     # TypeScript 型チェック
+pnpm types:check     # TypeScript 型チェック
 pnpm lint:docs          # docs/ + README/AGENTS/CLAUDE のリンク検証
 pnpm test:e2e --project=chromium
 ```

@@ -22,7 +22,7 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 
 - Start with the narrowest relevant check for the changed area, then run broader checks before finishing.
 - Backend: `mise run verify:backend`
-- Frontend: `pnpm format:check`, `pnpm lint`, `pnpm lint:typecheck`, `pnpm test:e2e --reporter=dot`
+- Frontend: `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:e2e --reporter=dot`
 - Docs: `pnpm lint:docs` (covers `docs/` and root markdown entrypoints)
 - Browser: Use Playwright CLI (`npx @playwright/cli`) for interactive page verification when available. Requires npm registry access or a prior global/cached install. Snapshots saved to `.playwright-cli/` (gitignored).
 - For bug fixes, prefer adding a test that reproduces the issue.

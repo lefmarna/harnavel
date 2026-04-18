@@ -26,15 +26,24 @@ interface LinkError {
 
 async function findMarkdownFiles(dir: string): Promise<string[]> {
   const files: string[] = []
+
   for await (const entry of glob('**/*.md', { cwd: dir })) {
-    if (REPORT_RE.test(path.basename(entry))) continue
+    if (REPORT_RE.test(path.basename(entry))) {
+      continue
+    }
+
     files.push(path.join(dir, entry))
   }
+
   // Also check key root markdown files that act as agent entry points.
   for (const name of ['AGENTS.md', 'CLAUDE.md', 'README.md']) {
     const p = path.join(ROOT, name)
-    if (fs.existsSync(p)) files.push(p)
+
+    if (fs.existsSync(p)) {
+      files.push(p)
+    }
   }
+
   return files.sort()
 }
 
@@ -46,13 +55,20 @@ function checkLinks(filePath: string, content: string): LinkError[] {
   for (let i = 0; i < lines.length; i++) {
     let match: RegExpExecArray | null
     LINK_RE.lastIndex = 0
+
     while ((match = LINK_RE.exec(lines[i])) !== null) {
       const rawLink = match[2]
 
       // Strip anchor
       const linkWithoutAnchor = rawLink.split('#')[0]
-      if (!linkWithoutAnchor) continue // pure anchor link
-      if (IGNORED_PREFIXES.some((p) => rawLink.startsWith(p))) continue
+
+      if (!linkWithoutAnchor) {
+        continue
+      } // pure anchor link
+
+      if (IGNORED_PREFIXES.some((p) => rawLink.startsWith(p))) {
+        continue
+      }
 
       const resolved = path.resolve(fileDir, linkWithoutAnchor)
 
@@ -66,6 +82,7 @@ function checkLinks(filePath: string, content: string): LinkError[] {
       }
     }
   }
+
   return errors
 }
 
@@ -86,10 +103,12 @@ async function main() {
   }
 
   console.error(`✗ Found ${allErrors.length} broken link(s):\n`)
+
   for (const err of allErrors) {
     console.error(`  ${err.file}:${err.line} → ${err.link}`)
     console.error(`    ${err.reason}\n`)
   }
+
   process.exit(1)
 }
 

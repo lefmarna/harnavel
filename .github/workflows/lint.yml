@@ -42,7 +42,7 @@ jobs:
         run: pnpm run format:check
 
       - name: Lint Frontend
-        run: pnpm run lint
+        run: pnpm run lint:check
 
       - name: Generate Wayfinder Files
         run: |
@@ -51,7 +51,7 @@ jobs:
           php artisan wayfinder:generate --with-form
 
       - name: Type Check Frontend
-        run: pnpm run lint:typecheck
+        run: pnpm run types:check
 
       - name: Lint Markdown Links
         run: pnpm run lint:docs

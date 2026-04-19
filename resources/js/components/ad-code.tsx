@@ -46,7 +46,7 @@ export const AdCode = (props: AdCodeProps) => {
     } catch (e) {
       console.error(e)
     }
-  }, [])
+  }, [tracking.adsEnabled, tracking.adsensePublisherId])
 
   // 開発環境では何も表示しない
   if (import.meta.env.DEV) {

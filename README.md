@@ -1,14 +1,14 @@
 # Laravel App Template
 
-Laravel 12 + Inertia React + MariaDB を Docker で開発するためのテンプレートです。
+Laravel 13 + Inertia React + MariaDB を Docker で開発するためのテンプレートです。
 複数案件へ横展開しやすいように、認証・基本画面・開発コマンド・運用ルールを初期状態で揃えています。
 
 ## 技術構成
 
 | Layer          | Technology                       |
 | -------------- | -------------------------------- |
-| Backend        | Laravel 12, PHP 8.4, Fortify     |
-| Frontend       | React 19, Inertia v2, TypeScript |
+| Backend        | Laravel 13, PHP 8.5, Fortify     |
+| Frontend       | React 19, Inertia v3, TypeScript |
 | Styling        | Tailwind CSS v4, Radix UI        |
 | Testing        | Pest v4, Playwright              |
 | Infrastructure | Docker (Nginx, MariaDB, Mailpit) |
@@ -54,7 +54,7 @@ mise run app            # app コンテナへ入る
 mise run verify:backend # Pint -> Larastan -> Pest
 pnpm format:check       # Prettier チェックのみ
 pnpm fix                # ESLint + Prettier 自動修正
-pnpm types:check     # TypeScript 型チェック
+pnpm types:check        # TypeScript 型チェック
 pnpm lint:docs          # docs/ + README/AGENTS/CLAUDE のリンク検証
 pnpm test:e2e --project=chromium
 ```

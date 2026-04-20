@@ -52,8 +52,8 @@
             '@id' => $authorSchema['@id'],
         ] : null,
         'featureList' => [
-            'Laravel 12 backend',
-            'Inertia.js v2 and React 19 frontend',
+            'Laravel backend',
+            'Inertia.js and React frontend',
             'Tailwind CSS v4 UI foundation',
             'Docker local development environment',
             'Authentication and application scaffolding',

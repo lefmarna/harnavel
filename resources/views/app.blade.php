@@ -42,7 +42,7 @@
         $robots = $pageSeo['robots'] ?? $defaultRobots;
         $googlebot = $pageSeo['googlebot'] ?? 'max-image-preview:large';
 
-        $title = $seoTitle ? "{$seoTitle} - {$displayName}" : $displayName;
+        $title = $seoTitle ? "{$seoTitle} | {$displayName}" : $displayName;
         $description = $pageSeo['description'] ?? ($pageProps['appDescription'] ?? config('app.description'));
         $rawImage = $pageSeo['image'] ?? 'opengraph-image.png';
         $image = \Illuminate\Support\Str::startsWith($rawImage, ['http://', 'https://']) ? $rawImage : asset($rawImage);
@@ -82,7 +82,7 @@
     <meta data-inertia="twitter:description" name="twitter:description" content="{{ $description }}">
     <meta data-inertia="twitter:image" name="twitter:image" content="{{ $image }}">
 
-    <link rel="shortcut icon" href="/icon.ico">
+    <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png">
     <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" type="image/png">

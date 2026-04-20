@@ -57,7 +57,7 @@
     <title data-inertia>{{ $title }}</title>
 
     <meta data-inertia="description" name="description" content="{{ $description }}">
-    <meta name="author" content="lefmarna">
+    <meta name="author" content="{{ config('app.author', '') }}">
     <meta data-inertia="format-detection" name="format-detection" content="telephone=no, email=no">
     @if (is_string($robots) && $robots !== '')
         <meta data-inertia="robots" name="robots" content="{{ $robots }}">

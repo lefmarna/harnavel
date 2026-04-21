@@ -1,16 +1,26 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # SSL更新(HTTP-01)の検証パスをRewriteから除外
+  # SSL更新(HTTP-01)の検証パスはホスト制限/HTTPS強制/public転送より先に通す
   RewriteRule ^\.well-known/acme-challenge(?:/|$) - [L]
 
-  # HTTPS強制 + www→non-www を1回のリダイレクトで処理
-  RewriteCond %{HTTPS} off [OR]
-  RewriteCond %{HTTP_HOST} ^www\. [NC]
-  RewriteCond %{HTTP_HOST} ^(?:www\.)?(.+)$ [NC]
-  RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+  # 許可ホスト以外はアクセス拒否
+  RewriteCond %{HTTP_HOST} !^(?:(?:www|dev)\.)?laravel-app-template\.com$ [NC]
+  RewriteRule ^ - [F]
 
-  # public/ への転送（ループ防止付き）
+  # www→non-www リダイレクト（メインドメインのみ）
+  RewriteCond %{HTTP_HOST} ^www\.laravel-app-template\.com$ [NC]
+  RewriteRule ^ https://laravel-app-template.com%{REQUEST_URI} [R=301,L]
+
+  # HTTPS強制（全ホスト共通）
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+  # サブドメインは各自のディレクトリで処理（public/転送をスキップ）
+  RewriteCond %{HTTP_HOST} !^(?:www\.)?laravel-app-template\.com$ [NC]
+  RewriteRule ^ - [L]
+
+  # public/ への転送
   RewriteCond %{REQUEST_URI} !^/public/
   RewriteRule ^(.*)$ public/$1 [QSA,L]
 </IfModule>
@@ -21,6 +31,6 @@
 </IfModule>
 
 # ドットファイルを拒否（.env 等）ただし .well-known は許可
-<FilesMatch "^\.(?!well-known(/|$))">
+<FilesMatch "^\.(?!well-known$)">
   Require all denied
 </FilesMatch>

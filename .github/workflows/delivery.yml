@@ -1,0 +1,159 @@
+name: delivery
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+concurrency:
+  group: delivery-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+
+      - name: Get pnpm store directory
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Dependencies
+        run: |
+          composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+          pnpm install --frozen-lockfile
+
+      - name: Run Pint
+        run: vendor/bin/pint --test
+
+      - name: Run Static Analysis
+        run: composer analyse
+
+      - name: Check Frontend Formatting
+        run: pnpm run format:check
+
+      - name: Lint Frontend
+        run: pnpm run lint:check
+
+      - name: Generate Wayfinder Files
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan wayfinder:generate --with-form
+
+      - name: Type Check Frontend
+        run: pnpm run types:check
+
+      - name: Lint Markdown Links
+        run: pnpm run lint:docs
+
+  test:
+    needs: lint
+    uses: ./.github/workflows/reusable-test.yml
+    with:
+      upload-artifacts: true
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    # Each environment must define its own XSERVER_* and DEPLOY_DIRECTORY secrets.
+    environment: ${{ github.ref_name == 'main' && 'Production' || 'Develop' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # テストジョブでビルドした成果物をダウンロード
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: public/build/
+
+      - name: Create deployment package
+        run: |
+          test -f public/build/manifest.json || { echo 'public/build/manifest.json is missing. Build artifact was not downloaded correctly.' >&2; exit 1; }
+          mkdir -p .deploy
+          rsync -av --exclude-from='.deployignore' ./ .deploy/
+
+          # develop環境では .htaccess.develop を使用
+          if [ "${{ github.ref_name }}" = "develop" ]; then
+            test -f .htaccess.develop || { echo '.htaccess.develop is missing' >&2; exit 1; }
+            cp .htaccess.develop .deploy/.htaccess
+          fi
+
+      # SSH設定（XSERVER_KNOWN_HOSTSを必須にしてknown_hostsへ登録）
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.XSERVER_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          if [ -z "${{ secrets.XSERVER_KNOWN_HOSTS }}" ]; then
+            echo "XSERVER_KNOWN_HOSTS is required" >&2
+            exit 1
+          fi
+          printf '%s\n' "${{ secrets.XSERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+
+      # rsync除外の方針:
+      # - .deployignore: ローカルパッケージ作成時の除外（開発用ファイル等）
+      # - rsync --exclude: サーバー側の既存データ保護（.env, storage, サブドメイン等）
+      - name: Deploy to XServer via Rsync
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p 10022" \
+            --exclude='.env' \
+            --exclude='.user.ini' \
+            --exclude='storage/app/private/**' \
+            --exclude='storage/app/public/**' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='dev.laravel-app-template.com' \
+            .deploy/ ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }}:$DEPLOY_DIRECTORY/
+
+      - name: Run Post-Deploy Commands
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
+        run: |
+          ssh -p 10022 ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+          "cd $DEPLOY_DIRECTORY && \
+          /usr/bin/php8.5 ~/opt/bin/composer-2.9.7 install --no-dev --no-interaction --optimize-autoloader && \
+          /usr/bin/php8.5 artisan config:cache && \
+          /usr/bin/php8.5 artisan route:cache && \
+          /usr/bin/php8.5 artisan view:cache && \
+          /usr/bin/php8.5 artisan migrate --force"

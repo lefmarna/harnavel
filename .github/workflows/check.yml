@@ -63,14 +63,14 @@ jobs:
       - name: Check Frontend Formatting
         run: pnpm run format:check
 
-      - name: Lint Frontend
-        run: pnpm run lint:check
-
       - name: Generate Wayfinder Files
         run: |
           cp .env.example .env
           php artisan key:generate
           php artisan wayfinder:generate --with-form
+
+      - name: Lint Frontend
+        run: pnpm run lint:check
 
       - name: Type Check Frontend
         run: pnpm run types:check

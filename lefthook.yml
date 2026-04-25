@@ -1,19 +1,19 @@
 pre-commit:
   jobs:
-    - name: fix and generate
+    - name: generate and format php
       group:
         parallel: true
         jobs:
           - name: generate wayfinder routes
             run: docker compose exec -T app php artisan wayfinder:generate --with-form
-          - name: fix staged frontend files with eslint
-            glob: '*.{js,jsx,ts,tsx}'
-            run: pnpm exec eslint --fix {staged_files}
-            stage_fixed: true
           - name: format staged php files
             glob: '*.php'
             run: docker compose exec -T app vendor/bin/pint --format=agent {staged_files}
             stage_fixed: true
+    - name: fix staged frontend files with eslint
+      glob: '*.{js,jsx,ts,tsx}'
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
     - name: format staged frontend files
       glob: '*.{css,html,js,json,jsx,md,ts,tsx,yaml,yml}'
       run: pnpm exec prettier --write --log-level warn {staged_files}

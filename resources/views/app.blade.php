@@ -42,7 +42,7 @@
         $robots = $pageSeo['robots'] ?? $defaultRobots;
         $googlebot = $pageSeo['googlebot'] ?? 'max-image-preview:large';
 
-        $title = $seoTitle ? "{$seoTitle} | {$displayName}" : $displayName;
+        $title = $seoTitle ? "{$seoTitle} - {$displayName}" : $displayName;
         $description = $pageSeo['description'] ?? ($pageProps['appDescription'] ?? config('app.description'));
         $rawImage = $pageSeo['image'] ?? 'opengraph-image.png';
         $image = \Illuminate\Support\Str::startsWith($rawImage, ['http://', 'https://']) ? $rawImage : asset($rawImage);

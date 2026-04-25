@@ -18,7 +18,7 @@ function SeoWrapper({ children }: { children: ReactNode }) {
 }
 
 createInertiaApp({
-  title: (title) => (title ? `${title} | ${appName}` : appName),
+  title: (title) => (title ? `${title} - ${appName}` : appName),
   layout: () => SeoWrapper,
   strictMode: true,
   progress: {

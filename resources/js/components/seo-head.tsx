@@ -42,7 +42,7 @@ export default function SeoHead({
     image ?? sharedSeo.image ?? '/opengraph-image.png',
     appUrl,
   ).toString()
-  const pageTitle = resolvedTitle ? `${resolvedTitle} | ${siteName}` : siteName
+  const pageTitle = resolvedTitle ? `${resolvedTitle} - ${siteName}` : siteName
 
   return (
     <Head title={resolvedTitle}>

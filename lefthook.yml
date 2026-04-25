@@ -1,5 +1,7 @@
 pre-commit:
   jobs:
+    - name: generate wayfinder routes
+      run: docker compose exec -T app php artisan wayfinder:generate --with-form
     - name: fix staged frontend files with eslint
       glob: '*.{js,jsx,ts,tsx}'
       run: pnpm exec eslint --fix {staged_files}

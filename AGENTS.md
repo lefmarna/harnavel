@@ -6,7 +6,7 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 ## Architecture
 
 - Stack: PHP 8.5 / Laravel 13 / Inertia.js v3 (React 19) / Tailwind CSS v4 / Pest v4 / Larastan v3 / Pint v1 / MariaDB / mise
-- Queue workers and SSR are unavailable due to XServer shared-hosting constraints. Do not introduce long-running background workers.
+- Queue workers and SSR are unavailable due to XServer shared-hosting constraints. Do not introduce long-running background workers. Jobs must run synchronously with `dispatchSync()` or `QUEUE_CONNECTION=sync`.
 - Prefer solutions that work in both Docker local dev and XServer shared hosting.
 - `php` and `php artisan` commands MUST run inside the Docker container. Use `docker compose exec app php artisan ...` (or `docker compose exec -T app ...` in non-interactive contexts). Never run `php artisan` directly on the host.
 

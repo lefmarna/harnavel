@@ -8,11 +8,15 @@ pnpm = "10.33.0"
 
 [tasks.setup]
 description = "Setup entire project from scratch"
-depends = ["setup:tools", "build", "up", "setup:backend", "migrate", "seed"]
+depends = ["setup:tools", "setup:env", "build", "up", "setup:backend", "migrate", "seed"]
 
 [tasks."setup:tools"]
 description = "Install development tools and frontend dependencies"
 run = ["mise install", "pnpm install --frozen-lockfile"]
+
+[tasks."setup:env"]
+description = "Create local environment file if missing"
+run = "[ -f .env ] || cp .env.example .env"
 
 [tasks."setup:backend"]
 description = "Setup backend (requires running containers)"
@@ -33,6 +37,7 @@ run = "docker compose build --no-cache --force-rm"
 
 [tasks.up]
 description = "Start docker containers"
+depends = ["setup:env"]
 run = "docker compose up -d"
 
 [tasks.stop]

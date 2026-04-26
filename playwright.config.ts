@@ -4,12 +4,20 @@ import { defineConfig, devices } from '@playwright/test'
 
 const isCI = !!process.env.CI
 const envFile = fs.existsSync('.env') ? fs.readFileSync('.env', 'utf8') : ''
-const envPort = envFile.match(/^NGINX_PORT=(\d+)$/m)?.[1] ?? '8080'
-const localPort = Number.parseInt(envPort, 10)
-const PORT = isCI ? 8000 : Number.isNaN(localPort) ? 8080 : localPort
+const parseEnvPort = (name: string, fallback: number): number => {
+  const value =
+    process.env[name] ?? envFile.match(new RegExp(`^${name}=(\\d+)$`, 'm'))?.[1]
+  const port = Number.parseInt(value ?? '', 10)
+
+  return Number.isNaN(port) ? fallback : port
+}
+const localPort = parseEnvPort('NGINX_PORT', 8080)
+const PORT = isCI ? 8000 : localPort
+const VITE_PORT = parseEnvPort('VITE_PORT', 5173)
 
 export default defineConfig({
   testDir: './e2e',
+  globalSetup: './e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
@@ -41,9 +49,15 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: isCI ? 'php artisan serve' : 'pnpm dev',
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !isCI,
-  },
+  webServer: isCI
+    ? {
+        command: 'php artisan serve',
+        url: `http://localhost:${PORT}`,
+        reuseExistingServer: false,
+      }
+    : {
+        command: 'pnpm dev',
+        url: `http://localhost:${VITE_PORT}/@vite/client`,
+        reuseExistingServer: true,
+      },
 })

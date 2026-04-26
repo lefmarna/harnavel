@@ -12,13 +12,13 @@ For exact commands, use `docs/commands.md`.
 | `app` | PHP-FPM with Laravel | - |
 | `mariadb` | Main database | `3306` |
 | `mariadb-testing` | Testing database (isolated) | - |
-| `mailpit` | Mail catcher (SMTP + Web UI) | `1028`, `8028` |
+| `mailpit` | Mail catcher (SMTP + Web UI) | `1025`, `8025` |
 
 ## Default Local Endpoints
 
 - App: `http://localhost:8080`
 - Vite: `http://localhost:5173`
-- Mailpit: `http://localhost:8028`
+- Mailpit: `http://localhost:8025`
 
 ## Environment Variables
 
@@ -28,8 +28,8 @@ For exact commands, use `docs/commands.md`.
 | `NGINX_PORT` | Nginx exposed port | `8080` |
 | `VITE_PORT` | Vite dev server port | `5173` |
 | `MARIADB_PORT` | MariaDB exposed port | `3306` |
-| `MAILPIT_SMTP_PORT` | Mailpit SMTP port | `1028` |
-| `MAILPIT_UI_PORT` | Mailpit web UI port | `8028` |
+| `MAILPIT_SMTP_PORT` | Mailpit SMTP port | `1025` |
+| `MAILPIT_UI_PORT` | Mailpit web UI port | `8025` |
 
 Keep this file and `.env.example` aligned when project-specific ports change.
 

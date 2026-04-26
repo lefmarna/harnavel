@@ -42,7 +42,7 @@ pnpm dev
 セットアップ完了後の既定 URL:
 
 - アプリ: `http://localhost:8080`
-- Mailpit: `http://localhost:8028`
+- Mailpit: `http://localhost:8025`
 
 ## 日常的によく使うコマンド
 

@@ -11,16 +11,19 @@ import {
 } from 'node:path'
 
 const PRETTIER_EXTS = new Set([
+  '.cjs',
   '.css',
+  '.html',
   '.js',
   '.jsx',
   '.json',
+  '.mjs',
   '.ts',
   '.tsx',
   '.yaml',
   '.yml',
 ])
-const ESLINT_EXTS = new Set(['.js', '.jsx', '.ts', '.tsx'])
+const ESLINT_EXTS = new Set(['.cjs', '.js', '.jsx', '.mjs', '.ts', '.tsx'])
 const PHP_EXTS = new Set(['.php'])
 const PATCH_FILE_RE = /^\*\*\* (?:Add|Update|Delete) File: (.+)$/
 

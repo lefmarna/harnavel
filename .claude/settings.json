@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post-edit.sh"
+            "command": "mise exec -- node \"$CLAUDE_PROJECT_DIR/scripts/hooks/post-edit.mjs\""
           }
         ]
       }

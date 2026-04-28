@@ -1,12 +1,11 @@
 [features]
 codex_hooks = true
 
-[[hooks.PostToolUse]]
-matcher = "Write|Edit"
+[[hooks.Stop]]
 
-[[hooks.PostToolUse.hooks]]
+[[hooks.Stop.hooks]]
 type = "command"
-command = 'mise exec -- node "$(git rev-parse --show-toplevel)/scripts/hooks/post-edit.mjs"'
+command = 'mise exec -- node "$(git rev-parse --show-toplevel)/scripts/hooks/stop-verify.mjs"'
 
 [mcp_servers.laravel-boost]
 command = "docker"

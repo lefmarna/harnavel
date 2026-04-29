@@ -49,6 +49,10 @@ const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0
 const dockerReady =
   hasAnyPhpChange && hasCommand('docker') && dockerAppRunning(repo)
 
+if (dockerReady) {
+  ensureDockerGitSafeDirectory(repo)
+}
+
 // ---- Auto-fix phase (sequential, lefthook order) ----
 
 if (dockerReady && phpExisting.length) {
@@ -199,6 +203,52 @@ function dockerAppRunning(repo) {
   )
 
   return result.status === 0 && result.stdout.split('\n').includes('app')
+}
+
+function ensureDockerGitSafeDirectory(repo) {
+  const result = run(
+    [
+      'docker',
+      'compose',
+      'exec',
+      '-T',
+      'app',
+      'git',
+      'rev-parse',
+      '--show-toplevel',
+    ],
+    repo,
+  )
+
+  if (result.status === 0) {
+    return
+  }
+
+  const output = `${result.stdout}\n${result.stderr}`
+
+  if (!output.includes('dubious ownership')) {
+    return
+  }
+
+  const pwd = run(['docker', 'compose', 'exec', '-T', 'app', 'pwd'], repo)
+  const safeDirectory = pwd.status === 0 ? pwd.stdout.trim() : '/app'
+
+  run(
+    [
+      'docker',
+      'compose',
+      'exec',
+      '-T',
+      'app',
+      'git',
+      'config',
+      '--global',
+      '--add',
+      'safe.directory',
+      safeDirectory,
+    ],
+    repo,
+  )
 }
 
 function hasCommand(command) {

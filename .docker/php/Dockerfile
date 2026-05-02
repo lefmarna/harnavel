@@ -1,4 +1,4 @@
-FROM php:8.5.2-fpm-bookworm
+FROM php:8.5.5-fpm-bookworm
 
 # Install Composer
 COPY --from=composer:2.9.7 /usr/bin/composer /usr/bin/composer
@@ -19,10 +19,6 @@ RUN apt-get update \
   libpng-dev \
   libzip-dev \
   mariadb-client \
-  # Install Node.js from the NodeSource 24.x channel.
-  # The exact package version is intentionally not pinned because the latest
-  # candidate was unavailable when this image was updated.
-  # nodejs=24.15.0-1nodesource1 \
   nodejs \
   unzip \
   # Install Xdebug

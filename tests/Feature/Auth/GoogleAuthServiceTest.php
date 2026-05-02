@@ -176,6 +176,11 @@ test('UniqueConstraintViolationException 発生時にフォールバックで既
             return null;
         }
 
+        public function create(array $attributes): User
+        {
+            throw new BadMethodCallException;
+        }
+
         public function save(User $user): void
         {
             throw new UniqueConstraintViolationException(
@@ -184,6 +189,11 @@ test('UniqueConstraintViolationException 発生時にフォールバックで既
                 [],
                 new PDOException('Integrity constraint violation')
             );
+        }
+
+        public function updatePassword(User $user, string $newPassword): void
+        {
+            throw new BadMethodCallException;
         }
     };
 
@@ -225,6 +235,11 @@ test('UniqueConstraintViolationException 後に findByEmail でユーザーを�
             return $this->existingUser;
         }
 
+        public function create(array $attributes): User
+        {
+            throw new BadMethodCallException;
+        }
+
         public function save(User $user): void
         {
             if ($this->saveCount === 0) {
@@ -237,6 +252,11 @@ test('UniqueConstraintViolationException 後に findByEmail でユーザーを�
                 );
             }
             // 2 回目（フォールバック内の更新保存）は成功させる
+        }
+
+        public function updatePassword(User $user, string $newPassword): void
+        {
+            throw new BadMethodCallException;
         }
     };
 
@@ -284,6 +304,11 @@ test('UniqueConstraintViolationException 後のフォールバックでも別レ
             return $this->userByEmail;
         }
 
+        public function create(array $attributes): User
+        {
+            throw new BadMethodCallException;
+        }
+
         public function save(User $user): void
         {
             throw new UniqueConstraintViolationException(
@@ -292,6 +317,11 @@ test('UniqueConstraintViolationException 後のフォールバックでも別レ
                 [],
                 new PDOException('Integrity constraint violation')
             );
+        }
+
+        public function updatePassword(User $user, string $newPassword): void
+        {
+            throw new BadMethodCallException;
         }
     };
 
@@ -333,6 +363,11 @@ test('lowercase usernamesが無効なら UniqueConstraintViolationException 後�
             return $this->existingUser;
         }
 
+        public function create(array $attributes): User
+        {
+            throw new BadMethodCallException;
+        }
+
         public function save(User $user): void
         {
             if ($this->saveCount === 0) {
@@ -344,6 +379,11 @@ test('lowercase usernamesが無効なら UniqueConstraintViolationException 後�
                     new PDOException('Integrity constraint violation')
                 );
             }
+        }
+
+        public function updatePassword(User $user, string $newPassword): void
+        {
+            throw new BadMethodCallException;
         }
     };
 

@@ -10,6 +10,13 @@ use Illuminate\Support\Collection;
 interface UserRepositoryContract
 {
     /**
+     * ユーザーを作成する。
+     *
+     * @param  array{name: string, email: string, password: string}  $attributes
+     */
+    public function create(array $attributes): User;
+
+    /**
      * google_id または email に一致する候補ユーザーをまとめて取得する。
      * $lock = true のとき id 昇順で SELECT ... FOR UPDATE を行う（デッドロック防止）。
      * このリポジトリでは、email の大小文字非依存性は MariaDB の
@@ -35,4 +42,10 @@ interface UserRepositoryContract
      * ユーザーを保存する（INSERT / UPDATE どちらも対応）。
      */
     public function save(User $user): void;
+
+    /**
+     * ユーザーのパスワードを更新する。
+     * 値は User モデルの 'hashed' cast によりハッシュ化される。
+     */
+    public function updatePassword(User $user, string $newPassword): void;
 }

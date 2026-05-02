@@ -5,7 +5,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
-use App\Params\StoreUserParams;
+use App\Repositories\User\UserRepositoryContract;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -14,6 +14,10 @@ use Laravel\Fortify\Fortify;
 class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules, ProfileValidationRules;
+
+    public function __construct(
+        private readonly UserRepositoryContract $userRepository,
+    ) {}
 
     /**
      * Validate and create a newly registered user.
@@ -30,7 +34,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        return User::create(StoreUserParams::fromInput($validated)->toArray());
+        return $this->userRepository->create($validated);
     }
 
     /**

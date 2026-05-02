@@ -12,6 +12,14 @@ class EloquentUserRepository implements UserRepositoryContract
     /**
      * {@inheritDoc}
      */
+    public function create(array $attributes): User
+    {
+        return User::create($attributes);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
     {
         $query = User::query()
@@ -59,6 +67,15 @@ class EloquentUserRepository implements UserRepositoryContract
      */
     public function save(User $user): void
     {
+        $user->save();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function updatePassword(User $user, string $newPassword): void
+    {
+        $user->password = $newPassword;
         $user->save();
     }
 }

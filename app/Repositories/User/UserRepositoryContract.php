@@ -45,7 +45,6 @@ interface UserRepositoryContract
 
     /**
      * ユーザーのパスワードを更新する。
-     * 値は User モデルの 'hashed' cast によりハッシュ化される。
      */
     public function updatePassword(User $user, string $newPassword): void;
 }

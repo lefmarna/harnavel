@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('登録画面を表示できる', function () {
@@ -30,6 +32,26 @@ test('新規ユーザーを登録できる', function () {
         'name' => 'Test User',
         'email' => 'test@example.com',
     ]);
+});
+
+test('bcrypt形式の文字列をパスワードとして登録しても平文としてハッシュ化される', function () {
+    $password = Hash::make('known-plain');
+
+    $response = $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => $password,
+        'password_confirmation' => $password,
+    ]);
+
+    $response->assertRedirect(route('dashboard', absolute: false));
+
+    $storedPassword = User::query()->where('email', 'test@example.com')->value('password');
+
+    expect($storedPassword)
+        ->not->toBe($password)
+        ->and(Hash::check($password, $storedPassword))->toBeTrue()
+        ->and(Hash::check('known-plain', $storedPassword))->toBeFalse();
 });
 
 test('登録時のメールアドレスは小文字で保存される', function () {

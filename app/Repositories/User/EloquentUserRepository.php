@@ -6,6 +6,7 @@ namespace App\Repositories\User;
 
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
 
 class EloquentUserRepository implements UserRepositoryContract
 {
@@ -75,7 +76,7 @@ class EloquentUserRepository implements UserRepositoryContract
      */
     public function updatePassword(User $user, string $newPassword): void
     {
-        $user->password = $newPassword;
+        $user->password = Hash::make($newPassword);
         $user->save();
     }
 }

@@ -40,6 +40,31 @@ test('パスワードを更新できる', function () {
     expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
 });
 
+test('bcrypt形式の文字列でパスワード更新しても平文としてハッシュ化される', function () {
+    $user = User::factory()->create();
+    $password = Hash::make('known-plain');
+
+    $response = $this
+        ->actingAs($user)
+        ->from(route('user-password.edit'))
+        ->put(route('user-password.update'), [
+            'current_password' => 'password',
+            'password' => $password,
+            'password_confirmation' => $password,
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('user-password.edit'));
+
+    $storedPassword = $user->refresh()->password;
+
+    expect($storedPassword)
+        ->not->toBe($password)
+        ->and(Hash::check($password, $storedPassword))->toBeTrue()
+        ->and(Hash::check('known-plain', $storedPassword))->toBeFalse();
+});
+
 test('パスワード更新には現在の正しいパスワードが必要', function () {
     $user = User::factory()->create();
 

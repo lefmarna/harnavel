@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Params;
 
+use Illuminate\Support\Facades\Hash;
+
 final readonly class UpdatePasswordParams
 {
     public function __construct(
@@ -27,7 +29,7 @@ final readonly class UpdatePasswordParams
     public function toArray(): array
     {
         return [
-            'password' => $this->password,
+            'password' => Hash::make($this->password),
         ];
     }
 }

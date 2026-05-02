@@ -3,6 +3,13 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { delimiter, extname, join } from 'node:path'
 
+// tests/ は phpstan.neon.dist の paths に含まれていないため Larastan の対象外にする。
+// $this->get() などの binding が tests/Pest.php に集約されており、ファイル単体で
+// 解析すると method.notFound が発生するため。pint や Pest は引き続き対象。
+const PHPSTAN_EXCLUDED_DIRS = ['tests/']
+const isExcludedFromPhpStan = (file) =>
+  PHPSTAN_EXCLUDED_DIRS.some((dir) => file.startsWith(dir))
+
 const PRETTIER_EXTS = new Set([
   '.cjs',
   '.css',
@@ -41,10 +48,14 @@ const eslintAll = byExt(all, ESLINT_EXTS)
 const eslintFiles = byExt(existing, ESLINT_EXTS)
 const phpAll = byExt(all, PHP_EXTS).filter((file) => !isBlade(file))
 const phpExisting = byExt(existing, PHP_EXTS).filter((file) => !isBlade(file))
+const phpStanAll = phpAll.filter((file) => !isExcludedFromPhpStan(file))
+const phpStanExisting = phpExisting.filter(
+  (file) => !isExcludedFromPhpStan(file),
+)
 const hasTs = byExt(all, TS_EXTS).length > 0
 const hasMd = byExt(all, MD_EXTS).length > 0
 const hasJsTsDeletions = eslintAll.length > eslintFiles.length
-const hasPhpDeletions = phpAll.length > phpExisting.length
+const hasPhpStanDeletions = phpStanAll.length > phpStanExisting.length
 const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0
 const dockerReady =
   hasAnyPhpChange && hasCommand('docker') && dockerAppRunning(repo)
@@ -103,9 +114,9 @@ if (hasMd && hasCommand('pnpm')) {
 }
 
 if (dockerReady) {
-  if (phpAll.length) {
+  if (phpStanAll.length) {
     tasks.push(
-      hasPhpDeletions
+      hasPhpStanDeletions
         ? runAsync(
             ['docker', 'compose', 'exec', '-T', 'app', 'composer', 'analyse'],
             repo,
@@ -122,7 +133,7 @@ if (dockerReady) {
               'analyse',
               '--memory-limit=1G',
               '--no-progress',
-              ...phpExisting,
+              ...phpStanExisting,
             ],
             repo,
             'Larastan',

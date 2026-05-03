@@ -93,7 +93,7 @@
 
     @viteReactRefresh
     @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
-    @inertiaHead
+    <x-inertia::head />
 
     @if ($tracking['adsEnabled'] ?? false)
         @include('partials.google-adsense')
@@ -104,7 +104,7 @@
 </head>
 
 <body class="font-sans">
-    @inertia
+    <x-inertia::app />
     @include('partials.structured-data')
 </body>
 

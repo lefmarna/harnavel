@@ -5,9 +5,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 
 test('二段階認証設定画面を表示できる', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     Features::twoFactorAuthentication([
         'confirm' => true,
@@ -29,9 +27,7 @@ test('二段階認証設定画面を表示できる', function () {
 });
 
 test('二段階認証設定画面は有効時にパスワード確認を要求する', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     $user = User::factory()->create();
 
@@ -47,9 +43,7 @@ test('二段階認証設定画面は有効時にパスワード確認を要求�
 });
 
 test('二段階認証設定画面はパスワード確認が無効なら要求しない', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     $user = User::factory()->create();
 
@@ -68,9 +62,7 @@ test('二段階認証設定画面はパスワード確認が無効なら要求�
 });
 
 test('二段階認証が無効なら二段階認証設定画面はforbiddenを返す', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     config(['fortify.features' => []]);
 

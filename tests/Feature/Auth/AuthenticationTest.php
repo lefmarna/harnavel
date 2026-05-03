@@ -31,9 +31,7 @@ test('二段階認証未設定ユーザーはログイン画面から認証で�
 });
 
 test('二段階認証有効ユーザーは二段階認証チャレンジへリダイレクトされる', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     Features::twoFactorAuthentication([
         'confirm' => true,

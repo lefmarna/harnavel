@@ -359,9 +359,7 @@ test('パスワード確認ページはseo.titleとdescriptionを持つ', functi
 });
 
 test('二段階認証チャレンジページはseo.titleとdescriptionを持つ', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     $user = User::factory()->create();
     $user->forceFill([

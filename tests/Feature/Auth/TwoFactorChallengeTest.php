@@ -5,9 +5,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 
 test('未認証時は二段階認証チャレンジからログイン画面へリダイレクトされる', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     $response = $this->get(route('two-factor.login'));
 
@@ -15,9 +13,7 @@ test('未認証時は二段階認証チャレンジからログイン画面へ�
 });
 
 test('二段階認証チャレンジ画面を表示できる', function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
-        $this->markTestSkipped('Two-factor authentication is not enabled.');
-    }
+    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
     Features::twoFactorAuthentication([
         'confirm' => true,

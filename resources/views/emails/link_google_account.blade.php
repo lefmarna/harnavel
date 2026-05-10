@@ -1,7 +1,3 @@
-@php
-    $appName = config('app.name', 'Laravel');
-@endphp
-
 <div>
     このメールは{{ $appName }}のGoogleログイン連携手続きをされた方に自動送信しております。
 </div>

@@ -1,5 +1,6 @@
 [features]
 hooks = true
+multi_agent = true
 
 [[hooks.Stop]]
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\GoogleAuthException;
+use App\Exceptions\GoogleLinkConfirmationPendingException;
 use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use Illuminate\Database\QueryException;
@@ -311,6 +312,31 @@ test('callback() で GoogleAuthException のビジネスメッセージがセッ
     $this->get(route('auth.google.callback'))
         ->assertRedirect(route('login'))
         ->assertSessionHas('error', $errorMessage);
+});
+
+test('callback() で既存メールアカウント確認待ちなら確認メール送信画面へリダイレクトする', function () {
+    $existingUser = User::factory()->create([
+        'email' => 'existing@example.com',
+        'google_id' => null,
+    ]);
+
+    $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
+    $googleUser->allows('getId')->andReturn('google-123');
+    $googleUser->allows('getEmail')->andReturn('existing@example.com');
+    $googleUser->allows('getName')->andReturn('Existing User');
+    $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+    $driver = Mockery::mock(GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+    mock(GoogleAuthServiceContract::class)
+        ->shouldReceive('findOrCreate')
+        ->andThrow(new GoogleLinkConfirmationPendingException($existingUser, 'google-123', 'existing@example.com'));
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(route('auth.google.link.confirm'))
+        ->assertSessionHas('google_link_email_sent', true);
 });
 
 test('callback() で想定外例外が発生しても安全なメッセージでログイン画面に戻す', function () {

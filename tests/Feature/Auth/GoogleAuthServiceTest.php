@@ -1,11 +1,14 @@
 <?php
 
 use App\Exceptions\GoogleAuthException;
+use App\Exceptions\GoogleLinkConfirmationPendingException;
+use App\Mail\LinkGoogleAccountMail;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Services\GoogleAuth\GoogleAuthService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 
 test('新規ユーザーを作成する', function () {
     $service = app(GoogleAuthService::class);
@@ -22,25 +25,29 @@ test('新規ユーザーを作成する', function () {
     ]);
 });
 
-test('既存メールユーザーに google_id を連携する', function () {
+test('既存メールユーザーには確認メールを送信し即時連携しない', function () {
+    Mail::fake();
+
     $existing = User::factory()->create([
         'email' => 'existing@example.com',
         'google_id' => null,
     ]);
 
     $service = app(GoogleAuthService::class);
-    $user = $service->findOrCreate('google-456', 'existing@example.com', 'Existing User');
 
-    expect($user->id)->toBe($existing->id)
-        ->and($user->google_id)->toBe('google-456');
+    expect(fn () => $service->findOrCreate('google-456', 'existing@example.com', 'Existing User'))
+        ->toThrow(GoogleLinkConfirmationPendingException::class);
 
     $this->assertDatabaseHas('users', [
         'id' => $existing->id,
-        'google_id' => 'google-456',
+        'google_id' => null,
     ]);
+
+    Mail::assertSent(LinkGoogleAccountMail::class);
 });
 
-test('lowercase usernamesが無効なら lowercase のGoogleメールでも mixed-case メールの既存ユーザーを再利用し casing を維持する', function () {
+test('lowercase usernamesが無効なら lowercase のGoogleメールでも mixed-case メールの既存ユーザーに確認メールを送信し casing を維持する', function () {
+    Mail::fake();
     config(['fortify.lowercase_usernames' => false]);
 
     $existing = User::factory()->create([
@@ -49,13 +56,15 @@ test('lowercase usernamesが無効なら lowercase のGoogleメールでも mixe
     ]);
 
     $service = app(GoogleAuthService::class);
-    $user = $service->findOrCreate('google-mixed-case', 'test.user@example.com', 'Existing User');
 
-    expect($user->id)->toBe($existing->id)
-        ->and($user->google_id)->toBe('google-mixed-case');
+    expect(fn () => $service->findOrCreate('google-mixed-case', 'test.user@example.com', 'Existing User'))
+        ->toThrow(GoogleLinkConfirmationPendingException::class);
 
     expect(User::query()->sole()->email)->toBe('Test.User@Example.COM')
+        ->and(User::query()->sole()->google_id)->toBeNull()
         ->and(User::query()->count())->toBe(1);
+
+    Mail::assertSent(LinkGoogleAccountMail::class);
 });
 
 test('既存 google_id ユーザーをそのまま返す', function () {
@@ -71,17 +80,24 @@ test('既存 google_id ユーザーをそのまま返す', function () {
     $this->assertDatabaseCount('users', 1);
 });
 
-test('既存ユーザーの email_verified_at が null なら自動設定する', function () {
+test('google_id 未連携の既存ユーザーは email_verified_at が null でも確認メール待ちにする', function () {
+    Mail::fake();
+
     $existing = User::factory()->unverified()->create([
         'email' => 'unverified@example.com',
         'google_id' => null,
     ]);
 
     $service = app(GoogleAuthService::class);
-    $user = $service->findOrCreate('google-abc', 'unverified@example.com', 'Unverified User');
 
-    expect($user->email_verified_at)->not->toBeNull();
-    expect(User::find($existing->id)?->email_verified_at)->not->toBeNull();
+    expect(fn () => $service->findOrCreate('google-abc', 'unverified@example.com', 'Unverified User'))
+        ->toThrow(GoogleLinkConfirmationPendingException::class);
+
+    expect($existing->fresh())
+        ->google_id->toBeNull()
+        ->email_verified_at->toBeNull();
+
+    Mail::assertSent(LinkGoogleAccountMail::class);
 });
 
 test('google_id ユーザーとメールユーザーが別レコードの場合 GoogleAuthException を投げる', function () {
@@ -205,7 +221,9 @@ test('UniqueConstraintViolationException 発生時にフォールバックで既
     expect($user->id)->toBe($existing->id);
 });
 
-test('UniqueConstraintViolationException 後に findByEmail でユーザーを取得し google_id と email_verified_at を補完する', function () {
+test('UniqueConstraintViolationException 後に findByEmail で既存メールユーザーを取得した場合は確認メールを送信する', function () {
+    Mail::fake();
+
     $existing = User::factory()->unverified()->create([
         'email' => 'fallback@example.com',
         'google_id' => null,
@@ -263,11 +281,14 @@ test('UniqueConstraintViolationException 後に findByEmail でユーザーを�
     app()->instance(UserRepositoryContract::class, $fakeRepo);
     $service = app(GoogleAuthService::class);
 
-    $user = $service->findOrCreate('new-google', 'fallback@example.com', 'Fallback User');
+    expect(fn () => $service->findOrCreate('new-google', 'fallback@example.com', 'Fallback User'))
+        ->toThrow(GoogleLinkConfirmationPendingException::class);
 
-    expect($user->id)->toBe($existing->id)
-        ->and($user->google_id)->toBe('new-google')
-        ->and($user->email_verified_at)->not->toBeNull();
+    expect($existing->fresh())
+        ->google_id->toBeNull()
+        ->email_verified_at->toBeNull();
+
+    Mail::assertSent(LinkGoogleAccountMail::class);
 });
 
 test('UniqueConstraintViolationException 後のフォールバックでも別レコード衝突なら GoogleAuthException を投げる', function () {
@@ -332,7 +353,8 @@ test('UniqueConstraintViolationException 後のフォールバックでも別レ
         ->toThrow(GoogleAuthException::class, 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
 });
 
-test('lowercase usernamesが無効なら UniqueConstraintViolationException 後も mixed-case メールの既存ユーザーを再利用し casing を維持する', function () {
+test('lowercase usernamesが無効なら UniqueConstraintViolationException 後も mixed-case メールの既存ユーザーに確認メールを送信する', function () {
+    Mail::fake();
     config(['fortify.lowercase_usernames' => false]);
 
     $existing = User::factory()->unverified()->create([
@@ -390,10 +412,39 @@ test('lowercase usernamesが無効なら UniqueConstraintViolationException 後�
     app()->instance(UserRepositoryContract::class, $fakeRepo);
     $service = app(GoogleAuthService::class);
 
-    $user = $service->findOrCreate('new-google', 'test.user@example.com', 'Fallback User');
+    expect(fn () => $service->findOrCreate('new-google', 'test.user@example.com', 'Fallback User'))
+        ->toThrow(GoogleLinkConfirmationPendingException::class);
 
-    expect($user->id)->toBe($existing->id)
-        ->and($user->google_id)->toBe('new-google')
-        ->and($user->email)->toBe('Test.User@Example.COM')
-        ->and($user->email_verified_at)->not->toBeNull();
+    expect($existing->fresh())
+        ->google_id->toBeNull()
+        ->email->toBe('Test.User@Example.COM')
+        ->email_verified_at->toBeNull();
+
+    Mail::assertSent(LinkGoogleAccountMail::class);
+});
+
+test('confirmLink は署名メールの対象ユーザーへ google_id を連携しメール認証済みにする', function () {
+    $existing = User::factory()->unverified()->create([
+        'email' => 'confirm@example.com',
+        'google_id' => null,
+    ]);
+
+    $service = app(GoogleAuthService::class);
+
+    expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com'))->toBeTrue();
+
+    expect($existing->fresh())
+        ->google_id->toBe('google-confirm')
+        ->email_verified_at->not->toBeNull();
+});
+
+test('confirmLink は対象ユーザーが異なる場合 false を返す', function () {
+    User::factory()->create([
+        'email' => 'confirm@example.com',
+        'google_id' => null,
+    ]);
+
+    $service = app(GoogleAuthService::class);
+
+    expect($service->confirmLink('999999', 'google-confirm', 'confirm@example.com'))->toBeFalse();
 });

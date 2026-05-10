@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
@@ -8,10 +10,10 @@ use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
 use App\Params\UpdateProfileParams;
 use App\ViewModels\Settings\ProfilePageViewModel;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,7 +30,7 @@ class ProfileController extends Controller
         return Inertia::render(
             'settings/profile',
             new ProfilePageViewModel(
-                mustVerifyEmail: $user instanceof MustVerifyEmail,
+                mustVerifyEmail: true,
                 status: is_string($status) ? $status : null,
             )->toArray(),
         );
@@ -43,10 +45,15 @@ class ProfileController extends Controller
         /** @var array{name: string, email: string} $validated */
         $validated = $request->validated();
         $params = UpdateProfileParams::fromInput($validated);
+        $originalEmail = $user->email;
 
         $user->fill($params->toArray());
 
-        if ($user->isDirty('email')) {
+        $emailChanged = config('fortify.lowercase_usernames')
+            ? $user->isDirty('email')
+            : Str::lower($originalEmail) !== Str::lower($user->email);
+
+        if ($emailChanged) {
             $user->email_verified_at = null;
         }
 

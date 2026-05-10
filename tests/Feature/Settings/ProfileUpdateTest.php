@@ -15,7 +15,7 @@ test('プロフィール設定画面を表示できる', function () {
         ->assertInertia(
             fn (Assert $page) => $page
                 ->component('settings/profile')
-                ->where('mustVerifyEmail', false)
+                ->where('mustVerifyEmail', true)
                 ->where('status', null)
                 ->where('seo.title', 'プロフィール設定')
                 ->where('seo.description', '名前とメールアドレスを管理します。')
@@ -81,6 +81,29 @@ test('lowercase usernamesが無効ならプロフィール更新時にメール�
 
     expect($user->refresh()->email)->toBe('Test.User@Example.COM');
     expect($user->email_verified_at)->toBeNull();
+});
+
+test('lowercase usernamesが無効ならメールアドレスの大文字小文字だけの変更ではメール認証状態を維持する', function () {
+    config(['fortify.lowercase_usernames' => false]);
+
+    $user = User::factory()->create([
+        'email' => 'test.user@example.com',
+        'email_verified_at' => now(),
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => 'Test.User@Example.COM',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->refresh()->email)->toBe('Test.User@Example.COM');
+    expect($user->email_verified_at)->not->toBeNull();
 });
 
 test('メールアドレスが変わらない場合はメール認証状態を維持する', function () {

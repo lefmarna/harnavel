@@ -84,7 +84,7 @@ class GoogleAuthController extends Controller
                 ->with('error', 'Googleアカウント情報の取得に失敗しました。もう一度お試しください。');
         }
 
-        $name = $googleUser->getName() ?? $email;
+        $name = $googleUser->getName() ?? '';
 
         try {
             $user = $this->googleAuthService->findOrCreate($googleId, $email, $name);

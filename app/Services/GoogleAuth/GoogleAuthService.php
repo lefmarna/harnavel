@@ -27,6 +27,8 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     public function findOrCreate(string $googleId, string $email, string $name): User
     {
+        $name = $this->normalizeName($name, $email);
+
         $lowercaseUsernames = (bool) config('fortify.lowercase_usernames');
         $caseInsensitiveEmail = ! $lowercaseUsernames;
 
@@ -222,6 +224,13 @@ class GoogleAuthService implements GoogleAuthServiceContract
         } catch (JsonException $e) {
             throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。', previous: $e);
         }
+    }
+
+    private function normalizeName(string $name, string $email): string
+    {
+        $trimmed = preg_replace('/^\s++|\s++$/u', '', $name) ?? '';
+
+        return $trimmed !== '' ? $trimmed : $email;
     }
 
     private function userKey(User $user): string

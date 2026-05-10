@@ -25,6 +25,24 @@ test('新規ユーザーを作成する', function () {
     ]);
 });
 
+test('Google プロフィール名が空または空白のみのときは email を name に使う', function (string $blankName) {
+    $service = app(GoogleAuthService::class);
+
+    $user = $service->findOrCreate('google-blank', 'blank@example.com', $blankName);
+
+    expect($user->name)->toBe('blank@example.com');
+
+    $this->assertDatabaseHas('users', [
+        'google_id' => 'google-blank',
+        'email' => 'blank@example.com',
+        'name' => 'blank@example.com',
+    ]);
+})->with([
+    'empty string' => [''],
+    'ascii whitespace' => ['   '],
+    'unicode whitespace' => ["\u{3000}\u{3000}"],
+]);
+
 test('既存メールユーザーには確認メールを送信し即時連携しない', function () {
     Mail::fake();
 

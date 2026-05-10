@@ -66,5 +66,6 @@ pnpm test:e2e --project=chromium
 - [README](README.md): 人間向けの概要とセットアップ
 - [AGENTS.md](AGENTS.md): AI エージェント向けの起点
 - [docs/commands.md](docs/commands.md): コマンドのソースオブトゥルース
+- [docs/infrastructure.md](docs/infrastructure.md): ローカルポート、Mailpit、デプロイ前提
 
-repo 固有ルールは `AGENTS.md`、参照情報は `docs/` を確認してください。
+プロジェクト固有ルールは `AGENTS.md`、参照情報は `docs/` を確認してください。

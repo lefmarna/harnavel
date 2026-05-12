@@ -25,6 +25,7 @@ For exact commands, use `docs/commands.md`.
 | Variable | Meaning | Default |
 | --- | --- | --- |
 | `APP_NAME` | Container name prefix | `app` |
+| `DB_DATABASE` | MariaDB database name | `app` |
 | `NGINX_PORT` | Nginx exposed port | `8080` |
 | `VITE_PORT` | Vite dev server port | `5173` |
 | `MARIADB_PORT` | MariaDB exposed port | `3306` |

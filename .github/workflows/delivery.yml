@@ -111,6 +111,10 @@ jobs:
           if [ "${{ github.ref_name }}" = "develop" ]; then
             test -f .htaccess.develop || { echo '.htaccess.develop is missing' >&2; exit 1; }
             cp .htaccess.develop .deploy/.htaccess
+
+            # develop環境は検索エンジンに公開しない
+            printf 'User-agent: *\nDisallow: /\n' > .deploy/public/robots.txt
+            rm -f .deploy/public/sitemap.xml
           fi
 
       # SSH設定（XSERVER_KNOWN_HOSTSを必須にしてknown_hostsへ登録）

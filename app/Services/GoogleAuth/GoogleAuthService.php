@@ -25,7 +25,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     public function __construct(private readonly UserRepositoryContract $userRepository) {}
 
-    public function findOrCreate(string $googleId, string $email, string $name): User
+    public function findOrCreate(string $googleId, string $email, ?string $name): User
     {
         $name = $this->normalizeName($name, $email);
 
@@ -79,10 +79,18 @@ class GoogleAuthService implements GoogleAuthServiceContract
     {
         try {
             return DB::transaction(function () use ($userId, $googleId, $email): bool {
-                $user = $this->userRepository->findByEmail($email, lock: true);
+                $user = $this->userRepository->find($userId, lock: true);
 
-                if (! $user instanceof User || $this->userKey($user) !== $userId) {
+                if (! $user instanceof User) {
                     Log::warning('Google link confirmation failed because the user was not found.', [
+                        'user_id' => $userId,
+                    ]);
+
+                    return false;
+                }
+
+                if (! $this->emailsMatch($user->email, $email)) {
+                    Log::warning('Google link confirmation failed because the email did not match.', [
                         'user_id' => $userId,
                     ]);
 
@@ -200,6 +208,11 @@ class GoogleAuthService implements GoogleAuthServiceContract
         return $user;
     }
 
+    private function emailsMatch(string $storedEmail, string $payloadEmail): bool
+    {
+        return Str::lower($storedEmail) === Str::lower($payloadEmail);
+    }
+
     private function sendLinkConfirmationEmail(User $user, string $googleId, string $email): void
     {
         $signedUrl = URL::temporarySignedRoute(
@@ -226,9 +239,9 @@ class GoogleAuthService implements GoogleAuthServiceContract
         }
     }
 
-    private function normalizeName(string $name, string $email): string
+    private function normalizeName(?string $name, string $email): string
     {
-        $trimmed = preg_replace('/^\s++|\s++$/u', '', $name) ?? '';
+        $trimmed = preg_replace('/^\s++|\s++$/u', '', (string) $name) ?? '';
 
         return $trimmed !== '' ? $trimmed : $email;
     }

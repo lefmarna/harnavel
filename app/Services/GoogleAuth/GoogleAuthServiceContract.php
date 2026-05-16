@@ -18,7 +18,7 @@ interface GoogleAuthServiceContract
      * @throws GoogleLinkConfirmationPendingException 既存メールユーザーの本人確認メール送信が必要な場合
      * @throws QueryException DB 例外（接続エラー・保存失敗など）
      */
-    public function findOrCreate(string $googleId, string $email, string $name): User;
+    public function findOrCreate(string $googleId, string $email, ?string $name): User;
 
     /**
      * 確認メールの署名付きリンクをもとに既存ユーザーへ Google アカウントを連携する。

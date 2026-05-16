@@ -17,6 +17,11 @@ interface UserRepositoryContract
     public function create(array $attributes): User;
 
     /**
+     * 主キーでユーザーを検索する。
+     */
+    public function find(string|int $id, bool $lock = false): ?User;
+
+    /**
      * google_id または email に一致する候補ユーザーをまとめて取得する。
      * $lock = true のとき id 昇順で SELECT ... FOR UPDATE を行う（デッドロック防止）。
      * このリポジトリでは、email の大小文字非依存性は MariaDB の

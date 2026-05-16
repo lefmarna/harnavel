@@ -25,7 +25,7 @@ test('新規ユーザーを作成する', function () {
     ]);
 });
 
-test('Google プロフィール名が空または空白のみのときは email を name に使う', function (string $blankName) {
+test('Google プロフィール名が null、空、空白のみのときは email を name に使う', function (?string $blankName) {
     $service = app(GoogleAuthService::class);
 
     $user = $service->findOrCreate('google-blank', 'blank@example.com', $blankName);
@@ -38,6 +38,7 @@ test('Google プロフィール名が空または空白のみのときは email 
         'name' => 'blank@example.com',
     ]);
 })->with([
+    'null' => [null],
     'empty string' => [''],
     'ascii whitespace' => ['   '],
     'unicode whitespace' => ["\u{3000}\u{3000}"],
@@ -195,6 +196,11 @@ test('UniqueConstraintViolationException 発生時にフォールバックで既
     {
         public function __construct(private readonly User $existingUser) {}
 
+        public function find(string|int $id, bool $lock = false): ?User
+        {
+            return null;
+        }
+
         public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
         {
             return collect();
@@ -255,6 +261,11 @@ test('UniqueConstraintViolationException 後に findByEmail で既存メール�
             private readonly User $existingUser,
             private int $saveCount,
         ) {}
+
+        public function find(string|int $id, bool $lock = false): ?User
+        {
+            return null;
+        }
 
         public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
         {
@@ -328,6 +339,11 @@ test('UniqueConstraintViolationException 後のフォールバックでも別レ
             private readonly User $userByEmail,
         ) {}
 
+        public function find(string|int $id, bool $lock = false): ?User
+        {
+            return null;
+        }
+
         public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
         {
             return collect();
@@ -387,6 +403,11 @@ test('lowercase usernamesが無効なら UniqueConstraintViolationException 後�
             private readonly User $existingUser,
             private int $saveCount,
         ) {}
+
+        public function find(string|int $id, bool $lock = false): ?User
+        {
+            return null;
+        }
 
         public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
         {
@@ -454,6 +475,103 @@ test('confirmLink は署名メールの対象ユーザーへ google_id を連携
     expect($existing->fresh())
         ->google_id->toBe('google-confirm')
         ->email_verified_at->not->toBeNull();
+});
+
+test('confirmLink は payload email の casing が異なっても署名メールの対象ユーザーへ連携する', function () {
+    $existing = User::factory()->unverified()->create([
+        'email' => 'Confirm.User@Example.COM',
+        'google_id' => null,
+    ]);
+
+    $service = app(GoogleAuthService::class);
+
+    expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm.user@example.com'))->toBeTrue();
+
+    expect($existing->fresh())
+        ->google_id->toBe('google-confirm')
+        ->email->toBe('Confirm.User@Example.COM')
+        ->email_verified_at->not->toBeNull();
+});
+
+test('confirmLink は署名メールの対象ユーザーと payload email が異なる場合 false を返す', function () {
+    $existing = User::factory()->unverified()->create([
+        'email' => 'confirm@example.com',
+        'google_id' => null,
+    ]);
+
+    $service = app(GoogleAuthService::class);
+
+    expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'other@example.com'))->toBeFalse();
+
+    expect($existing->fresh())
+        ->google_id->toBeNull()
+        ->email_verified_at->toBeNull();
+});
+
+test('confirmLink は署名メールの userId を lock 付きで取得する', function () {
+    $existing = User::factory()->unverified()->create([
+        'email' => 'confirm@example.com',
+        'google_id' => null,
+    ]);
+
+    $fakeRepo = new class($existing) implements UserRepositoryContract
+    {
+        public string|int|null $foundId = null;
+
+        public bool $foundWithLock = false;
+
+        public bool $findByEmailCalled = false;
+
+        public function __construct(private readonly User $existingUser) {}
+
+        public function find(string|int $id, bool $lock = false): ?User
+        {
+            $this->foundId = $id;
+            $this->foundWithLock = $lock;
+
+            return $this->existingUser;
+        }
+
+        public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
+        {
+            throw new BadMethodCallException;
+        }
+
+        public function findByGoogleId(string $googleId, bool $lock = false): ?User
+        {
+            throw new BadMethodCallException;
+        }
+
+        public function findByEmail(string $email, bool $lock = false): ?User
+        {
+            $this->findByEmailCalled = true;
+
+            return null;
+        }
+
+        public function create(array $attributes): User
+        {
+            throw new BadMethodCallException;
+        }
+
+        public function save(User $user): void
+        {
+            $user->save();
+        }
+
+        public function updatePassword(User $user, string $newPassword): void
+        {
+            throw new BadMethodCallException;
+        }
+    };
+
+    app()->instance(UserRepositoryContract::class, $fakeRepo);
+    $service = app(GoogleAuthService::class);
+
+    expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com'))->toBeTrue()
+        ->and($fakeRepo->foundId)->toBe((string) $existing->getKey())
+        ->and($fakeRepo->foundWithLock)->toBeTrue()
+        ->and($fakeRepo->findByEmailCalled)->toBeFalse();
 });
 
 test('confirmLink は対象ユーザーが異なる場合 false を返す', function () {

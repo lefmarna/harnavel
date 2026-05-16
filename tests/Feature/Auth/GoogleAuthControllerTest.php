@@ -164,6 +164,30 @@ test('callback() は intended URL があれば fortify.home より優先して�
     $this->assertAuthenticatedAs($existingUser);
 });
 
+test('callback() は Google プロフィール名が null の場合もそのままサービスへ渡す', function () {
+    $existingUser = User::factory()->create(['email' => 'test@example.com']);
+
+    $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
+    $googleUser->allows('getId')->andReturn('google-123');
+    $googleUser->allows('getEmail')->andReturn('test@example.com');
+    $googleUser->allows('getName')->andReturn(null);
+    $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+    $driver = Mockery::mock(GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+    mock(GoogleAuthServiceContract::class)
+        ->shouldReceive('findOrCreate')
+        ->with('google-123', 'test@example.com', null)
+        ->andReturn($existingUser);
+
+    $this->get(route('auth.google.callback'))
+        ->assertRedirect(config('fortify.home'));
+
+    $this->assertAuthenticatedAs($existingUser);
+});
+
 test('callback() で二段階認証が有効ならチャレンジ画面へリダイレクトする', function () {
     Event::fake([TwoFactorAuthenticationChallenged::class]);
 

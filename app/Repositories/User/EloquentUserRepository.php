@@ -21,6 +21,20 @@ class EloquentUserRepository implements UserRepositoryContract
     /**
      * {@inheritDoc}
      */
+    public function find(string|int $id, bool $lock = false): ?User
+    {
+        $query = User::query()->whereKey($id);
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
     {
         $query = User::query()

@@ -1,0 +1,3 @@
+# Use Kiro discovery for new work
+
+Use `kiro-discovery` as the discovery entry point for raw new-work ideas, then use the Kiro requirements and design phases to turn the chosen boundary into implementation-ready specs. A standalone pre-spec requirements discovery workflow would duplicate purpose, alternatives, and scope discovery while creating a second session-artifact handoff into Kiro, so this project keeps discovery in the Kiro flow; use `grill-with-docs` only when an existing plan, spec, design draft, or proposed decision needs to be challenged against project language, code, and documented decisions.

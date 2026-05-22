@@ -66,6 +66,25 @@ pnpm test:e2e:ui        # Run with UI mode (interactive debugging)
 pnpm test:e2e:headed    # Run with browser visible
 ```
 
+## Interactive Browser Verification
+
+Use Playwright CLI for ad hoc browser checks while an agent is changing UI behavior. Start the
+local app and Vite server first with the Docker and frontend commands above.
+
+```bash
+npx @playwright/cli open http://localhost:8080 # Start a browser on the local app
+npx @playwright/cli snapshot --depth=4         # Inspect page structure and element refs
+npx @playwright/cli screenshot                 # Capture visuals when layout or paint matters
+npx @playwright/cli close                      # End the browser session
+```
+
+Prefer snapshots for navigation, form interaction, and semantic checks. Use screenshots after the
+snapshot when the change needs visual confirmation. Playwright CLI artifacts stay in
+`.playwright-cli/` and are ignored by Git.
+
+Playwright CLI checks are transient. Add or update an E2E spec when a bug fix or user flow should
+keep failing in future sessions, then run the narrowest relevant `pnpm test:e2e` command.
+
 ## Documentation
 
 ```bash

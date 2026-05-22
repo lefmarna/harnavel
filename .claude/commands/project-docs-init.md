@@ -53,7 +53,6 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 
 以下のファイルはテンプレート共通のため**原則変更しない**:
 
-- `docs/planning.md` - `docs/plans/` 用の共通ガイド
 - `docs/commands.md` - コマンドのソースオブトゥルース
 - `docs/generated/boost.md` - 自動生成（編集禁止）
 - `docs/generated/specs.md` - 自動生成（編集禁止）

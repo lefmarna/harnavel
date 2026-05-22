@@ -38,13 +38,16 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 
 ## Documentation
 
-- `README.md` is in Japanese. `docs/` is in English. `docs/plans/` may use either.
+- `README.md` is in Japanese. `docs/` is in English.
 - Files under `docs/generated/` are auto-generated; do not edit manually.
+- Treat `CONTEXT.md` as the project domain glossary. If `CONTEXT-MAP.md` exists, use it to find the relevant context glossary instead.
+- Before planning, specifying, designing, or refactoring an area, read the relevant glossary and ADRs in `docs/adr/` when they exist.
+- Use glossary terms for domain concepts and surface ADR conflicts explicitly instead of silently overriding recorded decisions.
+- Keep `CONTEXT.md` focused on domain language, not implementation details. Create or update context docs and ADRs lazily as terms or decisions are resolved, preferably through `grill-with-docs`.
 
 ## Reference Docs
 
 - Laravel Boost guidelines: `docs/generated/boost.md`
 - Commands: `docs/commands.md`
 - Infrastructure: `docs/infrastructure.md`
-- Planning: `docs/planning.md`
 - Spec workflow: `docs/generated/specs.md`

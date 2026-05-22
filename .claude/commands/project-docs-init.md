@@ -28,7 +28,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 ユーザーに以下を確認する:
 
 1. **コンテキストディレクトリ**: プロジェクトの既存ドキュメントがある場所（デフォルト: `old_docs/`）
-2. **ポート設定**: このプロジェクトで使う Docker ポート（複数プロジェクト並列開発のため、プロジェクトごとにポートを変える運用）
+2. **ローカル識別子・ポート設定**: このプロジェクトで使う `APP_NAME`、`DB_DATABASE`、Docker ポート（複数プロジェクト並列開発のため、プロジェクトごとに変える運用）
 
 ## Step 2: コンテキスト読み取り
 
@@ -47,17 +47,19 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 | ファイル | 更新内容 |
 | --- | --- |
 | `AGENTS.md` | プロジェクトの目的、非自明な慣習、運用ルールを展開先前提の内容へ更新 |
-| `docs/infrastructure.md` | ポート番号、ローカル runtime 事実、必要ならデプロイ前提を更新 |
-| `.env.example` | ポート番号のデフォルト値を更新 |
+| `docs/infrastructure.md` | ローカル識別子、DB 名、ポート番号、runtime 事実、必要ならデプロイ前提を更新 |
+| `docs/commands.md` | Interactive Browser Verification のローカル URL 例を更新 |
+| `.env.example` | `APP_NAME`、`DB_DATABASE`、`VITE_APP_NAME`、ポート番号のデフォルト値を更新 |
+| `public/manifest.webmanifest` | Web App Manifest の静的なアプリ名・説明を更新 |
 | `README.md` | タイトル、冒頭のリード文、概要、セットアップをプロジェクト固有の文言へ更新 |
 
 以下のファイルはテンプレート共通のため**原則変更しない**:
 
-- `docs/commands.md` - コマンドのソースオブトゥルース
 - `docs/generated/boost.md` - 自動生成（編集禁止）
 - `docs/generated/specs.md` - 自動生成（編集禁止）
 
 補足:
+- `docs/commands.md` はコマンドのソースオブトゥルースなので、プロジェクト固有の URL 例以外は実際にコマンド差分がある場合だけ更新する
 - `README.md` と `AGENTS.md` は構成や役割は維持するが、タイトルと導入文はテンプレート文言のまま残さない
 - 「template」「starter」「ひな形」など、展開先で他人事に見える導入文は避ける
 
@@ -97,13 +99,20 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 
 必要なら、画面構成やアクセス制御のような補足は専用 doc を増やさず、まず `AGENTS.md` に短く要約して済ませる。
 
-## Step 6: ポート設定の更新
+## Step 6: ローカル識別子・ポート設定の更新
 
-ユーザー指定のポート番号で以下を更新:
+ユーザー指定の `APP_NAME`、`DB_DATABASE`、ポート番号、およびコンテキストから抽出したプロジェクト名で以下を更新:
 
 - `docs/infrastructure.md` の Local Runtime Topology テーブルと Default local endpoints
 - `docs/infrastructure.md` の Environment Variables テーブルの Default 列
-- `.env.example` の該当変数
+- `docs/commands.md` の Interactive Browser Verification にある Playwright CLI のローカル URL
+- `README.md` のセットアップ後の既定 URL
+- `.env.example` の `APP_NAME`、`DB_DATABASE`、`VITE_APP_NAME`、ポート設定の該当変数
+- `public/manifest.webmanifest` の `name`、`short_name`、`description`
+
+命名規則:
+- `APP_NAME` はケバブケース
+- `DB_DATABASE` はスネークケース
 
 ## Step 7: 確認と検証
 

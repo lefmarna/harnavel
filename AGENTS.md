@@ -32,9 +32,12 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 
 ## Testing
 
-- Test titles are written in Japanese.
-- For new features, prefer writing tests before implementation.
+- Tests are the canonical behavioral specification. Author the spec as `it('...')->todo()`
+  cases and get them approved before implementing. See `docs/testing-as-spec.md`.
+- Test titles are written in Japanese; new tests use a `describe`/`it` hierarchy.
+- For new features, write tests before implementation (red → green via the `tdd` skill).
 - New pages require at least a smoke E2E test.
+- After completion, organize only ADRs and `CONTEXT.md` (see ADR-0002, which amends ADR-0001).
 
 ## Documentation
 
@@ -48,6 +51,7 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 ## Reference Docs
 
 - Laravel Boost guidelines: `docs/generated/boost.md`
+- Testing as specification: `docs/testing-as-spec.md`
 - Commands: `docs/commands.md`
 - Infrastructure: `docs/infrastructure.md`
 - Spec workflow: `docs/generated/specs.md`

@@ -37,14 +37,14 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 - Test titles are written in Japanese; new tests use a `describe`/`it` hierarchy.
 - For new features, write tests before implementation (red → green via the `tdd` skill).
 - New pages require at least a smoke E2E test.
-- After completion, organize only ADRs and `CONTEXT.md` (see ADR-0002, which amends ADR-0001).
+- After completion, organize only ADRs and `CONTEXT.md` (see TADR-0001 in `docs/adr/template/`).
 
 ## Documentation
 
 - `README.md` is in Japanese. `docs/` is in English.
 - Files under `docs/generated/` are auto-generated; do not edit manually.
 - Treat `CONTEXT.md` as the project domain glossary. If `CONTEXT-MAP.md` exists, use it to find the relevant context glossary instead.
-- Before planning, specifying, designing, or refactoring an area, read the relevant glossary and ADRs in `docs/adr/` when they exist.
+- Before planning, specifying, designing, or refactoring an area, read the relevant glossary and ADRs when they exist. App ADRs live in `docs/adr/` (ADR-NNNN); template ADRs in `docs/adr/template/` (TADR-NNNN). See `docs/adr/README.md`.
 - Use glossary terms for domain concepts and surface ADR conflicts explicitly instead of silently overriding recorded decisions.
 - Keep `CONTEXT.md` focused on domain language, not implementation details. Create or update context docs and ADRs lazily as terms or decisions are resolved, preferably through `grill-with-docs`.
 

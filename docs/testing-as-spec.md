@@ -3,20 +3,22 @@
 Tests are the canonical behavioral spec. The reviewer approves the **test cases**
 and confirms they are green, without reading the implementation.
 
-Decision, rationale, and risks: [ADR-0002](adr/0002-tests-as-executable-specification.md).
+Decision, rationale, and risks: [TADR-0001](adr/template/0001-development-workflow.md).
 This file is the operational playbook — keep it terse.
 
 ## Loop
 
-1. **Intent** — one line of what should change.
+1. **Intent** — one line of what should change (optionally preceded by Kiro
+   `requirements`/`design` when useful).
 2. **Spec** — author `it('...')->todo()` cases: the `describe`/`it` tree + assertion sketch.
 3. **Approve** — reviewer approves the test cases **before** implementing. *Review happens here.*
 4. **Implement** — red → green (`tdd` skill).
 5. **Gates** — every CI check currently wired in this repo must pass. The target set
-   across the ADR-0002 rollout is: green + coverage floor + `arch()` + Larastan +
+   across the TADR-0001 rollout is: green + coverage floor + `arch()` + Larastan +
    (scoped) Infection. Require only the checks already enabled.
 6. **Merge** — approved spec × green × gates → merge without reading the implementation.
-7. **Organize** — update only ADRs / `CONTEXT.md`. Do not reconstruct Kiro docs.
+7. **Organize** — update only ADRs / `CONTEXT.md`. Don't reconstruct Kiro
+   `requirements`/`design` after the fact (using them upfront is fine).
 
 ## Rules
 

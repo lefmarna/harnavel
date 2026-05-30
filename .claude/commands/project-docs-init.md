@@ -47,7 +47,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 | ファイル | 更新内容 |
 | --- | --- |
 | `AGENTS.md` | プロジェクトの目的、非自明な慣習、運用ルールを展開先前提の内容へ更新 |
-| `docs/infrastructure.md` | ローカル識別子、DB 名、ポート番号、runtime 事実、必要ならデプロイ前提を更新 |
+| `docs/infrastructure.md` | Local Runtime Topology / Default local endpoints / runtime 事実 / 必要ならデプロイ前提を更新（識別子・DB 名・ポートの値そのものは `.env.example` が正典） |
 | `docs/commands.md` | Interactive Browser Verification のローカル URL 例を更新 |
 | `.env.example` | `APP_NAME`、`DB_DATABASE`、`VITE_APP_NAME`、ポート番号のデフォルト値を更新 |
 | `public/manifest.webmanifest` | Web App Manifest の静的なアプリ名・説明を更新 |
@@ -57,6 +57,8 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 
 - `docs/generated/boost.md` - 自動生成（編集禁止）
 - `docs/generated/specs.md` - 自動生成（編集禁止）
+- `docs/testing-as-spec.md` - テスト=仕様 手法（template 共通）
+- `docs/adr/template/**`、`docs/adr/README.md` - template ADR と ADR 採番規約（プロジェクト独自 ADR は `docs/adr/NNNN-*.md` に作成）
 
 補足:
 - `docs/commands.md` はコマンドのソースオブトゥルースなので、プロジェクト固有の URL 例以外は実際にコマンド差分がある場合だけ更新する
@@ -104,7 +106,6 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 ユーザー指定の `APP_NAME`、`DB_DATABASE`、ポート番号、およびコンテキストから抽出したプロジェクト名で以下を更新:
 
 - `docs/infrastructure.md` の Local Runtime Topology テーブルと Default local endpoints
-- `docs/infrastructure.md` の Environment Variables テーブルの Default 列
 - `docs/commands.md` の Interactive Browser Verification にある Playwright CLI のローカル URL
 - `README.md` のセットアップ後の既定 URL
 - `.env.example` の `APP_NAME`、`DB_DATABASE`、`VITE_APP_NAME`、ポート設定の該当変数

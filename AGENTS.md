@@ -42,6 +42,7 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 ## Documentation
 
 - `README.md` is in Japanese. `docs/` is in English.
+- This repo is worked on by multiple AI agents (e.g. Claude Code, Codex). Keep durable knowledge in repo docs — never rely on a single tool's private memory.
 - Files under `docs/generated/` are auto-generated; do not edit manually.
 - Treat `CONTEXT.md` as the project domain glossary. If `CONTEXT-MAP.md` exists, use it to find the relevant context glossary instead.
 - Before planning, specifying, designing, or refactoring an area, read the relevant glossary and ADRs when they exist. App ADRs live in `docs/adr/` (ADR-NNNN); template ADRs in `docs/adr/template/` (TADR-NNNN). See `docs/adr/README.md`.

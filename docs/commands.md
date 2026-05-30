@@ -8,7 +8,6 @@ Use this file when you need the repository's actual command names instead of gue
 mise run setup          # Full project setup
 mise run setup:tools    # Install tools & pnpm dependencies
 mise run setup:backend  # Setup backend (requires containers)
-pnpm exec lefthook install # Install Git hooks manually if prepare is skipped
 ```
 
 ## Docker

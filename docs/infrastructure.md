@@ -1,7 +1,8 @@
 # Infrastructure Reference
 
 Use this file for concrete runtime facts: ports, local services, and deployment constraints.
-For exact commands, use `docs/commands.md`.
+For exact commands, use `docs/commands.md`. Configurable ports and names are declared in
+`.env.example` (the template defaults); override them locally in `.env`.
 
 ## Local Runtime Topology
 
@@ -19,20 +20,6 @@ For exact commands, use `docs/commands.md`.
 - App: `http://localhost:8080`
 - Vite: `http://localhost:5173`
 - Mailpit: `http://localhost:8025`
-
-## Environment Variables
-
-| Variable | Meaning | Default |
-| --- | --- | --- |
-| `APP_NAME` | Container name prefix | `app` |
-| `DB_DATABASE` | MariaDB database name | `app` |
-| `NGINX_PORT` | Nginx exposed port | `8080` |
-| `VITE_PORT` | Vite dev server port | `5173` |
-| `MARIADB_PORT` | MariaDB exposed port | `3306` |
-| `MAILPIT_SMTP_PORT` | Mailpit SMTP port | `1025` |
-| `MAILPIT_UI_PORT` | Mailpit web UI port | `8025` |
-
-Keep this file and `.env.example` aligned when project-specific ports change.
 
 ## Deployment Profile
 

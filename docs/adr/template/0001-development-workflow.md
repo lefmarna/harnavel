@@ -68,7 +68,7 @@ instead.
 Phased so the methodology can propagate to projects derived from this template without
 breaking their CI:
 
-- **Phase 1 (current): conventions only, no CI change** — this ADR, `docs/testing-as-spec.md`,
+- **Phase 1: conventions only, no CI change** — this ADR, `docs/testing-as-spec.md`,
   a thin pointer in `AGENTS.md`, and `/merge-template` classification. Flows to derived
   projects via `git pull template main` + `/merge-template`.
 - **Phase 2:** `arch()` rules (written to pass current code).

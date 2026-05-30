@@ -17,7 +17,7 @@ jobs:
 
     services:
       mariadb-testing:
-        image: mariadb:10.5
+        image: mariadb:10.11
         env:
           MARIADB_ROOT_PASSWORD: password
           MARIADB_DATABASE: app_testing

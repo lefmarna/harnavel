@@ -8,6 +8,7 @@ use App\Repositories\User\UserRepositoryContract;
 use App\Services\GoogleAuth\GoogleAuthService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 describe('Google 認証サービス', function () {
@@ -585,4 +586,301 @@ describe('Google 認証サービス', function () {
 
         expect($service->confirmLink('999999', 'google-confirm', 'confirm@example.com'))->toBeFalse();
     });
+
+    describe('リンク確認の未仕様分岐', function () {
+        it('同じ google_id で再確認した場合 true になる', function () {
+            $existing = User::factory()->create([
+                'email' => 'confirmed@example.com',
+                'google_id' => 'google-confirmed',
+            ]);
+
+            $fakeRepo = new class($existing) implements UserRepositoryContract
+            {
+                public int $saveCount = 0;
+
+                public function __construct(private readonly User $existingUser) {}
+
+                public function find(string|int $id, bool $lock = false): ?User
+                {
+                    return $this->existingUser;
+                }
+
+                public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function findByGoogleId(string $googleId, bool $lock = false): ?User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function findByEmail(string $email, bool $lock = false): ?User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function create(array $attributes): User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function save(User $user): void
+                {
+                    $this->saveCount++;
+                }
+
+                public function updatePassword(User $user, string $newPassword): void
+                {
+                    throw new BadMethodCallException;
+                }
+            };
+
+            app()->instance(UserRepositoryContract::class, $fakeRepo);
+            $service = app(GoogleAuthService::class);
+
+            expect($service->confirmLink((string) $existing->getKey(), 'google-confirmed', 'confirmed@example.com'))->toBeTrue()
+                ->and($fakeRepo->saveCount)->toBe(0);
+        });
+
+        it('別の google_id が既に連携済みの場合 false になる', function () {
+            $existing = User::factory()->create([
+                'email' => 'already-linked@example.com',
+                'google_id' => 'old-google',
+            ]);
+
+            $service = app(GoogleAuthService::class);
+
+            expect($service->confirmLink((string) $existing->getKey(), 'new-google', 'already-linked@example.com'))->toBeFalse();
+
+            expect($existing->fresh())
+                ->google_id->toBe('old-google');
+        });
+
+        it('google_id 連携保存がユニーク制約で競合しても同じユーザーへ連携済みなら true になる', function () {
+            $existing = User::factory()->unverified()->create([
+                'email' => 'race-confirm@example.com',
+                'google_id' => null,
+            ]);
+
+            $fakeRepo = new class($existing) implements UserRepositoryContract
+            {
+                public int $saveCount = 0;
+
+                public function __construct(private readonly User $existingUser) {}
+
+                public function find(string|int $id, bool $lock = false): ?User
+                {
+                    return $this->existingUser;
+                }
+
+                public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function findByGoogleId(string $googleId, bool $lock = false): ?User
+                {
+                    return $this->existingUser;
+                }
+
+                public function findByEmail(string $email, bool $lock = false): ?User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function create(array $attributes): User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function save(User $user): void
+                {
+                    $this->saveCount++;
+
+                    throw testingUniqueConstraintViolation();
+                }
+
+                public function updatePassword(User $user, string $newPassword): void
+                {
+                    throw new BadMethodCallException;
+                }
+            };
+
+            app()->instance(UserRepositoryContract::class, $fakeRepo);
+            $service = app(GoogleAuthService::class);
+
+            expect($service->confirmLink((string) $existing->getKey(), 'race-google', 'race-confirm@example.com'))->toBeTrue()
+                ->and($fakeRepo->saveCount)->toBe(1);
+        });
+    });
+
+    describe('ユニーク制約競合の未仕様分岐', function () {
+        it('既存ユーザーを回復できないユニーク制約競合が続く場合ログを出して GoogleAuthException になる', function () {
+            $fakeRepo = new class implements UserRepositoryContract
+            {
+                public int $saveCount = 0;
+
+                public int $googleIdLookupCount = 0;
+
+                public int $emailLookupCount = 0;
+
+                public function find(string|int $id, bool $lock = false): ?User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
+                {
+                    return collect();
+                }
+
+                public function findByGoogleId(string $googleId, bool $lock = false): ?User
+                {
+                    $this->googleIdLookupCount++;
+
+                    return null;
+                }
+
+                public function findByEmail(string $email, bool $lock = false): ?User
+                {
+                    $this->emailLookupCount++;
+
+                    return null;
+                }
+
+                public function create(array $attributes): User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function save(User $user): void
+                {
+                    $this->saveCount++;
+
+                    throw testingUniqueConstraintViolation();
+                }
+
+                public function updatePassword(User $user, string $newPassword): void
+                {
+                    throw new BadMethodCallException;
+                }
+            };
+
+            Log::shouldReceive('warning')
+                ->once()
+                ->with('Google OAuth: UniqueConstraintViolationException but user not found.', [
+                    'google_id' => 'retry-google',
+                ]);
+
+            app()->instance(UserRepositoryContract::class, $fakeRepo);
+            $service = app(GoogleAuthService::class);
+
+            expect(fn () => $service->findOrCreate('retry-google', 'retry@example.com', 'Retry User'))
+                ->toThrow(GoogleAuthException::class, 'Google認証に失敗しました。もう一度お試しください。');
+
+            expect($fakeRepo->saveCount)->toBe(5)
+                ->and($fakeRepo->googleIdLookupCount)->toBe(5)
+                ->and($fakeRepo->emailLookupCount)->toBe(5);
+        });
+    });
+
+    describe('既存 Google アカウント同期の未仕様分岐', function () {
+        it('既存 google_id ユーザーの email_verified_at が未設定の場合補完できる', function () {
+            $existing = User::factory()->unverified()->create([
+                'email' => 'unverified-google@example.com',
+                'google_id' => 'unverified-google',
+            ]);
+
+            $service = app(GoogleAuthService::class);
+
+            $user = $service->findOrCreate('unverified-google', 'unverified-google@example.com', 'Google User');
+
+            expect($user->is($existing))->toBeTrue()
+                ->and($existing->fresh()->email_verified_at)->not->toBeNull();
+        });
+
+        it('lowercase usernames が有効な場合既存 google_id ユーザーの email を lowercase に同期できる', function () {
+            config(['fortify.lowercase_usernames' => true]);
+
+            $existing = User::factory()->create([
+                'email' => 'Mixed.User@Example.COM',
+                'google_id' => 'mixed-google',
+            ]);
+
+            $service = app(GoogleAuthService::class);
+
+            $user = $service->findOrCreate('mixed-google', 'Mixed.User@Example.COM', 'Google User');
+
+            expect($user->is($existing))->toBeTrue()
+                ->and($existing->fresh()->email)->toBe('mixed.user@example.com');
+        });
+
+        it('既存 google_id ユーザーに同期差分がない場合保存しない', function () {
+            $existing = User::factory()->create([
+                'email' => 'stable@example.com',
+                'google_id' => 'stable-google',
+            ]);
+
+            $fakeRepo = new class($existing) implements UserRepositoryContract
+            {
+                public int $saveCount = 0;
+
+                public function __construct(private readonly User $existingUser) {}
+
+                public function find(string|int $id, bool $lock = false): ?User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
+                {
+                    return collect([$this->existingUser]);
+                }
+
+                public function findByGoogleId(string $googleId, bool $lock = false): ?User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function findByEmail(string $email, bool $lock = false): ?User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function create(array $attributes): User
+                {
+                    throw new BadMethodCallException;
+                }
+
+                public function save(User $user): void
+                {
+                    $this->saveCount++;
+                }
+
+                public function updatePassword(User $user, string $newPassword): void
+                {
+                    throw new BadMethodCallException;
+                }
+            };
+
+            app()->instance(UserRepositoryContract::class, $fakeRepo);
+            $service = app(GoogleAuthService::class);
+
+            $user = $service->findOrCreate('stable-google', 'stable@example.com', 'Stable User');
+
+            expect($user->is($existing))->toBeTrue()
+                ->and($fakeRepo->saveCount)->toBe(0);
+        });
+    });
 });
+
+function testingUniqueConstraintViolation(): UniqueConstraintViolationException
+{
+    return new UniqueConstraintViolationException(
+        'testing',
+        'INSERT INTO `users`',
+        [],
+        new PDOException('Integrity constraint violation')
+    );
+}

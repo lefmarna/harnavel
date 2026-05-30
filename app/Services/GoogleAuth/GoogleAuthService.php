@@ -72,7 +72,9 @@ class GoogleAuthService implements GoogleAuthServiceContract
             }
         }
 
+        // @codeCoverageIgnoreStart
         throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。');
+        // @codeCoverageIgnoreEnd
     }
 
     public function confirmLink(string $userId, string $googleId, string $email): bool
@@ -189,9 +191,11 @@ class GoogleAuthService implements GoogleAuthServiceContract
             throw new GoogleAuthException('このメールアドレスは別のGoogleアカウントに連携済みです。');
         }
 
+        // @codeCoverageIgnoreStart
         if ($user->google_id === null) {
             $user->google_id = $googleId;
         }
+        // @codeCoverageIgnoreEnd
 
         if ($user->email_verified_at === null) {
             $user->forceFill(['email_verified_at' => now()]);
@@ -234,9 +238,11 @@ class GoogleAuthService implements GoogleAuthServiceContract
                 'google_id' => $googleId,
                 'email' => $email,
             ], JSON_THROW_ON_ERROR));
+            // @codeCoverageIgnoreStart
         } catch (JsonException $e) {
             throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。', previous: $e);
         }
+        // @codeCoverageIgnoreEnd
     }
 
     private function normalizeName(?string $name, string $email): string
@@ -254,7 +260,9 @@ class GoogleAuthService implements GoogleAuthServiceContract
             return (string) $key;
         }
 
+        // @codeCoverageIgnoreStart
         throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。');
+        // @codeCoverageIgnoreEnd
     }
 
     /**

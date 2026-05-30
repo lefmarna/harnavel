@@ -33,7 +33,7 @@ Key boundaries:
   (`〜できる`, `〜の場合〜になる`); one `it` = one behavior.
 - **Coverage:** high floor (~90%) on `app/`; 100% is aspirational on pure logic layers
   (`Services`/`Actions`/`Repositories`); honesty is backed by mutation testing
-  (Infection). **Global 100% line coverage is explicitly rejected** because it rewards
+  (`pest --mutate`; see Rollout Phase 4). **Global 100% line coverage is explicitly rejected** because it rewards
   tautological tests and gives false confidence.
 - **Coverage contract:** behavioral changes (endpoints, validation, authorization,
   business rules, Inertia contract) MUST have a test = "untested means unspecified".
@@ -74,4 +74,16 @@ breaking their CI:
 - **Phase 2:** `arch()` rules (written to pass current code).
 - **Phase 3:** migrate existing tests (hybrid: structural reshape preserving assertions),
   then add the coverage gate (non-blocking → blocking).
-- **Phase 4:** Infection scoped to logic layers, wired into CI.
+- **Phase 4:** mutation testing scoped to the pure-logic layers
+  (`app/Services`, `app/Actions`, `app/Repositories`), wired into CI as a separate workflow
+  that runs on PRs touching those layers or their tests (`pull_request` with a `paths`
+  filter) plus manual `workflow_dispatch`, non-blocking at first and promoted to blocking
+  once stable.
+  - **Tool:** realized with Pest's built-in `pest --mutate` (`pestphp/pest-plugin-mutate`),
+    **not** standalone `infection/infection`. Standalone Infection 0.33 is structurally
+    incompatible with Pest 4 — Pest emits `P\…` evaluable test-class names in its coverage
+    report that Infection cannot reconcile against its JUnit report (`TestNotFound`), and
+    Infection 0.33 ships no Pest adapter. `pest --mutate` uses the same mutation-score (MSI)
+    concept and honours `// @pest-mutate-ignore` for equivalent mutants.
+  - **Gate:** the MSI floor (`--min`) lives in the CI workflow as the single source of truth
+    (not duplicated in docs).

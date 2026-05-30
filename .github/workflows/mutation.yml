@@ -1,0 +1,115 @@
+name: mutation
+
+# 純ロジック層（app/Services・app/Actions・app/Repositories）のミューテーションテスト。
+# 「テスト＝仕様」方針（docs/testing-as-spec.md / TADR-0001 Phase 4）における
+# 「緑＝レビュー不要」の honesty を MSI で担保する。
+#
+# mutation は重い（テストを多数回実行する）ため、毎 push/全 PR では回さない。
+# ロジック層またはそのテストを変更した PR のときだけ走らせる（paths フィルタ）。
+# それ以外の PR では走らない。手動実行も可能（workflow_dispatch）。
+#
+# 段階導入: 現在は非ブロッキング（continue-on-error でレポートのみ）。
+# 安定後に下記 "Run mutation testing" ステップの continue-on-error を外して
+# ブロッキングへ昇格する。MSI のゲート値（--min）はこのワークフローが単一正典。
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'app/Services/**'
+      - 'app/Actions/**'
+      - 'app/Repositories/**'
+      - 'tests/**'
+      - '.github/workflows/mutation.yml'
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb-testing:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: app_testing
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.5
+          tools: composer:v2
+          # ミューテーションテストはテストを多数回実行するため、高速な PCOV を使う。
+          coverage: pcov
+
+      - name: Get pnpm store directory
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Cache Composer packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.composer/cache
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Node Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install PHP Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Build Assets
+        run: pnpm run build
+        env:
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: app_testing
+
+      - name: Run mutation testing
+        # 段階導入のため現在は非ブロッキング。昇格時はこの行を削除する。
+        continue-on-error: true
+        run: >-
+          ./vendor/bin/pest --mutate --covered-only --no-progress
+          --class="App\Services,App\Actions,App\Repositories"
+          --min=80
+        env:
+          DB_HOST: 127.0.0.1
+          GOOGLE_CLIENT_ID: test-client-id
+          GOOGLE_CLIENT_SECRET: test-client-secret
+          GOOGLE_REDIRECT_URI: http://localhost/auth/google/callback

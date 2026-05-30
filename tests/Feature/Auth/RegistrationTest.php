@@ -66,9 +66,9 @@ describe('ユーザー登録', function () {
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
 
-        $this->assertDatabaseHas('users', [
-            'email' => 'test.user@example.com',
-        ]);
+        // DB の照合順序は大文字小文字を区別しないため assertDatabaseHas では小文字化を検証できない。
+        // 実際に格納された値を厳密比較する。
+        expect(User::query()->value('email'))->toBe('test.user@example.com');
     });
 
     it('lowercase usernamesが無効なら登録時にメールアドレスの大文字小文字を維持する', function () {
@@ -84,8 +84,6 @@ describe('ユーザー登録', function () {
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
 
-        $this->assertDatabaseHas('users', [
-            'email' => 'Test.User@Example.COM',
-        ]);
+        expect(User::query()->value('email'))->toBe('Test.User@Example.COM');
     });
 });

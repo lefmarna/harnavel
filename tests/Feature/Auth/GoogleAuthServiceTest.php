@@ -19,11 +19,13 @@ describe('Google 認証サービス', function () {
 
         expect($user->google_id)->toBe('google-123')
             ->and($user->email)->toBe('new@example.com')
+            ->and($user->name)->toBe('New User')
             ->and($user->email_verified_at)->not->toBeNull();
 
         $this->assertDatabaseHas('users', [
             'google_id' => 'google-123',
             'email' => 'new@example.com',
+            'name' => 'New User',
         ]);
     });
 

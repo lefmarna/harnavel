@@ -36,7 +36,9 @@ class GoogleAuthService implements GoogleAuthServiceContract
             $email = Str::lower($email);
         }
 
-        for ($attempt = 0; $attempt < self::MAX_CREATE_RETRIES; $attempt++) {
+        // attempt === MAX_CREATE_RETRIES - 1 で必ず例外を投げるため、終端条件 < を <= にしても
+        // 追加の反復には到達しない（等価変異）。
+        for ($attempt = 0; $attempt < self::MAX_CREATE_RETRIES; $attempt++) { // @pest-mutate-ignore: SmallerToSmallerOrEqual
             try {
                 return DB::transaction(fn (): User => $this->findOrCreateWithinTransaction(
                     googleId: $googleId,
@@ -247,7 +249,9 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     private function normalizeName(?string $name, string $email): string
     {
-        $trimmed = preg_replace('/^\s++|\s++$/u', '', (string) $name) ?? '';
+        // preg_replace は正規表現エラー時のみ null を返すが、このパターンでは発生しないため
+        // ?? のフォールバック値は実質到達不能（フォールバック値を変える変異は等価）。
+        $trimmed = preg_replace('/^\s++|\s++$/u', '', (string) $name) ?? ''; // @pest-mutate-ignore: EmptyStringToNotEmpty
 
         return $trimmed !== '' ? $trimmed : $email;
     }

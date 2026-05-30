@@ -24,6 +24,9 @@ RUN apt-get update \
   # Install Xdebug
   && pecl install xdebug \
   && docker-php-ext-enable xdebug \
+  # Install PCOV (fast code-coverage driver)
+  && pecl install pcov \
+  && docker-php-ext-enable pcov \
   # Install PHP Extension
   && docker-php-ext-install \
   bcmath \

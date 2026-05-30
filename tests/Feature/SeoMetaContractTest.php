@@ -52,337 +52,339 @@ function findStructuredDataByType(array $schemas, string $type): array
         ->first(fn (array $schema): bool => ($schema['@type'] ?? null) === $type, []);
 }
 
-test('ホームページはtitleとdescriptionを含むseo propsを返す', function () {
-    $response = $this->get(route('home'));
+describe('SEO メタ契約', function () {
+    it('ホームページはtitleとdescriptionを含むseo propsを返す', function () {
+        $response = $this->get(route('home'));
 
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->component('welcome')
-        ->has('seo')
-        ->where('seo.title', 'ホーム')
-        ->where('seo.description', config('app.description'))
-    );
-});
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('welcome')
+            ->has('seo')
+            ->where('seo.title', 'ホーム')
+            ->where('seo.description', config('app.description'))
+        );
+    });
 
-test('ホームページの初期HTMLにはInertia管理のSEOタグが含まれる', function () {
-    $response = $this->get(route('home'));
-    $content = $response->getContent();
+    it('ホームページの初期HTMLにはInertia管理のSEOタグが含まれる', function () {
+        $response = $this->get(route('home'));
+        $content = $response->getContent();
 
-    expect($content)->toContain('<link rel="canonical" data-inertia="canonical"')
-        ->and($content)->toContain('<title data-inertia>ホーム - ')
-        ->and($content)->toContain('<meta data-inertia="description" name="description"')
-        ->and($content)->toContain('<meta data-inertia="robots" name="robots"')
-        ->and($content)->toContain('<meta data-inertia="og:type" property="og:type" content="website">')
-        ->and($content)->toContain('<meta data-inertia="og:url" property="og:url"')
-        ->and($content)->toContain('<meta data-inertia="og:site_name" property="og:site_name"')
-        ->and($content)->toContain('<meta data-inertia="og:title" property="og:title"')
-        ->and($content)->toContain('<meta data-inertia="og:description" property="og:description"')
-        ->and($content)->toContain('<meta data-inertia="og:image" property="og:image"')
-        ->and($content)->toContain('<meta data-inertia="twitter:card" name="twitter:card" content="summary_large_image">')
-        ->and($content)->toContain('<meta data-inertia="twitter:url" name="twitter:url"')
-        ->and($content)->toContain('<meta name="twitter:site" content="@lefmarna">')
-        ->and($content)->toContain('<meta name="twitter:creator" content="@lefmarna">')
-        ->and($content)->toContain('<meta data-inertia="twitter:title" name="twitter:title"')
-        ->and($content)->toContain('<meta data-inertia="twitter:description" name="twitter:description"')
-        ->and($content)->toContain('<meta data-inertia="twitter:image" name="twitter:image"');
+        expect($content)->toContain('<link rel="canonical" data-inertia="canonical"')
+            ->and($content)->toContain('<title data-inertia>ホーム - ')
+            ->and($content)->toContain('<meta data-inertia="description" name="description"')
+            ->and($content)->toContain('<meta data-inertia="robots" name="robots"')
+            ->and($content)->toContain('<meta data-inertia="og:type" property="og:type" content="website">')
+            ->and($content)->toContain('<meta data-inertia="og:url" property="og:url"')
+            ->and($content)->toContain('<meta data-inertia="og:site_name" property="og:site_name"')
+            ->and($content)->toContain('<meta data-inertia="og:title" property="og:title"')
+            ->and($content)->toContain('<meta data-inertia="og:description" property="og:description"')
+            ->and($content)->toContain('<meta data-inertia="og:image" property="og:image"')
+            ->and($content)->toContain('<meta data-inertia="twitter:card" name="twitter:card" content="summary_large_image">')
+            ->and($content)->toContain('<meta data-inertia="twitter:url" name="twitter:url"')
+            ->and($content)->toContain('<meta name="twitter:site" content="@lefmarna">')
+            ->and($content)->toContain('<meta name="twitter:creator" content="@lefmarna">')
+            ->and($content)->toContain('<meta data-inertia="twitter:title" name="twitter:title"')
+            ->and($content)->toContain('<meta data-inertia="twitter:description" name="twitter:description"')
+            ->and($content)->toContain('<meta data-inertia="twitter:image" name="twitter:image"');
 
-    preg_match('/property="og:image"\s+content="([^"]*)"/', $content, $ogImageMatches);
-    preg_match('/name="twitter:image"\s+content="([^"]*)"/', $content, $twitterImageMatches);
+        preg_match('/property="og:image"\s+content="([^"]*)"/', $content, $ogImageMatches);
+        preg_match('/name="twitter:image"\s+content="([^"]*)"/', $content, $twitterImageMatches);
 
-    expect($ogImageMatches[1] ?? '')->toEndWith('/opengraph-image.png')
-        ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.png');
-});
+        expect($ogImageMatches[1] ?? '')->toEndWith('/opengraph-image.png')
+            ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.png');
+    });
 
-test('ホームページの初期HTMLにはサイト用とページ用の構造化データが含まれる', function () {
-    $response = $this->get(route('home'));
-    $schemas = extractStructuredDataItems($response->getContent());
+    it('ホームページの初期HTMLにはサイト用とページ用の構造化データが含まれる', function () {
+        $response = $this->get(route('home'));
+        $schemas = extractStructuredDataItems($response->getContent());
 
-    $websiteSchema = findStructuredDataByType($schemas, 'WebSite');
-    $webApplicationSchema = findStructuredDataByType($schemas, 'WebApplication');
-    $webPageSchema = findStructuredDataByType($schemas, 'WebPage');
+        $websiteSchema = findStructuredDataByType($schemas, 'WebSite');
+        $webApplicationSchema = findStructuredDataByType($schemas, 'WebApplication');
+        $webPageSchema = findStructuredDataByType($schemas, 'WebPage');
 
-    expect($websiteSchema)
-        ->toMatchArray([
-            '@type' => 'WebSite',
-            '@id' => rtrim(config('app.url', url('/')), '/').'/#website',
-            'name' => config('app.display_name'),
-            'description' => config('app.description'),
-            'url' => rtrim(config('app.url', url('/')), '/'),
-        ])
-        ->and($webApplicationSchema)
-        ->toMatchArray([
-            '@type' => 'WebApplication',
-            '@id' => rtrim(config('app.url', url('/')), '/').'/#webapplication',
-            'name' => config('app.display_name'),
-            'description' => config('app.description'),
-            'url' => rtrim(config('app.url', url('/')), '/'),
-        ])
-        ->and($webPageSchema)
-        ->toMatchArray([
-            '@type' => 'WebPage',
-            '@id' => route('home').'#webpage',
-            'name' => 'ホーム - '.config('app.display_name'),
-            'description' => config('app.description'),
-            'url' => route('home'),
-        ])
-        ->and($webPageSchema['isPartOf']['@id'] ?? null)->toBe($websiteSchema['@id'])
-        ->and($webPageSchema['about']['@id'] ?? null)->toBe($webApplicationSchema['@id']);
-});
+        expect($websiteSchema)
+            ->toMatchArray([
+                '@type' => 'WebSite',
+                '@id' => rtrim(config('app.url', url('/')), '/').'/#website',
+                'name' => config('app.display_name'),
+                'description' => config('app.description'),
+                'url' => rtrim(config('app.url', url('/')), '/'),
+            ])
+            ->and($webApplicationSchema)
+            ->toMatchArray([
+                '@type' => 'WebApplication',
+                '@id' => rtrim(config('app.url', url('/')), '/').'/#webapplication',
+                'name' => config('app.display_name'),
+                'description' => config('app.description'),
+                'url' => rtrim(config('app.url', url('/')), '/'),
+            ])
+            ->and($webPageSchema)
+            ->toMatchArray([
+                '@type' => 'WebPage',
+                '@id' => route('home').'#webpage',
+                'name' => 'ホーム - '.config('app.display_name'),
+                'description' => config('app.description'),
+                'url' => route('home'),
+            ])
+            ->and($webPageSchema['isPartOf']['@id'] ?? null)->toBe($websiteSchema['@id'])
+            ->and($webPageSchema['about']['@id'] ?? null)->toBe($webApplicationSchema['@id']);
+    });
 
-test('初期HTMLのtitle canonical og:url robotsは期待値を満たす', function () {
-    $response = $this->get(route('home'));
-    $content = $response->getContent();
+    it('初期HTMLのtitle canonical og:url robotsは期待値を満たす', function () {
+        $response = $this->get(route('home'));
+        $content = $response->getContent();
 
-    preg_match('/<title data-inertia>([^<]*)<\/title>/', $content, $titleMatches);
-    $canonicalUrl = extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href');
-    $ogUrl = extractHeadAttribute($content, 'meta', ['property' => 'og:url'], 'content');
-    $robots = extractHeadAttribute($content, 'meta', ['name' => 'robots'], 'content');
+        preg_match('/<title data-inertia>([^<]*)<\/title>/', $content, $titleMatches);
+        $canonicalUrl = extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href');
+        $ogUrl = extractHeadAttribute($content, 'meta', ['property' => 'og:url'], 'content');
+        $robots = extractHeadAttribute($content, 'meta', ['name' => 'robots'], 'content');
 
-    expect($titleMatches[1] ?? '')->toBe('ホーム - '.config('app.display_name'))
-        ->and($canonicalUrl)->toBe(route('home'))
-        ->and($ogUrl)->toBe(route('home'))
-        ->and($robots)->toBe('noindex, nofollow');
-});
+        expect($titleMatches[1] ?? '')->toBe('ホーム - '.config('app.display_name'))
+            ->and($canonicalUrl)->toBe(route('home'))
+            ->and($ogUrl)->toBe(route('home'))
+            ->and($robots)->toBe('noindex, nofollow');
+    });
 
-test('機微なルートのog:urlはクエリ文字列を含まない', function () {
-    $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
-    $response = $this->get($url);
-    $content = $response->getContent();
+    it('機微なルートのog:urlはクエリ文字列を含まない', function () {
+        $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
+        $response = $this->get($url);
+        $content = $response->getContent();
 
-    preg_match('/property="og:url"\s+content="([^"]*)"/', $content, $matches);
-    $ogUrl = $matches[1] ?? '';
+        preg_match('/property="og:url"\s+content="([^"]*)"/', $content, $matches);
+        $ogUrl = $matches[1] ?? '';
 
-    expect($ogUrl)->not->toBeEmpty()
-        ->and($ogUrl)->not->toContain('email=')
-        ->and($ogUrl)->not->toContain('?')
-        ->and($ogUrl)->toContain('reset-password');
-});
+        expect($ogUrl)->not->toBeEmpty()
+            ->and($ogUrl)->not->toContain('email=')
+            ->and($ogUrl)->not->toContain('?')
+            ->and($ogUrl)->toContain('reset-password');
+    });
 
-test('機微なルートのcanonicalはクエリ文字列を含まない', function () {
-    $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
-    $response = $this->get($url);
-    $content = $response->getContent();
+    it('機微なルートのcanonicalはクエリ文字列を含まない', function () {
+        $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
+        $response = $this->get($url);
+        $content = $response->getContent();
 
-    $canonicalUrl = extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href');
+        $canonicalUrl = extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href');
 
-    expect($canonicalUrl)->not->toBeEmpty()
-        ->and($canonicalUrl)->not->toContain('email=')
-        ->and($canonicalUrl)->not->toContain('?')
-        ->and($canonicalUrl)->toContain('reset-password');
-});
+        expect($canonicalUrl)->not->toBeEmpty()
+            ->and($canonicalUrl)->not->toContain('email=')
+            ->and($canonicalUrl)->not->toContain('?')
+            ->and($canonicalUrl)->toContain('reset-password');
+    });
 
-test('og:urlはクエリ文字列を含まないcanonical pathを持つ', function () {
-    $response = $this->get(route('home'));
-    $content = $response->getContent();
+    it('og:urlはクエリ文字列を含まないcanonical pathを持つ', function () {
+        $response = $this->get(route('home'));
+        $content = $response->getContent();
 
-    preg_match('/property="og:url"\s+content="([^"]*)"/', $content, $matches);
-    $ogUrl = $matches[1] ?? '';
+        preg_match('/property="og:url"\s+content="([^"]*)"/', $content, $matches);
+        $ogUrl = $matches[1] ?? '';
 
-    expect($ogUrl)->not->toBeEmpty()
-        ->and($ogUrl)->not->toContain('?');
-});
+        expect($ogUrl)->not->toBeEmpty()
+            ->and($ogUrl)->not->toContain('?');
+    });
 
-test('shared propsにはappDisplayName・appDescription・seo・urls・flashが含まれる', function () {
-    $response = $this->get(route('home'));
+    it('shared propsにはappDisplayName・appDescription・seo・urls・flashが含まれる', function () {
+        $response = $this->get(route('home'));
 
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->where('url', rtrim(url('/'), '/'))
-        ->where('currentUrl', route('home'))
-        ->has('appDisplayName')
-        ->has('appDescription')
-        ->has('seo')
-        ->has('flash')
-        ->where('flash.status', null)
-        ->where('flash.error', null)
-    );
-});
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('url', rtrim(url('/'), '/'))
+            ->where('currentUrl', route('home'))
+            ->has('appDisplayName')
+            ->has('appDescription')
+            ->has('seo')
+            ->has('flash')
+            ->where('flash.status', null)
+            ->where('flash.error', null)
+        );
+    });
 
-test('shared auth userは安定した任意フィールドを公開する', function () {
-    $user = User::factory()->create();
+    it('shared auth userは安定した任意フィールドを公開する', function () {
+        $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('dashboard'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('auth.user')
-        ->where('auth.user.avatar', null)
-        ->where('auth.user.two_factor_enabled', false)
-        ->where('auth.hasPassword', true)
-    );
-});
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('auth.user')
+            ->where('auth.user.avatar', null)
+            ->where('auth.user.two_factor_enabled', false)
+            ->where('auth.hasPassword', true)
+        );
+    });
 
-test('shared auth userは二段階認証の有効状態を返す', function () {
-    $user = User::factory()->create();
-    $user->forceFill([
-        'two_factor_secret' => encrypt('test-secret'),
-        'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-        'two_factor_confirmed_at' => now(),
-    ])->save();
+    it('shared auth userは二段階認証の有効状態を返す', function () {
+        $user = User::factory()->create();
+        $user->forceFill([
+            'two_factor_secret' => encrypt('test-secret'),
+            'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+            'two_factor_confirmed_at' => now(),
+        ])->save();
 
-    $response = $this->actingAs($user)->get(route('dashboard'));
+        $response = $this->actingAs($user)->get(route('dashboard'));
 
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('auth.user')
-        ->where('auth.user.two_factor_enabled', true)
-    );
-});
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('auth.user')
+            ->where('auth.user.two_factor_enabled', true)
+        );
+    });
 
-test('guest authページはnoindex robots metaとseoを使う', function (string $routeName, array $routeParams = []) {
-    $response = $this->get(route($routeName, $routeParams));
+    it('guest authページはnoindex robots metaとseoを使う', function (string $routeName, array $routeParams = []) {
+        $response = $this->get(route($routeName, $routeParams));
 
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('seo')
-        ->where('seo.robots', 'noindex, nofollow')
-    );
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('seo')
+            ->where('seo.robots', 'noindex, nofollow')
+        );
 
-    expect($response->getContent())->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-})->with([
-    'login' => ['login'],
-    'register' => ['register'],
-    'forgot-password' => ['password.request'],
-    'reset-password' => ['password.reset', ['token' => 'test-token']],
-]);
-
-test('publicページは非本番環境でnoindexなrobots metaを使う', function () {
-    $response = $this->get(route('home'));
-    $content = $response->getContent();
-
-    expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-});
-
-test('ページ固有のdescriptionはWebPage構造化データにだけ反映される', function () {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)->get(route('profile.edit'));
-    $schemas = extractStructuredDataItems($response->getContent());
-
-    $websiteSchema = findStructuredDataByType($schemas, 'WebSite');
-    $webApplicationSchema = findStructuredDataByType($schemas, 'WebApplication');
-    $webPageSchema = findStructuredDataByType($schemas, 'WebPage');
-
-    expect($websiteSchema['description'] ?? null)->toBe(config('app.description'))
-        ->and($webApplicationSchema['description'] ?? null)->toBe(config('app.description'))
-        ->and($webPageSchema)
-        ->toMatchArray([
-            '@type' => 'WebPage',
-            '@id' => route('profile.edit').'#webpage',
-            'name' => 'プロフィール設定 - '.config('app.display_name'),
-            'description' => '名前とメールアドレスを管理します。',
-            'url' => route('profile.edit'),
-        ]);
-});
-
-test('各ページはseo.titleを公開する', function (string $routeName, string $expectedTitle, array $routeParams = []) {
-    $response = $this->get(route($routeName, $routeParams));
-
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('seo')
-        ->where('seo.title', $expectedTitle)
-    );
-})->with([
-    'home' => ['home', 'ホーム'],
-    'login' => ['login', 'ログイン'],
-    'register' => ['register', '新規登録'],
-    'forgot-password' => ['password.request', 'パスワードをお忘れの方'],
-    'reset-password' => ['password.reset', 'パスワード再設定', ['token' => 'test-token']],
-]);
-
-test('認証済みページはseo.titleとdescriptionを持つ', function (string $routeName, string $expectedTitle, string $expectedDescription) {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)->get(route($routeName));
-
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('seo')
-        ->where('seo.title', $expectedTitle)
-        ->where('seo.description', $expectedDescription)
-    );
-})->with([
-    'dashboard' => ['dashboard', 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。'],
-    'profile' => ['profile.edit', 'プロフィール設定', '名前とメールアドレスを管理します。'],
-    'password' => ['user-password.edit', 'パスワード設定', 'アカウントのパスワードを更新します。'],
-    'appearance' => ['appearance.edit', '表示設定', 'アカウントの表示設定を変更します。'],
-]);
-
-test('二段階認証設定ページはseo.titleとdescriptionを持つ', function () {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)
-        ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('two-factor.show'));
-
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('seo')
-        ->where('seo.title', '二段階認証設定')
-        ->where('seo.description', '二段階認証の設定を管理します。')
-    );
-});
-
-test('メール認証ページはseo.titleとdescriptionを持つ', function () {
-    $user = User::factory()->create(['email_verified_at' => null]);
-
-    $response = $this->actingAs($user)->get(route('verification.notice'));
-    $content = $response->getContent();
-
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('seo')
-        ->where('seo.title', 'メール認証')
-        ->where('seo.description', 'メールアドレスの認証を完了してください。')
-        ->where('seo.robots', 'noindex, nofollow')
-    );
-
-    expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-});
-
-test('パスワード確認ページはseo.titleとdescriptionを持つ', function () {
-    $user = User::factory()->create();
-
-    $response = $this->actingAs($user)->get(route('password.confirm'));
-    $content = $response->getContent();
-
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('seo')
-        ->where('seo.title', 'パスワード確認')
-        ->where('seo.description', '続行するには現在のパスワードを入力してください。')
-        ->where('seo.robots', 'noindex, nofollow')
-    );
-
-    expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-});
-
-test('二段階認証チャレンジページはseo.titleとdescriptionを持つ', function () {
-    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
-
-    $user = User::factory()->create();
-    $user->forceFill([
-        'two_factor_secret' => encrypt('test-secret'),
-        'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-        'two_factor_confirmed_at' => now(),
-    ])->save();
-
-    $this->post(route('login'), [
-        'email' => $user->email,
-        'password' => 'password',
+        expect($response->getContent())->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
+    })->with([
+        'login' => ['login'],
+        'register' => ['register'],
+        'forgot-password' => ['password.request'],
+        'reset-password' => ['password.reset', ['token' => 'test-token']],
     ]);
 
-    $response = $this->get(route('two-factor.login'));
-    $content = $response->getContent();
+    it('publicページは非本番環境でnoindexなrobots metaを使う', function () {
+        $response = $this->get(route('home'));
+        $content = $response->getContent();
 
-    $response->assertOk();
-    $response->assertInertia(fn (AssertableInertia $page) => $page
-        ->has('seo')
-        ->where('seo.title', '二段階認証')
-        ->where('seo.description', '認証アプリのコードを入力して続行します。')
-        ->where('seo.robots', 'noindex, nofollow')
-    );
+        expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
+    });
 
-    expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
+    it('ページ固有のdescriptionはWebPage構造化データにだけ反映される', function () {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $schemas = extractStructuredDataItems($response->getContent());
+
+        $websiteSchema = findStructuredDataByType($schemas, 'WebSite');
+        $webApplicationSchema = findStructuredDataByType($schemas, 'WebApplication');
+        $webPageSchema = findStructuredDataByType($schemas, 'WebPage');
+
+        expect($websiteSchema['description'] ?? null)->toBe(config('app.description'))
+            ->and($webApplicationSchema['description'] ?? null)->toBe(config('app.description'))
+            ->and($webPageSchema)
+            ->toMatchArray([
+                '@type' => 'WebPage',
+                '@id' => route('profile.edit').'#webpage',
+                'name' => 'プロフィール設定 - '.config('app.display_name'),
+                'description' => '名前とメールアドレスを管理します。',
+                'url' => route('profile.edit'),
+            ]);
+    });
+
+    it('各ページはseo.titleを公開する', function (string $routeName, string $expectedTitle, array $routeParams = []) {
+        $response = $this->get(route($routeName, $routeParams));
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('seo')
+            ->where('seo.title', $expectedTitle)
+        );
+    })->with([
+        'home' => ['home', 'ホーム'],
+        'login' => ['login', 'ログイン'],
+        'register' => ['register', '新規登録'],
+        'forgot-password' => ['password.request', 'パスワードをお忘れの方'],
+        'reset-password' => ['password.reset', 'パスワード再設定', ['token' => 'test-token']],
+    ]);
+
+    it('認証済みページはseo.titleとdescriptionを持つ', function (string $routeName, string $expectedTitle, string $expectedDescription) {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route($routeName));
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('seo')
+            ->where('seo.title', $expectedTitle)
+            ->where('seo.description', $expectedDescription)
+        );
+    })->with([
+        'dashboard' => ['dashboard', 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。'],
+        'profile' => ['profile.edit', 'プロフィール設定', '名前とメールアドレスを管理します。'],
+        'password' => ['user-password.edit', 'パスワード設定', 'アカウントのパスワードを更新します。'],
+        'appearance' => ['appearance.edit', '表示設定', 'アカウントの表示設定を変更します。'],
+    ]);
+
+    it('二段階認証設定ページはseo.titleとdescriptionを持つ', function () {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('two-factor.show'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('seo')
+            ->where('seo.title', '二段階認証設定')
+            ->where('seo.description', '二段階認証の設定を管理します。')
+        );
+    });
+
+    it('メール認証ページはseo.titleとdescriptionを持つ', function () {
+        $user = User::factory()->create(['email_verified_at' => null]);
+
+        $response = $this->actingAs($user)->get(route('verification.notice'));
+        $content = $response->getContent();
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('seo')
+            ->where('seo.title', 'メール認証')
+            ->where('seo.description', 'メールアドレスの認証を完了してください。')
+            ->where('seo.robots', 'noindex, nofollow')
+        );
+
+        expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
+    });
+
+    it('パスワード確認ページはseo.titleとdescriptionを持つ', function () {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('password.confirm'));
+        $content = $response->getContent();
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('seo')
+            ->where('seo.title', 'パスワード確認')
+            ->where('seo.description', '続行するには現在のパスワードを入力してください。')
+            ->where('seo.robots', 'noindex, nofollow')
+        );
+
+        expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
+    });
+
+    it('二段階認証チャレンジページはseo.titleとdescriptionを持つ', function () {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+
+        $user = User::factory()->create();
+        $user->forceFill([
+            'two_factor_secret' => encrypt('test-secret'),
+            'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+            'two_factor_confirmed_at' => now(),
+        ])->save();
+
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response = $this->get(route('two-factor.login'));
+        $content = $response->getContent();
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('seo')
+            ->where('seo.title', '二段階認証')
+            ->where('seo.description', '認証アプリのコードを入力して続行します。')
+            ->where('seo.robots', 'noindex, nofollow')
+        );
+
+        expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
+    });
 });

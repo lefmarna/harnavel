@@ -4,86 +4,88 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 
-test('登録画面を表示できる', function () {
-    $response = $this->get(route('register'));
+describe('ユーザー登録', function () {
+    it('登録画面を表示できる', function () {
+        $response = $this->get(route('register'));
 
-    $response
-        ->assertOk()
-        ->assertInertia(
-            fn (Assert $page) => $page
-                ->component('auth/register')
-                ->where('seo.title', '新規登録')
-                ->where('seo.description', '必要事項を入力して新しいアカウントを作成します。')
-        );
-});
+        $response
+            ->assertOk()
+            ->assertInertia(
+                fn (Assert $page) => $page
+                    ->component('auth/register')
+                    ->where('seo.title', '新規登録')
+                    ->where('seo.description', '必要事項を入力して新しいアカウントを作成します。')
+            );
+    });
 
-test('新規ユーザーを登録できる', function () {
-    $response = $this->post(route('register.store'), [
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-    ]);
+    it('新規ユーザーを登録できる', function () {
+        $response = $this->post(route('register.store'), [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('dashboard', absolute: false));
 
-    $this->assertDatabaseHas('users', [
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-    ]);
-});
+        $this->assertDatabaseHas('users', [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+        ]);
+    });
 
-test('bcrypt形式の文字列をパスワードとして登録しても平文としてハッシュ化される', function () {
-    $password = Hash::make('known-plain');
+    it('bcrypt形式の文字列をパスワードとして登録しても平文としてハッシュ化される', function () {
+        $password = Hash::make('known-plain');
 
-    $response = $this->post(route('register.store'), [
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => $password,
-        'password_confirmation' => $password,
-    ]);
+        $response = $this->post(route('register.store'), [
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => $password,
+            'password_confirmation' => $password,
+        ]);
 
-    $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('dashboard', absolute: false));
 
-    $storedPassword = User::query()->where('email', 'test@example.com')->value('password');
+        $storedPassword = User::query()->where('email', 'test@example.com')->value('password');
 
-    expect($storedPassword)
-        ->not->toBe($password)
-        ->and(Hash::check($password, $storedPassword))->toBeTrue()
-        ->and(Hash::check('known-plain', $storedPassword))->toBeFalse();
-});
+        expect($storedPassword)
+            ->not->toBe($password)
+            ->and(Hash::check($password, $storedPassword))->toBeTrue()
+            ->and(Hash::check('known-plain', $storedPassword))->toBeFalse();
+    });
 
-test('登録時のメールアドレスは小文字で保存される', function () {
-    $response = $this->post(route('register.store'), [
-        'name' => 'Test User',
-        'email' => 'Test.User@Example.COM',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-    ]);
+    it('登録時のメールアドレスは小文字で保存される', function () {
+        $response = $this->post(route('register.store'), [
+            'name' => 'Test User',
+            'email' => 'Test.User@Example.COM',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('dashboard', absolute: false));
 
-    $this->assertDatabaseHas('users', [
-        'email' => 'test.user@example.com',
-    ]);
-});
+        $this->assertDatabaseHas('users', [
+            'email' => 'test.user@example.com',
+        ]);
+    });
 
-test('lowercase usernamesが無効なら登録時にメールアドレスの大文字小文字を維持する', function () {
-    config(['fortify.lowercase_usernames' => false]);
+    it('lowercase usernamesが無効なら登録時にメールアドレスの大文字小文字を維持する', function () {
+        config(['fortify.lowercase_usernames' => false]);
 
-    $response = $this->post(route('register.store'), [
-        'name' => 'Test User',
-        'email' => 'Test.User@Example.COM',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-    ]);
+        $response = $this->post(route('register.store'), [
+            'name' => 'Test User',
+            'email' => 'Test.User@Example.COM',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticated();
+        $response->assertRedirect(route('dashboard', absolute: false));
 
-    $this->assertDatabaseHas('users', [
-        'email' => 'Test.User@Example.COM',
-    ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'Test.User@Example.COM',
+        ]);
+    });
 });

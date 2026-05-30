@@ -2,19 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature\Architecture;
-
 use App\Providers\DomainServiceProvider;
 use App\Providers\RepositoryServiceProvider;
-use Tests\TestCase;
 
-class ProviderTest extends TestCase
-{
-    /**
-     * DomainServiceProviderが正しくシングルトンを登録するかテスト
-     */
-    public function test_domain_service_provider_registers_bindings(): void
-    {
+describe('サービスプロバイダ登録', function () {
+    it('DomainServiceProvider は規約に沿ったサービス契約を singleton 登録する', function () {
         // テスト用の派生クラスを作成してメソッドをオーバーライド
         $provider = new class($this->app) extends DomainServiceProvider
         {
@@ -46,13 +38,9 @@ class ProviderTest extends TestCase
         // ここでは単純にboundされていることと、isShared（シングルトン）であることを確認する。
 
         $this->assertTrue($binding['shared'], "Binding for {$contract} should be shared (singleton).");
-    }
+    });
 
-    /**
-     * RepositoryServiceProviderが正しくシングルトンを登録するかテスト
-     */
-    public function test_repository_service_provider_registers_bindings(): void
-    {
+    it('RepositoryServiceProvider は規約に沿ったリポジトリ契約を singleton 登録する', function () {
         // テスト用の派生クラスを作成してメソッドをオーバーライド
         $provider = new class($this->app) extends RepositoryServiceProvider
         {
@@ -76,5 +64,5 @@ class ProviderTest extends TestCase
 
         $binding = $bindings[$contract];
         $this->assertTrue($binding['shared'], "Binding for {$contract} should be shared (singleton).");
-    }
-}
+    });
+});

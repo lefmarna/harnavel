@@ -58,6 +58,15 @@ mise run composer:install  # Composer install
 mise run composer:update   # Composer update
 ```
 
+> **Run only one DB-backed test process at a time.** All DB-backed tests share a single
+> `app_testing` schema (the `mariadb-testing` service) via `RefreshDatabase`, which migrates that
+> schema fresh at process start. Running two such processes against it concurrently — e.g.
+> `mise run mutate` while `mise run test`, `mise run verify:backend`, a manual `php artisan test`,
+> or an automated `--dirty` check is active — races their migrations and fails with a deadlock
+> (`SQLSTATE 1213`) or "table already exists" (`1050`). Run mutation testing on its own.
+> (`--parallel` only isolates workers *within* one run into separate `app_testing_*` schemas; it
+> does not coordinate independent test processes.)
+
 ## E2E Testing
 
 ```bash

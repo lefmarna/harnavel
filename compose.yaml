@@ -40,7 +40,10 @@ services:
     image: mariadb:10.11
     container_name: ${APP_NAME:-app}-mariadb-testing
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-app}_testing
+      # テスト用 DB 名は app_testing 固定（DB_DATABASE には連動させない）。
+      # phpunit.xml と CI の MARIADB_DATABASE に揃えており、DB_DATABASE をリネームしても
+      # テスト基盤が壊れないようにするため。
+      MYSQL_DATABASE: app_testing
       MYSQL_ROOT_PASSWORD: password
 
   mailpit:

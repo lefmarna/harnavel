@@ -54,6 +54,32 @@ This file is the operational playbook — keep it terse.
 3. **Sequence the gate** — non-blocking during the sweep, promote to blocking when the
    area is done.
 
+## Mutation & coverage annotations
+
+- **Prefer narrow `@pest-mutate-ignore` comments.** Put the directive on the mutated line or as a
+  docblock/leading comment for non-executable declarations. Scope it to specific mutators with a
+  comma-separated list: `// @pest-mutate-ignore: IncrementInteger,DecrementInteger`; no suffix
+  ignores the whole node and its children. Put the reason on a separate plain comment line.
+- **Clear the plugin cache before re-measuring suspicious survivors** with Pest's own option:
+  `mise run mutate -- --clear-cache` (or use `--no-cache` for a one-off run). Stale cached
+  results can make already-killed mutants look like survivors.
+- **One DB-backed test process at a time** (see `commands.md`): never run `--mutate` while another
+  `pest`/`--dirty` run shares the test schema.
+- **Classify survivors honestly.** Defensive guards real input can't reach → `@codeCoverageIgnore`
+  (line-level or start/end block + separate reason). Equivalent or non-deterministic mutants
+  (elapsed-time math, array-key reindex, no-op empty-string guards) → `@pest-mutate-ignore`
+  (+ separate reason). Never kill a mutant by weakening or deleting a test.
+
+## Test-writing gotchas
+
+- **`Mail::fake()` drops recipient names set through `Mail::to($address, $name)`.** `MailFake::to()`
+  accepts only the recipient value, so a `hasTo($address, $name)` callback will not match that
+  name. That callback works only when the `Mailable` itself carries the named recipient. For
+  facade-level recipient names, send through the `array` mailer and read
+  `Mail::mailer()->getSymfonyTransport()->messages()`.
+- **Unit tests don't boot the app.** Instantiating Eloquent models is fine, but `forceFill`-ing a
+  `datetime`-cast attribute needs the connection resolver — put such value-object tests in `Feature`.
+
 ## Propagating to derived projects
 
 `git pull template main` + `/merge-template` (these files merge to the template side) →

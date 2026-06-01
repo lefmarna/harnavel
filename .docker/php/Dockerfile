@@ -4,8 +4,6 @@ FROM php:8.5.5-fpm-bookworm
 COPY --from=composer:2.9.7 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
-  && apt-get install -y curl \
-  && curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
   && apt-get install -y \
   bash \
   coreutils \
@@ -19,7 +17,6 @@ RUN apt-get update \
   libpng-dev \
   libzip-dev \
   mariadb-client \
-  nodejs \
   unzip \
   # Install Xdebug
   && pecl install xdebug \

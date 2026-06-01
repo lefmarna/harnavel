@@ -53,6 +53,7 @@ mise run verify:backend # Run Pint + Larastan + Pest
 mise run verify:backend:full # Run Pint + Larastan + Pest + Chromium E2E
 mise run tinker         # Laravel tinker
 mise run route          # List routes
+mise run wayfinder      # Generate Wayfinder TypeScript route/action helpers
 mise run clear          # Clear all caches
 mise run composer:install  # Composer install
 mise run composer:update   # Composer update

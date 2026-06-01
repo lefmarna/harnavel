@@ -157,6 +157,10 @@ run = "docker compose exec app php artisan tinker"
 description = "List routes"
 run = "docker compose exec app php artisan route:list"
 
+[tasks.wayfinder]
+description = "Generate Wayfinder TypeScript route/action helpers"
+run = "docker compose exec -T app php artisan wayfinder:generate --with-form"
+
 # =============================================================================
 # フロントエンド関連
 # =============================================================================

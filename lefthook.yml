@@ -10,7 +10,7 @@ pre-commit:
               VITE_PORT="${VITE_PORT:-$(awk -F= '/^VITE_PORT=/{gsub(/"/, "", $2); print $2; exit}' .env 2>/dev/null)}"
               VITE_PORT="${VITE_PORT:-5173}"
               if ! curl -fsS "http://localhost:${VITE_PORT}/@vite/client" >/dev/null 2>&1; then
-                docker compose exec -T app php artisan wayfinder:generate --with-form
+                mise run wayfinder
               fi
           - name: format staged php files
             glob: '*.php'

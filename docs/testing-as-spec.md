@@ -60,9 +60,19 @@ This file is the operational playbook — keep it terse.
   docblock/leading comment for non-executable declarations. Scope it to specific mutators with a
   comma-separated list: `// @pest-mutate-ignore: IncrementInteger,DecrementInteger`; no suffix
   ignores the whole node and its children. Put the reason on a separate plain comment line.
-- **Clear the plugin cache before re-measuring suspicious survivors** with Pest's own option:
-  `mise run mutate -- --clear-cache` (or use `--no-cache` for a one-off run). Stale cached
-  results can make already-killed mutants look like survivors.
+- **Re-measure suspicious survivors with `mise run mutate -- --no-cache`** — it bypasses the
+  result cache and deletes nothing. Avoid `--clear-cache` and `rm -rf`ing the plugin's `.temp/`:
+  depending on plugin version, either can remove `.temp/mutations/`, which the runner writes
+  mutated sources into with no `mkdir`. If you must wipe, recreate it in the same breath:
+  `rm -rf vendor/pestphp/pest-plugin-mutate/.temp && mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations`.
+- **A `file_put_contents(... .temp/mutations/...): Failed to open stream` warning invalidates the
+  score.** With that directory missing, mutants are never applied and surviving mutants are silently
+  counted as killed — a *false* `Score: 100%` next to a green exit code (verified on v4.0.1: a real
+  72.73% printed as 100%). Score and exit code both look clean, so the warning is the only tell —
+  neither line alone is the verdict. Restore the directory (`composer reinstall pestphp/pest-plugin-mutate`,
+  or the `mkdir` above) and re-measure. CI is unaffected: the v4.0.1 dist ships the empty
+  `.temp/mutations/`, the mutation workflow `mkdir -p`s it before running as a version-drift guard,
+  and CI never passes `--clear-cache`.
 - **One DB-backed test process at a time** (see `commands.md`): never run `--mutate` while another
   `pest`/`--dirty` run shares the test schema.
 - **Classify survivors honestly.** Defensive guards real input can't reach → `@codeCoverageIgnore`

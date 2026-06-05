@@ -155,4 +155,16 @@ return [
     'uppercase' => ':attributeは、大文字で入力してください。',
     'url' => ':attributeは、有効なURL形式で指定してください。',
     'uuid' => ':attributeは、有効なUUIDである必要があります。',
+
+    'custom' => [
+        'password' => [
+            'regex' => 'パスワードは半角の英字・数字・記号のみ使用できます。',
+        ],
+    ],
+
+    'attributes' => [
+        'password' => 'パスワード',
+        'current_password' => '現在のパスワード',
+        'password_confirmation' => 'パスワード確認',
+    ],
 ];

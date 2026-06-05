@@ -22,8 +22,8 @@ describe('ユーザー登録', function () {
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'password1',
+            'password_confirmation' => 'password1',
         ]);
 
         $this->assertAuthenticated();
@@ -59,8 +59,8 @@ describe('ユーザー登録', function () {
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
             'email' => 'Test.User@Example.COM',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'password1',
+            'password_confirmation' => 'password1',
         ]);
 
         $this->assertAuthenticated();
@@ -77,8 +77,8 @@ describe('ユーザー登録', function () {
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
             'email' => 'Test.User@Example.COM',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'password1',
+            'password_confirmation' => 'password1',
         ]);
 
         $this->assertAuthenticated();

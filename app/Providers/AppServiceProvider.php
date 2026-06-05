@@ -38,16 +38,12 @@ class AppServiceProvider extends ServiceProvider
         );
 
         Password::defaults(
-            fn (): ?Password => app()->isProduction()
-                // @codeCoverageIgnoreStart
-                ? Password::min(12)
-                    ->mixedCase()
-                    ->letters()
-                    ->numbers()
-                    ->symbols()
-                    ->uncompromised()
-                // @codeCoverageIgnoreEnd
-                : null
+            fn (): Password => Password::min(8)
+                ->max(64)
+                ->letters()
+                ->numbers()
+                ->uncompromised()
+                ->rules(['regex:/^[\x21-\x7E]+\z/'])
         );
     }
 }

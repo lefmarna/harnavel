@@ -30,15 +30,15 @@ describe('パスワード設定', function () {
             ->from(route('user-password.edit'))
             ->put(route('user-password.update'), [
                 'current_password' => 'password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
+                'password' => 'new-password1',
+                'password_confirmation' => 'new-password1',
             ]);
 
         $response
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('user-password.edit'));
 
-        expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
+        expect(Hash::check('new-password1', $user->refresh()->password))->toBeTrue();
     });
 
     it('bcrypt形式の文字列でパスワード更新しても平文としてハッシュ化される', function () {
@@ -74,8 +74,8 @@ describe('パスワード設定', function () {
             ->from(route('user-password.edit'))
             ->put(route('user-password.update'), [
                 'current_password' => 'wrong-password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
+                'password' => 'new-password1',
+                'password_confirmation' => 'new-password1',
             ]);
 
         $response

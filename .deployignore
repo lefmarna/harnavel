@@ -73,6 +73,9 @@ docs
 .env.backup
 .env.production
 
+# 開発環境用 .htaccess テンプレート（GitHub Actions でビルド時に .htaccess へ変換）
+.htaccess.develop
+
 # デプロイ出力先
 .deploy
 

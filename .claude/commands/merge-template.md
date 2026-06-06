@@ -11,6 +11,7 @@ argument-hint: "[REMOTE=template] [BRANCH=main]"
 
 - **template 側に寄せる**: 共通基盤（auth, mail, settings 等）、scaffolding、テストヘルパー、命名・コーディング規約、ライブラリ更新、汎用 UI プリミティブ、テスト=仕様 手法のファイル（`docs/testing-as-spec.md`、template ADR `docs/adr/template/**`、`docs/adr/README.md`、arch test 雛形、カバレッジ/Infection 設定）
 - **アプリ側を優先**: ドメインロジック、独自 UI コンポーネント / デザイントークン、独自 ViewModel / Service / Repository パターン、i18n や多言語テスト、アプリ固有のルート・コントローラ、番号付きアプリ ADR（`docs/adr/NNNN-*.md`、フラット。`docs/adr/README.md` は template 寄せ）
+- **較正値（アプリ優先の例外）**: coverage / mutation のゲート値（`--min` の数値）と mutation のブロッキング可否（`continue-on-error` の有無）、およびその**直近の理由コメント行**。設定ファイル自体は template 寄せ（上記）だが、これらの行はプロジェクト個別に較正されるためアプリ側の値を残す（[`TADR-0001`](../../docs/adr/template/0001-development-workflow.md): 各プロジェクトの CI workflow がゲート値の単一正典／[`TADR-0003`](../../docs/adr/template/0003-shared-surface-convergence.md): 共有サーフェス収束と較正カーブアウト）
 - **テスト**: 同一観点が両側にあれば統合または片方削除して可。**寄せる場合は template 側へ**。アプリ固有のカバレッジ（i18n テストなど）は保持
 - **ADR 名前空間**: pull 後の調整（旧 template ADR の削除・`TADR-0001` への参照付け替え・app ADR の番号詰め）は `docs/adr/README.md` の手順に従う
 

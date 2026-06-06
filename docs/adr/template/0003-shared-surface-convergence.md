@@ -44,6 +44,12 @@ per project** (TADR-0001: each project's CI workflow is the single source of tru
 The config *files* lean template, but these *lines* stay app-priority. `/merge-template` records
 this exception so pulls resolve them deterministically.
 
+The **density** of `@pest-mutate-ignore` annotations is likewise calibration-coupled: a higher
+`--min` forces a project to annotate equivalent survivors that a lower floor can leave
+un-annotated. Only the code and the equivalent-mutant patterns
+([`docs/testing-as-spec.md`](../../testing-as-spec.md)) converge — the per-line annotation set
+stays app-priority.
+
 **Zero-conflict** therefore means: no conflicts on Tier 1 or the shared hunks of Tier 2.
 Calibration lines and Tier 3 files may still conflict on pull, but they resolve mechanically in
 the app's favour — no human judgment.

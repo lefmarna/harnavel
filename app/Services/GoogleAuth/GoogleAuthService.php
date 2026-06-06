@@ -147,8 +147,11 @@ class GoogleAuthService implements GoogleAuthServiceContract
         $user = $userByGoogleId ?? $userByEmail;
 
         if ($user !== null) {
-            if ($userByGoogleId === null && $userByEmail !== null && $userByEmail->google_id === null) {
-                throw new GoogleLinkConfirmationPendingException($userByEmail, $googleId, $userByEmail->email);
+            // google_id では一致せずメールだけで既存ユーザーに当たり、その既存ユーザーがまだ google_id
+            // 未連携なら、本人確認のため確認メール待ちにする。$userByGoogleId === null のとき $user は
+            // $userByEmail と同一なので $user の google_id を見れば足りる（冗長な null ガードを置かない）。
+            if ($userByGoogleId === null && $user->google_id === null) {
+                throw new GoogleLinkConfirmationPendingException($user, $googleId, $user->email);
             }
 
             return $this->syncGoogleAccount($user, $googleId, $lowercaseUsernames, $email);

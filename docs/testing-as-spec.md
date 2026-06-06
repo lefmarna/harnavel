@@ -79,6 +79,22 @@ This file is the operational playbook — keep it terse.
   (line-level or start/end block + separate reason). Equivalent or non-deterministic mutants
   (elapsed-time math, array-key reindex, no-op empty-string guards) → `@pest-mutate-ignore`
   (+ separate reason). Never kill a mutant by weakening or deleting a test.
+- **Prefer eliminating an equivalent mutant to annotating it — when elimination is free.** If the
+  survivor sits on genuinely redundant code (a condition a preceding guard already makes
+  unreachable, a duplicated check), delete the code: no mutant, less to read. Do **not** remove a
+  construct that types or static analysis depend on — a `(string)`/`(int)`/`(bool)` cast over a
+  `mixed` source still satisfies Larastan even when it is a runtime no-op, so it stays and gets
+  annotated.
+- **Annotate the load-bearing-but-unobservable survivors** (reason on a separate line). The
+  recurring ones across projects: `lockForUpdate()` / `Log::*` (`RemoveMethodCall` /
+  `RemoveFunctionCall` — unobservable in a single-process test), bounded retry guards
+  `$i < self::MAX` (`SmallerToSmallerOrEqual` — the loop terminates identically), behaviour-neutral
+  magic numbers (`IncrementInteger` / `DecrementInteger`), idempotent `array_values(array_filter(...))`
+  (`UnwrapArrayValues` / `UnwrapArrayFilter`), defensive `... ?? ''` defaults (`EmptyStringToNotEmpty`),
+  and eager-load or default-attribute arrays `->with([...])` / `['count' => 0]` (`RemoveArrayItem`).
+- **A lone, clearly-equivalent survivor may be left un-annotated** when the directive would add more
+  noise than the single survivor it silences — the calibrated `--min` floor leaves room for a small,
+  honest gap. Keep these rare and self-evident.
 
 ## Test-writing gotchas
 

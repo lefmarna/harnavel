@@ -18,9 +18,6 @@ RUN apt-get update \
   libzip-dev \
   mariadb-client \
   unzip \
-  # Install Xdebug
-  && pecl install xdebug \
-  && docker-php-ext-enable xdebug \
   # Install PCOV (fast code-coverage driver)
   && pecl install pcov \
   && docker-php-ext-enable pcov \

@@ -41,7 +41,7 @@ jobs:
         with:
           php-version: 8.5
           tools: composer:v2
-          coverage: xdebug
+          coverage: pcov
 
       - name: Get pnpm store directory
         id: pnpm-store
@@ -98,7 +98,7 @@ jobs:
           DB_DATABASE: app_testing
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E Tests
         run: pnpm test:e2e --project=chromium

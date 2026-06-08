@@ -57,3 +57,4 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 - Commands: `docs/commands.md`
 - Infrastructure: `docs/infrastructure.md`
 - Spec workflow: `docs/generated/specs.md`
+- Cross-app convergence: upstream (apps → template) `/absorb-from-apps`; downstream (template → app) `/merge-template`; decision model in `docs/adr/template/0003-shared-surface-convergence.md` (TADR-0003)

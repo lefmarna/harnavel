@@ -26,7 +26,7 @@ class AssignRequestId
             'route' => $request->route()?->getName(),
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
-            'user_id' => $request->user()?->getAuthIdentifier(),
+            'user_id' => null,
         ]);
 
         $response = $next($request);

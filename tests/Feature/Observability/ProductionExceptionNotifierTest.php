@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\User;
 use App\Services\Observability\ProductionExceptionNotifier;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\Request as HttpClientRequest;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -127,7 +129,7 @@ describe('本番例外通知', function () {
             observabilityRequest(),
         );
 
-        expect(fn () => app()->terminate())->not->toThrow(Throwable::class);
+        app()->terminate();
 
         Http::assertSentCount(1);
     });
@@ -192,11 +194,85 @@ describe('本番例外通知', function () {
         });
     });
 
+    it('実値を含み得るDB例外メッセージをマスクする', function (Throwable $exception, string $secret) {
+        app(ProductionExceptionNotifier::class)->report($exception, observabilityRequest());
+
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request) use ($secret): bool {
+            $payload = $request->data();
+            $fields = collect($payload['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
+            $json = json_encode($payload, JSON_THROW_ON_ERROR);
+
+            expect($fields->get('message'))->toBe('Database exception message omitted.')
+                ->and($json)->not->toContain($secret);
+
+            return true;
+        });
+    })->with([
+        'QueryException' => [
+            new QueryException(
+                'mysql',
+                'select * from users where email = ?',
+                ['secret@example.test'],
+                new PDOException("Duplicate entry 'secret@example.test' for key 'users_email_unique'"),
+            ),
+            'secret@example.test',
+        ],
+        'PDOException' => [
+            new PDOException("Duplicate entry 'raw-secret-value' for key 'users_email_unique'"),
+            'raw-secret-value',
+        ],
+    ]);
+
+    it('report 中に未解決のユーザーを解決しない', function () {
+        $request = observabilityRequest();
+        $request->setUserResolver(fn () => throw new RuntimeException('user provider was touched'));
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), $request);
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $fields = collect($request->data()['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
+
+            expect($fields)->not->toHaveKey('user_id');
+
+            return true;
+        });
+    });
+
+    it('解決済みユーザーの user_id を Discord payload に含められる', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request) use ($user): bool {
+            $fields = collect($request->data()['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
+
+            expect($fields->get('user_id'))->toBe((string) $user->getAuthIdentifier());
+
+            return true;
+        });
+    });
+
+    it('payload 構築に失敗しても例外を漏らさない', function () {
+        $request = observabilityRequest();
+        $request->setRouteResolver(fn () => throw new RuntimeException('route resolver failed'));
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), $request);
+        app()->terminate();
+
+        Http::assertNothingSent();
+    });
+
     it('Discord 送信に失敗しても例外処理を失敗させない', function () {
         Http::fake(['discord.test/*' => Http::failedConnection()]);
 
         app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
 
-        expect(fn () => app()->terminate())->not->toThrow(Throwable::class);
-    });
+        app()->terminate();
+    })->throwsNoExceptions();
 });

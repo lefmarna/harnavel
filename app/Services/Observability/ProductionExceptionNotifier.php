@@ -3,10 +3,12 @@
 namespace App\Services\Observability;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use PDOException;
 use Stringable;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
@@ -15,17 +17,21 @@ class ProductionExceptionNotifier
 {
     public function report(Throwable $exception, ?Request $request = null): void
     {
-        if (! $this->shouldNotify($exception)) {
-            return;
+        try {
+            if (! $this->shouldNotify($exception)) {
+                return;
+            }
+
+            if (! $this->reserveNotificationSlot($exception, $request)) {
+                return;
+            }
+
+            $payload = $this->payload($exception, $request);
+
+            app()->terminating(fn () => $this->send($payload));
+        } catch (Throwable) {
+            //
         }
-
-        if (! $this->reserveNotificationSlot($exception, $request)) {
-            return;
-        }
-
-        $payload = $this->payload($exception, $request);
-
-        app()->terminating(fn () => $this->send($payload));
     }
 
     private function shouldNotify(Throwable $exception): bool
@@ -98,13 +104,13 @@ class ProductionExceptionNotifier
                         'environment' => app()->environment(),
                         'status' => (string) $statusCode,
                         'exception' => $exception::class,
-                        'message' => Str::limit($exception->getMessage(), 500),
+                        'message' => $this->exceptionMessage($exception),
                         'method' => $request?->method(),
                         'url' => $request?->url(),
                         'route' => $request?->route()?->getName(),
                         'ip' => $request?->ip(),
                         'user_agent' => $this->userAgent($request),
-                        'user_id' => $request?->user()?->getAuthIdentifier(),
+                        'user_id' => $this->userId(),
                         'file' => $exception->getFile().':'.$exception->getLine(),
                     ]),
                 ],
@@ -198,6 +204,26 @@ class ProductionExceptionNotifier
         $userAgent = $request?->userAgent();
 
         return is_string($userAgent) ? Str::limit($userAgent, 200) : null;
+    }
+
+    private function exceptionMessage(Throwable $exception): string
+    {
+        if ($exception instanceof PDOException) {
+            return 'Database exception message omitted.';
+        }
+
+        return Str::limit($exception->getMessage(), 500);
+    }
+
+    private function userId(): int|string|null
+    {
+        if (! Auth::hasUser()) {
+            return null;
+        }
+
+        $userId = Auth::user()?->getAuthIdentifier();
+
+        return is_int($userId) || is_string($userId) ? $userId : null;
     }
 
     private function stringFieldValue(mixed $value): ?string

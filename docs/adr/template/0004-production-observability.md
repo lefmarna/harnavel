@@ -22,8 +22,10 @@ Add template-level production observability with these boundaries:
 - Assign every web request an application-generated `request_id`. Ignore incoming
   `X-Request-Id` values because the shared-hosting edge is not treated as a trusted request
   ID source.
-- Share `request_id` plus safe request metadata with Laravel log context. Do not include
-  request input, cookies, authorization headers, session payloads, or SQL bindings.
+- Share `request_id` plus safe request metadata with Laravel log context. Reset `user_id`
+  to `null` at request start without resolving the guard, then share the actual `user_id`
+  only after the authentication guard has resolved a user. Do not include request input,
+  cookies, authorization headers, session payloads, or SQL bindings.
 - Return `X-Request-Id` on web responses so operators can correlate browser reports,
   Discord notifications, and `storage/logs/laravel.log`.
 - Render minimal Blade-only `500` and `503` pages that show the request ID as an inquiry ID.
@@ -32,7 +34,8 @@ Add template-level production observability with these boundaries:
   and for otherwise unhandled exceptions treated as HTTP 500.
 - Keep Discord payloads short: request ID, environment, status, exception class, short
   exception message, method, URL without query string, route name, IP, user agent, user ID,
-  and source file/line.
+  and source file/line. Database exception messages are replaced with a fixed placeholder
+  because PDO and query exceptions may include SQL binding values or duplicated key values.
 - Rate-limit Discord notifications with a lightweight cache key. The same exception class,
   file, line, route/path, and environment is notified at most once per five minutes. Laravel
   logging still records every occurrence.

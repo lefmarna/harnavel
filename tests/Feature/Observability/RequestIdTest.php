@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +12,13 @@ beforeEach(function () {
             'request_id' => $request->attributes->get('request_id'),
         ]);
     })->name('testing.request-id');
+
+    Route::middleware('web')->get('/_testing/authenticated-request-id', function (Request $request) {
+        return response()->json([
+            'request_id' => $request->attributes->get('request_id'),
+            'user_id' => $request->user()?->getAuthIdentifier(),
+        ]);
+    })->name('testing.authenticated-request-id');
 });
 
 describe('問い合わせID', function () {
@@ -61,6 +70,50 @@ describe('問い合わせID', function () {
             });
 
         $this->getJson('/_testing/request-id')->assertOk();
+    });
+
+    it('ゲストリクエスト開始時に前リクエストの user_id をリセットできる', function () {
+        $user = User::factory()->create();
+
+        Log::shareContext(['user_id' => $user->getAuthIdentifier()]);
+
+        $this->getJson('/_testing/request-id')->assertOk();
+
+        expect(Log::sharedContext())
+            ->toHaveKey('user_id')
+            ->and(Log::sharedContext()['user_id'])->toBeNull();
+    });
+
+    it('認証済みリクエストでは解決後の user_id をログコンテキストに共有できる', function () {
+        $user = User::factory()->create();
+
+        $guardSessionKey = Auth::guard()->getName();
+
+        Log::spy();
+
+        $this->withSession([$guardSessionKey => $user->getAuthIdentifier()])
+            ->getJson('/_testing/authenticated-request-id')
+            ->assertOk()
+            ->assertJson([
+                'user_id' => $user->getAuthIdentifier(),
+            ]);
+
+        Log::shouldHaveReceived('shareContext')
+            ->withArgs(function (array $context): bool {
+                return array_key_exists('request_id', $context)
+                    && array_key_exists('user_id', $context)
+                    && $context['user_id'] === null;
+            })
+            ->once();
+
+        Log::shouldHaveReceived('shareContext')
+            ->withArgs(function (array $context) use ($user): bool {
+                return $context === [
+                    'user_id' => $user->getAuthIdentifier(),
+                ];
+            })
+            ->atLeast()
+            ->once();
     });
 
     it('レスポンスヘッダーに X-Request-Id を返せる', function () {

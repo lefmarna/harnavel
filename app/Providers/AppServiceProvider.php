@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Listeners\ShareAuthenticatedUserLogContext;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->registerEventListeners();
     }
 
     /**
@@ -45,5 +49,13 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
                 ->rules(['regex:/^[\x21-\x7E]+\z/'])
         );
+    }
+
+    /**
+     * Register framework event listeners.
+     */
+    protected function registerEventListeners(): void
+    {
+        Event::listen(Authenticated::class, ShareAuthenticatedUserLogContext::class);
     }
 }

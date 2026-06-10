@@ -29,8 +29,16 @@ class ProductionExceptionNotifier
             $payload = $this->payload($exception, $request);
 
             app()->terminating(fn () => $this->send($payload));
-        } catch (Throwable) {
-            //
+        } catch (Throwable $notifierException) {
+            // 通知経路の失敗が元例外のログ記録やレスポンス描画を妨げてはならない
+            // （report コールバック内の例外は Laravel の通常ログ出力より前に伝播する）
+            try {
+                Log::warning('Discord exception notification was skipped.', [
+                    'exception' => $notifierException,
+                ]);
+            } catch (Throwable) {
+                // ログ基盤まで壊れている場合は握りつぶす
+            }
         }
     }
 

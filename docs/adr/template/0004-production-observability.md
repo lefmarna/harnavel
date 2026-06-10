@@ -66,3 +66,21 @@ response path.
   collectors.
 - Some context is intentionally omitted from notifications for privacy and secret-handling
   reasons. Deeper analysis relies on Laravel logs and, later, XServer API log retrieval.
+- Because `resources/views/errors/500.blade.php` exists, Laravel renders it for every
+  `HttpException` that resolves to 500 — including `abort(500)` — even when
+  `APP_DEBUG=true`, so the framework debug error screen (whoops) is not shown for those.
+  Uncaught non-HTTP exceptions still render the debug screen while debugging.
+
+## Guidance for derived apps
+
+Derived apps may override the 500 page (for example by converting it to an Inertia page).
+When doing so:
+
+- Keep showing the request ID as the inquiry ID so support reports stay correlatable with
+  logs and Discord notifications.
+- Keep `ErrorPageTest` green by adapting only its response assertions to the overridden
+  rendering (for example asserting the Inertia component and its `requestId` prop instead
+  of the Blade content). The "no stack traces or input values" expectations must stay.
+- Note that Inertia responses embed the current URL (including the query string) in the
+  page object, which is why the input-leak test sends input in the POST body rather than
+  the query string.

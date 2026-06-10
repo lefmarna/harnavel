@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 
 beforeEach(function () {
@@ -11,7 +12,7 @@ beforeEach(function () {
         throw new RuntimeException('secret stack message');
     });
 
-    Route::middleware('web')->get('/_testing/errors/500-with-input', function () {
+    Route::middleware('web')->post('/_testing/errors/500-with-input', function () {
         throw new RuntimeException('secret stack message');
     });
 
@@ -48,7 +49,11 @@ describe('本番エラーページ', function () {
     });
 
     it('本番エラーページにスタックトレースや入力値を表示しない', function () {
-        $response = $this->get('/_testing/errors/500-with-input?password=secret-password');
+        // Inertia レスポンスはページオブジェクトの url にクエリ文字列を含むため、
+        // 派生アプリでも誤検知しないよう入力値はリクエストボディで送信して検証する
+        $this->withoutMiddleware(PreventRequestForgery::class);
+
+        $response = $this->post('/_testing/errors/500-with-input', ['password' => 'secret-password']);
 
         $response->assertInternalServerError();
 

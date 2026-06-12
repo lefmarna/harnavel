@@ -12,18 +12,24 @@ RUN apt-get update \
   git \
   grep \
   gzip \
+  libfreetype6-dev \
   libicu-dev \
+  libjpeg-dev \
   libonig-dev \
   libpng-dev \
+  libwebp-dev \
   libzip-dev \
   mariadb-client \
   unzip \
+  # Configure GD with JPEG/WebP/FreeType support
+  && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
   # Install PCOV (fast code-coverage driver)
   && pecl install pcov \
   && docker-php-ext-enable pcov \
   # Install PHP Extension
   && docker-php-ext-install \
   bcmath \
+  exif \
   gd \
   intl \
   mbstring \

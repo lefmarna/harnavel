@@ -37,8 +37,8 @@ Add template-level production observability with these boundaries:
   and source file/line. Database exception messages are replaced with a fixed placeholder
   because PDO and query exceptions may include SQL binding values or duplicated key values.
 - Rate-limit Discord notifications with a lightweight cache key. The same exception class,
-  file, line, route/path, and environment is notified at most once per five minutes. Laravel
-  logging still records every occurrence.
+  normalised message, route/path, and environment is notified at most once per five minutes.
+  Laravel logging still records every occurrence.
 - Send Discord notifications through `app()->terminating()` so the HTTP response is not
   delayed by the webhook call when the runtime supports termination callbacks. The webhook
   request uses short timeouts, and failures are swallowed after a warning log entry.

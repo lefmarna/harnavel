@@ -156,8 +156,7 @@ class ProductionExceptionNotifier
         $fingerprint = implode('|', [
             app()->environment(),
             $exception::class,
-            $exception->getFile(),
-            (string) $exception->getLine(),
+            hash('sha256', $this->exceptionMessage($exception)),
             $request?->path() ?? '',
             $request?->route()?->getName() ?? '',
         ]);

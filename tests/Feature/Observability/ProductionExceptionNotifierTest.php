@@ -119,6 +119,30 @@ describe('本番例外通知', function () {
         Http::assertSentCount(1);
     });
 
+    it('同じ経路とメッセージの例外は発生行が違っても再通知しない', function () {
+        $first = new RuntimeException('database is unavailable');
+        $second = new RuntimeException('database is unavailable');
+        $request = observabilityRequest();
+
+        expect($first->getLine())->not->toBe($second->getLine());
+
+        app(ProductionExceptionNotifier::class)->report($first, $request);
+        app(ProductionExceptionNotifier::class)->report($second, $request);
+        app()->terminate();
+
+        Http::assertSentCount(1);
+    });
+
+    it('同じ経路でもメッセージが異なる例外は別の障害として通知できる', function () {
+        $request = observabilityRequest();
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('database is unavailable'), $request);
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('cache is unavailable'), $request);
+        app()->terminate();
+
+        Http::assertSentCount(2);
+    });
+
     it('重複制御キャッシュが失敗しても例外処理を失敗させず通知できる', function () {
         Cache::shouldReceive('add')
             ->once()

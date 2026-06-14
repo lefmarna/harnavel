@@ -41,7 +41,10 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $exceptions->report(function (Throwable $e): void {
-            app(ProductionExceptionNotifier::class)->report($e, request());
+            app(ProductionExceptionNotifier::class)->report(
+                $e,
+                app()->bound('request') ? request() : null,
+            );
         });
 
         // Inertiaリクエストに対するHTTPエラーをハンドリング

@@ -115,7 +115,7 @@ return [
         'mixed' => ':attributeは大文字と小文字をそれぞれ1文字以上含める必要があります。',
         'numbers' => ':attributeは数字を1文字以上含める必要があります。',
         'symbols' => ':attributeは記号を1文字以上含める必要があります。',
-        'uncompromised' => ':attributeは情報漏洩した可能性があります。他の:attributeを選択してください。',
+        'uncompromised' => 'この:attributeは安全上の理由により使用できません。別の:attributeを入力してください。',
     ],
     'present' => ':attributeが存在している必要があります。',
     'present_if' => ':other が :value の場合、:attributeが存在する必要があります。',

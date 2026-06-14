@@ -25,9 +25,8 @@ pest()->extend(TestCase::class)
 |--------------------------------------------------------------------------
 |
 | Password::defaults() の uncompromised() は HaveIBeenPwned API へ実 HTTP を飛ばす。
-| パスワードを送信する既存テストでは既定で「未漏洩」応答にスタブし、オフライン・決定的に保つ。
-| Http::fake は先勝ち（first match）でマージされるため、漏洩あり/なしを出し分ける
-| PasswordPolicyTest はここでは対象に含めず、各テスト内で Http::fake を完結させている。
+| Feature テストでは既定で「未漏洩」応答にスタブし、オフライン・決定的に保つ。
+| 漏洩あり/なしを出し分ける PasswordPolicyTest は各テスト内で HTTP fake をリセットしている。
 |
 */
 
@@ -35,11 +34,7 @@ uses()
     ->beforeEach(function () {
         Http::fake(['api.pwnedpasswords.com/*' => Http::response('')]);
     })
-    ->in(
-        'Feature/Auth/RegistrationTest.php',
-        'Feature/Auth/PasswordResetTest.php',
-        'Feature/Settings/PasswordUpdateTest.php',
-    );
+    ->in('Feature');
 
 /*
 |--------------------------------------------------------------------------

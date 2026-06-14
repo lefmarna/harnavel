@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 
@@ -7,9 +8,10 @@ use Illuminate\Testing\TestResponse;
  * Password::defaults()（AppServiceProvider）で定義したパスワードポリシーの仕様。
  * 登録エンドポイント経由で各ルールの境界を検証する。
  *
- * uncompromised() は HaveIBeenPwned API を引くため、$register 内で毎回 Http::fake を
+ * uncompromised() は HaveIBeenPwned API を引くため、$register 内で毎回 HTTP fake を
  * 設定する（既定は「未漏洩」、$breached=true で当該パスワードを「漏洩あり」に出し分け）。
- * このファイルは tests/Pest.php のグローバル fake 対象に含めていない。
+ * tests/Pest.php の Feature 既定 fake は先に登録済みなので、この仕様テストでは
+ * Factory を差し替えてから明示的な fake だけを登録する。
  */
 describe('パスワードポリシー', function () {
     /**
@@ -20,6 +22,7 @@ describe('パスワードポリシー', function () {
     $register = function (string $password, bool $breached = false) {
         $suffix = substr(strtoupper(sha1($password)), 5);
 
+        Http::swap(new HttpFactory);
         Http::fake([
             'api.pwnedpasswords.com/*' => Http::response($breached ? $suffix.':42' : ''),
         ]);

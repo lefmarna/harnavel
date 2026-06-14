@@ -40,10 +40,11 @@ Supporting choices:
   cap that sits safely under bcrypt's 72-byte limit. `max` must stay within **[60, 72]**: 60
   to keep the "a bcrypt hash submitted as a password" tests passing (those submit a 60-char
   hash), 72 to avoid bcrypt truncation.
-- Tests stub HaveIBeenPwned (`Http::fake` for `api.pwnedpasswords.com/*`, scoped to
-  `Feature/Auth` + `Feature/Settings` in `tests/Pest.php`) so the suite stays offline and
-  deterministic. `tests/Feature/Auth/PasswordPolicyTest.php` specifies each rule, including a
-  faked "pwned" response, giving full mutation coverage of `Password::defaults()`.
+- Tests stub HaveIBeenPwned (`Http::fake` for `api.pwnedpasswords.com/*`, scoped to all
+  `Feature` tests in `tests/Pest.php`) so the suite stays offline and deterministic.
+  `tests/Feature/Auth/PasswordPolicyTest.php` resets the HTTP client fake before specifying
+  each rule, including a faked "pwned" response, giving full mutation coverage of
+  `Password::defaults()`.
 - The regex violation gets a user-facing message via `lang/ja/validation.php`
   (`custom.password.regex`); password field names are localised via `attributes`.
 

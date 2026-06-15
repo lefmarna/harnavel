@@ -48,7 +48,7 @@ Local development uses Docker (nginx + PHP-FPM + MariaDB). Deployment target is 
 - Treat `CONTEXT.md` as the project domain glossary. If `CONTEXT-MAP.md` exists, use it to find the relevant context glossary instead.
 - Before planning, specifying, designing, or refactoring an area, read the relevant glossary and ADRs when they exist. App ADRs live in `docs/adr/` (ADR-NNNN); template ADRs in `docs/adr/template/` (TADR-NNNN). See `docs/adr/README.md`.
 - Use glossary terms for domain concepts and surface ADR conflicts explicitly instead of silently overriding recorded decisions.
-- Keep `CONTEXT.md` focused on domain language, not implementation details. Create or update context docs and ADRs lazily as terms or decisions are resolved, preferably through `grill-with-docs`.
+- Keep `CONTEXT.md` focused on domain language, not implementation details. Create or update context docs and ADRs lazily as terms or decisions are resolved, preferably through `grill-with-docs`. Write ADRs only for durable decisions and squash provisional ones rather than leaving `Superseded` tombstones — see TADR-0005 (`docs/adr/template/0005-adr-lifecycle.md`).
 
 ## Reference Docs
 

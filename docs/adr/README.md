@@ -13,6 +13,24 @@ A derived project records its own decisions as App ADRs here and never edits Tem
 (they always merge to the template side). Because the two namespaces are separate
 directories, an App ADR and a Template ADR may share a number without conflicting.
 
+## When to write an ADR, and its lifecycle
+
+ADRs record **durable decisions**, not in-flight specs. The canonical spec is test code
+([`TADR-0001`](template/0001-development-workflow.md)); a rapidly-changing spec lives in
+tests + `CONTEXT.md`, which already keep only the current state because old tests are
+rewritten when behavior changes. Author or update an ADR only once a decision is
+**durable** — it has shipped, survived at least one iteration, or other work depends on it.
+A direction expected to flip is not yet a decision; keep it out of the ADR set.
+
+`Status` lifecycle: `Proposed` → `Accepted` → `Superseded by ADR-NNNN` / `Deprecated`.
+
+When a decision is superseded, **squash provisional ones**: keep a `Superseded` tombstone
+only if the old decision had real-world consequences (it shipped, or another ADR / design /
+code depends on it). If it was provisional — reverted before shipping, nothing depending on
+it — overwrite or delete it instead of leaving a tombstone. A `Proposed` ADR dropped before
+acceptance is deleted, not tombstoned. This deliberately relaxes pure append-only where it
+would only add noise; see [`TADR-0005`](template/0005-adr-lifecycle.md).
+
 ## Adopting template ADR updates (in a derived project)
 
 After `git pull template main`, resolve conflicts with `/merge-template`, then reconcile ADRs:

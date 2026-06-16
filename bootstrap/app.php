@@ -9,6 +9,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -50,12 +51,27 @@ return Application::configure(basePath: dirname(__DIR__))
         // Inertiaリクエストに対するHTTPエラーをハンドリング
         // セッション切れ(419)やサーバーエラー(500)などをユーザーフレンドリーに処理
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
+            $status = $response->getStatusCode();
+
+            // 500: SPA 遷移時のみ Inertia ページへ変換する
+            // フルページロード時は Blade（TADR-0004）を維持し、Vite/JS 非依存を保証する
+            // X-Inertia ヘッダがある = JS はすでに動作中なので Inertia 応答は安全
+            // デバッグ時は変換せず素通しし、Ignition のデバッグレスポンスを保持する
+            // （Blade 500 が debug 時に未捕捉例外を握り潰さないのと同じ方針）
+            if ($status === 500 && $request->header('X-Inertia') && ! config('app.debug')) {
+                $requestId = $request->attributes->get('request_id');
+
+                return Inertia::render('errors/server-error', [
+                    'requestId' => is_string($requestId) && $requestId !== '' ? $requestId : null,
+                ])
+                    ->toResponse($request)
+                    ->setStatusCode(500);
+            }
+
             // Inertiaリクエストでない場合はデフォルトのレスポンスを返す
             if (! $request->header('X-Inertia')) {
                 return $response;
             }
-
-            $status = $response->getStatusCode();
 
             // 419: CSRF Token Mismatch / Session Expired
             if ($status === 419) {

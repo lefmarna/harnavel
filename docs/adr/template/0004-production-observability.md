@@ -29,7 +29,18 @@ Add template-level production observability with these boundaries:
 - Return `X-Request-Id` on web responses so operators can correlate browser reports,
   Discord notifications, and `storage/logs/laravel.log`.
 - Render minimal Blade-only `500` and `503` pages that show the request ID as an inquiry ID.
-  These pages must not depend on Inertia, Vite assets, or external resources.
+  These pages must not depend on Inertia, Vite assets, or external resources. They are the
+  primary path for full-page loads, where Vite/JS may itself be broken.
+- For a `500` that occurs during an Inertia SPA transition (request carries the `X-Inertia`
+  header) while `APP_DEBUG=false`, respond with the Inertia `errors/server-error` page
+  instead of the Blade page. A request with `X-Inertia` proves the JS bundle is already
+  running, so an Inertia response is safe and keeps the URL, history, and app chrome (layout,
+  dark mode) consistent rather than surfacing the framework's `iframe` error dialog. Skip the
+  conversion when `APP_DEBUG=true` so the framework's debug exception response passes through
+  and Inertia surfaces it in its error dialog — this mirrors how the Blade path leaves
+  uncaught non-HTTP exceptions on the debug screen during development. `503` stays Blade-only
+  because maintenance mode returns `503` to every request regardless of verb, so no SPA
+  transition occurs.
 - Notify Discord only for production HTTP exceptions that resolve to a 500-series status
   and for otherwise unhandled exceptions treated as HTTP 500.
 - Keep Discord payloads short: request ID, environment, status, exception class, short
@@ -73,14 +84,18 @@ response path.
 
 ## Guidance for derived apps
 
-Derived apps may override the 500 page (for example by converting it to an Inertia page).
-When doing so:
+The template already ships the hybrid `500` behavior: Blade for full-page loads and the
+`errors/server-error` Inertia page for SPA transitions (`X-Inertia` header). Derived apps
+may further customize either rendering. When doing so:
 
-- Keep showing the request ID as the inquiry ID so support reports stay correlatable with
-  logs and Discord notifications.
-- Keep `ErrorPageTest` green by adapting only its response assertions to the overridden
-  rendering (for example asserting the Inertia component and its `requestId` prop instead
-  of the Blade content). The "no stack traces or input values" expectations must stay.
+- Keep showing the request ID as the inquiry ID on both the Blade and the Inertia page so
+  support reports stay correlatable with logs and Discord notifications.
+- Keep the Blade `500`/`503` pages free of Inertia, Vite, and external dependencies — they
+  are the fallback when the JS bundle is broken.
+- Keep `ErrorPageTest` green. The SPA assertions inspect the JSON payload (`component` and
+  `props.requestId`) because an `X-Inertia` request returns JSON rather than an HTML view,
+  so `assertInertia` (which reads view data) does not apply to that path. The "no stack
+  traces or input values" expectations must stay for both paths.
 - Note that Inertia responses embed the current URL (including the query string) in the
   page object, which is why the input-leak test sends input in the POST body rather than
   the query string.

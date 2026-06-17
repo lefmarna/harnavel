@@ -102,12 +102,13 @@ class ProductionExceptionNotifier
         $statusCode = $this->statusCode($exception);
 
         return [
-            'content' => sprintf('[%s] Production exception: %s', $requestId, $exception::class),
+            'content' => sprintf('[%s][%s] Production exception: %s', $this->appName(), $requestId, $exception::class),
             'embeds' => [
                 [
                     'title' => 'Production exception',
                     'color' => 15_141_160,
                     'fields' => $this->fields([
+                        'app' => $this->appName(),
                         'request_id' => $requestId,
                         'environment' => app()->environment(),
                         'status' => (string) $statusCode,
@@ -248,5 +249,12 @@ class ProductionExceptionNotifier
         }
 
         return null;
+    }
+
+    private function appName(): string
+    {
+        $appName = config('app.name');
+
+        return is_string($appName) && $appName !== '' ? $appName : 'Laravel';
     }
 }

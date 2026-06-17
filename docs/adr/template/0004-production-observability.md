@@ -43,7 +43,7 @@ Add template-level production observability with these boundaries:
   transition occurs.
 - Notify Discord only for production HTTP exceptions that resolve to a 500-series status
   and for otherwise unhandled exceptions treated as HTTP 500.
-- Keep Discord payloads short: request ID, environment, status, exception class, short
+- Keep Discord payloads short: app name, request ID, environment, status, exception class, short
   exception message, method, URL without query string, route name, IP, user agent, user ID,
   and source file/line. Database exception messages are replaced with a fixed placeholder
   because PDO and query exceptions may include SQL binding values or duplicated key values.

@@ -182,7 +182,9 @@ describe('本番例外通知', function () {
             $payload = $request->data();
             $fields = collect($payload['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
 
-            expect($request->url())->toBe('https://discord.test/webhook')
+            expect($payload['content'])->toBe('[app][01JZ0000000000000000000000] Production exception: RuntimeException')
+                ->and($request->url())->toBe('https://discord.test/webhook')
+                ->and($fields->get('app'))->toBe('app')
                 ->and($fields->get('request_id'))->toBe('01JZ0000000000000000000000')
                 ->and($fields->get('exception'))->toBe(RuntimeException::class)
                 ->and($fields->get('message'))->toBe('database is unavailable')

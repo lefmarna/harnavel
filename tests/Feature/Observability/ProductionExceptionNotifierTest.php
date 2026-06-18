@@ -51,6 +51,13 @@ function observabilityRequest(): Request
     return $request;
 }
 
+function observabilityAppName(): string
+{
+    $appName = config('app.name');
+
+    return is_string($appName) && $appName !== '' ? $appName : 'Laravel';
+}
+
 describe('本番例外通知', function () {
     it('HTTPリクエストの未処理例外を Discord 通知へ接続できる', function () {
         $this->get('/_testing/notify-exception')->assertInternalServerError();
@@ -92,13 +99,30 @@ describe('本番例外通知', function () {
         Http::assertNothingSent();
     });
 
-    it('production 以外では通知しない', function () {
+    it('通知対象外の環境では通知しない', function () {
         $this->app->instance('env', 'local');
 
         app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
         app()->terminate();
 
         Http::assertNothingSent();
+    });
+
+    it('develop 環境でも通知できる', function () {
+        $this->app->instance('env', 'develop');
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $payload = $request->data();
+            $appName = observabilityAppName();
+
+            expect($payload['content'])->toBe("[{$appName}][01JZ0000000000000000000000] Develop exception: RuntimeException")
+                ->and($payload['embeds'][0]['title'])->toBe('Develop exception');
+
+            return true;
+        });
     });
 
     it('500系ではないHTTP例外は通知しない', function () {
@@ -181,10 +205,11 @@ describe('本番例外通知', function () {
         Http::assertSent(function (HttpClientRequest $request): bool {
             $payload = $request->data();
             $fields = collect($payload['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
+            $appName = observabilityAppName();
 
-            expect($payload['content'])->toBe('[app][01JZ0000000000000000000000] Production exception: RuntimeException')
+            expect($payload['content'])->toBe("[{$appName}][01JZ0000000000000000000000] Production exception: RuntimeException")
                 ->and($request->url())->toBe('https://discord.test/webhook')
-                ->and($fields->get('app'))->toBe('app')
+                ->and($fields->get('app'))->toBe($appName)
                 ->and($fields->get('request_id'))->toBe('01JZ0000000000000000000000')
                 ->and($fields->get('exception'))->toBe(RuntimeException::class)
                 ->and($fields->get('message'))->toBe('database is unavailable')

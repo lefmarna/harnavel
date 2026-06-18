@@ -28,7 +28,8 @@ For exact commands, use `docs/commands.md`. Configurable ports and names are dec
 - Shared-hosting constraints drive two repo-wide rules documented in `AGENTS.md`: no long-running Node.js / queue workers, and no SSR.
 - Build frontend assets before deployment. `public/build` must exist in deployment artifacts.
 - Production observability is template-provided but disabled until
-  `ERROR_NOTIFIER_DISCORD_WEBHOOK_URL` is configured. See
+  `ERROR_NOTIFIER_DISCORD_WEBHOOK_URL` is configured. Notifications are sent in
+  `production` and `develop` environments. See
   [`TADR-0004`](adr/template/0004-production-observability.md).
 
 ## Troubleshooting

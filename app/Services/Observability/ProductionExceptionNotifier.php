@@ -44,7 +44,7 @@ class ProductionExceptionNotifier
 
     private function shouldNotify(Throwable $exception): bool
     {
-        if (! app()->isProduction()) {
+        if (! app()->environment(['production', 'develop'])) {
             return false;
         }
 
@@ -101,11 +101,13 @@ class ProductionExceptionNotifier
         $requestId = $this->requestId($request);
         $statusCode = $this->statusCode($exception);
 
+        $title = ucfirst(app()->environment()).' exception';
+
         return [
-            'content' => sprintf('[%s][%s] Production exception: %s', $this->appName(), $requestId, $exception::class),
+            'content' => sprintf('[%s][%s] %s: %s', $this->appName(), $requestId, $title, $exception::class),
             'embeds' => [
                 [
-                    'title' => 'Production exception',
+                    'title' => $title,
                     'color' => 15_141_160,
                     'fields' => $this->fields([
                         'app' => $this->appName(),

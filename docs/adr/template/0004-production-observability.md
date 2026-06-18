@@ -41,8 +41,8 @@ Add template-level production observability with these boundaries:
   uncaught non-HTTP exceptions on the debug screen during development. `503` stays Blade-only
   because maintenance mode returns `503` to every request regardless of verb, so no SPA
   transition occurs.
-- Notify Discord only for production HTTP exceptions that resolve to a 500-series status
-  and for otherwise unhandled exceptions treated as HTTP 500.
+- Notify Discord for HTTP exceptions that resolve to a 500-series status and for otherwise
+  unhandled exceptions treated as HTTP 500 in `production` and `develop` environments.
 - Keep Discord payloads short: app name, request ID, environment, status, exception class, short
   exception message, method, URL without query string, route name, IP, user agent, user ID,
   and source file/line. Database exception messages are replaced with a fixed placeholder
@@ -54,6 +54,9 @@ Add template-level production observability with these boundaries:
   delayed by the webhook call when the runtime supports termination callbacks. The webhook
   request uses short timeouts, and failures are swallowed after a warning log entry.
 - Keep the feature disabled unless `ERROR_NOTIFIER_DISCORD_WEBHOOK_URL` is configured.
+  The `develop` environment also notifies when the webhook is set. Use a separate webhook
+  URL pointing to a dedicated channel such as `#dev-alerts` to keep `#prod-alerts` focused
+  on production incidents.
 
 `Log::critical()` / `Log::emergency()` Discord notification is intentionally not part of the
 initial implementation. It can be added later as a separate logging channel or Monolog

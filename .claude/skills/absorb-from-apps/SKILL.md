@@ -1,14 +1,16 @@
 ---
+name: absorb-from-apps
 description: 派生アプリで育った最良版を template へ吸い上げ（上り集約）、以降の pull をゼロコンフリクト化する
+disable-model-invocation: true
 argument-hint: "[REMOTE=template] [APPS=<app1> <app2> ...]"
 ---
 
-# Absorb From Apps Command
+# Absorb from Apps
 
 `/merge-template`（template→アプリの**下り**）の対になる、**アプリ→template の上り集約**コマンド。
 派生アプリ間で生じた差分のうち「アプリ固有でないもの」を最良版で template に吸い上げ、共有サーフェスを揃えて、以降の `git pull template main` を**判断不要（較正行のみのコンフリクト）**に保つ。
 
-決定モデルは [`TADR-0003`](../../docs/adr/template/0003-shared-surface-convergence.md)（共有サーフェス収束）。このコマンドはその運用手順で、**template repo で実行する**。
+決定モデルは [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)（共有サーフェス収束）。このコマンドはその運用手順で、**template repo で実行する**。
 
 ## 原則（逸脱しないこと）
 
@@ -110,6 +112,6 @@ template を push 後、各アプリは `git pull <REMOTE> main` + `/merge-templ
 
 ## 関連
 
-- 下り（template→アプリ）: [`merge-template`](merge-template.md)
-- 決定モデル: [`TADR-0003`](../../docs/adr/template/0003-shared-surface-convergence.md)
+- 下り（template→アプリ）: [`merge-template`](../merge-template/SKILL.md)
+- 決定モデル: [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
 - テスト規約・等価変異カタログ: `docs/testing-as-spec.md`

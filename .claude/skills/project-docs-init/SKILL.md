@@ -1,6 +1,7 @@
 ---
+name: project-docs-init
 description: テンプレートから展開した新規プロジェクトのdocsを初期化する
-allowed-tools: Read, Write, Edit, Bash, Glob
+disable-model-invocation: true
 ---
 
 # Project Docs Initialization

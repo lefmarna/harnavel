@@ -143,31 +143,55 @@ jobs:
       # rsync除外の方針:
       # - .deployignore: ローカルパッケージ作成時の除外（開発用ファイル等）
       # - rsync --exclude: サーバー側の既存データ保護（.env, storage, サブドメイン等）
+      # XServerへのSSH接続は稀に瞬断・スロットリングで失敗するため、
+      # 接続タイムアウトを短めにして指数バックオフでリトライする。
       - name: Deploy to XServer via Rsync
         env:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
         run: |
-          rsync -avz --delete \
-            -e "ssh -p 10022" \
-            --exclude='.env' \
-            --exclude='.user.ini' \
-            --exclude='storage/app/private/**' \
-            --exclude='storage/app/public/**' \
-            --exclude='storage/logs/*' \
-            --exclude='storage/framework/cache/data/*' \
-            --exclude='storage/framework/sessions/*' \
-            --exclude='storage/framework/views/*' \
-            --exclude='dev.laravel-app-template.com' \
-            .deploy/ ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }}:$DEPLOY_DIRECTORY/
+          ssh_opts="ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4"
+          for attempt in 1 2 3; do
+            if rsync -avz --delete --timeout=60 \
+              -e "$ssh_opts" \
+              --exclude='.env' \
+              --exclude='.user.ini' \
+              --exclude='storage/app/private/**' \
+              --exclude='storage/app/public/**' \
+              --exclude='storage/logs/*' \
+              --exclude='storage/framework/cache/data/*' \
+              --exclude='storage/framework/sessions/*' \
+              --exclude='storage/framework/views/*' \
+              --exclude='dev.laravel-app-template.com' \
+              .deploy/ ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }}:$DEPLOY_DIRECTORY/; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "rsync attempt ${attempt} failed; retrying in $((attempt * 30))s..." >&2
+              sleep "$((attempt * 30))"
+            fi
+          done
+          echo "rsync failed after 3 attempts" >&2
+          exit 1
 
       - name: Run Post-Deploy Commands
         env:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
         run: |
-          ssh -p 10022 ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
-          "cd $DEPLOY_DIRECTORY && \
-          /usr/bin/php8.5 ~/opt/bin/composer-2.9.7 install --no-dev --no-interaction --optimize-autoloader && \
-          /usr/bin/php8.5 artisan config:cache && \
-          /usr/bin/php8.5 artisan route:cache && \
-          /usr/bin/php8.5 artisan view:cache && \
-          /usr/bin/php8.5 artisan migrate --force"
+          for attempt in 1 2 3; do
+            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+              "cd $DEPLOY_DIRECTORY && \
+              /usr/bin/php8.5 ~/opt/bin/composer-2.9.7 install --no-dev --no-interaction --optimize-autoloader && \
+              /usr/bin/php8.5 artisan config:cache && \
+              /usr/bin/php8.5 artisan route:cache && \
+              /usr/bin/php8.5 artisan view:cache && \
+              /usr/bin/php8.5 artisan migrate --force"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "post-deploy ssh attempt ${attempt} failed; retrying in $((attempt * 30))s..." >&2
+              sleep "$((attempt * 30))"
+            fi
+          done
+          echo "post-deploy ssh failed after 3 attempts" >&2
+          exit 1

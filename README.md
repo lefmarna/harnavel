@@ -17,7 +17,7 @@ Laravel 13 + Inertia React + MariaDB を Docker で開発するためのテン�
 > **SSR は使用しません。** デプロイ先の XServer 共有ホスティングでは Node.js プロセスを常駐できないため、Inertia SSR は無効化しています。SEO メタタグは `app.blade.php` 側で初期 HTML に出力します。
 
 > [!IMPORTANT]
-> **OGP 画像はプロジェクトごとに追加してください。** `public/opengraph-image.png`（推奨: 1200x630px）はリポジトリに含まれていないため、SNS シェアが必要な場合は必ず作成してください。
+> **OGP 画像はプロジェクトごとに追加してください。** SNS シェア用の既定画像は `public/opengraph-image.jpg`（推奨: 1200x630px）で、初期 HTML の OGP/Twitter Card はこの JPG を参照します。リポジトリには含まれていないため、SNS シェアが必要な場合は必ず作成してください。
 
 ## 前提環境
 

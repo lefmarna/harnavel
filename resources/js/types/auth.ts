@@ -28,6 +28,7 @@ export type SeoData = {
   robots?: string
   googlebot?: string
   image?: string
+  imageAlt?: string
   url?: string
   type?: 'website' | 'article'
 }

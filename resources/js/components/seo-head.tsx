@@ -7,8 +7,27 @@ interface SeoProps {
   robots?: string
   googlebot?: string
   image?: string
+  imageAlt?: string
   url?: string
   type?: 'website' | 'article'
+}
+
+function imageMimeType(imageUrl: string): string | undefined {
+  const extension = new URL(imageUrl).pathname.split('.').pop()?.toLowerCase()
+
+  switch (extension) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'png':
+      return 'image/png'
+    case 'webp':
+      return 'image/webp'
+    case 'gif':
+      return 'image/gif'
+    default:
+      return undefined
+  }
 }
 
 export default function SeoHead({
@@ -17,6 +36,7 @@ export default function SeoHead({
   robots,
   googlebot,
   image,
+  imageAlt,
   url,
   type,
 }: SeoProps) {
@@ -39,9 +59,11 @@ export default function SeoHead({
     googlebot ?? sharedSeo.googlebot ?? 'max-image-preview:large'
   const metaUrl = new URL(url ?? sharedSeo.url ?? currentUrl, appUrl).toString()
   const metaImage = new URL(
-    image ?? sharedSeo.image ?? '/opengraph-image.png',
+    image ?? sharedSeo.image ?? '/opengraph-image.jpg',
     appUrl,
   ).toString()
+  const metaImageAlt = imageAlt ?? sharedSeo.imageAlt ?? siteName
+  const metaImageType = imageMimeType(metaImage)
   const pageTitle = resolvedTitle ? `${resolvedTitle} - ${siteName}` : siteName
 
   return (
@@ -76,6 +98,18 @@ export default function SeoHead({
         content={metaDescription}
       />
       <meta head-key="og:image" property="og:image" content={metaImage} />
+      {metaImageType ? (
+        <meta
+          head-key="og:image:type"
+          property="og:image:type"
+          content={metaImageType}
+        />
+      ) : null}
+      <meta
+        head-key="og:image:alt"
+        property="og:image:alt"
+        content={metaImageAlt}
+      />
 
       <meta
         head-key="twitter:card"
@@ -90,6 +124,11 @@ export default function SeoHead({
         content={metaDescription}
       />
       <meta head-key="twitter:image" name="twitter:image" content={metaImage} />
+      <meta
+        head-key="twitter:image:alt"
+        name="twitter:image:alt"
+        content={metaImageAlt}
+      />
     </Head>
   )
 }

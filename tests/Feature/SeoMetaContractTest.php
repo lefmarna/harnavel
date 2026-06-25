@@ -90,8 +90,23 @@ describe('SEO メタ契約', function () {
         preg_match('/property="og:image"\s+content="([^"]*)"/', $content, $ogImageMatches);
         preg_match('/name="twitter:image"\s+content="([^"]*)"/', $content, $twitterImageMatches);
 
-        expect($ogImageMatches[1] ?? '')->toEndWith('/opengraph-image.png')
-            ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.png');
+        expect($ogImageMatches[1] ?? '')->toEndWith('/opengraph-image.jpg')
+            ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.jpg');
+    });
+
+    it('既定のOGP画像はJPEGを参照しMIMEタイプとaltを出力する', function () {
+        $response = $this->get(route('home'));
+        $content = $response->getContent();
+
+        $ogImage = extractHeadAttribute($content, 'meta', ['property' => 'og:image'], 'content');
+        $twitterImage = extractHeadAttribute($content, 'meta', ['name' => 'twitter:image'], 'content');
+        $displayName = config('app.display_name');
+
+        expect($ogImage)->toEndWith('/opengraph-image.jpg')
+            ->and($twitterImage)->toEndWith('/opengraph-image.jpg')
+            ->and($content)->toContain('<meta data-inertia="og:image:type" property="og:image:type" content="image/jpeg">')
+            ->and($content)->toContain('<meta data-inertia="og:image:alt" property="og:image:alt" content="'.$displayName.'">')
+            ->and($content)->toContain('<meta data-inertia="twitter:image:alt" name="twitter:image:alt" content="'.$displayName.'">');
     });
 
     it('ホームページの初期HTMLにはサイト用とページ用の構造化データが含まれる', function () {

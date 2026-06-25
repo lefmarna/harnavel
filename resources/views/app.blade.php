@@ -44,8 +44,24 @@
 
         $title = $seoTitle ? "{$seoTitle} - {$displayName}" : $displayName;
         $description = $pageSeo['description'] ?? ($pageProps['appDescription'] ?? config('app.description'));
-        $rawImage = $pageSeo['image'] ?? 'opengraph-image.png';
+        $rawImage =
+            is_string($pageSeo['image'] ?? null) && $pageSeo['image'] !== ''
+                ? $pageSeo['image']
+                : 'opengraph-image.jpg';
         $image = \Illuminate\Support\Str::startsWith($rawImage, ['http://', 'https://']) ? $rawImage : asset($rawImage);
+        $imagePath = parse_url($rawImage, PHP_URL_PATH);
+        $imageExtension = is_string($imagePath) ? strtolower(pathinfo($imagePath, PATHINFO_EXTENSION)) : '';
+        $imageType = match ($imageExtension) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            default => null,
+        };
+        $imageAlt =
+            is_string($pageSeo['imageAlt'] ?? null) && $pageSeo['imageAlt'] !== ''
+                ? $pageSeo['imageAlt']
+                : $displayName;
         $rawUrl = $pageSeo['url'] ?? url()->current();
         $url = \Illuminate\Support\Str::startsWith($rawUrl, ['http://', 'https://']) ? $rawUrl : url($rawUrl);
         $type = $pageSeo['type'] ?? 'website';
@@ -69,6 +85,10 @@
     <meta data-inertia="og:title" property="og:title" content="{{ $title }}">
     <meta data-inertia="og:description" property="og:description" content="{{ $description }}">
     <meta data-inertia="og:image" property="og:image" content="{{ $image }}">
+    @if (is_string($imageType))
+        <meta data-inertia="og:image:type" property="og:image:type" content="{{ $imageType }}">
+    @endif
+    <meta data-inertia="og:image:alt" property="og:image:alt" content="{{ $imageAlt }}">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:locale" content="{{ $locale }}">
@@ -81,6 +101,7 @@
     <meta data-inertia="twitter:title" name="twitter:title" content="{{ $title }}">
     <meta data-inertia="twitter:description" name="twitter:description" content="{{ $description }}">
     <meta data-inertia="twitter:image" name="twitter:image" content="{{ $image }}">
+    <meta data-inertia="twitter:image:alt" name="twitter:image:alt" content="{{ $imageAlt }}">
 
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png">

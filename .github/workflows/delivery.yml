@@ -111,9 +111,13 @@ jobs:
           name: build
           path: public/build/
 
+      - name: Check release-critical files
+        run: |
+          test -f public/build/manifest.json || { echo '::error::Build artifact missing: public/build/manifest.json'; exit 1; }
+          test -f public/opengraph-image.jpg || { echo '::error::Default Open Graph image missing: public/opengraph-image.jpg'; exit 1; }
+
       - name: Create deployment package
         run: |
-          test -f public/build/manifest.json || { echo 'public/build/manifest.json is missing. Build artifact was not downloaded correctly.' >&2; exit 1; }
           mkdir -p .deploy
           rsync -av --exclude-from='.deployignore' ./ .deploy/
 

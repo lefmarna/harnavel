@@ -79,7 +79,8 @@ pnpm test:e2e:headed    # Run with browser visible
 ## Interactive Browser Verification
 
 Use Playwright CLI for ad hoc browser checks while an agent is changing UI behavior. Start the
-local app and Vite server first with the Docker and frontend commands above.
+local app and Vite server first with the Docker and frontend commands above. The CLI requires npm
+registry access or a prior global/cached install, so it is unavailable in fully offline sessions.
 
 ```bash
 npx @playwright/cli open http://localhost:8080 # Start a browser on the local app

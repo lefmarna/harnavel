@@ -95,6 +95,9 @@ may further customize either rendering. When doing so:
   support reports stay correlatable with logs and Discord notifications.
 - Keep the Blade `500`/`503` pages free of Inertia, Vite, and external dependencies — they
   are the fallback when the JS bundle is broken.
+- Keep `ProductionExceptionNotifierTest` green when changing notification targets, 500-series
+  filtering, Discord payload shape, or sensitive-data redaction, and update this ADR and
+  `docs/infrastructure.md` to match.
 - Keep `ErrorPageTest` green. The SPA assertions inspect the JSON payload (`component` and
   `props.requestId`) because an `X-Inertia` request returns JSON rather than an HTML view,
   so `assertInertia` (which reads view data) does not apply to that path. The "no stack

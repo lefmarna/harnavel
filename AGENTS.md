@@ -36,7 +36,7 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 
 - `README.md` is Japanese; `docs/` is English. `docs/generated/` is auto-generated — never edit by hand.
 - Multiple agents (Claude Code, Codex) work this repo: keep durable knowledge in repo docs, never a single tool's private memory.
-- Before planning, designing, or refactoring an area, read its glossary and ADRs. `CONTEXT.md` is the domain glossary (use `CONTEXT-MAP.md` if present); ADRs live in `docs/adr/` (ADR-NNNN) and `docs/adr/template/` (TADR-NNNN) — see `docs/adr/README.md`.
+- Before planning, specifying, designing, or refactoring an area, read its glossary and ADRs. `CONTEXT.md` is the domain glossary — domain language only, no implementation details (use `CONTEXT-MAP.md` if present); ADRs live in `docs/adr/` (ADR-NNNN) and `docs/adr/template/` (TADR-NNNN) — see `docs/adr/README.md`.
 - Use glossary terms and surface ADR conflicts instead of overriding them silently. After completing work, record only durable decisions as ADRs and tidy `CONTEXT.md` (TADR-0001); squash provisional ADRs rather than leaving `Superseded` tombstones (TADR-0005).
 
 ## Reference Docs

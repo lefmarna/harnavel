@@ -35,9 +35,10 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 ## Documentation
 
 - `README.md` is Japanese; `docs/` is English. `docs/generated/` is auto-generated — never edit by hand.
-- Multiple agents (Claude Code, Codex) work this repo: keep durable knowledge in repo docs, never a single tool's private memory.
-- Before planning, specifying, designing, or refactoring an area, read its glossary and ADRs. `CONTEXT.md` is the domain glossary — domain language only, no implementation details (use `CONTEXT-MAP.md` if present); ADRs live in `docs/adr/` (ADR-NNNN) and `docs/adr/template/` (TADR-NNNN) — see `docs/adr/README.md`.
-- Use glossary terms and surface ADR conflicts instead of overriding them silently. After completing work, record only durable decisions as ADRs and tidy `CONTEXT.md` (TADR-0001); squash provisional ADRs rather than leaving `Superseded` tombstones (TADR-0005).
+- This file is the single agent entry point; `CLAUDE.md` / `GEMINI.md` are one-line pointers to it. Put content here, never in a pointer file; supporting a new agent tool means adding another pointer, nothing else.
+- Any agent (Claude Code, Codex, Gemini, ...) works this repo: durable knowledge lives in versioned repo Markdown, never a single tool's private memory. Placement: constraint every session needs → here; behavior → test; domain term → `CONTEXT.md`; durable decision with rationale → ADR; how-to/reference → `docs/`; everything else stays in code or is not kept.
+- Before planning, specifying, designing, or refactoring an area, read its glossary and ADRs. `CONTEXT.md` is the domain glossary — domain language only, no implementation details (use `CONTEXT-MAP.md` if present); ADRs live in `docs/adr/` (ADR-NNNN) and `docs/adr/template/` (TADR-NNNN) — policy in `docs/adr/README.md`.
+- Use glossary terms and surface ADR conflicts instead of overriding them silently. After completing work, organize only ADRs and `CONTEXT.md` (TADR-0001); when and how to author, squash, or delete an ADR is defined in `docs/adr/README.md`.
 
 ## Reference Docs
 
@@ -46,4 +47,4 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 - Commands: `docs/commands.md`
 - Infrastructure: `docs/infrastructure.md`
 - Spec workflow: `docs/generated/specs.md`
-- Cross-app convergence: upstream (apps → template) `/absorb-from-apps`, downstream (template → app) `/merge-template`; decision model in TADR-0003 (`docs/adr/template/0003-shared-surface-convergence.md`)
+- Cross-app convergence: upstream (apps → template) `/absorb-from-apps`, downstream (template → app) `/merge-template`; decision model in TADR-0003 (`docs/adr/template/0003-shared-surface-convergence.md`). These procedures are plain Markdown under `.claude/skills/<name>/SKILL.md` — non-Claude agents follow them by path.

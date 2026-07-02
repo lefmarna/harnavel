@@ -7,7 +7,7 @@ Accepted.
 ## Context
 
 Multiple projects derive from this template and adopt its updates via `git pull template main` +
-`/merge-template` (see [`TADR-0001`](0001-development-workflow.md) Rollout). As each project
+`/merge-template` (see [`TADR-0001`](0001-development-workflow.md)). As each project
 implemented the test-as-spec methodology independently, the **template-origin surface drifted**
 across them: the same shared file — `app/Services/GoogleAuth/GoogleAuthService.php`, the
 Fortify/Settings backend, the auth/settings test suites, the CI workflows — acquired divergent

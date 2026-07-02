@@ -38,6 +38,7 @@ disable-model-invocation: true
 - プロジェクト名・概要
 - 対象ユーザー・解決する課題
 - 主要機能・スコープ
+- ドメイン用語（`CONTEXT.md` の初期エントリ候補）
 - 技術的な制約や特記事項
 - 未決定事項
 
@@ -48,6 +49,7 @@ disable-model-invocation: true
 | ファイル | 更新内容 |
 | --- | --- |
 | `AGENTS.md` | プロジェクトの目的、非自明な慣習、運用ルールを展開先前提の内容へ更新 |
+| `CONTEXT.md` | コンテキストから抽出したドメイン用語で初期エントリを記入（冒頭の契約文とエントリ形式は維持） |
 | `docs/infrastructure.md` | Local Runtime Topology / Default local endpoints / runtime 事実 / 必要ならデプロイ前提を更新（識別子・DB 名・ポートの値そのものは `.env.example` が正典） |
 | `docs/commands.md` | Interactive Browser Verification のローカル URL 例を更新 |
 | `.env.example` | `APP_NAME`、`DB_DATABASE`、`VITE_APP_NAME`、ポート番号のデフォルト値を更新 |

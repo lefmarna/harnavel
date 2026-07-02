@@ -14,8 +14,8 @@ This file is the operational playbook — keep it terse.
 3. **Approve** — reviewer approves the test cases **before** implementing. *Review happens here.*
 4. **Implement** — red → green (`tdd` skill).
 5. **Gates** — every CI check currently wired in this repo must pass. The target set
-   across the TADR-0001 rollout is: green + coverage floor + `arch()` + Larastan +
-   (scoped) Infection. Require only the checks already enabled.
+   (TADR-0001 Gates) is: green + coverage floor + `arch()` + Larastan + scoped mutation
+   testing. Require only the checks already enabled.
 6. **Merge** — approved spec × green × gates → merge without reading the implementation.
 7. **Organize** — update only ADRs / `CONTEXT.md`. Don't reconstruct Kiro
    `requirements`/`design` after the fact (using them upfront is fine).
@@ -34,7 +34,7 @@ This file is the operational playbook — keep it terse.
   Exempt: styling/copy/layout, config/infra, docs. A new page MUST have a smoke E2E.
 - **Coverage gate:** floor ~90% on `app/` (exclude boilerplate); 100% aspirational on
   `Services`/`Actions`/`Repositories`. No global 100%. Honesty is backed by the
-  Infection mutation score, not by line coverage.
+  mutation score (`pest --mutate`), not by line coverage.
 
 ## Reviewing without reading the implementation
 

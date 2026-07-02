@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted. Consolidates the template's development-workflow decisions and supersedes the
-earlier stance that made `kiro-discovery` the mandatory entry point (see History).
+Accepted. Consolidates the template's development-workflow decisions, including the
+retired stance that made `kiro-discovery` the mandatory entry point (see Kiro's place).
 
 ## Decision
 
@@ -17,10 +17,9 @@ Human review is **front-loaded** onto the spec, not removed:
    (the title tree plus assertion sketch).
 2. The reviewer approves that spec **before implementation**.
 3. Implement red → green (`tdd` skill).
-4. CI gates stand in for reading the implementation. The target set, enabled across the
-   rollout below, is: green tests **+** coverage floor **+** Pest `arch()` **+** Larastan
-   **+** (scoped) mutation testing — require only the gates currently wired.
-5. Approved spec × green × the currently wired gates passing → merge without reading the
+4. CI gates stand in for reading the implementation (see Gates below); require only the
+   checks currently wired in the repo.
+5. Approved spec × green × the wired gates passing → merge without reading the
    implementation.
 6. After completion, organize **only** ADRs and `CONTEXT.md`.
 
@@ -32,8 +31,8 @@ Key boundaries:
 - **Structure:** `describe`/`it` hierarchy for new tests; Japanese behavioral titles
   (`〜できる`, `〜の場合〜になる`); one `it` = one behavior.
 - **Coverage:** high floor (~90%) on `app/`; 100% is aspirational on pure logic layers
-  (`Services`/`Actions`/`Repositories`); honesty is backed by mutation testing
-  (`pest --mutate`; see Rollout Phase 4). **Global 100% line coverage is explicitly rejected** because it rewards
+  (`Services`/`Actions`/`Repositories`); honesty is backed by mutation testing (see
+  Gates). **Global 100% line coverage is explicitly rejected** because it rewards
   tautological tests and gives false confidence.
 - **Coverage contract:** behavioral changes (endpoints, validation, authorization,
   business rules, Inertia contract) MUST have a test = "untested means unspecified".
@@ -42,17 +41,32 @@ Key boundaries:
 
 The full convention lives in [`docs/testing-as-spec.md`](../../testing-as-spec.md).
 
-## History
+## Gates
 
-The template initially made `kiro-discovery` the **mandatory** entry point for new work —
-turning raw ideas into Kiro requirements/design before implementation. Test-first replaced
-that *mandatory* status, but **Kiro is not removed**. Its `requirements`/`design` phases
-remain available as an **optional upfront design aid**, used when they help (not every
-change needs them). Using Kiro does **not** conflict with this workflow: tests remain the
-single canonical spec, and any `requirements`/`design` are upfront working artifacts, not a
-competing spec. The only thing avoided is **reconstructing** `requirements`/`design`/`tasks`
-after the fact as documentation — durable knowledge consolidates into ADRs + `CONTEXT.md`
-instead.
+The full gate set: green tests + coverage floor + Pest `arch()` + Larastan + scoped
+mutation testing. A project enables them incrementally (non-blocking → blocking); only
+the currently wired checks are required for merge.
+
+- **Calibration is per project.** Each project's CI workflow is the single source of
+  truth for its gate values — the coverage and mutation-score floors (`--min`) and
+  whether mutation blocks the build (`continue-on-error`). These lines stay app-side on
+  template pulls ([`TADR-0003`](0003-shared-surface-convergence.md)).
+- **Mutation scope:** the pure-logic layers (`app/Services`, `app/Actions`,
+  `app/Repositories`), run as a separate workflow on PRs touching those layers or their
+  tests, plus manual dispatch.
+- **Mutation tool:** Pest's built-in `pest --mutate` (`pestphp/pest-plugin-mutate`),
+  **not** standalone `infection/infection` — Infection 0.33 is structurally incompatible
+  with Pest 4 (it cannot reconcile Pest's `P\…` evaluable test-class names against its
+  JUnit report, `TestNotFound`, and ships no Pest adapter). `pest --mutate` uses the same
+  mutation-score (MSI) concept and honours `@pest-mutate-ignore` for equivalent mutants.
+
+## Kiro's place
+
+Kiro's `requirements`/`design` phases were once the mandatory entry point for new work;
+they are now an **optional upfront design aid**, used when they help. Tests remain the
+single canonical spec: Kiro artifacts are upfront working documents, never reconstructed
+after the fact as documentation — durable knowledge consolidates into ADRs +
+`CONTEXT.md` instead.
 
 ## Consequences and accepted risks
 
@@ -62,28 +76,3 @@ instead.
   `arch()` and Larastan instead of human reading.
 - "Green = correct" depends on test honesty, which is enforced by mutation testing (scoped
   to logic layers) and a minimal-mocking convention.
-
-## Rollout
-
-Phased so the methodology can propagate to projects derived from this template without
-breaking their CI:
-
-- **Phase 1: conventions only, no CI change** — this ADR, `docs/testing-as-spec.md`,
-  a thin pointer in `AGENTS.md`, and `/merge-template` classification. Flows to derived
-  projects via `git pull template main` + `/merge-template`.
-- **Phase 2:** `arch()` rules (written to pass current code).
-- **Phase 3:** migrate existing tests (hybrid: structural reshape preserving assertions),
-  then add the coverage gate (non-blocking → blocking).
-- **Phase 4:** mutation testing scoped to the pure-logic layers
-  (`app/Services`, `app/Actions`, `app/Repositories`), wired into CI as a separate workflow
-  that runs on PRs touching those layers or their tests (`pull_request` with a `paths`
-  filter) plus manual `workflow_dispatch`, non-blocking at first and promoted to blocking
-  once stable.
-  - **Tool:** realized with Pest's built-in `pest --mutate` (`pestphp/pest-plugin-mutate`),
-    **not** standalone `infection/infection`. Standalone Infection 0.33 is structurally
-    incompatible with Pest 4 — Pest emits `P\…` evaluable test-class names in its coverage
-    report that Infection cannot reconcile against its JUnit report (`TestNotFound`), and
-    Infection 0.33 ships no Pest adapter. `pest --mutate` uses the same mutation-score (MSI)
-    concept and honours `// @pest-mutate-ignore` for equivalent mutants.
-  - **Gate:** the MSI floor (`--min`) lives in the CI workflow as the single source of truth
-    (not duplicated in docs).

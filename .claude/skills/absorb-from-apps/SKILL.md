@@ -18,7 +18,7 @@ argument-hint: "[REMOTE=template] [APPS=<app1> <app2> ...]"
   - **T1 完全共有** — アプリ固有内容を持たないファイル → byte 一致を狙う。
   - **T2 ハイブリッド** — template scaffolding とアプリ内容が混在 → template 由来ハンクのみ収束し、アプリ拡張は残す（byte 一致しない）。
   - **T3 アプリ所有** — プレゼン/ブランディング/ドメイン/デプロイ設定 → 収束対象外。
-- **アプリ優先で残す（＝統一しない）**: 較正値（coverage/mutation の `--min`・mutation のブロッキング可否・`@pest-mutate-ignore` の注釈密度）、ドメインロジック、デザイントークン、i18n、アプリ固有のルート/ドメイン/デプロイ設定。
+- **アプリ優先で残す（＝統一しない）**: 較正値（coverage/mutation の `--min`・mutation のブロッキング可否・`@pest-mutate-ignore` の注釈密度）、ドメインロジック、デザイントークン、i18n、アプリ固有のルート/ドメイン/デプロイ設定、`CONTEXT.md` とアプリ ADR（`docs/adr/NNNN-*.md`）— これらは上りに流さない。
 - **選定はベストプラクティス基準**（頻度の多数決ではない）。**ハンク単位**で最良版を選ぶ。
 - **等価変異は注釈より簡約で消す**（簡約不可で load-bearing な場合のみ `@pest-mutate-ignore`＋理由）。詳細は `docs/testing-as-spec.md`。
 - **テストと実装は結合して動かす**: より網羅的な共有テストは、それを満たす実装が template 側に揃って初めて上げる。template が緑にできない spec は上げない。

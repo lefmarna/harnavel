@@ -1,5 +1,10 @@
 # Architecture Decision Records
 
+This README is the single policy document for decision records: namespaces, when a
+decision deserves an ADR, lifecycle, and how derived projects adopt template updates.
+
+## Namespaces
+
 Two independent ADR namespaces share this tree so that the template and projects derived
 from it never collide on numbering:
 
@@ -13,33 +18,51 @@ A derived project records its own decisions as App ADRs here and never edits Tem
 (they always merge to the template side). Because the two namespaces are separate
 directories, an App ADR and a Template ADR may share a number without conflicting.
 
-## When to write an ADR, and its lifecycle
+## When to write an ADR
 
 ADRs record **durable decisions**, not in-flight specs. The canonical spec is test code
 ([`TADR-0001`](template/0001-development-workflow.md)); a rapidly-changing spec lives in
-tests + `CONTEXT.md`, which already keep only the current state because old tests are
-rewritten when behavior changes. Author or update an ADR only once a decision is
+tests + [`CONTEXT.md`](../../CONTEXT.md), which keep only the current state because old
+tests are rewritten when behavior changes. Author or update an ADR only once a decision is
 **durable** — it has shipped, survived at least one iteration, or other work depends on it.
 A direction expected to flip is not yet a decision; keep it out of the ADR set.
 
-`Status` lifecycle: `Proposed` → `Accepted` → `Superseded by ADR-NNNN` / `Deprecated`.
+Not every durable fact is an ADR. Constraints every session needs go in `AGENTS.md`,
+domain terms in `CONTEXT.md`, how-tos and reference facts in `docs/`. An ADR earns its
+place only by recording a decision **with the rationale and rejected alternatives** a
+future reader would otherwise re-derive — if there is nothing to re-derive, a line in one
+of the files above is enough. The measure of the ADR set is not completeness but that
+every entry is worth reading.
 
-When a decision is superseded, **squash provisional ones**: keep a `Superseded` tombstone
-only if the old decision had real-world consequences (it shipped, or another ADR / design /
-code depends on it). If it was provisional — reverted before shipping, nothing depending on
-it — overwrite or delete it instead of leaving a tombstone. A `Proposed` ADR dropped before
-acceptance is deleted, not tombstoned. This deliberately relaxes pure append-only where it
-would only add noise; see [`TADR-0005`](template/0005-adr-lifecycle.md).
+## Lifecycle
+
+`Status`: `Proposed` → `Accepted` → `Superseded by ADR-NNNN` / `Deprecated`.
+
+Strict ADR doctrine is append-only: never delete, always supersede. This repo deliberately
+relaxes that, because append-only assumes every recorded decision had consequences worth
+preserving — an assumption that fails for decisions recorded before they stabilized, and
+the resulting tombstones bury the durable decisions readers came for:
+
+- **Squash provisional supersessions.** Keep a `Superseded` tombstone only if the old
+  decision had real-world consequences (it shipped, or another ADR / design / code depends
+  on it). If it was provisional — reverted before shipping, nothing depending on it —
+  overwrite or delete it instead. When in doubt, keep the tombstone.
+- A `Proposed` ADR dropped before acceptance is deleted, not tombstoned.
+- A decision that merely **moves** (absorbed into this README or another ADR) is deleted
+  at its old path once every reference is repointed; no tombstone, since the decision
+  itself still stands.
+- A Template ADR's number is retired with the file and never reused. App ADRs may close
+  gaps instead (see Renumbering below).
 
 ## Adopting template ADR updates (in a derived project)
 
 After `git pull template main`, resolve conflicts with `/merge-template`, then reconcile ADRs:
 
 1. Take Template ADRs (`docs/adr/template/**`) and this README from the template side.
-2. Remove any old flat Template ADRs the template has deleted (e.g. a former
-   `docs/adr/0001-*.md` now living under `template/`) if git did not remove them.
+2. Remove any old Template ADRs the template has deleted or absorbed elsewhere (e.g. a
+   former lifecycle TADR now living in this README) if git did not remove them.
 3. Repoint stale references in your own docs/code: a dropped Template ADR is gone; the
-   development-workflow decision is now `TADR-0001`.
+   development-workflow decision is `TADR-0001`, ADR policy is this README.
 4. Leave your own App ADRs (`docs/adr/NNNN-*.md`) untouched — renumber only if a gap
    appeared (see below).
 

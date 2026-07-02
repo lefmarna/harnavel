@@ -36,7 +36,13 @@ async function findMarkdownFiles(dir: string): Promise<string[]> {
   }
 
   // Also check key root markdown files that act as agent entry points.
-  for (const name of ['AGENTS.md', 'CLAUDE.md', 'README.md']) {
+  for (const name of [
+    'AGENTS.md',
+    'CLAUDE.md',
+    'GEMINI.md',
+    'CONTEXT.md',
+    'README.md',
+  ]) {
     const p = path.join(ROOT, name)
 
     if (fs.existsSync(p)) {

@@ -102,7 +102,8 @@ keep failing in future sessions, then run the narrowest relevant `pnpm test:e2e`
 pnpm lint:docs          # Validate internal markdown links in docs/ + root markdown entrypoints
 ```
 
-`pnpm lint:docs` includes `docs/`, `README.md`, `AGENTS.md`, and `CLAUDE.md` when present.
+`pnpm lint:docs` includes `docs/` plus the root entry-point files (`README.md`, `AGENTS.md`,
+`CLAUDE.md`, `GEMINI.md`, `CONTEXT.md`) when present.
 
 ## Git Hooks
 

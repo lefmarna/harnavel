@@ -12,7 +12,7 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 
 ## Layout
 
-- `app/Params`, `app/Repositories`, `app/Services`, `app/ViewModels` — backend layer objects; `app/Concerns`, `app/Support` — shared traits and helpers.
+- `app/Params`, `app/Repositories`, `app/Services`, `app/ViewModels` — backend layer objects; `app/Concerns`, `app/Support` — shared traits and helpers. When to introduce each backend layer is decided by TADR-0005 (`docs/adr/template/0005-layer-decision-rules.md`).
 - `e2e/` Playwright E2E tests; `.docker/` nginx/PHP config; `docs/` engineering docs.
 - `storage/logs/laravel.log` can grow large — read recent entries only (`tail -n 200`).
 

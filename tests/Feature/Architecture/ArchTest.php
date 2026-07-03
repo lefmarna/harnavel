@@ -14,6 +14,14 @@ arch('Laravel のデバッグ関数を残さない')
     ->expect(['dd'])
     ->not->toBeUsed();
 
+arch('App 配下は env() を直接呼ばない')
+    ->expect(['env'])
+    ->not->toBeUsedIn('App');
+
+arch('App 配下は ShouldQueue を実装しない')
+    ->expect('App')
+    ->not->toImplement('Illuminate\Contracts\Queue\ShouldQueue');
+
 arch('App 配下は strict types を宣言する')
     ->expect('App')
     ->toUseStrictTypes();

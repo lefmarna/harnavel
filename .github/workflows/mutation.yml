@@ -8,9 +8,8 @@ name: mutation
 # ロジック層またはそのテストを変更した PR のときだけ走らせる（paths フィルタ）。
 # それ以外の PR では走らない。手動実行も可能（workflow_dispatch）。
 #
-# 段階導入: 現在は非ブロッキング（continue-on-error でレポートのみ）。
-# 安定後に下記 "Run mutation testing" ステップの continue-on-error を外して
-# ブロッキングへ昇格する。MSI のゲート値（--min）はこのワークフローが単一正典。
+# ロジック層変更時のブロッキングゲートとして MSI を担保する。
+# MSI のゲート値（--min）はこのワークフローが単一正典。
 
 on:
   workflow_dispatch:
@@ -102,8 +101,6 @@ jobs:
           DB_DATABASE: app_testing
 
       - name: Run mutation testing
-        # 段階導入のため現在は非ブロッキング。昇格時はこの行を削除する。
-        continue-on-error: true
         run: |
           # プラグインは .temp/mutations/ へ mkdir なしで書き込む。欠けると file_put_contents が
           # 失敗し、変異が適用されないまま偽の Score 100% が出る（警告のみで exit 0 のため

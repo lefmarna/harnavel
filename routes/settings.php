@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
-use App\ViewModels\PageViewModel;
+use App\ViewModels\StaticPageViewModel;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -28,10 +28,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/appearance', function () {
         return Inertia::render(
             'settings/appearance',
-            new PageViewModel(
+            new StaticPageViewModel(
                 title: '表示設定',
                 description: 'アカウントの表示設定を変更します。',
-            )->toArray(),
+            ),
         );
     })->name('appearance.edit');
 

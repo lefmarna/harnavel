@@ -4,31 +4,29 @@ declare(strict_types=1);
 
 namespace App\ViewModels;
 
-final readonly class PageViewModel
+use Inertia\ProvidesInertiaProperties;
+
+abstract readonly class PageViewModel implements ProvidesInertiaProperties
 {
     /**
-     * @param  array<string, mixed>  $props
-     * @param  array<string, mixed>  $seo
+     * @return array{title: string, description: string}
      */
-    public function __construct(
-        private string $title,
-        private string $description,
-        private array $props = [],
-        private array $seo = [],
-    ) {}
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function toArray(): array
+    protected function basicSeo(string $title, string $description): array
     {
         return [
-            ...$this->props,
-            'seo' => [
-                'title' => $this->title,
-                'description' => $this->description,
-                ...$this->seo,
-            ],
+            'title' => $title,
+            'description' => $description,
+        ];
+    }
+
+    /**
+     * @return array{title: string, description: string, robots: string}
+     */
+    protected function noIndexSeo(string $title, string $description): array
+    {
+        return [
+            ...$this->basicSeo($title, $description),
+            'robots' => 'noindex, nofollow',
         ];
     }
 }

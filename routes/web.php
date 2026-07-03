@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Models\User;
-use App\ViewModels\PageViewModel;
+use App\ViewModels\StaticPageViewModel;
+use App\ViewModels\WelcomePageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -15,27 +16,21 @@ use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
 Route::get('/', function () {
-    $appDescription = config('app.description');
-
     return Inertia::render(
         'welcome',
-        new PageViewModel(
-            title: 'ホーム',
-            description: is_string($appDescription) ? $appDescription : '',
-            props: [
-                'canRegister' => Features::enabled(Features::registration()),
-            ],
-        )->toArray(),
+        new WelcomePageViewModel(
+            canRegister: Features::enabled(Features::registration()),
+        ),
     );
 })->name('home');
 
 Route::get('dashboard', function () {
     return Inertia::render(
         'dashboard',
-        new PageViewModel(
+        new StaticPageViewModel(
             title: 'ダッシュボード',
             description: 'アプリケーションの利用状況や設定への導線を確認できます。',
-        )->toArray(),
+        ),
     );
 })->middleware(['auth', 'verified'])->name('dashboard');
 

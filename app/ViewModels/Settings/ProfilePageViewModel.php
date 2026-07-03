@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\ViewModels\Settings;
 
-final readonly class ProfilePageViewModel
+use App\ViewModels\PageViewModel;
+use Inertia\RenderContext;
+
+final readonly class ProfilePageViewModel extends PageViewModel
 {
     public function __construct(
         private bool $mustVerifyEmail,
@@ -18,15 +21,12 @@ final readonly class ProfilePageViewModel
      *     seo: array{title: string, description: string}
      * }
      */
-    public function toArray(): array
+    public function toInertiaProperties(RenderContext $context): array
     {
         return [
             'mustVerifyEmail' => $this->mustVerifyEmail,
             'status' => $this->status,
-            'seo' => [
-                'title' => 'プロフィール設定',
-                'description' => '名前とメールアドレスを管理します。',
-            ],
+            'seo' => $this->basicSeo('プロフィール設定', '名前とメールアドレスを管理します。'),
         ];
     }
 }

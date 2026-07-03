@@ -32,7 +32,7 @@ class ProfileController extends Controller
             new ProfilePageViewModel(
                 mustVerifyEmail: true,
                 status: is_string($status) ? $status : null,
-            )->toArray(),
+            ),
         );
     }
 

@@ -9,7 +9,8 @@ use App\Exceptions\GoogleLinkConfirmationPendingException;
 use App\Http\Controllers\Controller;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use App\Support\GoogleOAuth;
-use App\ViewModels\PageViewModel;
+use App\ViewModels\Auth\GoogleLinkVerifyPageViewModel;
+use App\ViewModels\StaticPageViewModel;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -132,13 +133,11 @@ class GoogleAuthController extends Controller
 
         return Inertia::render(
             'auth/google-link/confirm',
-            new PageViewModel(
+            new StaticPageViewModel(
                 title: 'Googleログイン連携の確認',
                 description: '確認メールからGoogleログイン連携を完了してください。',
-                seo: [
-                    'robots' => 'noindex, nofollow',
-                ],
-            )->toArray(),
+                noIndex: true,
+            ),
         );
     }
 
@@ -259,34 +258,9 @@ class GoogleAuthController extends Controller
 
     private function googleLinkVerifyPage(string $status, ?string $actionUrl = null, ?string $email = null): Response
     {
-        $isSuccess = $status === 'success';
-        $isConfirm = $status === 'confirm';
-        $props = [
-            'status' => $status,
-        ];
-
-        if ($actionUrl !== null) {
-            $props['actionUrl'] = $actionUrl;
-        }
-
-        if ($email !== null) {
-            $props['email'] = $email;
-        }
-
         return Inertia::render(
             'auth/google-link/verify',
-            new PageViewModel(
-                title: $isSuccess
-                    ? 'Googleログイン連携完了'
-                    : ($isConfirm ? 'Googleログイン連携の確認' : 'Googleログイン連携エラー'),
-                description: $isSuccess
-                    ? 'Googleログイン連携が完了しました。'
-                    : ($isConfirm ? 'Googleログイン連携を確認してください。' : 'Googleログイン連携に失敗しました。'),
-                props: $props,
-                seo: [
-                    'robots' => 'noindex, nofollow',
-                ],
-            )->toArray(),
+            new GoogleLinkVerifyPageViewModel($status, $actionUrl, $email),
         );
     }
 }

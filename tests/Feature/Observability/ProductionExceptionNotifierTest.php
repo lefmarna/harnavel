@@ -11,6 +11,7 @@ use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 beforeEach(function () {
@@ -134,7 +135,27 @@ describe('本番例外通知', function () {
         Http::assertNothingSent();
     });
 
+    it('499のHTTP例外は通知しない', function () {
+        app(ProductionExceptionNotifier::class)->report(new HttpException(499), observabilityRequest());
+        app()->terminate();
+
+        Http::assertNothingSent();
+    });
+
     it('同一例外キーは5分以内に再通知しない', function () {
+        $exception = new RuntimeException('database is unavailable');
+        $request = observabilityRequest();
+
+        app(ProductionExceptionNotifier::class)->report($exception, $request);
+        app(ProductionExceptionNotifier::class)->report($exception, $request);
+        app()->terminate();
+
+        Http::assertSentCount(1);
+    });
+
+    it('重複制御秒数が1秒でも同一例外キーは再通知しない', function () {
+        config()->set('observability.discord.deduplication_seconds', 1);
+
         $exception = new RuntimeException('database is unavailable');
         $request = observabilityRequest();
 
@@ -164,6 +185,28 @@ describe('本番例外通知', function () {
 
         app(ProductionExceptionNotifier::class)->report(new RuntimeException('database is unavailable'), $request);
         app(ProductionExceptionNotifier::class)->report(new RuntimeException('cache is unavailable'), $request);
+        app()->terminate();
+
+        Http::assertSentCount(2);
+    });
+
+    it('同じメッセージでも例外クラスが異なる場合は別の障害として通知できる', function () {
+        $request = observabilityRequest();
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), $request);
+        app(ProductionExceptionNotifier::class)->report(new LogicException('shared failure'), $request);
+        app()->terminate();
+
+        Http::assertSentCount(2);
+    });
+
+    it('同じメッセージでもリクエストパスが異なる場合は別の障害として通知できる', function () {
+        $first = observabilityRequest();
+        $second = observabilityRequest();
+        $second->server->set('REQUEST_URI', '/invoices/987');
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), $first);
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), $second);
         app()->terminate();
 
         Http::assertSentCount(2);
@@ -211,14 +254,54 @@ describe('本番例外通知', function () {
 
             expect($payload['content'])->toBe("[{$appName}][01JZ0000000000000000000000] Production exception: RuntimeException")
                 ->and($request->url())->toBe('https://discord.test/webhook')
+                ->and($payload['embeds'][0]['title'])->toBe('Production exception')
+                ->and($payload['embeds'][0]['color'])->toBe(15_141_160)
                 ->and($fields->get('app'))->toBe($appName)
                 ->and($fields->get('request_id'))->toBe('01JZ0000000000000000000000')
+                ->and($fields->get('status'))->toBe('500')
                 ->and($fields->get('exception'))->toBe(RuntimeException::class)
                 ->and($fields->get('message'))->toBe('database is unavailable')
                 ->and($fields->get('method'))->toBe('POST')
                 ->and($fields->get('url'))->toBe('https://example.test/orders/123')
                 ->and($fields->get('route'))->toBe('orders.store')
-                ->and($fields->get('environment'))->toBe('production');
+                ->and($fields->get('ip'))->toBe('127.0.0.1')
+                ->and($fields->get('user_agent'))->toBe('Pest Browser')
+                ->and($fields->get('file'))->toMatch('/ProductionExceptionNotifierTest\.php:\d+$/')
+                ->and($fields->get('environment'))->toBe('production')
+                ->and($payload['embeds'][0]['fields'])->each->toHaveKey('inline', true);
+
+            return true;
+        });
+    });
+
+    it('request がない例外も通知できる', function () {
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('console failure'));
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $fields = collect($request->data()['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
+
+            expect($fields->get('request_id'))->toBe('unavailable')
+                ->and($fields)->not->toHaveKeys(['method', 'url', 'route', 'ip', 'user_agent']);
+
+            return true;
+        });
+    });
+
+    it('request_id が空文字の場合は unavailable として通知できる', function () {
+        $request = observabilityRequest();
+        $request->attributes->set('request_id', '');
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('missing request id'), $request);
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $payload = $request->data();
+            $fields = collect($payload['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
+            $appName = observabilityAppName();
+
+            expect($payload['content'])->toBe("[{$appName}][unavailable] Production exception: RuntimeException")
+                ->and($fields->get('request_id'))->toBe('unavailable');
 
             return true;
         });

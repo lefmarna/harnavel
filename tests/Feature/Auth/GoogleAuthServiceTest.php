@@ -10,6 +10,7 @@ use App\Repositories\User\UserRepositoryContract;
 use App\Services\GoogleAuth\GoogleAuthService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -69,6 +70,41 @@ describe('Google 認証サービス', function () {
         ]);
 
         Mail::assertSent(LinkGoogleAccountMail::class);
+    });
+
+    it('既存メールユーザーへの確認メールURLに対象ユーザーとGoogle連携payloadを含められる', function () {
+        Mail::fake();
+
+        $existing = User::factory()->create([
+            'email' => 'existing@example.com',
+            'google_id' => null,
+        ]);
+
+        $service = app(GoogleAuthService::class);
+
+        expect(fn () => $service->findOrCreate('google-456', 'existing@example.com', 'Existing User'))
+            ->toThrow(GoogleLinkConfirmationPendingException::class);
+
+        Mail::assertSent(LinkGoogleAccountMail::class, function (LinkGoogleAccountMail $mail) use ($existing): bool {
+            $parts = parse_url($mail->url);
+            expect($parts['path'] ?? null)->toBe('/auth/google/link/verify/'.$existing->getKey());
+
+            parse_str((string) ($parts['query'] ?? ''), $query);
+
+            expect($query)
+                ->toHaveKeys(['expires', 'payload', 'signature'])
+                ->and($query['payload'])->toBeString()->not->toBeEmpty();
+
+            /** @var array{google_id?: mixed, email?: mixed} $payload */
+            $payload = json_decode(Crypt::decryptString($query['payload']), true, flags: JSON_THROW_ON_ERROR);
+
+            expect($payload)->toBe([
+                'google_id' => 'google-456',
+                'email' => 'existing@example.com',
+            ]);
+
+            return true;
+        });
     });
 
     it('lowercase usernamesが無効なら lowercase のGoogleメールでも mixed-case メールの既存ユーザーに確認メールを送信し casing を維持する', function () {

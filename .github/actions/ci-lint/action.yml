@@ -80,3 +80,7 @@ runs:
     - name: Lint Markdown Links
       shell: bash
       run: pnpm run lint:docs
+
+    - name: Test Deploy Rsync Excludes
+      shell: bash
+      run: pnpm run test:deploy-rsync-excludes

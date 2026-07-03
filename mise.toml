@@ -190,3 +190,7 @@ echo '✅ Deployment package created in ./.deploy/'
 [tasks."deploy:prepare"]
 description = "Full deployment preparation (build + package)"
 depends = ["deploy:build", "deploy:package"]
+
+[tasks."test:deploy-rsync-excludes"]
+description = "Verify delivery rsync excludes protect remote-only XServer data"
+run = "pnpm test:deploy-rsync-excludes"

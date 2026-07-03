@@ -13,6 +13,7 @@
     "lint:check": "eslint .",
     "types:check": "tsc --pretty --noEmit",
     "lint:docs": "tsx scripts/lint-docs.ts",
+    "test:deploy-rsync-excludes": "node --import tsx scripts/test-deploy-rsync-excludes.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",

@@ -2,9 +2,8 @@
 
 ## Status
 
-Accepted. The rules are ratified; two of the template's own exemplars still predate them and are
-migrated as the decision is applied (see Consequences), so read those exemplars as the pattern
-being replaced, not as reference implementations.
+Accepted. The rules are ratified and the template's initial rollout has migrated the pre-existing
+exemplars that contradicted them.
 
 ## Context
 
@@ -16,10 +15,10 @@ when a backend layer object is warranted:
   bound in the container, and typed exceptions carry control flow. It touches multiple rows,
   external OAuth identities, and transactional email.
 - **Profile update** is a single-model CRUD: `ProfileController::update` fills a `User` from
-  `validated()`, detects an email change inline, and saves — yet it also routes through an
-  `UpdateProfileParams` object whose only job is to copy two already-validated keys into an
-  array. There is no service, no repository, and no transaction. The Params object adds a
-  layer without adding a boundary.
+  `validated()`, detects an email change inline, and saves. Before this decision it routed
+  through an `UpdateProfileParams` object whose only job was to copy two already-validated keys
+  into an array. There was no service, no repository, and no transaction. The Params object
+  added a layer without adding a boundary.
 
 Nothing states which shape a new use case should take. In AI-driven development this
 ambiguity is expensive: different agents (and different derived apps) resolve the same
@@ -197,7 +196,7 @@ Consequences, after which the same-change rule holds without exception.
 ## Considered alternatives
 
 - **Always introduce Service/Repository/Params for consistency.** Rejected: it adds a boundary
-  where there is none to protect, and the empty ceremony (today's `UpdateProfileParams`) is
+  where there is none to protect, and the empty ceremony (the former `UpdateProfileParams`) is
   exactly the mixed signal this decision removes. Layers earn their place by guarding a real
   boundary.
 - **Keep `UpdateProfileParams` as a "Params without a Service" exemplar.** Rejected: it
@@ -217,13 +216,11 @@ Consequences, after which the same-change rule holds without exception.
 - A new use case has a single defensible shape, so agents and derived apps converge instead of
   each inventing a layering. Reviewers check the shape against these rules rather than re-deriving
   it.
-- The template's own exemplars must match these rules (rule 6). When this decision is recorded,
-  two do not yet: the page ViewModels still use the `final readonly` + `toArray()` shape rather
-  than `ProvidesInertiaProperties`, and the service-less `UpdateProfileParams`/
-  `UpdatePasswordParams` still exist. Both are brought into compliance as this decision is applied
-  — the ViewModels migrated to `ProvidesInertiaProperties`, the service-less Params removed or
-  converted to the `toParams()` form. Until then the template knowingly contains exemplars this
-  ADR supersedes.
+- The template's own exemplars must match these rules (rule 6). During this decision's initial
+  rollout, the page ViewModels were migrated to `ProvidesInertiaProperties`, and the service-less
+  `UpdateProfileParams` / `UpdatePasswordParams` were removed rather than converted to the
+  `toParams()` form. Future changes to these conventions must update their template exemplars in
+  the same change.
 - Rule 3(a) moves the array-shape cast into the FormRequest, so the validation rules and the DTO
   shape are read together; Larastan `max` verifies the cast against the constructor signature.
 - The `PageViewModel`-suffix scoping (rule 4) lets derived apps keep fragment ViewModels without

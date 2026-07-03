@@ -16,7 +16,7 @@ runs:
     - name: Get pnpm store directory
       id: pnpm-store
       shell: bash
-      run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
     - name: Cache pnpm store
       uses: actions/cache@v5
@@ -89,8 +89,11 @@ runs:
       shell: bash
       run: pnpm run types:check
 
+    # rhysd/actionlint has no action.yml; run the official Docker image (pinned) instead.
     - name: Lint GitHub Actions Workflows
-      uses: rhysd/actionlint@v1
+      uses: docker://rhysd/actionlint:1.7.12
+      with:
+        args: -color
 
     - name: Lint Markdown Links
       shell: bash

@@ -1,11 +1,13 @@
 // Validates internal markdown links in repository markdown files.
 // Checks that relative links resolve to actual files.
 //
-// Additional checks (WU-11):
+// Additional checks:
 // - CLAUDE.md / GEMINI.md are one-line @AGENTS.md pointers.
 // - .claude/skills/<name>/SKILL.md and .agents/skills/<name>/SKILL.md frontmatter
 //   has `name` matching directory name and non-empty `description`.
-// - Same-name skills in both .claude/skills and .agents/skills are byte-identical.
+// - Repo-owned skills listed in MIRRORED_SKILLS are byte-identical between
+//   .claude/skills and .agents/skills (other same-name skills may diverge
+//   intentionally per agent format).
 import fs from 'node:fs'
 import { glob } from 'node:fs/promises'
 import path from 'node:path'
@@ -102,7 +104,7 @@ function checkLinks(filePath: string, content: string): LinkError[] {
 }
 
 // ---------------------------------------------------------------------------
-// WU-11: Pointer file validation
+// Pointer file validation
 // CLAUDE.md and GEMINI.md must be exactly one-line @AGENTS.md pointers.
 // ---------------------------------------------------------------------------
 
@@ -133,7 +135,7 @@ function checkPointerFiles(): LintError[] {
 }
 
 // ---------------------------------------------------------------------------
-// WU-11: Skill frontmatter validation
+// Skill frontmatter validation
 // Each SKILL.md must have:
 //   - `name` matching the parent directory name
 //   - non-empty `description`
@@ -251,7 +253,7 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
 }
 
 // ---------------------------------------------------------------------------
-// WU-11: Skill duplication sync check
+// Skill duplication sync check
 //
 // Only repo-owned skills that are intentionally mirrored to both
 // .claude/skills and .agents/skills are checked for byte identity.

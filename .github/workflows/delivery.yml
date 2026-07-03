@@ -100,7 +100,7 @@ jobs:
               --exclude='storage/framework/sessions/*' \
               --exclude='storage/framework/views/*' \
               --exclude='dev.laravel-app-template.com' \
-              .deploy/ ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }}:$DEPLOY_DIRECTORY/; then
+              .deploy/ "${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }}:$DEPLOY_DIRECTORY/"; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then

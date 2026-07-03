@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Mail\LinkGoogleAccountMail;
 use App\Models\User;
 

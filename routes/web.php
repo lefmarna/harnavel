@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Models\User;
 use App\ViewModels\PageViewModel;

@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
-use App\Params\UpdateProfileParams;
 use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,11 +43,11 @@ class ProfileController extends Controller
         $user = $this->currentUser($request);
         /** @var array{name: string, email: string} $validated */
         $validated = $request->validated();
-        $params = UpdateProfileParams::fromInput($validated);
         $originalEmail = $user->email;
 
-        $user->fill($params->toArray());
+        $user->fill($validated);
 
+        // Single-model profile updates stay in the controller per TADR-0005.
         $emailChanged = config('fortify.lowercase_usernames')
             ? $user->isDirty('email')
             : Str::lower($originalEmail) !== Str::lower($user->email);

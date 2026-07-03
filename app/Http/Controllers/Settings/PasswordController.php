@@ -7,9 +7,9 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
-use App\Params\UpdatePasswordParams;
 use App\ViewModels\StaticPageViewModel;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,9 +41,10 @@ class PasswordController extends Controller
 
         /** @var array{password: string} $validated */
         $validated = $request->validated();
-        $params = UpdatePasswordParams::fromInput($validated);
 
-        $user->update($params->toArray());
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
 
         return back();
     }

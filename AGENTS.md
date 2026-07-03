@@ -48,3 +48,4 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 - Infrastructure: `docs/infrastructure.md`
 - Spec workflow: `docs/generated/specs.md`
 - Cross-app convergence: upstream (apps → template) `/absorb-from-apps`, downstream (template → app) `/merge-template`; decision model in TADR-0003 (`docs/adr/template/0003-shared-surface-convergence.md`). These procedures are plain Markdown under `.claude/skills/<name>/SKILL.md` — non-Claude agents follow them by path.
+- New Inertia pages: follow `.claude/skills/add-page/SKILL.md` (mirrored at `.agents/skills/add-page/SKILL.md`) so route, PageViewModel, Wayfinder, React props, Feature spec, and smoke E2E stay aligned.

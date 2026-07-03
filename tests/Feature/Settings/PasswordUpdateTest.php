@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Inertia\Testing\AssertableInertia as Assert;
 
 describe('パスワード設定', function () {
     it('パスワード更新画面を表示できる', function () {
@@ -17,8 +16,10 @@ describe('パスワード設定', function () {
         $response
             ->assertOk()
             ->assertInertia(
-                fn (Assert $page) => $page
-                    ->component('settings/password')
+                fn ($page) => assertInertiaShape($page, 'settings/password', [
+                    'seo.title',
+                    'seo.description',
+                ])
                     ->where('seo.title', 'パスワード設定')
                     ->where('seo.description', 'アカウントのパスワードを更新します。')
             );

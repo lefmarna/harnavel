@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 /*
@@ -64,7 +65,16 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * @param  list<string>  $keys
+ */
+function assertInertiaShape(AssertableInertia $page, string $component, array $keys): AssertableInertia
 {
-    // ..
+    $page->component($component);
+
+    foreach ($keys as $key) {
+        $page->has($key);
+    }
+
+    return $page;
 }

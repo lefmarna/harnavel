@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["composer", "npm"],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["* 0-6 * * 1"],
+  "packageRules": [
+    {
+      "description": "Group Composer minor and patch updates.",
+      "matchManagers": ["composer"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Composer minor and patch dependencies",
+      "groupSlug": "composer-minor-patch"
+    },
+    {
+      "description": "Group pnpm minor and patch updates through Renovate's npm manager.",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "pnpm minor and patch dependencies",
+      "groupSlug": "pnpm-minor-patch"
+    }
+  ]
+}

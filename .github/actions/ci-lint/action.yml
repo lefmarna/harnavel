@@ -89,6 +89,9 @@ runs:
       shell: bash
       run: pnpm run types:check
 
+    - name: Lint GitHub Actions Workflows
+      uses: rhysd/actionlint@v1
+
     - name: Lint Markdown Links
       shell: bash
       run: pnpm run lint:docs

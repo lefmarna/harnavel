@@ -1,7 +1,11 @@
-/**
- * Validates internal markdown links in repository markdown files.
- * Checks that relative links resolve to actual files.
- */
+// Validates internal markdown links in repository markdown files.
+// Checks that relative links resolve to actual files.
+//
+// Additional checks (WU-11):
+// - CLAUDE.md / GEMINI.md are one-line @AGENTS.md pointers.
+// - .claude/skills/<name>/SKILL.md and .agents/skills/<name>/SKILL.md frontmatter
+//   has `name` matching directory name and non-empty `description`.
+// - Same-name skills in both .claude/skills and .agents/skills are byte-identical.
 import fs from 'node:fs'
 import { glob } from 'node:fs/promises'
 import path from 'node:path'
@@ -21,6 +25,11 @@ interface LinkError {
   file: string
   line: number
   link: string
+  reason: string
+}
+
+interface LintError {
+  file: string
   reason: string
 }
 
@@ -92,27 +101,283 @@ function checkLinks(filePath: string, content: string): LinkError[] {
   return errors
 }
 
+// ---------------------------------------------------------------------------
+// WU-11: Pointer file validation
+// CLAUDE.md and GEMINI.md must be exactly one-line @AGENTS.md pointers.
+// ---------------------------------------------------------------------------
+
+function checkPointerFiles(): LintError[] {
+  const errors: LintError[] = []
+  const pointerFiles = ['CLAUDE.md', 'GEMINI.md']
+
+  for (const name of pointerFiles) {
+    const filePath = path.join(ROOT, name)
+
+    if (!fs.existsSync(filePath)) {
+      continue
+    }
+
+    const content = fs.readFileSync(filePath, 'utf-8')
+    // Allow an optional trailing newline; the substantive content must be "@AGENTS.md" only.
+    const trimmed = content.trim()
+
+    if (trimmed !== '@AGENTS.md') {
+      errors.push({
+        file: name,
+        reason: `Must contain exactly "@AGENTS.md" (one-line pointer). Found: ${JSON.stringify(trimmed.slice(0, 80))}`,
+      })
+    }
+  }
+
+  return errors
+}
+
+// ---------------------------------------------------------------------------
+// WU-11: Skill frontmatter validation
+// Each SKILL.md must have:
+//   - `name` matching the parent directory name
+//   - non-empty `description`
+// ---------------------------------------------------------------------------
+
+interface FrontmatterParseResult {
+  name?: string
+  description?: string
+}
+
+function parseFrontmatter(content: string): FrontmatterParseResult | null {
+  if (!content.startsWith('---')) {
+    return null
+  }
+
+  const end = content.indexOf('\n---', 3)
+
+  if (end === -1) {
+    return null
+  }
+
+  const block = content.slice(3, end)
+  const result: FrontmatterParseResult = {}
+
+  for (const line of block.split('\n')) {
+    // Match `key: value` or `key: 'value'` or `key: "value"`
+    const m = line.match(/^(\w[\w-]*):\s*(.+)$/)
+
+    if (!m) {
+      continue
+    }
+
+    const key = m[1]
+    let value = m[2].trim()
+
+    // Strip surrounding quotes
+    if (
+      (value.startsWith("'") && value.endsWith("'")) ||
+      (value.startsWith('"') && value.endsWith('"'))
+    ) {
+      value = value.slice(1, -1)
+    }
+
+    if (key === 'name') {
+      result.name = value
+    } else if (key === 'description') {
+      result.description = value
+    }
+  }
+
+  return result
+}
+
+async function checkSkillFrontmatter(): Promise<LintError[]> {
+  const errors: LintError[] = []
+  const skillDirs = [
+    path.join(ROOT, '.claude', 'skills'),
+    path.join(ROOT, '.agents', 'skills'),
+  ]
+
+  for (const skillsRoot of skillDirs) {
+    if (!fs.existsSync(skillsRoot)) {
+      continue
+    }
+
+    const entries = fs.readdirSync(skillsRoot, { withFileTypes: true })
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue
+      }
+
+      const dirName = entry.name
+      const skillFile = path.join(skillsRoot, dirName, 'SKILL.md')
+
+      if (!fs.existsSync(skillFile)) {
+        continue
+      }
+
+      const relPath = path.relative(ROOT, skillFile)
+      const content = fs.readFileSync(skillFile, 'utf-8')
+      const fm = parseFrontmatter(content)
+
+      if (fm === null) {
+        errors.push({
+          file: relPath,
+          reason:
+            'Missing YAML frontmatter (expected --- block at top of file)',
+        })
+        continue
+      }
+
+      if (!fm.name) {
+        errors.push({
+          file: relPath,
+          reason: 'Frontmatter missing required field: `name`',
+        })
+      } else if (fm.name !== dirName) {
+        errors.push({
+          file: relPath,
+          reason: `Frontmatter \`name\` ("${fm.name}") does not match directory name ("${dirName}")`,
+        })
+      }
+
+      if (!fm.description || fm.description.trim() === '') {
+        errors.push({
+          file: relPath,
+          reason: 'Frontmatter `description` is empty or missing',
+        })
+      }
+    }
+  }
+
+  return errors
+}
+
+// ---------------------------------------------------------------------------
+// WU-11: Skill duplication sync check
+//
+// Only repo-owned skills that are intentionally mirrored to both
+// .claude/skills and .agents/skills are checked for byte identity.
+//
+// External skills (kiro-*, etc.) are deliberately maintained in different
+// formats per agent toolchain (.claude adds allowed-tools/argument-hint
+// frontmatter; .agents uses <background_information>/<instructions> tags).
+// Including them would produce permanent false positives and bury real drift.
+//
+// When a repo-owned skill is placed in both directories, add its name here.
+// ---------------------------------------------------------------------------
+
+const MIRRORED_SKILLS: readonly string[] = [
+  // repo-owned skills mirrored to both .claude/skills and .agents/skills.
+  // Add a skill here when its SKILL.md is intentionally byte-identical in both trees.
+  'add-page',
+]
+
+function checkSkillSync(): LintError[] {
+  const errors: LintError[] = []
+  const claudeSkillsRoot = path.join(ROOT, '.claude', 'skills')
+  const agentsSkillsRoot = path.join(ROOT, '.agents', 'skills')
+
+  for (const name of MIRRORED_SKILLS) {
+    const claudeFile = path.join(claudeSkillsRoot, name, 'SKILL.md')
+    const agentsFile = path.join(agentsSkillsRoot, name, 'SKILL.md')
+
+    if (!fs.existsSync(claudeFile)) {
+      errors.push({
+        file: `.claude/skills/${name}/SKILL.md`,
+        reason: `Mirrored skill "${name}" is missing from .claude/skills. Add it or remove from MIRRORED_SKILLS.`,
+      })
+      continue
+    }
+
+    if (!fs.existsSync(agentsFile)) {
+      errors.push({
+        file: `.agents/skills/${name}/SKILL.md`,
+        reason: `Mirrored skill "${name}" is missing from .agents/skills. Add it or remove from MIRRORED_SKILLS.`,
+      })
+      continue
+    }
+
+    const claudeContent = fs.readFileSync(claudeFile)
+    const agentsContent = fs.readFileSync(agentsFile)
+
+    if (!claudeContent.equals(agentsContent)) {
+      errors.push({
+        file: `.claude/skills/${name}/SKILL.md`,
+        reason: `Mirrored skill "${name}" has diverged between .claude/skills and .agents/skills (byte mismatch). Keep SKILL.md byte-identical in both directories.`,
+      })
+    }
+  }
+
+  return errors
+}
+
 async function main() {
   const files = await findMarkdownFiles(DOCS_DIR)
-  const allErrors: LinkError[] = []
+  const allLinkErrors: LinkError[] = []
 
   for (const file of files) {
     const content = fs.readFileSync(file, 'utf-8')
-    allErrors.push(...checkLinks(file, content))
+    allLinkErrors.push(...checkLinks(file, content))
   }
 
-  if (allErrors.length === 0) {
+  const pointerErrors = checkPointerFiles()
+  const frontmatterErrors = await checkSkillFrontmatter()
+  const syncErrors = checkSkillSync()
+
+  const hasErrors =
+    allLinkErrors.length > 0 ||
+    pointerErrors.length > 0 ||
+    frontmatterErrors.length > 0 ||
+    syncErrors.length > 0
+
+  if (!hasErrors) {
     console.log(
       `✓ ${files.length} markdown files checked, no broken links found.`,
+    )
+    console.log('✓ Pointer files (CLAUDE.md, GEMINI.md) are valid.')
+    console.log(
+      '✓ Skill frontmatter valid in .claude/skills and .agents/skills.',
+    )
+    console.log(
+      `✓ Mirrored skills (${MIRRORED_SKILLS.join(', ')}) are byte-identical.`,
     )
     process.exit(0)
   }
 
-  console.error(`✗ Found ${allErrors.length} broken link(s):\n`)
+  if (allLinkErrors.length > 0) {
+    console.error(`✗ Found ${allLinkErrors.length} broken link(s):\n`)
 
-  for (const err of allErrors) {
-    console.error(`  ${err.file}:${err.line} → ${err.link}`)
-    console.error(`    ${err.reason}\n`)
+    for (const err of allLinkErrors) {
+      console.error(`  ${err.file}:${err.line} → ${err.link}`)
+      console.error(`    ${err.reason}\n`)
+    }
+  }
+
+  if (pointerErrors.length > 0) {
+    console.error(`✗ Found ${pointerErrors.length} pointer file error(s):\n`)
+
+    for (const err of pointerErrors) {
+      console.error(`  ${err.file}`)
+      console.error(`    ${err.reason}\n`)
+    }
+  }
+
+  if (frontmatterErrors.length > 0) {
+    console.error(
+      `✗ Found ${frontmatterErrors.length} skill frontmatter error(s):\n`,
+    )
+
+    for (const err of frontmatterErrors) {
+      console.error(`  ${err.file}`)
+      console.error(`    ${err.reason}\n`)
+    }
+  }
+
+  if (syncErrors.length > 0) {
+    console.error(`✗ Found ${syncErrors.length} skill sync error(s):\n`)
+
+    for (const err of syncErrors) {
+      console.error(`  ${err.file}`)
+      console.error(`    ${err.reason}\n`)
+    }
   }
 
   process.exit(1)

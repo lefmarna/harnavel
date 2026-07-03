@@ -2,9 +2,21 @@
 
 declare(strict_types=1);
 
-arch('プロダクションコードにデバッグ関数を残さない')
-    ->expect(['dd', 'dump', 'ray', 'var_dump', 'var_export', 'print_r'])
+arch('PHP の危険な構文とデバッグ関数を使わない')
+    ->preset()
+    ->php();
+
+arch('セキュリティ上危険な関数を使わない')
+    ->preset()
+    ->security();
+
+arch('Laravel のデバッグ関数を残さない')
+    ->expect(['dd'])
     ->not->toBeUsed();
+
+arch('App 配下は strict types を宣言する')
+    ->expect('App')
+    ->toUseStrictTypes();
 
 arch('コントローラは Controller サフィックスを持つ')
     ->expect('App\Http\Controllers')
@@ -18,3 +30,27 @@ arch('フォームリクエストは Request サフィックスを持ち FormReq
 arch('ドメイン層はコントローラに依存しない')
     ->expect('App\Http\Controllers')
     ->not->toBeUsedIn(['App\Services', 'App\Repositories', 'App\Models', 'App\Params', 'App\ViewModels']);
+
+arch('Params は readonly class である')
+    ->expect('App\Params')
+    ->classes()
+    ->toBeReadonly();
+
+arch('Params は HTTP リクエストやセッションに依存しない')
+    ->expect('App\Params')
+    ->not->toUse([
+        'Illuminate\Contracts\Session',
+        'Illuminate\Foundation\Http\FormRequest',
+        'Illuminate\Http\Request',
+        'Illuminate\Session',
+        'Session',
+        'session',
+    ]);
+
+arch('モデルはサービス・リポジトリ・HTTP 層に依存しない')
+    ->expect('App\Models')
+    ->not->toUse(['App\Services', 'App\Repositories', 'App\Http']);
+
+arch('フォームリクエストはコントローラからのみ使用される')
+    ->expect('App\Http\Requests')
+    ->toOnlyBeUsedIn('App\Http\Controllers');

@@ -54,6 +54,10 @@ stays app-priority.
 Calibration lines and Tier 3 files may still conflict on pull, but they resolve mechanically in
 the app's favour — no human judgment.
 
+The Tier 1 / 2 / 3 path classifications and calibration-line patterns are maintained in machine-readable
+form in [`.shared-surface.yml`](../../../.shared-surface.yml), which `/merge-template` and
+`/absorb-from-apps` treat as the authoritative tier reference.
+
 ## Considered alternatives
 
 - **Extract calibration values out of the pulled files** (GitHub Actions `vars`/inputs) so the

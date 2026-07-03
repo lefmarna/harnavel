@@ -1,0 +1,167 @@
+# Shared-surface manifest
+#
+# Machine-readable form of the Tier 1 / 2 / 3 classification defined in
+# docs/adr/template/0003-shared-surface-convergence.md (TADR-0003).
+#
+# This file is the authoritative tier reference for /merge-template and
+# /absorb-from-apps. When the ADR classification changes, update this file
+# in the same commit.
+#
+# Glob syntax follows .gitignore pattern rules (as used by rsync / git ls-files).
+# Paths are relative to the repository root.
+#
+# Precedence: when a path matches globs in multiple tiers, the most specific
+# glob wins. If specificity is equal, the lowest-numbered tier takes priority
+# (Tier 1 > Tier 2 > Tier 3). Consumers must apply this rule when resolving
+# overlaps between broad Tier 3 catch-alls and narrow upper-tier entries.
+
+# ---------------------------------------------------------------------------
+# Tier 1 — Fully shared, byte-identical target
+#
+# Files with no legitimate app-specific content. Converge to byte identity.
+# The canonical version is the most thorough, correct one.
+# ---------------------------------------------------------------------------
+
+tier1:
+  # Test infrastructure scaffolding
+  - tests/Pest.php
+  - tests/TestCase.php
+
+  # Shared auth / settings tests
+  - tests/Feature/Auth/**
+  - tests/Feature/Settings/**
+
+  # Shared architecture tests
+  - tests/Feature/Architecture/**
+
+  # Shared concern traits
+  - app/Concerns/PasswordValidationRules.php
+
+  # Shared form requests (Settings)
+  - app/Http/Requests/Settings/**
+
+  # GoogleAuth service (minus app-specific hunks — see Tier 2 for Provider)
+  - app/Services/GoogleAuth/**
+
+  # Generic UI primitives (shadcn/ui wrappers — no app branding)
+  - resources/js/components/ui/**
+
+  # CI workflows — calibration lines are carved out (see calibration-lines below)
+  - .github/workflows/check.yml
+  - .github/workflows/quality.yml
+  - .github/workflows/reusable-test.yml
+  - .github/workflows/mutation.yml
+  - .github/workflows/delivery.yml
+  - .github/actions/**
+
+  # Agent entry-point docs and methodology docs
+  - docs/testing-as-spec.md
+  - docs/adr/README.md
+  - docs/adr/template/**
+
+  # Skills owned by this template repo (mirrored to .agents/skills where noted)
+  - .claude/skills/absorb-from-apps/**
+  - .claude/skills/merge-template/**
+  - .claude/skills/add-page/**
+  - .agents/skills/add-page/**
+
+# ---------------------------------------------------------------------------
+# Tier 2 — Hybrid
+#
+# Files mixing template scaffolding with app content. Converge the
+# template-origin hunks only; keep app hunks. Never byte-identical.
+# ---------------------------------------------------------------------------
+
+tier2:
+  # User model (template scaffolding fields + app-specific columns/relations)
+  - app/Models/User.php
+
+  # Fortify service provider (auth page rendering + app-specific feature flags)
+  - app/Providers/FortifyServiceProvider.php
+
+  # Settings controllers (shared structure, app-specific fields/logic)
+  - app/Http/Controllers/Settings/**
+
+  # Eloquent user repository (shared interface impl + app-specific query methods)
+  - app/Repositories/User/EloquentUserRepository.php
+
+  # Agent entry point (Verification/Testing/Documentation rules lean template;
+  # Project Context and app-specific layout descriptions stay app-side)
+  - AGENTS.md
+  - CLAUDE.md
+  - GEMINI.md
+
+  # GoogleAuth controller (shared OAuth flow, app-specific redirect/role logic)
+  - app/Http/Controllers/Auth/GoogleAuthController.php
+
+# ---------------------------------------------------------------------------
+# Tier 3 — App-owned, out of scope
+#
+# Presentation, branding, and domain. Not converged.
+# ---------------------------------------------------------------------------
+
+tier3:
+  # App-specific pages
+  - resources/js/pages/**
+
+  # App-specific components (except resources/js/components/ui/** → Tier 1)
+  - resources/js/components/**
+
+  # Design tokens and global styles
+  - resources/css/**
+
+  # Public assets
+  - public/**
+
+  # App routes
+  - routes/**
+
+  # Domain controllers (except app/Http/Controllers/Settings/** → Tier 2,
+  # app/Http/Controllers/Auth/GoogleAuthController.php → Tier 2)
+  - app/Http/Controllers/**
+
+  # Lockfiles (managed per-project)
+  - composer.lock
+  - pnpm-lock.yaml
+
+  # Environment config (values differ per project)
+  - .env.example
+  - .env
+
+  # Project readme and domain glossary
+  - README.md
+  - CONTEXT.md
+
+  # App-numbered ADRs (flat namespace, not template/)
+  - docs/adr/[0-9][0-9][0-9][0-9]-*.md
+
+# ---------------------------------------------------------------------------
+# Calibration lines (app-priority carve-out within Tier 1 CI files)
+#
+# These lines inside otherwise Tier 1 files are calibrated per project and
+# stay app-priority on every merge. /merge-template resolves them in the
+# app's favour without human judgment.
+#
+# Identified by the pattern they match within the file, not by line number.
+# ---------------------------------------------------------------------------
+
+calibration-lines:
+  # Coverage gate threshold in reusable-test.yml
+  - pattern: '--min=[0-9]+'
+    files:
+      - .github/workflows/reusable-test.yml
+
+  # Mutation gate threshold and blocking toggle in mutation.yml
+  - pattern: '--min=[0-9]+'
+    files:
+      - .github/workflows/mutation.yml
+  - pattern: 'continue-on-error:'
+    files:
+      - .github/workflows/mutation.yml
+
+  # Adjacent rationale comments immediately before/after calibration lines
+  # (identified by proximity to the above patterns — resolve app-priority)
+  - pattern: '# .*[Nn]on-blocking|# .*segment|# .*floor|# .*段階導入'
+    files:
+      - .github/workflows/mutation.yml
+      - .github/workflows/reusable-test.yml

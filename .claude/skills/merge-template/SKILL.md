@@ -11,6 +11,8 @@ argument-hint: "[REMOTE=template] [BRANCH=main]"
 
 ## 解消方針
 
+ティア分類の権威的定義は [`.shared-surface.yml`](../../../.shared-surface.yml) を参照（TADR-0003 の機械可読版）。
+
 - **template 側に寄せる**: 共通基盤（auth, mail, settings 等）、scaffolding、テストヘルパー、命名・コーディング規約、ライブラリ更新、汎用 UI プリミティブ、テスト=仕様 手法のファイル（`docs/testing-as-spec.md`、template ADR `docs/adr/template/**`、`docs/adr/README.md`、arch test 雛形、カバレッジ/mutation 設定）
 - **アプリ側を優先**: ドメインロジック、独自 UI コンポーネント / デザイントークン、独自 ViewModel / Service / Repository パターン、i18n や多言語テスト、アプリ固有のルート・コントローラ、番号付きアプリ ADR（`docs/adr/NNNN-*.md`、フラット。`docs/adr/README.md` は template 寄せ）、`CONTEXT.md`（ドメイン用語集。template はシードを提供するだけでアプリ所有）
 - **ハイブリッド（`AGENTS.md`）**: 構成・運用ルール（Verification / Testing / Documentation の規約）は template 寄せ、Project Context などアプリ固有の記述はアプリ側を残す。エージェント入口ファイル（`CLAUDE.md` / `GEMINI.md`）はポインタ 1 行のまま template 寄せ

@@ -14,6 +14,8 @@ argument-hint: "[REMOTE=template] [APPS=<app1> <app2> ...]"
 
 ## 原則（逸脱しないこと）
 
+ティア分類の権威的定義は [`.shared-surface.yml`](../../../.shared-surface.yml) を参照（TADR-0003 の機械可読版）。
+
 - **収束対象は3ティア**（TADR-0003）:
   - **T1 完全共有** — アプリ固有内容を持たないファイル → byte 一致を狙う。
   - **T2 ハイブリッド** — template scaffolding とアプリ内容が混在 → template 由来ハンクのみ収束し、アプリ拡張は残す（byte 一致しない）。

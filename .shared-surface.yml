@@ -50,16 +50,13 @@ tier1:
   - resources/js/components/ui/**
 
   # CI workflows — calibration lines are carved out (see calibration-lines
-  # below). delivery.yml is Tier 2 — see below.
-  - .github/workflows/check.yml
-  - .github/workflows/quality.yml
+  # below). check.yml, quality.yml, and delivery.yml are Tier 2 — see below.
   - .github/workflows/reusable-test.yml
   - .github/workflows/mutation.yml
   - .github/actions/**
 
   # Agent entry-point docs and methodology docs
   - docs/testing-as-spec.md
-  - docs/adr/README.md
   - docs/adr/template/**
 
   # Skills owned by this template repo (mirrored to .agents/skills where noted)
@@ -118,6 +115,15 @@ tier2:
   # The app-side exclude set is contract-tested by
   # scripts/test-deploy-rsync-excludes.ts, whose PROTECTED_PATHS pairs with it)
   - .github/workflows/delivery.yml
+
+  # CI entry workflows (the reusable ci-lint job structure leans template;
+  # app-specific steps such as additional frontend unit checks stay app-side)
+  - .github/workflows/check.yml
+  - .github/workflows/quality.yml
+
+  # ADR policy README (template policy text leans template; app-owned ADR
+  # index sections stay app-side)
+  - docs/adr/README.md
 
   # Page ViewModel scaffolding (base class, generic page VMs, and the
   # auth/settings page VMs lean template in structure; app-adapted props,

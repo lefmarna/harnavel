@@ -28,19 +28,23 @@ template (best version wins — prefer *eliminating* an equivalent mutant by sim
   content: test infrastructure (`tests/TestCase.php`), shared auth/settings tests,
   `app/Concerns/PasswordValidationRules`, `app/Http/Requests/Settings/*`,
   `app/Services/GoogleAuth/*` (minus app hunks), generic `resources/js/components/ui/*`
-  primitives, repo tooling scripts (`scripts/lint-docs.ts`, `scripts/hooks/*`), CI workflows
-  except `delivery.yml` (minus calibration — see below). For shared behavioural tests the
-  canonical version is the **most thorough, correct** one; genuinely app-specific cases (i18n,
-  app validation, disabled features) stay app-side.
+  primitives, repo tooling scripts (`scripts/lint-docs.ts`, `scripts/hooks/*`), CI reusable
+  test/mutation workflows and `.github/actions/*` (minus calibration — see below; `check.yml`,
+  `quality.yml`, and `delivery.yml` are Tier 2). For shared behavioural tests the canonical
+  version is the **most thorough, correct** one; genuinely app-specific cases (i18n, app
+  validation, disabled features) stay app-side.
 - **Tier 2 — hybrid.** Files mixing template scaffolding with app content (`app/Models/User.php`,
   `FortifyServiceProvider`, Settings controllers, `EloquentUserRepository`, `tests/Pest.php` —
   scaffolding plus app test helpers, `tests/Feature/Architecture/ArchTest.php` — shared rules
   plus reasoned app-side `->ignoring()` hunks, `scripts/test-deploy-rsync-excludes.ts` — shared
   logic plus app-calibrated protected paths, the page-ViewModel scaffolding under
-  `app/ViewModels`, and `.github/workflows/delivery.yml` — shared deploy structure plus
+  `app/ViewModels`, `.github/workflows/delivery.yml` — shared deploy structure plus
   app-calibrated sibling-subdomain excludes, release-critical asset lists, and app-specific
-  steps; its app exclude set pairs with the rsync contract test's `PROTECTED_PATHS`). Converge
-  the template-origin hunks only; keep the app hunks. These are never byte-identical.
+  steps; its app exclude set pairs with the rsync contract test's `PROTECTED_PATHS`,
+  `.github/workflows/check.yml` and `.github/workflows/quality.yml` — shared `ci-lint` job
+  structure plus app-specific steps, and `docs/adr/README.md` — shared ADR policy text plus
+  app-owned ADR index sections). Converge the template-origin hunks only; keep the app hunks.
+  These are never byte-identical.
 - **Tier 3 — app-owned, out of scope.** Presentation, branding, and domain: `welcome` /
   `dashboard` / domain pages, branding components, `resources/css` design tokens, `public/*`,
   `routes/web.php`, lockfiles, `.env.example`, `README`.
@@ -48,8 +52,9 @@ template (best version wins — prefer *eliminating* an equivalent mutant by sim
 **Calibration carve-out.** The coverage/mutation gate values (`--min`) and the mutation-blocking
 toggle (`continue-on-error`), together with their adjacent rationale comments, are **calibrated
 per project** (TADR-0001: each project's CI workflow is the single source of truth for its gate).
-The config *files* lean template, but these *lines* stay app-priority. `/merge-template` records
-this exception so pulls resolve them deterministically.
+The reusable test/mutation workflow *files* (`reusable-test.yml` / `mutation.yml`) lean template,
+but these *lines* stay app-priority. `/merge-template` records this exception so pulls resolve
+them deterministically.
 
 The **density** of `@pest-mutate-ignore` annotations is likewise calibration-coupled: a higher
 `--min` forces a project to annotate equivalent survivors that a lower floor can leave

@@ -164,10 +164,18 @@ final readonly class FooCatalogFilters
 - **Page ViewModel** — one per Inertia page, class name ends in `PageViewModel`, implements
   `Inertia\ProvidesInertiaProperties`, and assembles the page's entire props payload (including
   SEO). The controller passes the object straight to `Inertia::render(...)`; the object resolves
-  its own props via `toInertiaProperties(RenderContext)`. Pages with page-specific props get a
-  1:1 concrete class (e.g. profile, two-factor). Pages that only need a title/description get the
-  shared `StaticPageViewModel` rather than a bespoke class per page, so ceremony scales with
-  complexity, not page count.
+  its own props via `toInertiaProperties(RenderContext)`. Three shapes, so ceremony scales with
+  complexity, not page count:
+  - Pages with page-specific props get a **1:1 concrete class** (e.g. profile, two-factor). This
+    is the default whenever the page's props shape is worth fixing as a type — the array-shape
+    PHPDoc on `toInertiaProperties` is what Larastan checks against.
+  - Pages that only need a title/description get the shared **`StaticPageViewModel`**.
+  - Pages whose props are already assembled by fragment ViewModels get the shared
+    **`DynamicPageViewModel`** (title/description + a props array + optional noindex). The props
+    shape responsibility then lives in the fragment ViewModels' array-shape PHPDocs, not at the
+    page level. Absorbed from a derived app, which pioneered the pattern; use it
+    instead of inlining raw prop arrays into `Inertia::render(...)` so SEO composition stays
+    uniform.
 - **Fragment ViewModel** — a formatting part for a piece of a page (a list row, a summary card),
   class name ends in `ViewModel` but not `PageViewModel`. It is a plain value object with a
   `toArray()`; it is not an Inertia page and does not implement `ProvidesInertiaProperties`.

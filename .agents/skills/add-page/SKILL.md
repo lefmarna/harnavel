@@ -27,6 +27,7 @@ Laravel + Inertia React の新規ページを、template の層規約と検証�
 3. PageViewModel を用意する。
    - 固有 props を持つページは `app/ViewModels/**/...PageViewModel.php` を作り、`PageViewModel` を継承する。
    - title / description だけの静的ページは `StaticPageViewModel` を使う。
+   - fragment ViewModel が props を組み立て済みのページは `DynamicPageViewModel` を使う（props の shape は fragment 側の PHPDoc が担う）。`Inertia::render` に生の配列を直接渡さない。
    - `toInertiaProperties(RenderContext $context)` の array-shape PHPDoc を React props 型と鏡合わせにする。
 4. `Inertia::render('path/to/page', $viewModel)` で ViewModel オブジェクトを直接渡す。
 5. route を変更したら `mise run wayfinder` を実行する。

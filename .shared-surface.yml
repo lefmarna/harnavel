@@ -24,15 +24,18 @@
 
 tier1:
   # Test infrastructure scaffolding
-  - tests/Pest.php
   - tests/TestCase.php
 
   # Shared auth / settings tests
   - tests/Feature/Auth/**
   - tests/Feature/Settings/**
 
-  # Shared architecture tests
+  # Shared architecture tests (ArchTest.php itself is Tier 2 — see below)
   - tests/Feature/Architecture/**
+
+  # Repo tooling scripts (lint-docs, agent hooks)
+  - scripts/lint-docs.ts
+  - scripts/hooks/**
 
   # Shared concern traits
   - app/Concerns/PasswordValidationRules.php
@@ -93,6 +96,29 @@ tier2:
 
   # GoogleAuth controller (shared OAuth flow, app-specific redirect/role logic)
   - app/Http/Controllers/Auth/GoogleAuthController.php
+
+  # Pest bootstrap (template scaffolding + assertInertiaShape lean template;
+  # app-specific test helpers and uses() scope extensions stay app-side)
+  - tests/Pest.php
+
+  # Arch rules (rules and presets lean template; app-side `->ignoring()`
+  # entries with a reason comment are legitimate app hunks — e.g. a preset
+  # exclusion for a non-crypto sha1 use, or a documented Model dependency)
+  - tests/Feature/Architecture/ArchTest.php
+
+  # Deploy rsync contract test (extraction/assertion logic leans template;
+  # PROTECTED_PATHS is app-calibrated — sibling subdomains and app-specific
+  # remote state differ per project and stay app-priority)
+  - scripts/test-deploy-rsync-excludes.ts
+
+  # Page ViewModel scaffolding (base class, generic page VMs, and the
+  # auth/settings page VMs lean template in structure; app-adapted props,
+  # i18n helpers, and app-specific SEO copy stay app-side)
+  - app/ViewModels/PageViewModel.php
+  - app/ViewModels/StaticPageViewModel.php
+  - app/ViewModels/DynamicPageViewModel.php
+  - app/ViewModels/Auth/**
+  - app/ViewModels/Settings/**
 
 # ---------------------------------------------------------------------------
 # Tier 3 — App-owned, out of scope

@@ -114,6 +114,7 @@ export default [
     ignores: [
       'vendor',
       'node_modules',
+      '.deploy',
       'public',
       'bootstrap/ssr',
       'playwright-report',

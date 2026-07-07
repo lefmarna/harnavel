@@ -45,10 +45,17 @@ jobs:
           name: build
           path: public/build/
 
+      # 対象ファイルのリストはアプリ較正（.shared-surface.yml: delivery.yml は Tier 2）
       - name: Check release-critical files
         run: |
-          test -f public/build/manifest.json || { echo '::error::Build artifact missing: public/build/manifest.json'; exit 1; }
-          test -f public/opengraph-image.jpg || { echo '::error::Default Open Graph image missing: public/opengraph-image.jpg'; exit 1; }
+          missing=0
+          for f in public/build/manifest.json public/opengraph-image.jpg; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Release-critical file missing: $f"
+              missing=1
+            fi
+          done
+          [ $missing -eq 0 ] || exit 1
 
       - name: Create deployment package
         run: |

@@ -29,16 +29,18 @@ template (best version wins — prefer *eliminating* an equivalent mutant by sim
   `app/Concerns/PasswordValidationRules`, `app/Http/Requests/Settings/*`,
   `app/Services/GoogleAuth/*` (minus app hunks), generic `resources/js/components/ui/*`
   primitives, repo tooling scripts (`scripts/lint-docs.ts`, `scripts/hooks/*`), CI workflows
-  (minus calibration — see below). For shared behavioural tests the canonical version is the
-  **most thorough, correct** one; genuinely app-specific cases (i18n, app validation, disabled
-  features) stay app-side.
+  except `delivery.yml` (minus calibration — see below). For shared behavioural tests the
+  canonical version is the **most thorough, correct** one; genuinely app-specific cases (i18n,
+  app validation, disabled features) stay app-side.
 - **Tier 2 — hybrid.** Files mixing template scaffolding with app content (`app/Models/User.php`,
   `FortifyServiceProvider`, Settings controllers, `EloquentUserRepository`, `tests/Pest.php` —
   scaffolding plus app test helpers, `tests/Feature/Architecture/ArchTest.php` — shared rules
   plus reasoned app-side `->ignoring()` hunks, `scripts/test-deploy-rsync-excludes.ts` — shared
-  logic plus app-calibrated protected paths, and the page-ViewModel scaffolding under
-  `app/ViewModels`). Converge the template-origin hunks only; keep the app hunks. These are
-  never byte-identical.
+  logic plus app-calibrated protected paths, the page-ViewModel scaffolding under
+  `app/ViewModels`, and `.github/workflows/delivery.yml` — shared deploy structure plus
+  app-calibrated sibling-subdomain excludes, release-critical asset lists, and app-specific
+  steps; its app exclude set pairs with the rsync contract test's `PROTECTED_PATHS`). Converge
+  the template-origin hunks only; keep the app hunks. These are never byte-identical.
 - **Tier 3 — app-owned, out of scope.** Presentation, branding, and domain: `welcome` /
   `dashboard` / domain pages, branding components, `resources/css` design tokens, `public/*`,
   `routes/web.php`, lockfiles, `.env.example`, `README`.

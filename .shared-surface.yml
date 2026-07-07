@@ -49,12 +49,12 @@ tier1:
   # Generic UI primitives (shadcn/ui wrappers — no app branding)
   - resources/js/components/ui/**
 
-  # CI workflows — calibration lines are carved out (see calibration-lines below)
+  # CI workflows — calibration lines are carved out (see calibration-lines
+  # below). delivery.yml is Tier 2 — see below.
   - .github/workflows/check.yml
   - .github/workflows/quality.yml
   - .github/workflows/reusable-test.yml
   - .github/workflows/mutation.yml
-  - .github/workflows/delivery.yml
   - .github/actions/**
 
   # Agent entry-point docs and methodology docs
@@ -110,6 +110,14 @@ tier2:
   # PROTECTED_PATHS is app-calibrated — sibling subdomains and app-specific
   # remote state differ per project and stay app-priority)
   - scripts/test-deploy-rsync-excludes.ts
+
+  # Deploy workflow (job structure, retry/ssh hardening, and the shared
+  # Laravel-internal excludes — .env, .user.ini, storage/** — lean template;
+  # app hunks stay app-side: sibling-subdomain / server-layout --exclude
+  # lines, the release-critical asset list, and app-specific extra steps.
+  # The app-side exclude set is contract-tested by
+  # scripts/test-deploy-rsync-excludes.ts, whose PROTECTED_PATHS pairs with it)
+  - .github/workflows/delivery.yml
 
   # Page ViewModel scaffolding (base class, generic page VMs, and the
   # auth/settings page VMs lean template in structure; app-adapted props,

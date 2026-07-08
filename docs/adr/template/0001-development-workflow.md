@@ -30,7 +30,7 @@ Key boundaries:
 - **Structure:** `describe`/`it` hierarchy for new tests; Japanese behavioral titles
   (`〜できる`, `〜の場合〜になる`); one `it` = one behavior.
 - **Coverage:** high floor (~90%) on `app/`; 100% is aspirational on pure logic layers
-  (`Services`/`Actions`/`Repositories`); honesty is backed by mutation testing (see
+  (`Services`/`Actions`/`Repositories`/`Params`); honesty is backed by mutation testing (see
   Gates). **Global 100% line coverage is explicitly rejected** because it rewards
   tautological tests and gives false confidence.
 - **Coverage contract:** behavioral changes (endpoints, validation, authorization,
@@ -51,8 +51,8 @@ the currently wired checks are required for merge.
   whether mutation blocks the build (`continue-on-error`). These lines stay app-side on
   template pulls ([`TADR-0003`](0003-shared-surface-convergence.md)).
 - **Mutation scope:** the pure-logic layers (`app/Services`, `app/Actions`,
-  `app/Repositories`), run as a separate workflow on PRs touching those layers or their
-  tests, plus manual dispatch.
+  `app/Repositories`, `app/Params`), run as a separate workflow on PRs touching those
+  layers or their tests, plus manual dispatch.
 - **Mutation tool:** Pest's built-in `pest --mutate` (`pestphp/pest-plugin-mutate`),
   **not** standalone `infection/infection` — Infection 0.33 is structurally incompatible
   with Pest 4 (it cannot reconcile Pest's `P\…` evaluable test-class names against its

@@ -34,7 +34,7 @@ This file is the operational playbook — keep it terse.
   Exempt: styling/copy/layout, config/infra, docs. A new page MUST have a smoke E2E and a
   Feature spec that asserts its Inertia component and page-specific props shape.
 - **Coverage gate:** floor ~90% on `app/` (exclude boilerplate); 100% aspirational on
-  `Services`/`Actions`/`Repositories`. No global 100%. Honesty is backed by the
+  `Services`/`Actions`/`Repositories`/`Params`. No global 100%. Honesty is backed by the
   mutation score (`pest --mutate`), not by line coverage.
 
 ## Reviewing without reading the implementation

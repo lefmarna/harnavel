@@ -1,6 +1,6 @@
 name: mutation
 
-# 純ロジック層（app/Services・app/Actions・app/Repositories）のミューテーションテスト。
+# 純ロジック層（app/Services・app/Actions・app/Repositories・app/Params）のミューテーションテスト。
 # 「テスト＝仕様」方針（docs/testing-as-spec.md / TADR-0001 Phase 4）における
 # 「緑＝レビュー不要」の honesty を MSI で担保する。
 #
@@ -19,6 +19,7 @@ on:
       - 'app/Services/**'
       - 'app/Actions/**'
       - 'app/Repositories/**'
+      - 'app/Params/**'
       - 'tests/**'
       - '.github/workflows/mutation.yml'
 
@@ -108,7 +109,7 @@ jobs:
           # 将来のバージョン更新への保険として実行前に明示的に用意する。
           mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations
           ./vendor/bin/pest --mutate --covered-only --no-progress \
-            --class="App\Services,App\Actions,App\Repositories" \
+            --class="App\Services,App\Actions,App\Repositories,App\Params" \
             --min=80
         env:
           DB_HOST: 127.0.0.1

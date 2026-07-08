@@ -97,12 +97,12 @@ description = "Run tests"
 run = "docker compose exec app php artisan test $@"
 raw = true
 
-# 純ロジック層（Services/Actions/Repositories）のミューテーションテスト。
+# 純ロジック層（Services/Actions/Repositories/Params）のミューテーションテスト。
 # 「緑＝レビュー不要」を支える MSI（テストが実際にバグを捕まえるか）を計測する。
 # 閾値（--min）は付けない＝ローカルはスコア確認用。ゲートの数値は CI が単一正典。
 [tasks.mutate]
-description = "Run mutation testing on pure-logic layers (Services/Actions/Repositories)"
-run = 'docker compose exec app vendor/bin/pest --mutate --covered-only --class="App\Services,App\Actions,App\Repositories" $@'
+description = "Run mutation testing on pure-logic layers (Services/Actions/Repositories/Params)"
+run = 'docker compose exec app vendor/bin/pest --mutate --covered-only --class="App\Services,App\Actions,App\Repositories,App\Params" $@'
 raw = true
 
 [tasks.analyse]

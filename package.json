@@ -11,7 +11,7 @@
     "format:check": "prettier --check --log-level warn .",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
-    "types:check": "tsc --pretty --noEmit && tsc -p scripts/tsconfig.json --pretty false",
+    "types:check": "tsc --pretty --noEmit && tsc -p scripts/tsconfig.json --pretty false && tsc -p e2e/tsconfig.json --pretty false",
     "test:unit": "node --import tsx scripts/run-unit-tests.ts",
     "lint:docs": "tsx scripts/lint-docs.ts",
     "test:deploy-rsync-excludes": "node --import tsx scripts/test-deploy-rsync-excludes.ts",

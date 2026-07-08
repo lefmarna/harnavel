@@ -1,75 +1,75 @@
 ---
 name: merge-template
-description: template リポジトリからの pull で発生したコンフリクトを規約に沿って解消する
+description: Resolve conflicts from pulling the template repository according to the app-specific versus template-aligned decision rules.
 disable-model-invocation: true
 argument-hint: "[REMOTE=template] [BRANCH=main]"
 ---
 
 # Merge Template
 
-`git pull <remote> <branch>` で発生したコンフリクトを、アプリ固有/template 寄せの判断基準に沿って解消します。
+Resolve conflicts from `git pull <remote> <branch>` using the repository rules for app-specific content versus template-aligned content.
 
-## 解消方針
+## Resolution Policy
 
-分類モデルは [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) を参照し、具体パスは下の運用パス分類に従う。
+Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) for the classification model, and use the operational path classification below for concrete paths.
 
-- **template 側に寄せる**: 共通基盤（auth, mail, settings 等）の template 由来ハンク、scaffolding、テストヘルパー、命名・コーディング規約、ライブラリ更新、汎用 UI プリミティブの雛形、テスト=仕様 手法のファイル（`docs/testing-as-spec.md`、template ADR `docs/adr/template/**`、arch test 雛形、`reusable-test.yml` / `mutation.yml` / `.github/actions/**`）
-- **アプリ側を優先**: ドメインロジック、独自 UI コンポーネント / デザイントークン、独自 ViewModel / Service / Repository パターン、i18n や多言語テスト、アプリ固有のルート・コントローラ、番号付きアプリ ADR（`docs/adr/NNNN-*.md`、フラット）、`CONTEXT.md`（ドメイン用語集。template はシードを提供するだけでアプリ所有）
-- **ハイブリッド（`AGENTS.md`）**: 構成・運用ルール（Verification / Testing / Documentation の規約）は template 寄せ、Project Context などアプリ固有の記述はアプリ側を残す。エージェント入口ファイル（`CLAUDE.md` / `GEMINI.md`）はポインタ 1 行のまま template 寄せ
-- **ハイブリッド（CI entry workflows）**: `.github/workflows/check.yml` / `.github/workflows/quality.yml` は共有 `ci-lint` 呼び出し構造を template 寄せ、アプリ固有ステップ（例: 追加の frontend unit test）はアプリ側を残す。`.github/workflows/delivery.yml` は共有 deploy 構造・ssh/retry hardening・Laravel 内部 exclude を template 寄せ、sibling-subdomain / server-layout の `--exclude`、release-critical asset list、アプリ固有追加ステップはアプリ側を残す
-- **ハイブリッド（`docs/adr/README.md`）**: ADR ポリシー本文は template 寄せ、アプリ所有の ADR インデックス節（例: `## App ADRs`）はアプリ側を残す
-- **ハイブリッド（`mise.toml`）**: 新規タスクはまず template 昇格を前提に検討し、避けられないプロジェクト固有ワークフローだけアプリ側追加を許容する。template 取り込み時は極力触らず、共有コマンド面を変える必要がある場合だけ `AGENTS.md` / `docs/commands.md` とセットで明示レビューして採用する
-- **較正値（アプリ優先の例外）**: coverage / mutation のゲート値（`--min` の数値）と mutation のブロッキング可否（`continue-on-error` の有無）、およびその**直近の理由コメント行**。`reusable-test.yml` / `mutation.yml` 自体は template 寄せ（上記）だが、これらの行はプロジェクト個別に較正されるためアプリ側の値を残す（[`TADR-0001`](../../../docs/adr/template/0001-development-workflow.md): 各プロジェクトの CI workflow がゲート値の単一正典／[`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md): 共有サーフェス収束と較正カーブアウト）
-- **テスト**: 同一観点が両側にあれば統合または片方削除して可。**寄せる場合は template 側へ**。アプリ固有のカバレッジ（i18n テストなど）は保持
-- **ADR 名前空間**: pull 後の調整（旧 template ADR の削除・`TADR-0001` への参照付け替え・app ADR の番号詰め）は `docs/adr/README.md` の手順に従う
+- **Prefer the template side**: template-origin hunks for common foundations such as auth, mail, and settings; scaffolding; test helpers; naming and coding conventions; library updates; generic UI primitive scaffolds; and testing-as-spec files (`docs/testing-as-spec.md`, template ADRs under `docs/adr/template/**`, architecture test scaffolds, `reusable-test.yml` / `mutation.yml` / `.github/actions/**`).
+- **Prefer the app side**: domain logic, custom UI components / design tokens, custom ViewModel / Service / Repository patterns, i18n and multilingual tests, app-specific routes/controllers, numbered App ADRs (`docs/adr/NNNN-*.md`, flat namespace), and `CONTEXT.md` (domain glossary; the template only provides the seed and the app owns it).
+- **Hybrid (`AGENTS.md`)**: keep template-aligned structure and operational rules such as Verification / Testing / Documentation, while preserving app-specific Project Context. Agent entry files (`CLAUDE.md` / `GEMINI.md`) stay one-line pointers aligned with the template.
+- **Hybrid (CI entry workflows)**: for `.github/workflows/check.yml` / `.github/workflows/quality.yml`, keep the shared `ci-lint` call structure aligned with the template and preserve app-specific steps such as additional frontend unit tests. For `.github/workflows/delivery.yml`, keep the shared deploy structure, ssh/retry hardening, and Laravel internal excludes aligned with the template, while preserving sibling-subdomain / server-layout `--exclude` values, the release-critical asset list, and app-specific extra steps.
+- **Hybrid (`docs/adr/README.md`)**: keep the ADR policy body aligned with the template and preserve the app-owned ADR index section such as `## App ADRs`.
+- **Hybrid (`mise.toml`)**: first consider promoting new tasks to the template. Allow app-side additions only for unavoidable project-specific workflows. When pulling from the template, avoid touching this file unless the shared command surface must change; if it must, review it together with `AGENTS.md` / `docs/commands.md`.
+- **Calibration values (app-priority exception)**: coverage / mutation gate values (`--min` numbers), whether mutation is blocking (`continue-on-error`), and the immediately adjacent reason comments. `reusable-test.yml` / `mutation.yml` themselves are template-aligned, but these lines are calibrated per project and should keep the app-side values ([`TADR-0001`](../../../docs/adr/template/0001-development-workflow.md): each project's CI workflow is the single canonical source for gate values; [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md): shared-surface convergence with calibration carve-outs).
+- **Tests**: if both sides cover the same behavior, merge them or delete one side as appropriate. When aligning, prefer the template side. Preserve app-specific coverage such as i18n tests.
+- **ADR namespace**: after the pull, follow `docs/adr/README.md` for cleanup such as deleting old template ADRs, retargeting references to `TADR-0001`, and compacting App ADR numbers.
 
-## 運用パス分類
+## Operational Path Classification
 
-旧 manifest は持たない。収束判断に使う具体分類は、この手順内に置く。
+There is no legacy manifest. The concrete classification used for convergence lives in this procedure.
 
-- **T1 完全共有**: `tests/TestCase.php`, `tests/Feature/Architecture/**`（`tests/Feature/Architecture/ArchTest.php` を除く）, `app/Concerns/PasswordValidationRules.php`, `e2e/support/**`, `scripts/lint-docs.ts`, `scripts/run-unit-tests.ts`, `scripts/hooks/**`, `.github/workflows/reusable-test.yml`, `.github/workflows/mutation.yml`, `.github/actions/**`, `docs/testing-as-spec.md`, `docs/adr/template/**`, `.claude/skills/absorb-from-apps/**`, `.claude/skills/merge-template/**`, `.claude/skills/add-page/**`, `.claude/skills/adr-compact/**`, `.agents/skills/add-page/**`, `.agents/skills/adr-compact/**`
-- **T2 ハイブリッド**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `app/Models/User.php`, `app/Providers/FortifyServiceProvider.php`, `app/Http/Controllers/Settings/**`, `app/Http/Controllers/Auth/GoogleAuthController.php`, `app/Http/Requests/Settings/**`, `app/Repositories/User/EloquentUserRepository.php`, `app/Services/GoogleAuth/**`, `app/ViewModels/**`, `tests/Pest.php`, `tests/Feature/Auth/**`, `tests/Feature/Settings/**`, `tests/Feature/Architecture/ArchTest.php`, `resources/js/components/ui/**`, `scripts/test-deploy-rsync-excludes.ts`, `.github/workflows/check.yml`, `.github/workflows/quality.yml`, `.github/workflows/delivery.yml`, `docs/adr/README.md`, `mise.toml`
-- **T3 アプリ所有**: `resources/js/pages/**`, `resources/js/components/**`（`resources/js/components/ui/**` を除く）, `resources/css/**`, `public/**`, `routes/**`, `app/Http/Controllers/**`（Settings / GoogleAuth を除く）, `composer.lock`, `pnpm-lock.yaml`, `.env.example`, `.env`, `README.md`, `CONTEXT.md`, `docs/adr/[0-9][0-9][0-9][0-9]-*.md`
-- **較正行**: `reusable-test.yml` / `mutation.yml` の `--min`, `continue-on-error`, その直近理由コメント、`@pest-mutate-ignore` の注釈密度はアプリ優先。
+- **T1 Shared**: `tests/TestCase.php`, `tests/Feature/Architecture/**` (`tests/Feature/Architecture/ArchTest.php` excluded), `app/Concerns/PasswordValidationRules.php`, `e2e/support/**`, `scripts/lint-docs.ts`, `scripts/run-unit-tests.ts`, `scripts/hooks/**`, `.github/workflows/reusable-test.yml`, `.github/workflows/mutation.yml`, `.github/actions/**`, `docs/testing-as-spec.md`, `docs/adr/template/**`, `.claude/skills/absorb-from-apps/**`, `.claude/skills/merge-template/**`, `.claude/skills/add-page/**`, `.claude/skills/adr-compact/**`, `.agents/skills/add-page/**`, `.agents/skills/adr-compact/**`
+- **T2 Hybrid**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `app/Models/User.php`, `app/Providers/FortifyServiceProvider.php`, `app/Http/Controllers/Settings/**`, `app/Http/Controllers/Auth/GoogleAuthController.php`, `app/Http/Requests/Settings/**`, `app/Repositories/User/EloquentUserRepository.php`, `app/Services/GoogleAuth/**`, `app/ViewModels/**`, `tests/Pest.php`, `tests/Feature/Auth/**`, `tests/Feature/Settings/**`, `tests/Feature/Architecture/ArchTest.php`, `resources/js/components/ui/**`, `scripts/test-deploy-rsync-excludes.ts`, `.github/workflows/check.yml`, `.github/workflows/quality.yml`, `.github/workflows/delivery.yml`, `docs/adr/README.md`, `mise.toml`
+- **T3 App-owned**: `resources/js/pages/**`, `resources/js/components/**` (`resources/js/components/ui/**` excluded), `resources/css/**`, `public/**`, `routes/**`, `app/Http/Controllers/**` (Settings / GoogleAuth excluded), `composer.lock`, `pnpm-lock.yaml`, `.env.example`, `.env`, `README.md`, `CONTEXT.md`, `docs/adr/[0-9][0-9][0-9][0-9]-*.md`
+- **Calibration lines**: `--min`, `continue-on-error`, their immediately adjacent reason comments in `reusable-test.yml` / `mutation.yml`, and `@pest-mutate-ignore` annotation density are app-priority.
 
-## 引数
+## Arguments
 
-- `REMOTE`: マージ対象のリモート名（既定: `template`）
-- `BRANCH`: マージ対象のブランチ名（既定: `main`）
+- `REMOTE`: Remote name to merge from. Default: `template`.
+- `BRANCH`: Branch name to merge from. Default: `main`.
 
-## 作業フロー
+## Workflow
 
-### 1. 事前確認
+### 1. Preflight
 
 ```bash
 git status
 git remote -v
 ```
 
-- マージが進行中か (`MERGE_HEAD` の有無)
-- 既に `git pull <REMOTE> <BRANCH>` 実行済みか
-- 未実行なら実行する。失敗してコンフリクトが出た時点でこのフローへ
+- Check whether a merge is in progress (`MERGE_HEAD` exists).
+- Check whether `git pull <REMOTE> <BRANCH>` has already run.
+- If not, run it. When it fails with conflicts, continue with this workflow.
 
-### 2. コンフリクト一覧化＆タスク管理
+### 2. List Conflicts and Track Tasks
 
 ```bash
 git diff --diff-filter=U --name-only
 ```
 
-- 一覧を取得し、TaskCreate でファイル単位のタスクを起こす
-- ファイル数が多い場合は関連グループ（auth 関連、settings 関連 等）でまとめて可
+- Get the conflict list and create file-level tasks.
+- If there are many files, group related files such as auth or settings.
 
-### 3. 各コンフリクトの解消
+### 3. Resolve Each Conflict
 
-ファイルを開いて `<<<<<<< HEAD / ======= / >>>>>>> ...` ブロックを 1 つずつ解消する。
+Open each file and resolve every `<<<<<<< HEAD / ======= / >>>>>>> ...` block.
 
-判断手順:
+Decision procedure:
 
-1. **両側の差分の意図を理解する**（ドキュメント・周辺コード・既存テストを読む）
-2. **分類する**: `アプリ固有 / template 寄せ / ハイブリッド`
-3. **ハイブリッドの場合**: アプリ固有の規約（例: 専用 ViewModel パターン、独自 Repository メソッド）を残しつつ、内部実装は template の方針を採用するなど折衷
-4. **PII / セキュリティ関連の差分**: ベストプラクティス側を採用（例: ログから email を除外、defense-in-depth）
-5. **解消後**、コンフリクトマーカーが残っていないことを確認
+1. Understand the intent of both sides by reading docs, nearby code, and existing tests.
+2. Classify the change as app-specific, template-aligned, or hybrid.
+3. For hybrid changes, preserve app-specific conventions such as dedicated ViewModel patterns or custom Repository methods while adopting the template implementation direction where appropriate.
+4. For PII or security-related changes, choose the best-practice side, such as removing email from logs.
+5. After resolving, confirm no conflict markers remain.
 
 ```bash
 git grep -nI -E '^(<<<<<<<|=======|>>>>>>>)' -- . \
@@ -81,23 +81,24 @@ git grep -nI -E '^(<<<<<<<|=======|>>>>>>>)' -- . \
   ':(exclude)docs/generated/**'
 ```
 
-### 4. アプリ固有メソッド / 不要コードの整理
+### 4. Clean Up App-Specific Methods or Dead Code
 
-- template 寄せに合わせて使われなくなったメソッド（例: Repository の独自メソッド）は削除
-- 関連するテストの fake / mock も併せて整理
+- Remove methods that became unused after aligning with the template, such as custom Repository methods.
+- Clean up related test fakes and mocks at the same time.
 
-### 5. 検証
+### 5. Verify
 
-プロジェクトの規約に沿ったコマンドを実行する。`CLAUDE.md` / `AGENTS.md` の Verification セクションを参照して選ぶ。
+Run commands according to the project rules. Use the Verification section in `CLAUDE.md` / `AGENTS.md`.
 
-例（Laravel + Inertia/React アプリ）:
-- Backend: `mise run verify:backend`、または必要に応じて `docker compose exec app ...`
-- Frontend: `pnpm format:check` / `pnpm lint:check` / `pnpm types:check` / `pnpm test:e2e --reporter=dot`
-- Docs: `pnpm lint:docs`
+Examples for Laravel + Inertia/React apps:
 
-format check で warn が出たら `pnpm format` で自動整形してから再 check。
+- Backend: `mise run verify:backend`, or `docker compose exec app ...` when narrower checks are appropriate.
+- Frontend: `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:e2e --reporter=dot`.
+- Docs: `pnpm lint:docs`.
 
-### 6. ステージングとサマリ
+If format check reports warnings, run `pnpm format` and then rerun the check.
+
+### 6. Stage and Summarize
 
 ```bash
 git add <resolved-files>
@@ -105,43 +106,43 @@ git status
 git diff --cached --stat
 ```
 
-- 全コンフリクトが解消され、`All conflicts fixed` 表示になっていることを確認
-- **コミットは行わない**。ユーザーがレビューしてから自身でコミットする方針
+- Confirm that all conflicts are resolved and Git reports `All conflicts fixed`.
+- Do not commit. The user reviews and commits.
 
-### 7. レポート
+### 7. Report
 
-ユーザーに以下を提示:
+Report the following to the user:
 
-- **template 側を採用した部分**: ファイルと簡潔な理由
-- **アプリ側を残した部分**: ファイルと簡潔な理由
-- **テストの統廃合内容**: 削除したテスト、統合したテスト、保持した固有テスト
-- **検証結果**: 各コマンドの pass 状況
-- **upstream 報告候補**: コンフリクト解消中に template 側にもバグや改善点を発見した場合は、報告用の文面を併記
+- Template-side choices: files and brief reasons.
+- App-side choices: files and brief reasons.
+- Test consolidation: deleted, merged, and preserved app-specific tests.
+- Verification results: pass status for each command.
+- Upstream candidates: if conflict resolution exposed a template-side bug or improvement, include a ready-to-file issue or PR note.
 
-## 重要な原則
+## Important Principles
 
-- **読み解いてから判断する**: 両側の差分の "意図" を周辺コードと突き合わせて理解する。表面的なテキストマージは避ける
-- **defense in depth は維持**: セキュリティ系の二重チェックを「冗長」として安易に削らない
-- **PII を残さない**: ログから email など個人情報を出すコードがあれば落とす方向で揃える
-- **依存の暗黙化に注意**: DB collation 等の "設定への暗黙依存" がある場合は、プロジェクト規約で明示されているか確認
-- **DRY と明示性のバランス**: アプリ規約があるならそれに従う（例: 専用 ViewModel パターンを使うアプリでは、template の inline 実装を ViewModel に置き換える）
-- **環境ガードブロックは 1 つに**: `if (app()->environment(['local', 'testing']))` などの test-only ブロックが複数できないように統合する
-- **コミット前に止まる**: 解消後はステージングまでで停止し、ユーザーレビューを待つ
+- **Understand before deciding**: compare both sides' intent against surrounding code. Avoid superficial text merges.
+- **Keep defense in depth**: do not remove security double checks merely because they look redundant.
+- **Do not keep PII**: prefer changes that remove personal information such as email addresses from logs.
+- **Watch implicit dependencies**: if behavior relies on settings such as DB collation, confirm the dependency is explicit in project policy.
+- **Balance DRY and explicitness**: follow app conventions when they exist, for example replacing the template's inline implementation with a dedicated ViewModel in apps that use that pattern.
+- **Keep one environment guard block**: avoid creating multiple test-only blocks such as `if (app()->environment(['local', 'testing']))`.
+- **Stop before commit**: after resolving conflicts, stop at staging and wait for user review.
 
-## アプリ固有が template 起因の bug fix だった場合
+## If an App-Specific Change Is a Template Bug Fix
 
-差分が「template 側のバグを直す改善」だった場合:
+If the diff fixes a template-side bug:
 
-1. 差分の妥当性を判断（アプリ固有事情がないか確認）
-2. アプリ側で fix を維持しつつ、template への upstream 報告文面（issue / PR テンプレート）を提示する
-3. 報告文面には: 概要・再現条件・原因・修正案コード・回帰防止テストを含める
+1. Judge whether the change is valid and not app-specific.
+2. Keep the fix in the app and provide an upstream report draft for the template.
+3. Include summary, reproduction conditions, cause, proposed fix code, and regression test.
 
-## 使用例
+## Examples
 
 ```bash
-# 標準（template リモート、main ブランチ）
+# Standard template remote and main branch.
 /merge-template
 
-# 異なるリモート / ブランチを指定
+# Custom remote or branch.
 /merge-template REMOTE=upstream BRANCH=develop
 ```

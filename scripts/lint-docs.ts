@@ -279,10 +279,10 @@ const SHARED_SURFACE_CLASSIFICATION_FILES: readonly string[] = [
 ]
 
 const CLASSIFICATION_LINE_LABELS = [
-  'T1 完全共有',
-  'T2 ハイブリッド',
-  'T3 アプリ所有',
-  '較正行',
+  'T1 Shared',
+  'T2 Hybrid',
+  'T3 App-owned',
+  'Calibration lines',
 ] as const
 
 type ClassificationLineLabel = (typeof CLASSIFICATION_LINE_LABELS)[number]
@@ -350,13 +350,13 @@ function extractOperationalPathClassification(
   const content = fs.readFileSync(absolutePath, 'utf-8')
   const lines = content.split('\n')
   const headingIndex = lines.findIndex(
-    (line) => line.trim() === '## 運用パス分類',
+    (line) => line.trim() === '## Operational Path Classification',
   )
 
   if (headingIndex === -1) {
     errors.push({
       file: relativePath,
-      reason: 'Missing "## 運用パス分類" section.',
+      reason: 'Missing "## Operational Path Classification" section.',
     })
 
     return { errors, lines: linesByLabel }

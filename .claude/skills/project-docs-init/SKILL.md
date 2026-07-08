@@ -1,144 +1,147 @@
 ---
 name: project-docs-init
-description: テンプレートから展開した新規プロジェクトのdocsを初期化する
+description: Initialize docs for a new project expanded from the template.
 disable-model-invocation: true
 ---
 
 # Project Docs Initialization
 
-テンプレートリポジトリから展開した新規プロジェクトのドキュメントを初期化する。
+Initialize documentation for a new project expanded from the template repository.
 
 ## Purpose
 
-このテンプレートは Laravel + Inertia + Docker のひな形であり、展開先プロジェクトごとに `docs/` の内容をカスタマイズする必要がある。既存のプロジェクトコンテキスト（`old_docs/` 等）を読み取り、テンプレートの docs 構成を維持しつつプロジェクト固有の情報を反映する。
+This template is a Laravel + Inertia + Docker starter, so each derived project needs its own customized `docs/` content. Read the existing project context, such as `old_docs/`, and reflect project-specific information while preserving the template docs structure.
 
-重要:
-- docs は短く保つ
-- 推測できる一般論や長いチュートリアルは追加しない
-- プロジェクト固有で、安定していて、コードだけでは分からない情報だけを残す
+Important:
+
+- Keep docs short.
+- Do not add inferable generalities or long tutorials.
+- Keep only information that is project-specific, stable, and not obvious from code alone.
 
 ## Prerequisites
 
-実行前に以下を確認する:
+Confirm the following before running:
 
-1. プロジェクトのコンテキスト情報が `old_docs/` ディレクトリ（または指定されたディレクトリ）にまとめられていること
-2. テンプレートの `docs/` 構造がそのまま残っていること
+1. Project context information is collected in the `old_docs/` directory, or another specified directory.
+2. The template `docs/` structure is still intact.
 
-## Step 1: Input 確認
+## Step 1: Confirm Inputs
 
-ユーザーに以下を確認する:
+Ask the user to confirm:
 
-1. **コンテキストディレクトリ**: プロジェクトの既存ドキュメントがある場所（デフォルト: `old_docs/`）
-2. **ローカル識別子・ポート設定**: このプロジェクトで使う `APP_NAME`、`DB_DATABASE`、Docker ポート（複数プロジェクト並列開発のため、プロジェクトごとに変える運用）
+1. **Context directory**: where the project's existing documentation lives. Default: `old_docs/`.
+2. **Local identifiers and port settings**: `APP_NAME`, `DB_DATABASE`, and Docker ports used by this project. These are changed per project so multiple projects can be developed in parallel.
 
-## Step 2: コンテキスト読み取り
+## Step 2: Read Context
 
-コンテキストディレクトリ内のすべてのファイルを読み取り、以下の情報を抽出する:
+Read every file in the context directory and extract:
 
-- プロジェクト名・概要
-- 対象ユーザー・解決する課題
-- 主要機能・スコープ
-- ドメイン用語（`CONTEXT.md` の初期エントリ候補）
-- 技術的な制約や特記事項
-- 未決定事項
+- Project name and summary.
+- Target users and problems solved.
+- Major features and scope.
+- Domain terms, as initial entry candidates for `CONTEXT.md`.
+- Technical constraints and notable facts.
+- Undecided items.
 
-## Step 3: docs 更新対象の特定
+## Step 3: Identify Docs to Update
 
-テンプレートの docs 構成のうち、プロジェクト固有の情報で更新が必要なファイル:
+Files in the template docs structure that need project-specific updates:
 
-| ファイル | 更新内容 |
+| File | Update |
 | --- | --- |
-| `AGENTS.md` | プロジェクトの目的、非自明な慣習、運用ルールを展開先前提の内容へ更新 |
-| `CONTEXT.md` | コンテキストから抽出したドメイン用語で初期エントリを記入（冒頭の契約文とエントリ形式は維持） |
-| `docs/infrastructure.md` | Local Runtime Topology / Default local endpoints / runtime 事実 / 必要ならデプロイ前提を更新（識別子・DB 名・ポートの値そのものは `.env.example` が正典） |
-| `docs/commands.md` | Interactive Browser Verification のローカル URL 例を更新 |
-| `.env.example` | `APP_NAME`、`DB_DATABASE`、`VITE_APP_NAME`、ポート番号のデフォルト値を更新 |
-| `public/manifest.webmanifest` | Web App Manifest の静的なアプリ名・説明を更新 |
-| `README.md` | タイトル、冒頭のリード文、概要、セットアップをプロジェクト固有の文言へ更新 |
+| `AGENTS.md` | Update the project purpose, non-obvious conventions, and operational rules for the derived project. |
+| `CONTEXT.md` | Fill initial entries with domain terms extracted from context. Preserve the opening contract text and entry format. |
+| `docs/infrastructure.md` | Update Local Runtime Topology, Default local endpoints, runtime facts, and deployment assumptions if needed. The actual identifier, DB name, and port values are canonical in `.env.example`. |
+| `docs/commands.md` | Update the local URL examples in Interactive Browser Verification. |
+| `.env.example` | Update default values for `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port numbers. |
+| `public/manifest.webmanifest` | Update the static app name and description in the Web App Manifest. |
+| `README.md` | Update the title, opening lead, overview, and setup text for the project. |
 
-以下のファイルはテンプレート共通のため**原則変更しない**:
+The following files are template-shared and should generally not be changed:
 
-- `docs/generated/boost.md` - 自動生成（編集禁止）
-- `docs/generated/specs.md` - 自動生成（編集禁止）
-- `docs/testing-as-spec.md` - テスト=仕様 手法（template 共通）
-- `docs/adr/template/**`、`docs/adr/README.md` - template ADR と ADR 採番規約（プロジェクト独自 ADR は `docs/adr/NNNN-*.md` に作成）
+- `docs/generated/boost.md` - generated; do not edit.
+- `docs/generated/specs.md` - generated; do not edit.
+- `docs/testing-as-spec.md` - testing-as-spec method; shared by the template.
+- `docs/adr/template/**`, `docs/adr/README.md` - template ADRs and ADR numbering policy. Project-specific ADRs are created as `docs/adr/NNNN-*.md`.
 
-補足:
-- `docs/commands.md` はコマンドのソースオブトゥルースなので、プロジェクト固有の URL 例以外は実際にコマンド差分がある場合だけ更新する
-- `README.md` と `AGENTS.md` は構成や役割は維持するが、タイトルと導入文はテンプレート文言のまま残さない
-- 「template」「starter」「ひな形」など、展開先で他人事に見える導入文は避ける
+Notes:
 
-## Step 4: 入口ドキュメントの更新
+- `docs/commands.md` is the command source of truth, so update it only for project-specific URL examples unless the actual commands differ.
+- Preserve the structure and role of `README.md` and `AGENTS.md`, but do not leave the title and introduction as template wording.
+- Avoid introductory text that reads like someone else's template after expansion, such as "template", "starter", or "scaffold".
 
-`README.md` と `AGENTS.md` の先頭を以下の方針で更新する:
+## Step 4: Update Entry Documents
+
+Update the top of `README.md` and `AGENTS.md` with the following policy:
 
 **`README.md`**
 
-- タイトルをプロジェクト名またはプロジェクト名ベースの文言へ変更
-- 冒頭 1-2 段落を、そのプロジェクトが何をするものかに書き換える
-- 「テンプレートです」「複数案件へ横展開」など、雛形前提の説明を残さない
-- セットアップ手順は実際の利用者向けに維持する
+- Change the title to the project name or project-name-based wording.
+- Rewrite the first one or two paragraphs to describe what the project does.
+- Do not leave scaffold-oriented explanations such as "this is a template" or "for horizontal rollout across multiple projects".
+- Keep setup steps for actual users.
 
 **`AGENTS.md`**
 
-- プロジェクトの目的、守るべき非自明ルール、確認コマンドを展開先前提で更新する
-- テンプレート前提の表現を残さない
-- generated 編集禁止・review ルール・docs の責務分離など、運用上の強制事項は維持する
+- Update the project purpose, non-obvious rules, and verification commands for the derived project.
+- Do not leave template-assumption wording.
+- Keep mandatory operational rules such as generated-file edit bans, review rules, and docs responsibility separation.
 
-## Step 5: AGENTS.md のプロジェクト文脈更新
+## Step 5: Update Project Context in AGENTS.md
 
-`AGENTS.md` の `Project Context` と関連セクションを以下の方針で更新する:
+Update `Project Context` and related sections in `AGENTS.md` using this policy:
 
-**プロジェクト固有で書き換える要素:**
+**Project-specific elements to rewrite:**
 
-- このアプリが何者で、誰に何を提供するか
-- 何が初期スコープで、何が out of scope か
-- コードだけでは伝わりにくい運用ルールや制約
-- プロジェクト固有の review / verification の判断基準
+- What this app is and what it provides to whom.
+- What is in the initial scope and what is out of scope.
+- Operational rules and constraints that are hard to infer from code alone.
+- Project-specific review and verification judgment criteria.
 
-**維持する要素（テンプレート共通）:**
+**Elements to preserve because they are template-shared:**
 
-- docs の責務分離
-- generated ファイル編集禁止
-- docs / README の言語ルール
+- Docs responsibility separation.
+- Generated-file edit ban.
+- Language rules for docs and README.
 
-必要なら、画面構成やアクセス制御のような補足は専用 doc を増やさず、まず `AGENTS.md` に短く要約して済ませる。
+If supplemental details such as screen structure or access control are needed, first summarize them briefly in `AGENTS.md` instead of adding a dedicated doc.
 
-## Step 6: ローカル識別子・ポート設定の更新
+## Step 6: Update Local Identifiers and Port Settings
 
-ユーザー指定の `APP_NAME`、`DB_DATABASE`、ポート番号、およびコンテキストから抽出したプロジェクト名で以下を更新:
+Using the user-provided `APP_NAME`, `DB_DATABASE`, port numbers, and the project name extracted from context, update:
 
-- `docs/infrastructure.md` の Local Runtime Topology テーブルと Default local endpoints
-- `docs/commands.md` の Interactive Browser Verification にある Playwright CLI のローカル URL
-- `README.md` のセットアップ後の既定 URL
-- `.env.example` の `APP_NAME`、`DB_DATABASE`、`VITE_APP_NAME`、ポート設定の該当変数
-- `public/manifest.webmanifest` の `name`、`short_name`、`description`
+- Local Runtime Topology table and Default local endpoints in `docs/infrastructure.md`.
+- Playwright CLI local URL in Interactive Browser Verification in `docs/commands.md`.
+- Default URL after setup in `README.md`.
+- Relevant `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port variables in `.env.example`.
+- `name`, `short_name`, and `description` in `public/manifest.webmanifest`.
 
-命名規則:
-- `APP_NAME` はケバブケース
-- `DB_DATABASE` はスネークケース
+Naming rules:
 
-## Step 7: 確認と検証
+- `APP_NAME` is kebab-case.
+- `DB_DATABASE` is snake_case.
 
-1. 更新内容をユーザーに提示して承認を得る
-2. `pnpm lint:docs` を実行して `docs/` 配下のリンク整合性を確認する
-3. `README.md` と `AGENTS.md` を目視で確認し、リンク・タイトル・導入文にテンプレート感が残っていないかを確認する
-4. コンテキストディレクトリに残った情報で反映漏れがないか最終チェック
+## Step 7: Review and Verify
+
+1. Present the updates to the user and get approval.
+2. Run `pnpm lint:docs` to verify link consistency under `docs/`.
+3. Review `README.md` and `AGENTS.md` visually and confirm links, titles, and introductions no longer feel like the template.
+4. Do a final check for context-directory information that was not reflected.
 
 ## Output
 
-更新完了後、以下を報告する:
+After finishing, report:
 
-- 更新したファイルの一覧と変更概要
-- `README.md` と `AGENTS.md` のタイトル / リード文をどう更新したか
-- コンテキストから抽出したが `AGENTS.md` / `README.md` / `docs/infrastructure.md` のいずれにも自然に置けなかった情報（あれば）
-- 次のアクション推奨（追加確認が必要な項目があれば）
+- List of updated files and summary of changes.
+- How the `README.md` and `AGENTS.md` titles / lead text were updated.
+- Information extracted from context that did not naturally fit in `AGENTS.md`, `README.md`, or `docs/infrastructure.md`, if any.
+- Recommended next actions, if additional confirmation is needed.
 
 ## Notes
 
-- テンプレートの docs 構成は最小限を維持し、不要なファイルを増やさない
-- 生成ファイル（`docs/generated/`）は絶対に編集しない
-- `docs/` 内は英語、`README.md` は日本語のルールを維持する
-- 追加情報は「これを削除すると AI が誤るか」で判断し、不要なら追加しない
-- ルールの重複を避け、永続ルールは `AGENTS.md`、参照情報は `docs/` に寄せる
-- 展開先では「テンプレートの説明」ではなく「このプロジェクトの説明」として読める文面にする
+- Keep the template docs structure minimal and do not add unnecessary files.
+- Never edit generated files under `docs/generated/`.
+- Preserve the rule that files under `docs/` are English and `README.md` is Japanese.
+- Decide whether to add information by asking "would AI make a mistake if this were deleted?" If not, do not add it.
+- Avoid duplicated rules. Put durable rules in `AGENTS.md` and reference information in `docs/`.
+- In derived projects, the text should read as "this project documentation", not "template documentation".

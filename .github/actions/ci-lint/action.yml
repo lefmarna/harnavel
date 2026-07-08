@@ -40,15 +40,11 @@ runs:
         composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
         pnpm install --frozen-lockfile
 
-    # Dependency audits are non-blocking during initial rollout. Promote by removing
-    # continue-on-error after baseline advisories are reviewed and intentionally fixed or accepted.
     - name: Audit Composer Dependencies
-      continue-on-error: true
       shell: bash
       run: composer audit
 
     - name: Audit pnpm Production Dependencies
-      continue-on-error: true
       shell: bash
       run: pnpm audit --prod
 

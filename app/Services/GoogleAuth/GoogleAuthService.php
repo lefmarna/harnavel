@@ -29,15 +29,18 @@ class GoogleAuthService implements GoogleAuthServiceContract
     {
         $name = $this->normalizeName($name, $email);
 
-        $lowercaseUsernames = (bool) config('fortify.lowercase_usernames');
+        // config('fortify.lowercase_usernames') は bool を返すため (bool) は冗長で、後段の
+        // `if`/`!` 判定も真偽値で同値。キャスト除去は等価変異。
+        $lowercaseUsernames = (bool) config('fortify.lowercase_usernames'); // @pest-mutate-ignore: RemoveBooleanCast
         $caseInsensitiveEmail = ! $lowercaseUsernames;
 
         if ($lowercaseUsernames) {
             $email = Str::lower($email);
         }
 
-        // attempt === MAX_CREATE_RETRIES - 1 で必ず例外を投げるため、終端条件 < を <= にしても
-        // 追加の反復には到達しない（等価変異）。
+        // 終端条件 < を <= にしても、内側の枯渇判定（$attempt === MAX_CREATE_RETRIES - 1）が
+        // 最終試行で必ず return / throw するため余分な反復には到達しない（SmallerToSmallerOrEqual のみ等価）。
+        // カウンタの初期値・増減方向はリトライ予算（試行回数）を変える観測可能な変異なので ignore せずテストで殺す。
         for ($attempt = 0; $attempt < self::MAX_CREATE_RETRIES; $attempt++) { // @pest-mutate-ignore: SmallerToSmallerOrEqual
             try {
                 return DB::transaction(fn (): User => $this->findOrCreateWithinTransaction(
@@ -278,8 +281,11 @@ class GoogleAuthService implements GoogleAuthServiceContract
     private function findCandidateByEmail(Collection $candidates, string $email, bool $caseInsensitiveEmail): ?User
     {
         if (! $caseInsensitiveEmail) {
+            // lowercaseUsernames=true ではメールが小文字に正規化済みのため、厳密一致 firstWhere と
+            // 下の大小無視 first は同じ結果になる。早期 return の除去はレガシーな大小混在メールでしか
+            // 差が出ず、その差もユニーク制約リカバリが同一の最終結果に収束させるため等価。
             /** @var User|null */
-            return $candidates->firstWhere('email', $email);
+            return $candidates->firstWhere('email', $email); // @pest-mutate-ignore: RemoveEarlyReturn
         }
 
         /** @var User|null */

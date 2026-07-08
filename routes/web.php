@@ -8,6 +8,7 @@ use App\ViewModels\StaticPageViewModel;
 use App\ViewModels\WelcomePageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
@@ -47,6 +48,29 @@ Route::prefix('auth/google/link')->name('auth.google.link.')->controller(GoogleA
 });
 
 if (app()->environment(['local', 'testing'])) {
+    Route::get('/_e2e/auth/login-verified', function (): RedirectResponse {
+        $suffix = Str::lower(Str::random(8));
+        $user = User::factory()->create([
+            'email' => "e2e-verified-{$suffix}@example.test",
+        ]);
+
+        $user->markEmailAsVerified();
+        Auth::login($user);
+
+        return redirect()->route('dashboard');
+    });
+
+    Route::get('/_e2e/auth/login-unverified', function (): RedirectResponse {
+        $suffix = Str::lower(Str::random(8));
+        $user = User::factory()->unverified()->create([
+            'email' => "e2e-unverified-{$suffix}@example.test",
+        ]);
+
+        Auth::login($user);
+
+        return redirect()->route('dashboard');
+    });
+
     Route::get('/_e2e/auth/google-link/confirm', function (Request $request): RedirectResponse {
         $request->session()->flash('google_link_email_sent', true);
 

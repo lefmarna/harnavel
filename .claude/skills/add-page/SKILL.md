@@ -42,6 +42,8 @@ Laravel + Inertia React の新規ページを、template の層規約と検証�
    - 値が仕様である props は `where()` などで値も検証する。
 8. Playwright smoke E2E を `e2e/tests/` に追加または既存 smoke に追記する。
    - 新ページは JavaScript error なしで表示できることを最低限確認する。
+   - 認証が必要なページは、local / testing 限定の `/_e2e/auth/login-verified` または
+     `/_e2e/auth/login-unverified` でログイン状態を作ってから確認する。
 9. 検証する。
    - Backend: `mise run verify:backend`
    - Frontend: `pnpm format:check`、`pnpm lint:check`、`pnpm types:check`

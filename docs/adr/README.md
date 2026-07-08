@@ -58,13 +58,15 @@ the resulting tombstones bury the durable decisions readers came for:
 
 After `git pull template main`, resolve conflicts with `/merge-template`, then reconcile ADRs:
 
-1. Take Template ADRs (`docs/adr/template/**`) and this README from the template side.
+1. Take Template ADRs (`docs/adr/template/**`) and the template-owned sections of this
+   README from the template side.
 2. Remove any old Template ADRs the template has deleted or absorbed elsewhere (e.g. a
    former lifecycle TADR now living in this README) if git did not remove them.
 3. Repoint stale references in your own docs/code: a dropped Template ADR is gone; the
    development-workflow decision is `TADR-0001`, ADR policy is this README.
-4. Leave your own App ADRs (`docs/adr/NNNN-*.md`) untouched — renumber only if a gap
-   appeared (see below).
+4. Leave your own App ADRs (`docs/adr/NNNN-*.md`) and the App ADR index below untouched —
+   regenerate the index from existing files if template changes replaced it. Renumber only
+   if a gap appeared (see below).
 
 ## Renumbering App ADRs
 
@@ -74,3 +76,7 @@ breaks existing references, so do it early and rarely.
 1. Rename files to close the gap: `0002-foo.md` → `0001-foo.md`, …
 2. Update every cross-reference (other ADRs, docs, code).
 3. Never renumber Template ADRs.
+
+## App ADRs
+
+This section is app-owned. Preserve or regenerate it during template merges.

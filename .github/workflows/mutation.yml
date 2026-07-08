@@ -104,8 +104,8 @@ jobs:
         run: |
           # プラグインは .temp/mutations/ へ mkdir なしで書き込む。欠けると file_put_contents が
           # 失敗し、変異が適用されないまま偽の Score 100% が出る（警告のみで exit 0 のため
-          # 非ブロッキング CI では気づけない）。v4.0.1 の dist は同梱済みだが、将来の
-          # バージョン更新への保険として実行前に明示的に用意する。
+          # ブロッキング CI でも偽グリーンになり気づけない）。v4.0.1 の dist は同梱済みだが、
+          # 将来のバージョン更新への保険として実行前に明示的に用意する。
           mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations
           ./vendor/bin/pest --mutate --covered-only --no-progress \
             --class="App\Services,App\Actions,App\Repositories" \

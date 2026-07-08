@@ -58,15 +58,11 @@ Add template-level production observability with these boundaries:
   URL pointing to a dedicated channel such as `#dev-alerts` to keep `#prod-alerts` focused
   on production incidents.
 
-`Log::critical()` / `Log::emergency()` Discord notification is intentionally not part of the
-initial implementation. It can be added later as a separate logging channel or Monolog
-handler if operators need explicit non-exception alerts.
+`Log::critical()` / `Log::emergency()` Discord notification is out of scope; this decision covers
+exception notification only.
 
-XServer API integration is also not part of the initial implementation. The future shape is
-an operator command such as `php artisan xserver:logs --request-id=...` that retrieves
-XServer access/error logs after a Discord notification has already identified the request
-ID, URL, timestamp, and IP. XServer API calls must not run inside the production error
-response path.
+XServer API integration is out of scope. XServer API calls must not run inside the production
+error response path.
 
 ## Consequences
 
@@ -79,7 +75,7 @@ response path.
 - The design works on XServer shared hosting because it avoids queues and long-running
   collectors.
 - Some context is intentionally omitted from notifications for privacy and secret-handling
-  reasons. Deeper analysis relies on Laravel logs and, later, XServer API log retrieval.
+  reasons. Deeper analysis relies on Laravel logs.
 - Because `resources/views/errors/500.blade.php` exists, Laravel renders it for every
   `HttpException` that resolves to 500 — including `abort(500)` — even when
   `APP_DEBUG=true`, so the framework debug error screen (whoops) is not shown for those.
@@ -91,17 +87,9 @@ The template already ships the hybrid `500` behavior: Blade for full-page loads 
 `errors/server-error` Inertia page for SPA transitions (`X-Inertia` header). Derived apps
 may further customize either rendering. When doing so:
 
-- Keep showing the request ID as the inquiry ID on both the Blade and the Inertia page so
-  support reports stay correlatable with logs and Discord notifications.
+- Keep showing the request ID as the inquiry ID on both the Blade and the Inertia page.
 - Keep the Blade `500`/`503` pages free of Inertia, Vite, and external dependencies — they
-  are the fallback when the JS bundle is broken.
+  are the fallback path when the JS bundle is broken.
 - Keep `ProductionExceptionNotifierTest` green when changing notification targets, 500-series
-  filtering, Discord payload shape, or sensitive-data redaction, and update this ADR and
-  `docs/infrastructure.md` to match.
-- Keep `ErrorPageTest` green. The SPA assertions inspect the JSON payload (`component` and
-  `props.requestId`) because an `X-Inertia` request returns JSON rather than an HTML view,
-  so `assertInertia` (which reads view data) does not apply to that path. The "no stack
-  traces or input values" expectations must stay for both paths.
-- Note that Inertia responses embed the current URL (including the query string) in the
-  page object, which is why the input-leak test sends input in the POST body rather than
-  the query string.
+  filtering, Discord payload shape, or sensitive-data redaction.
+- Keep `ErrorPageTest` green when changing error rendering.

@@ -58,7 +58,6 @@ Supporting choices:
 - **Runtime dependency on HaveIBeenPwned.** `NotPwnedVerifier` is **fail-open**: on a network
   error/timeout it reports the exception and treats the password as not compromised, so an
   outage never locks users out — it only silently disables the breach check for that request.
-  The default timeout is 30s; not hardened here (can be shortened later by rebinding
-  `UncompromisedVerifier` in the container).
+  The framework default timeout is accepted.
 - Derived projects inherit these defaults and **may override** them in their own
   `AppServiceProvider`; record such overrides as an App ADR.

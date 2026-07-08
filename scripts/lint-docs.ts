@@ -269,6 +269,7 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
 const MIRRORED_SKILLS: readonly string[] = [
   // repo-owned skills mirrored to both .claude/skills and .agents/skills.
   // Add a skill here when its SKILL.md is intentionally byte-identical in both trees.
+  'adr-compact',
   'add-page',
 ]
 

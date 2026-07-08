@@ -65,7 +65,6 @@ components.json
 phpstan.neon.dist
 pint.json
 renovate.json
-.shared-surface.yml
 .deployignore
 
 # Vite dev server state

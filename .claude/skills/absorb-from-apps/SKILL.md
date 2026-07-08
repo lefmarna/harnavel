@@ -14,7 +14,7 @@ argument-hint: "[REMOTE=template] [APPS=<app1> <app2> ...]"
 
 ## 原則（逸脱しないこと）
 
-ティア分類の権威的定義は [`.shared-surface.yml`](../../../.shared-surface.yml) を参照（TADR-0003 の機械可読版）。
+分類モデルは [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) を参照し、具体パスは下の運用パス分類に従う。
 
 - **収束対象は3ティア**（TADR-0003）:
   - **T1 完全共有** — アプリ固有内容を持たないファイル → byte 一致を狙う。
@@ -26,6 +26,15 @@ argument-hint: "[REMOTE=template] [APPS=<app1> <app2> ...]"
 - **テストと実装は結合して動かす**: より網羅的な共有テストは、それを満たす実装が template 側に揃って初めて上げる。template が緑にできない spec は上げない。
 - **小さく・検証・ステージ止め**: ファイル種別ごとに小さい PR、各 PR で検証、ステージまでで停止しユーザーがコミットする。
 - **作業ログは残さない**: per-app チェックリストや具体的な差分メモは作業用（`/tmp` 等）に留め、repo には commit しない（一度きりの transient）。
+
+## 運用パス分類
+
+旧 manifest は持たない。収束判断に使う具体分類は、この手順内に置く。
+
+- **T1 完全共有**: `tests/TestCase.php`, `tests/Feature/Auth/**`, `tests/Feature/Settings/**`, `tests/Feature/Architecture/**`（`tests/Feature/Architecture/ArchTest.php` を除く）, `app/Concerns/PasswordValidationRules.php`, `app/Http/Requests/Settings/**`, `app/Services/GoogleAuth/**`, `resources/js/components/ui/**`, `scripts/lint-docs.ts`, `scripts/hooks/**`, `.github/workflows/reusable-test.yml`, `.github/workflows/mutation.yml`, `.github/actions/**`, `docs/testing-as-spec.md`, `docs/adr/template/**`, `.claude/skills/absorb-from-apps/**`, `.claude/skills/merge-template/**`, `.claude/skills/add-page/**`, `.claude/skills/adr-compact/**`, `.agents/skills/add-page/**`, `.agents/skills/adr-compact/**`
+- **T2 ハイブリッド**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `app/Models/User.php`, `app/Providers/FortifyServiceProvider.php`, `app/Http/Controllers/Settings/**`, `app/Http/Controllers/Auth/GoogleAuthController.php`, `app/Repositories/User/EloquentUserRepository.php`, `app/ViewModels/**`, `tests/Pest.php`, `tests/Feature/Architecture/ArchTest.php`, `scripts/test-deploy-rsync-excludes.ts`, `.github/workflows/check.yml`, `.github/workflows/quality.yml`, `.github/workflows/delivery.yml`, `docs/adr/README.md`, `mise.toml`
+- **T3 アプリ所有**: `resources/js/pages/**`, `resources/js/components/**`（`resources/js/components/ui/**` を除く）, `resources/css/**`, `public/**`, `routes/**`, `app/Http/Controllers/**`（Settings / GoogleAuth を除く）, `composer.lock`, `pnpm-lock.yaml`, `.env.example`, `.env`, `README.md`, `CONTEXT.md`, `docs/adr/[0-9][0-9][0-9][0-9]-*.md`
+- **較正行**: `reusable-test.yml` / `mutation.yml` の `--min`, `continue-on-error`, その直近理由コメント、`@pest-mutate-ignore` の注釈密度はアプリ優先。
 
 ## 引数
 

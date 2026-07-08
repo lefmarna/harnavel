@@ -2,8 +2,7 @@
 
 ## Status
 
-Accepted. Consolidates the template's development-workflow decisions, including the
-retired stance that made `kiro-discovery` the mandatory entry point (see Kiro's place).
+Accepted.
 
 ## Decision
 
@@ -62,11 +61,9 @@ the currently wired checks are required for merge.
 
 ## Kiro's place
 
-Kiro's `requirements`/`design` phases were once the mandatory entry point for new work;
-they are now an **optional upfront design aid**, used when they help. Tests remain the
-single canonical spec: Kiro artifacts are upfront working documents, never reconstructed
-after the fact as documentation — durable knowledge consolidates into ADRs +
-`CONTEXT.md` instead.
+Kiro `requirements` / `design` artifacts are optional upfront design aids. Tests remain the
+single canonical spec: Kiro artifacts are working documents, never reconstructed after the
+fact as documentation. Durable knowledge consolidates into ADRs + `CONTEXT.md`.
 
 ## Consequences and accepted risks
 

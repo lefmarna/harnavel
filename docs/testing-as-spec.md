@@ -106,9 +106,3 @@ This file is the operational playbook — keep it terse.
   `Mail::mailer()->getSymfonyTransport()->messages()`.
 - **Unit tests don't boot the app.** Instantiating Eloquent models is fine, but `forceFill`-ing a
   `datetime`-cast attribute needs the connection resolver — put such value-object tests in `Feature`.
-
-## Propagating to derived projects
-
-`git pull template main` + `/merge-template` (these files merge to the template side) →
-run the migration → promote the gates. Phase 1 changes no CI, so the pull will not break
-a derived pipeline.

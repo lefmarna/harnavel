@@ -45,7 +45,7 @@ jobs:
           name: build
           path: public/build/
 
-      # 対象ファイルのリストはアプリ較正（.shared-surface.yml: delivery.yml は Tier 2）
+      # 対象ファイルのリストはアプリ較正（TADR-0003: delivery.yml は Tier 2）
       - name: Check release-critical files
         run: |
           missing=0

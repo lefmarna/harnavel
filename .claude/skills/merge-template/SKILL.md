@@ -11,16 +11,25 @@ argument-hint: "[REMOTE=template] [BRANCH=main]"
 
 ## 解消方針
 
-ティア分類の権威的定義は [`.shared-surface.yml`](../../../.shared-surface.yml) を参照（TADR-0003 の機械可読版）。
+分類モデルは [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) を参照し、具体パスは下の運用パス分類に従う。
 
 - **template 側に寄せる**: 共通基盤（auth, mail, settings 等）、scaffolding、テストヘルパー、命名・コーディング規約、ライブラリ更新、汎用 UI プリミティブ、テスト=仕様 手法のファイル（`docs/testing-as-spec.md`、template ADR `docs/adr/template/**`、arch test 雛形、`reusable-test.yml` / `mutation.yml` / `.github/actions/**`）
 - **アプリ側を優先**: ドメインロジック、独自 UI コンポーネント / デザイントークン、独自 ViewModel / Service / Repository パターン、i18n や多言語テスト、アプリ固有のルート・コントローラ、番号付きアプリ ADR（`docs/adr/NNNN-*.md`、フラット）、`CONTEXT.md`（ドメイン用語集。template はシードを提供するだけでアプリ所有）
 - **ハイブリッド（`AGENTS.md`）**: 構成・運用ルール（Verification / Testing / Documentation の規約）は template 寄せ、Project Context などアプリ固有の記述はアプリ側を残す。エージェント入口ファイル（`CLAUDE.md` / `GEMINI.md`）はポインタ 1 行のまま template 寄せ
 - **ハイブリッド（CI entry workflows）**: `.github/workflows/check.yml` / `.github/workflows/quality.yml` は共有 `ci-lint` 呼び出し構造を template 寄せ、アプリ固有ステップ（例: 追加の frontend unit test）はアプリ側を残す。`.github/workflows/delivery.yml` は共有 deploy 構造・ssh/retry hardening・Laravel 内部 exclude を template 寄せ、sibling-subdomain / server-layout の `--exclude`、release-critical asset list、アプリ固有追加ステップはアプリ側を残す
 - **ハイブリッド（`docs/adr/README.md`）**: ADR ポリシー本文は template 寄せ、アプリ所有の ADR インデックス節（例: `## App ADRs`）はアプリ側を残す
+- **ハイブリッド（`mise.toml`）**: 新規タスクはまず template 昇格を前提に検討し、避けられないプロジェクト固有ワークフローだけアプリ側追加を許容する。template 取り込み時は極力触らず、共有コマンド面を変える必要がある場合だけ `AGENTS.md` / `docs/commands.md` とセットで明示レビューして採用する
 - **較正値（アプリ優先の例外）**: coverage / mutation のゲート値（`--min` の数値）と mutation のブロッキング可否（`continue-on-error` の有無）、およびその**直近の理由コメント行**。`reusable-test.yml` / `mutation.yml` 自体は template 寄せ（上記）だが、これらの行はプロジェクト個別に較正されるためアプリ側の値を残す（[`TADR-0001`](../../../docs/adr/template/0001-development-workflow.md): 各プロジェクトの CI workflow がゲート値の単一正典／[`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md): 共有サーフェス収束と較正カーブアウト）
 - **テスト**: 同一観点が両側にあれば統合または片方削除して可。**寄せる場合は template 側へ**。アプリ固有のカバレッジ（i18n テストなど）は保持
 - **ADR 名前空間**: pull 後の調整（旧 template ADR の削除・`TADR-0001` への参照付け替え・app ADR の番号詰め）は `docs/adr/README.md` の手順に従う
+
+## 運用パス分類
+
+旧 manifest は持たない。収束判断に使う具体分類は、この手順内に置く。
+
+- **T1 完全共有**: `tests/TestCase.php`, `tests/Feature/Auth/**`, `tests/Feature/Settings/**`, `tests/Feature/Architecture/**`（`tests/Feature/Architecture/ArchTest.php` を除く）, `app/Concerns/PasswordValidationRules.php`, `app/Http/Requests/Settings/**`, `app/Services/GoogleAuth/**`, `resources/js/components/ui/**`, `scripts/lint-docs.ts`, `scripts/hooks/**`, `.github/workflows/reusable-test.yml`, `.github/workflows/mutation.yml`, `.github/actions/**`, `docs/testing-as-spec.md`, `docs/adr/template/**`, `.claude/skills/absorb-from-apps/**`, `.claude/skills/merge-template/**`, `.claude/skills/add-page/**`, `.claude/skills/adr-compact/**`, `.agents/skills/add-page/**`, `.agents/skills/adr-compact/**`
+- **T2 ハイブリッド**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `app/Models/User.php`, `app/Providers/FortifyServiceProvider.php`, `app/Http/Controllers/Settings/**`, `app/Http/Controllers/Auth/GoogleAuthController.php`, `app/Repositories/User/EloquentUserRepository.php`, `app/ViewModels/**`, `tests/Pest.php`, `tests/Feature/Architecture/ArchTest.php`, `scripts/test-deploy-rsync-excludes.ts`, `.github/workflows/check.yml`, `.github/workflows/quality.yml`, `.github/workflows/delivery.yml`, `docs/adr/README.md`, `mise.toml`
+- **T3 アプリ所有**: `resources/js/pages/**`, `resources/js/components/**`（`resources/js/components/ui/**` を除く）, `resources/css/**`, `public/**`, `routes/**`, `app/Http/Controllers/**`（Settings / GoogleAuth を除く）, `composer.lock`, `pnpm-lock.yaml`, `.env.example`, `.env`, `README.md`, `CONTEXT.md`, `docs/adr/[0-9][0-9][0-9][0-9]-*.md`
 
 ## 引数
 

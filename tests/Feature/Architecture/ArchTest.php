@@ -44,6 +44,12 @@ arch('Params は readonly class である')
     ->classes()
     ->toBeReadonly();
 
+arch('Params は final class で Params サフィックスを持つ')
+    ->expect('App\Params')
+    ->classes()
+    ->toBeFinal()
+    ->toHaveSuffix('Params');
+
 arch('Params は HTTP リクエストやセッションに依存しない')
     ->expect('App\Params')
     ->not->toUse([

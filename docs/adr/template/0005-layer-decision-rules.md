@@ -51,11 +51,16 @@ not get a Params object.
 It exists **only when a Service consumes it**. The FormRequest owns conversion to the Params so
 validation and the array-shape assertion stay together. The Params exposes typed properties;
 avoid array round-trips such as `fromInput()` / `toArray()` unless a real boundary requires them.
+Place it under `App\Params\<Domain>\`, name it `...Params`, and keep it `final readonly`.
+For write DTOs, FormRequest conversion is the boundary owner; the Params must not parse raw input
+or expose `toArray()` just to feed Eloquent.
 
 **(b) Search/filter normalization object.** A value object that leniently parses and normalizes
 GET query parameters (unknown/empty values become `null`, sort keys are constrained to an
 allow-list). Its input is an array, not a `Request`; the controller extracts the query first so
 Params stays framework-independent.
+This is the only Params form where a `toArray()`-style method is acceptable, and only for carrying
+normalized query parameters back into links or pagination.
 
 ### 4. ViewModels exist in two kinds
 

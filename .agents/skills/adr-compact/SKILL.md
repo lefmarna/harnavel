@@ -1,8 +1,6 @@
 ---
 name: adr-compact
 description: Compact ADRs down to the decisions that are currently in force. Remove or merge superseded decisions, temporary rollout notes, implementation tasks, and duplicate explanations, and renumber App ADRs when needed.
-disable-model-invocation: true
-argument-hint: "[ADR paths or area]"
 ---
 
 # ADR Compact

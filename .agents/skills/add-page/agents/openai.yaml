@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Add Page'
+  short_description: 'Add an Inertia React page safely'
+
+policy:
+  allow_implicit_invocation: false

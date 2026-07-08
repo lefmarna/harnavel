@@ -1,0 +1,6 @@
+interface:
+  display_name: 'ADR Compact'
+  short_description: 'Compact ADRs to current decisions'
+
+policy:
+  allow_implicit_invocation: false

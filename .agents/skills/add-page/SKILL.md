@@ -1,8 +1,6 @@
 ---
 name: add-page
 description: Use when adding a new Laravel + Inertia React page. Create the route, controller, PageViewModel, Wayfinder, React page, Pest Feature spec, and Playwright smoke E2E consistently, and verify the props boundary.
-disable-model-invocation: true
-argument-hint: "<page-name>"
 ---
 
 # Add Page

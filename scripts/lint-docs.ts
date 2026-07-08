@@ -5,9 +5,9 @@
 // - CLAUDE.md / GEMINI.md are one-line @AGENTS.md pointers.
 // - .claude/skills/<name>/SKILL.md and .agents/skills/<name>/SKILL.md frontmatter
 //   has `name` matching directory name and non-empty `description`.
-// - Repo-owned skills listed in MIRRORED_SKILLS are byte-identical between
-//   .claude/skills and .agents/skills (other same-name skills may diverge
-//   intentionally per agent format).
+// - Repo-owned skills listed in MIRRORED_SKILLS are content-equivalent between
+//   .claude/skills and .agents/skills after agent-specific frontmatter is
+//   normalized (other same-name skills may diverge intentionally per agent format).
 import fs from 'node:fs'
 import { glob } from 'node:fs/promises'
 import path from 'node:path'
@@ -256,7 +256,7 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
 // Skill duplication sync check
 //
 // Only repo-owned skills that are intentionally mirrored to both
-// .claude/skills and .agents/skills are checked for byte identity.
+// .claude/skills and .agents/skills are checked for content equivalence.
 //
 // External skills (kiro-*, etc.) are deliberately maintained in different
 // formats per agent toolchain (.claude adds allowed-tools/argument-hint
@@ -268,10 +268,15 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
 
 const MIRRORED_SKILLS: readonly string[] = [
   // repo-owned skills mirrored to both .claude/skills and .agents/skills.
-  // Add a skill here when its SKILL.md is intentionally byte-identical in both trees.
+  // Add a skill here when its SKILL.md body and shared frontmatter are intentionally identical in both trees.
   'adr-compact',
   'add-page',
 ]
+
+const AGENT_SPECIFIC_FRONTMATTER_KEYS = new Set([
+  'argument-hint',
+  'disable-model-invocation',
+])
 
 const SHARED_SURFACE_CLASSIFICATION_FILES: readonly string[] = [
   '.claude/skills/absorb-from-apps/SKILL.md',
@@ -286,6 +291,30 @@ const CLASSIFICATION_LINE_LABELS = [
 ] as const
 
 type ClassificationLineLabel = (typeof CLASSIFICATION_LINE_LABELS)[number]
+
+function normalizeMirroredSkillContent(content: string): string {
+  if (!content.startsWith('---')) {
+    return content
+  }
+
+  const end = content.indexOf('\n---', 3)
+
+  if (end === -1) {
+    return content
+  }
+
+  const block = content.slice(3, end)
+  const filteredBlock = block
+    .split('\n')
+    .filter((line) => {
+      const match = line.match(/^(\w[\w-]*):/)
+
+      return match === null || !AGENT_SPECIFIC_FRONTMATTER_KEYS.has(match[1])
+    })
+    .join('\n')
+
+  return `---${filteredBlock}${content.slice(end)}`
+}
 
 function checkSkillSync(): LintError[] {
   const errors: LintError[] = []
@@ -312,13 +341,17 @@ function checkSkillSync(): LintError[] {
       continue
     }
 
-    const claudeContent = fs.readFileSync(claudeFile)
-    const agentsContent = fs.readFileSync(agentsFile)
+    const claudeContent = normalizeMirroredSkillContent(
+      fs.readFileSync(claudeFile, 'utf-8'),
+    )
+    const agentsContent = normalizeMirroredSkillContent(
+      fs.readFileSync(agentsFile, 'utf-8'),
+    )
 
-    if (!claudeContent.equals(agentsContent)) {
+    if (claudeContent !== agentsContent) {
       errors.push({
         file: `.claude/skills/${name}/SKILL.md`,
-        reason: `Mirrored skill "${name}" has diverged between .claude/skills and .agents/skills (byte mismatch). Keep SKILL.md byte-identical in both directories.`,
+        reason: `Mirrored skill "${name}" has diverged between .claude/skills and .agents/skills. Keep the SKILL.md body and shared frontmatter equivalent; agent-specific frontmatter belongs in the relevant agent metadata.`,
       })
     }
   }
@@ -456,7 +489,7 @@ async function main() {
       '✓ Skill frontmatter valid in .claude/skills and .agents/skills.',
     )
     console.log(
-      `✓ Mirrored skills (${MIRRORED_SKILLS.join(', ')}) are byte-identical.`,
+      `✓ Mirrored skills (${MIRRORED_SKILLS.join(', ')}) are content-equivalent.`,
     )
     console.log('✓ Shared-surface skill classifications are synchronized.')
     process.exit(0)

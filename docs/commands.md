@@ -33,6 +33,7 @@ pnpm format:check       # Check Prettier formatting
 pnpm lint               # Run ESLint with auto-fix
 pnpm lint:check         # Run ESLint (check only)
 pnpm types:check        # TypeScript type check
+pnpm test:unit          # Run node:test frontend unit tests (resources/js/**/__tests__)
 pnpm format             # Format with Prettier
 pnpm fix                # Run lint + format
 ```

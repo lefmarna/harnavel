@@ -20,7 +20,7 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 
 - Start with the narrowest check for the changed area, then widen before finishing.
 - Backend: `mise run verify:backend`.
-- Frontend: `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:e2e --reporter=dot`.
+- Frontend: `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:unit`, `pnpm test:e2e --reporter=dot`.
 - Docs: `pnpm lint:docs`.
 - Browser checks: follow the Playwright CLI loop in `docs/commands.md`.
 - `delivery.yml` deploys to XServer with `rsync --delete` and `migrate --force`, so editing it can delete live server data — review the rsync excludes, `.deployignore`, develop-only `.htaccess`/robots, release-critical checks, and post-deploy commands together.

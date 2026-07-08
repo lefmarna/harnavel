@@ -12,6 +12,7 @@
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "types:check": "tsc --pretty --noEmit",
+    "test:unit": "node --import tsx scripts/run-unit-tests.ts",
     "lint:docs": "tsx scripts/lint-docs.ts",
     "test:deploy-rsync-excludes": "node --import tsx scripts/test-deploy-rsync-excludes.ts",
     "test:e2e": "playwright test",

@@ -273,6 +273,20 @@ const MIRRORED_SKILLS: readonly string[] = [
   'add-page',
 ]
 
+const SHARED_SURFACE_CLASSIFICATION_FILES: readonly string[] = [
+  '.claude/skills/absorb-from-apps/SKILL.md',
+  '.claude/skills/merge-template/SKILL.md',
+]
+
+const CLASSIFICATION_LINE_LABELS = [
+  'T1 完全共有',
+  'T2 ハイブリッド',
+  'T3 アプリ所有',
+  '較正行',
+] as const
+
+type ClassificationLineLabel = (typeof CLASSIFICATION_LINE_LABELS)[number]
+
 function checkSkillSync(): LintError[] {
   const errors: LintError[] = []
   const claudeSkillsRoot = path.join(ROOT, '.claude', 'skills')
@@ -312,6 +326,106 @@ function checkSkillSync(): LintError[] {
   return errors
 }
 
+interface ClassificationBlock {
+  errors: LintError[]
+  lines: Map<ClassificationLineLabel, string>
+}
+
+function extractOperationalPathClassification(
+  relativePath: string,
+): ClassificationBlock {
+  const errors: LintError[] = []
+  const linesByLabel = new Map<ClassificationLineLabel, string>()
+  const absolutePath = path.join(ROOT, relativePath)
+
+  if (!fs.existsSync(absolutePath)) {
+    errors.push({
+      file: relativePath,
+      reason: 'Shared-surface skill file is missing.',
+    })
+
+    return { errors, lines: linesByLabel }
+  }
+
+  const content = fs.readFileSync(absolutePath, 'utf-8')
+  const lines = content.split('\n')
+  const headingIndex = lines.findIndex(
+    (line) => line.trim() === '## 運用パス分類',
+  )
+
+  if (headingIndex === -1) {
+    errors.push({
+      file: relativePath,
+      reason: 'Missing "## 運用パス分類" section.',
+    })
+
+    return { errors, lines: linesByLabel }
+  }
+
+  for (let index = headingIndex + 1; index < lines.length; index++) {
+    const line = lines[index]
+
+    if (line.startsWith('## ')) {
+      break
+    }
+
+    const match = line.match(/^- \*\*([^*]+)\*\*: .+$/)
+
+    if (!match) {
+      continue
+    }
+
+    const label = match[1] as ClassificationLineLabel
+
+    if (CLASSIFICATION_LINE_LABELS.includes(label)) {
+      linesByLabel.set(label, line.trim())
+    }
+  }
+
+  for (const label of CLASSIFICATION_LINE_LABELS) {
+    if (!linesByLabel.has(label)) {
+      errors.push({
+        file: relativePath,
+        reason: `Missing operational path classification line: ${label}`,
+      })
+    }
+  }
+
+  return { errors, lines: linesByLabel }
+}
+
+function checkSharedSurfaceClassificationSync(): LintError[] {
+  const errors: LintError[] = []
+  const [baseFile, ...comparisonFiles] = SHARED_SURFACE_CLASSIFICATION_FILES
+  const base = extractOperationalPathClassification(baseFile)
+
+  errors.push(...base.errors)
+
+  for (const comparisonFile of comparisonFiles) {
+    const comparison = extractOperationalPathClassification(comparisonFile)
+
+    errors.push(...comparison.errors)
+
+    for (const label of CLASSIFICATION_LINE_LABELS) {
+      const baseLine = base.lines.get(label)
+      const comparisonLine = comparison.lines.get(label)
+
+      if (
+        baseLine !== undefined &&
+        comparisonLine !== undefined &&
+        baseLine !== comparisonLine
+      ) {
+        errors.push({
+          file: comparisonFile,
+          reason: `Operational path classification line "${label}" differs from ${baseFile}. Keep T1/T2/T3/calibration lines identical between shared-surface skills.`,
+        })
+      }
+    }
+  }
+
+  return errors
+}
+
 async function main() {
   const files = await findMarkdownFiles(DOCS_DIR)
   const allLinkErrors: LinkError[] = []
@@ -324,12 +438,14 @@ async function main() {
   const pointerErrors = checkPointerFiles()
   const frontmatterErrors = await checkSkillFrontmatter()
   const syncErrors = checkSkillSync()
+  const classificationErrors = checkSharedSurfaceClassificationSync()
 
   const hasErrors =
     allLinkErrors.length > 0 ||
     pointerErrors.length > 0 ||
     frontmatterErrors.length > 0 ||
-    syncErrors.length > 0
+    syncErrors.length > 0 ||
+    classificationErrors.length > 0
 
   if (!hasErrors) {
     console.log(
@@ -342,6 +458,7 @@ async function main() {
     console.log(
       `✓ Mirrored skills (${MIRRORED_SKILLS.join(', ')}) are byte-identical.`,
     )
+    console.log('✓ Shared-surface skill classifications are synchronized.')
     process.exit(0)
   }
 
@@ -378,6 +495,17 @@ async function main() {
     console.error(`✗ Found ${syncErrors.length} skill sync error(s):\n`)
 
     for (const err of syncErrors) {
+      console.error(`  ${err.file}`)
+      console.error(`    ${err.reason}\n`)
+    }
+  }
+
+  if (classificationErrors.length > 0) {
+    console.error(
+      `✗ Found ${classificationErrors.length} shared-surface classification error(s):\n`,
+    )
+
+    for (const err of classificationErrors) {
       console.error(`  ${err.file}`)
       console.error(`    ${err.reason}\n`)
     }

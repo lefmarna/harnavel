@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from '../support/fixtures'
 
 test('Googleログイン連携の確認メール送信後ページが表示される', async ({
   page,

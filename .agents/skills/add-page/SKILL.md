@@ -41,7 +41,8 @@ Laravel + Inertia React の新規ページを、template の層規約と検証�
    - props shape は `assertInertiaShape($page, 'component/name', ['prop', 'nested.key'])` を使う。
    - 値が仕様である props は `where()` などで値も検証する。
 8. Playwright smoke E2E を `e2e/tests/` に追加または既存 smoke に追記する。
-   - 新ページは JavaScript error なしで表示できることを最低限確認する。
+   - `../support/fixtures` から `test` / `expect` を import し、fixture 経由で
+     JavaScript error なしの表示を検知する。
    - 認証が必要なページは、local / testing 限定の `/_e2e/auth/login-verified` または
      `/_e2e/auth/login-unverified` でログイン状態を作ってから確認する。
 9. 検証する。

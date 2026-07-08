@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from '../support/fixtures'
 
 test('SPA遷移時にSEOメタタグが更新される', async ({ page }) => {
   // Welcome ページに直接アクセス

@@ -60,6 +60,7 @@ if (app()->environment(['local', 'testing'])) {
         return redirect()->route('dashboard');
     });
 
+    // 未認証ユーザーは dashboard の verified middleware により、アプリ標準の確認誘導先へ送られる。
     Route::get('/_e2e/auth/login-unverified', function (): RedirectResponse {
         $suffix = Str::lower(Str::random(8));
         $user = User::factory()->unverified()->create([

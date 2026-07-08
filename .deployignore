@@ -22,6 +22,7 @@ e2e
 phpunit.xml
 .phpunit.cache
 .phpunit.result.cache
+.playwright-cli/
 playwright.config.ts
 playwright-report
 test-results
@@ -30,6 +31,7 @@ test-results
 .agent
 .agents
 .ai
+.antigravitycli/
 .claude
 .codex
 .cursor
@@ -47,6 +49,7 @@ test-results
 
 # ビルド設定
 vite.config.js
+vite.config.ts
 lefthook.yml
 mise.toml
 tsconfig.json
@@ -61,7 +64,12 @@ boost.json
 components.json
 phpstan.neon.dist
 pint.json
+renovate.json
+.shared-surface.yml
 .deployignore
+
+# Vite dev server state
+public/hot
 
 # ドキュメント
 *.md

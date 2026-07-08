@@ -106,6 +106,11 @@ jobs:
           DB_HOST: 127.0.0.1
           DB_DATABASE: app_testing
           APP_URL: http://localhost:8000
+          # E2E は php artisan serve が .env（.env.example 由来: MAIL_MAILER=smtp /
+          # MAIL_HOST=mailpit）を読むが、この workflow に Mailpit サービスはない。
+          # メール送信を伴う認証フロー（新規登録・パスワード再設定）が SMTP 接続失敗で
+          # 500 になるのを防ぐため、E2E 実行時はメーラーを array に上書きする。
+          MAIL_MAILER: array
 
       # デプロイ用にビルド成果物を保存（delivery ワークフローからの呼び出し時のみ）
       - name: Upload build artifacts

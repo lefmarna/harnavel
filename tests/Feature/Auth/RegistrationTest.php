@@ -29,7 +29,7 @@ describe('ユーザー登録', function () {
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(config('fortify.home'));
 
         $this->assertDatabaseHas('users', [
             'name' => 'Test User',
@@ -47,7 +47,7 @@ describe('ユーザー登録', function () {
             'password_confirmation' => $password,
         ]);
 
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(config('fortify.home'));
 
         $storedPassword = User::query()->where('email', 'test@example.com')->value('password');
 
@@ -66,7 +66,7 @@ describe('ユーザー登録', function () {
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(config('fortify.home'));
 
         // DB の照合順序は大文字小文字を区別しないため assertDatabaseHas では小文字化を検証できない。
         // 実際に格納された値を厳密比較する。
@@ -84,7 +84,7 @@ describe('ユーザー登録', function () {
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(config('fortify.home'));
 
         expect(User::query()->value('email'))->toBe('Test.User@Example.COM');
     });

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
 
 describe('パスワード設定', function () {
@@ -32,7 +33,7 @@ describe('パスワード設定', function () {
             ->actingAs($user)
             ->from(route('user-password.edit'))
             ->put(route('user-password.update'), [
-                'current_password' => 'password',
+                'current_password' => UserFactory::DEFAULT_PASSWORD,
                 'password' => 'new-password1',
                 'password_confirmation' => 'new-password1',
             ]);
@@ -52,7 +53,7 @@ describe('パスワード設定', function () {
             ->actingAs($user)
             ->from(route('user-password.edit'))
             ->put(route('user-password.update'), [
-                'current_password' => 'password',
+                'current_password' => UserFactory::DEFAULT_PASSWORD,
                 'password' => $password,
                 'password_confirmation' => $password,
             ]);

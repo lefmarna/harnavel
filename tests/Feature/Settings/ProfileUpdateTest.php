@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Database\Factories\UserFactory;
 use Inertia\Testing\AssertableInertia as Assert;
 
 describe('プロフィール設定', function () {
@@ -132,7 +133,7 @@ describe('プロフィール設定', function () {
         $response = $this
             ->actingAs($user)
             ->delete(route('profile.destroy'), [
-                'password' => 'password',
+                'password' => UserFactory::DEFAULT_PASSWORD,
             ]);
 
         $response

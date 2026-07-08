@@ -82,7 +82,7 @@ describe('パスワードポリシー', function () {
     it('ポリシーを満たすパスワードは受け付けられる', function () use ($register) {
         $register('valid-password1')
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
+            ->assertRedirect(config('fortify.home'));
         $this->assertAuthenticated();
     });
 });

@@ -26,7 +26,7 @@ describe('メール認証通知', function () {
 
         $this->actingAs($user)
             ->post(route('verification.send'))
-            ->assertRedirect(route('dashboard', absolute: false));
+            ->assertRedirect(config('fortify.home'));
 
         Notification::assertNothingSent();
     });

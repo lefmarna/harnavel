@@ -39,7 +39,7 @@ describe('メール認証', function () {
 
         Event::assertDispatched(Verified::class);
         expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-        $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+        $response->assertRedirect(config('fortify.home').'?verified=1');
     });
 
     it('無効なハッシュではメール認証されない', function () {
@@ -84,7 +84,7 @@ describe('メール認証', function () {
         $response = $this->actingAs($user)->get(route('verification.notice'));
 
         Event::assertNotDispatched(Verified::class);
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(config('fortify.home'));
     });
 
     it('既に認証済みのユーザーが認証リンクを開いても再度イベントを発火せずにリダイレクトされる', function () {
@@ -99,7 +99,7 @@ describe('メール認証', function () {
         );
 
         $this->actingAs($user)->get($verificationUrl)
-            ->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+            ->assertRedirect(config('fortify.home').'?verified=1');
 
         Event::assertNotDispatched(Verified::class);
         expect($user->fresh()->hasVerifiedEmail())->toBeTrue();

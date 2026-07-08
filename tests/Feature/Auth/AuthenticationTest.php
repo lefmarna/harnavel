@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
@@ -26,11 +27,11 @@ describe('ログイン', function () {
 
         $response = $this->post(route('login.store'), [
             'email' => $user->email,
-            'password' => 'password',
+            'password' => UserFactory::DEFAULT_PASSWORD,
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(config('fortify.home'));
     });
 
     it('二段階認証有効ユーザーは二段階認証チャレンジへリダイレクトされる', function () {
@@ -51,7 +52,7 @@ describe('ログイン', function () {
 
         $response = $this->post(route('login'), [
             'email' => $user->email,
-            'password' => 'password',
+            'password' => UserFactory::DEFAULT_PASSWORD,
         ]);
 
         $response->assertRedirect(route('two-factor.login'));

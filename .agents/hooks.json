@@ -1,0 +1,11 @@
+{
+  "stop-verify": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "mise exec -- node ../scripts/hooks/agy-stop-adapter.mjs",
+        "timeout": 120
+      }
+    ]
+  }
+}

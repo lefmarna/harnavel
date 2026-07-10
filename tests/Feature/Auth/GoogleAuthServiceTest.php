@@ -128,6 +128,39 @@ describe('Google 認証サービス', function () {
         Mail::assertSent(LinkGoogleAccountMail::class);
     });
 
+    it('lowercase usernamesが非 bool の真値でも bool 化して email を小文字化する', function () {
+        config(['fortify.lowercase_usernames' => 1]);
+
+        $service = app(GoogleAuthService::class);
+        $user = $service->findOrCreate('google-int-config', 'Int.Config@Example.COM', 'Int Config');
+
+        expect($user->email)->toBe('int.config@example.com');
+    });
+
+    it('lowercase usernamesが有効でレガシーな大小混在メールの既存ユーザーがいる場合は一意制約リカバリ経由で連携確認待ちになる', function () {
+        Mail::fake();
+        config(['fortify.lowercase_usernames' => true]);
+
+        $existing = User::factory()->create([
+            'email' => 'Mixed.Case@Example.COM',
+            'google_id' => null,
+        ]);
+
+        $service = app(GoogleAuthService::class);
+
+        // 厳密一致の候補照合ではレガシーな大小混在メールにヒットせず INSERT へ進むが、
+        // email の一意制約は utf8mb4_general_ci で大小を区別しないため重複となり、
+        // 一意制約リカバリ（findByEmail）で既存ユーザーへの連携確認待ちに収束する。
+        expect(fn () => $service->findOrCreate('google-legacy-mixed', 'mixed.case@example.com', 'Legacy User'))
+            ->toThrow(GoogleLinkConfirmationPendingException::class);
+
+        expect(User::query()->count())->toBe(1)
+            ->and(User::query()->sole()->email)->toBe('Mixed.Case@Example.COM')
+            ->and(User::query()->sole()->google_id)->toBeNull();
+
+        Mail::assertSent(LinkGoogleAccountMail::class);
+    });
+
     it('既存 google_id ユーザーをそのまま返す', function () {
         $existing = User::factory()->create([
             'google_id' => 'google-789',

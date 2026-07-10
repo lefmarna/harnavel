@@ -92,10 +92,15 @@ This file is the operational playbook — keep it terse.
   `$i < self::MAX` (`SmallerToSmallerOrEqual` — the loop terminates identically), behaviour-neutral
   magic numbers (`IncrementInteger` / `DecrementInteger`), idempotent `array_values(array_filter(...))`
   (`UnwrapArrayValues` / `UnwrapArrayFilter`), defensive `... ?? ''` defaults (`EmptyStringToNotEmpty`),
-  static-analysis casts over already-normalized config or mixed values (`RemoveBooleanCast` and
-  related cast removals), early returns that only skip an equivalent fallback path
-  (`RemoveEarlyReturn`),
   and eager-load or default-attribute arrays `->with([...])` / `['count' => 0]` (`RemoveArrayItem`).
+  Before annotating, attempt a targeted test first — one annotation has been disproven this way:
+  `config()` returns `mixed`, so a redundant-looking `(bool)` cast is load-bearing under
+  `strict_types` once a non-bool truthy value is configured (`RemoveBooleanCast`). The attempt cuts
+  both ways: the killing test must model a **reachable** world. A kill that only works on a fake
+  violating a documented environment assumption (e.g. a no-op `save()` that ignores the
+  case-insensitive-collation unique constraint the repository contract states) does not disprove
+  equivalence — it canonizes behavior production can never exhibit. Prefer the real adapter, or a
+  fake faithful to the contract, and assert the outcome the real environment converges to.
 - **A lone, clearly-equivalent survivor may be left un-annotated** when the directive would add more
   noise than the single survivor it silences — the calibrated `--min` floor leaves room for a small,
   honest gap. Keep these rare and self-evident.

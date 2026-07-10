@@ -6,6 +6,11 @@ type PageErrorFixtures = {
 
 const formatPageError = (error: Error): string => error.stack ?? error.message
 
+/**
+ * 全 spec で `page` の `pageerror`（未捕捉の JS 例外）を収集し、テスト終了時にゼロであることを検証する。
+ * `../support/fixtures` から `test` を import するだけで、明示的なアサーションなしに
+ * ページ上のランタイムエラーを検知できる（`{ auto: true }` により自動適用）。
+ */
 export const test = base.extend<PageErrorFixtures>({
   pageErrors: [
     async ({ page }, use) => {
@@ -26,4 +31,4 @@ export const test = base.extend<PageErrorFixtures>({
   ],
 })
 
-export { expect } from '@playwright/test'
+export { expect }

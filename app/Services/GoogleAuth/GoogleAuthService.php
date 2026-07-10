@@ -29,9 +29,9 @@ class GoogleAuthService implements GoogleAuthServiceContract
     {
         $name = $this->normalizeName($name, $email);
 
-        // config('fortify.lowercase_usernames') は bool を返すため (bool) は冗長で、後段の
-        // `if`/`!` 判定も真偽値で同値。キャスト除去は等価変異。
-        $lowercaseUsernames = (bool) config('fortify.lowercase_usernames'); // @pest-mutate-ignore: RemoveBooleanCast
+        // config() の戻り値は mixed で int 等の真値があり得る。bool 型引数へ渡すため
+        // strict_types 下ではこのキャストが必須（非 bool 設定値のテストが変異を殺す）。
+        $lowercaseUsernames = (bool) config('fortify.lowercase_usernames');
         $caseInsensitiveEmail = ! $lowercaseUsernames;
 
         if ($lowercaseUsernames) {
@@ -281,9 +281,11 @@ class GoogleAuthService implements GoogleAuthServiceContract
     private function findCandidateByEmail(Collection $candidates, string $email, bool $caseInsensitiveEmail): ?User
     {
         if (! $caseInsensitiveEmail) {
-            // lowercaseUsernames=true ではメールが小文字に正規化済みのため、厳密一致 firstWhere と
-            // 下の大小無視 first は同じ結果になる。早期 return の除去はレガシーな大小混在メールでしか
-            // 差が出ず、その差もユニーク制約リカバリが同一の最終結果に収束させるため等価。
+            // lowercase_usernames=true では email が小文字に正規化済みのため厳密一致で照合する。
+            // レガシーな大小混在メールの候補にはここでヒットしないが、続く INSERT が
+            // utf8mb4_general_ci の一意制約に当たり、リカバリ（findByEmail は CI 照合）が
+            // 同じ連携確認待ちへ収束する。早期 return の除去はこの契約前提の下では観測不能で、
+            // kill するには collation 前提を破る fake が必要になる（実証済み）ため等価扱いとする。
             /** @var User|null */
             return $candidates->firstWhere('email', $email); // @pest-mutate-ignore: RemoveEarlyReturn
         }

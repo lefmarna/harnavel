@@ -10,6 +10,8 @@ use Inertia\RenderContext;
 final readonly class LoginPageViewModel extends PageViewModel
 {
     public function __construct(
+        private string $title,
+        private string $description,
         private bool $canResetPassword,
         private bool $canRegister,
         private bool $canGoogleLogin,
@@ -35,7 +37,7 @@ final readonly class LoginPageViewModel extends PageViewModel
             'canGoogleLogin' => $this->canGoogleLogin,
             'error' => $this->error,
             'status' => $this->status,
-            'seo' => $this->noIndexSeo('ログイン', 'メールアドレスとパスワードを入力してログインします。'),
+            'seo' => $this->noIndexSeo($this->title, $this->description),
         ];
     }
 }

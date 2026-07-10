@@ -10,6 +10,8 @@ use Inertia\RenderContext;
 final readonly class VerifyEmailPageViewModel extends PageViewModel
 {
     public function __construct(
+        private string $title,
+        private string $description,
         private ?string $status,
     ) {}
 
@@ -23,7 +25,7 @@ final readonly class VerifyEmailPageViewModel extends PageViewModel
     {
         return [
             'status' => $this->status,
-            'seo' => $this->noIndexSeo('メール認証', 'メールアドレスの認証を完了してください。'),
+            'seo' => $this->noIndexSeo($this->title, $this->description),
         ];
     }
 }

@@ -10,6 +10,8 @@ use Inertia\RenderContext;
 final readonly class ForgotPasswordPageViewModel extends PageViewModel
 {
     public function __construct(
+        private string $title,
+        private string $description,
         private ?string $status,
     ) {}
 
@@ -23,7 +25,7 @@ final readonly class ForgotPasswordPageViewModel extends PageViewModel
     {
         return [
             'status' => $this->status,
-            'seo' => $this->noIndexSeo('パスワードをお忘れの方', 'メールアドレスを入力してパスワード再設定リンクを受け取ります。'),
+            'seo' => $this->noIndexSeo($this->title, $this->description),
         ];
     }
 }

@@ -58,6 +58,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn (Request $request) => Inertia::render(
             'auth/login',
             new LoginPageViewModel(
+                title: 'ログイン',
+                description: 'メールアドレスとパスワードを入力してログインします。',
                 canResetPassword: Features::enabled(Features::resetPasswords()),
                 canRegister: Features::enabled(Features::registration()),
                 canGoogleLogin: GoogleOAuth::isConfigured(),
@@ -69,6 +71,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render(
             'auth/reset-password',
             new ResetPasswordPageViewModel(
+                title: 'パスワード再設定',
+                description: 'アカウントの新しいパスワードを設定します。',
                 email: is_string($email = $request->email) ? $email : '',
                 token: is_string($token = $request->route('token')) ? $token : '',
             ),
@@ -77,6 +81,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render(
             'auth/forgot-password',
             new ForgotPasswordPageViewModel(
+                title: 'パスワードをお忘れの方',
+                description: 'メールアドレスを入力してパスワード再設定リンクを受け取ります。',
                 status: $this->sessionString($request, 'status'),
             ),
         ));
@@ -84,6 +90,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render(
             'auth/verify-email',
             new VerifyEmailPageViewModel(
+                title: 'メール認証',
+                description: 'メールアドレスの認証を完了してください。',
                 status: $this->sessionString($request, 'status'),
             ),
         ));

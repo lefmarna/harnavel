@@ -5,9 +5,9 @@
 // - CLAUDE.md / GEMINI.md are one-line @AGENTS.md pointers.
 // - .claude/skills/<name>/SKILL.md and .agents/skills/<name>/SKILL.md frontmatter
 //   has `name` matching directory name and non-empty `description`.
-// - Repo-owned skills listed in MIRRORED_SKILLS are content-equivalent between
-//   .claude/skills and .agents/skills after agent-specific frontmatter is
-//   normalized (other same-name skills may diverge intentionally per agent format).
+// - Repo-owned skills listed in MIRRORED_SKILLS have the same shared files in
+//   .claude/skills and .agents/skills after agent-specific metadata is excluded
+//   and SKILL.md frontmatter is normalized.
 import fs from 'node:fs'
 import { glob } from 'node:fs/promises'
 import path from 'node:path'
@@ -271,6 +271,7 @@ const MIRRORED_SKILLS: readonly string[] = [
   // Add a skill here when its SKILL.md body and shared frontmatter are intentionally identical in both trees.
   'adr-compact',
   'add-page',
+  'update-laravel-packages',
 ]
 
 const AGENT_SPECIFIC_FRONTMATTER_KEYS = new Set([
@@ -316,43 +317,114 @@ function normalizeMirroredSkillContent(content: string): string {
   return `---${filteredBlock}${content.slice(end)}`
 }
 
+function listMirroredSkillFiles(skillDir: string): string[] {
+  const files: string[] = []
+
+  function visit(currentDir: string, relativeDir = ''): void {
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const relativePath = path.join(relativeDir, entry.name)
+
+      // Agent-specific UI and invocation metadata intentionally differs.
+      if (
+        relativePath === 'agents' ||
+        relativePath.startsWith(`agents${path.sep}`)
+      ) {
+        continue
+      }
+
+      const absolutePath = path.join(currentDir, entry.name)
+
+      if (entry.isDirectory()) {
+        visit(absolutePath, relativePath)
+      } else if (entry.isFile()) {
+        files.push(relativePath)
+      }
+    }
+  }
+
+  visit(skillDir)
+
+  return files.sort()
+}
+
 function checkSkillSync(): LintError[] {
   const errors: LintError[] = []
   const claudeSkillsRoot = path.join(ROOT, '.claude', 'skills')
   const agentsSkillsRoot = path.join(ROOT, '.agents', 'skills')
 
   for (const name of MIRRORED_SKILLS) {
-    const claudeFile = path.join(claudeSkillsRoot, name, 'SKILL.md')
-    const agentsFile = path.join(agentsSkillsRoot, name, 'SKILL.md')
+    const claudeDir = path.join(claudeSkillsRoot, name)
+    const agentsDir = path.join(agentsSkillsRoot, name)
 
-    if (!fs.existsSync(claudeFile)) {
+    if (!fs.existsSync(claudeDir)) {
       errors.push({
-        file: `.claude/skills/${name}/SKILL.md`,
+        file: `.claude/skills/${name}`,
         reason: `Mirrored skill "${name}" is missing from .claude/skills. Add it or remove from MIRRORED_SKILLS.`,
       })
       continue
     }
 
-    if (!fs.existsSync(agentsFile)) {
+    if (!fs.existsSync(agentsDir)) {
       errors.push({
-        file: `.agents/skills/${name}/SKILL.md`,
+        file: `.agents/skills/${name}`,
         reason: `Mirrored skill "${name}" is missing from .agents/skills. Add it or remove from MIRRORED_SKILLS.`,
       })
       continue
     }
 
-    const claudeContent = normalizeMirroredSkillContent(
-      fs.readFileSync(claudeFile, 'utf-8'),
-    )
-    const agentsContent = normalizeMirroredSkillContent(
-      fs.readFileSync(agentsFile, 'utf-8'),
-    )
+    const claudeFiles = listMirroredSkillFiles(claudeDir)
+    const agentsFiles = listMirroredSkillFiles(agentsDir)
+    const claudeFileSet = new Set(claudeFiles)
+    const agentsFileSet = new Set(agentsFiles)
+    const allFiles = [...new Set([...claudeFiles, ...agentsFiles])].sort()
 
-    if (claudeContent !== agentsContent) {
+    if (!claudeFileSet.has('SKILL.md')) {
       errors.push({
         file: `.claude/skills/${name}/SKILL.md`,
-        reason: `Mirrored skill "${name}" has diverged between .claude/skills and .agents/skills. Keep the SKILL.md body and shared frontmatter equivalent; agent-specific frontmatter belongs in the relevant agent metadata.`,
+        reason: `Mirrored skill "${name}" is missing required file "SKILL.md" in .claude/skills.`,
       })
+    }
+
+    if (!agentsFileSet.has('SKILL.md')) {
+      errors.push({
+        file: `.agents/skills/${name}/SKILL.md`,
+        reason: `Mirrored skill "${name}" is missing required file "SKILL.md" in .agents/skills.`,
+      })
+    }
+
+    for (const relativeFile of allFiles) {
+      if (!claudeFileSet.has(relativeFile)) {
+        errors.push({
+          file: `.claude/skills/${name}/${relativeFile}`,
+          reason: `Mirrored skill "${name}" is missing shared file "${relativeFile}" in .claude/skills.`,
+        })
+        continue
+      }
+
+      if (!agentsFileSet.has(relativeFile)) {
+        errors.push({
+          file: `.agents/skills/${name}/${relativeFile}`,
+          reason: `Mirrored skill "${name}" is missing shared file "${relativeFile}" in .agents/skills.`,
+        })
+        continue
+      }
+
+      const claudeFile = path.join(claudeDir, relativeFile)
+      const agentsFile = path.join(agentsDir, relativeFile)
+      const contentsMatch =
+        relativeFile === 'SKILL.md'
+          ? normalizeMirroredSkillContent(
+              fs.readFileSync(claudeFile, 'utf-8'),
+            ) ===
+            normalizeMirroredSkillContent(fs.readFileSync(agentsFile, 'utf-8'))
+          : fs.readFileSync(claudeFile).equals(fs.readFileSync(agentsFile))
+
+      if (!contentsMatch) {
+        errors.push({
+          file: `.claude/skills/${name}/${relativeFile}`,
+          reason: `Mirrored skill "${name}" shared file "${relativeFile}" has diverged between .claude/skills and .agents/skills.`,
+        })
+      }
     }
   }
 

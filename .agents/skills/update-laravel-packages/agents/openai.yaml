@@ -1,0 +1,7 @@
+interface:
+  display_name: 'Update Laravel Packages'
+  short_description: 'Update Laravel tools, dependencies, and skeleton'
+  default_prompt: 'Use $update-laravel-packages to update this template from a fresh Laravel reference project.'
+
+policy:
+  allow_implicit_invocation: false

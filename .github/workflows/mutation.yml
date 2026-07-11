@@ -1,7 +1,7 @@
 name: mutation
 
 # 純ロジック層（app/Services・app/Actions・app/Repositories・app/Params）のミューテーションテスト。
-# 「テスト＝仕様」方針（docs/testing-as-spec.md / TADR-0001 Phase 4）における
+# 「テスト＝仕様」方針（docs/testing-as-spec.md / TADR-0001）における
 # 「緑＝レビュー不要」の honesty を MSI で担保する。
 #
 # mutation は重い（テストを多数回実行する）ため、毎 push/全 PR では回さない。

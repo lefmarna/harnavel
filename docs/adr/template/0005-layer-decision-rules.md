@@ -10,24 +10,13 @@ The template needs one consistent answer for when a backend layer object is warr
 Without it, agents and derived apps resolve the same use case differently and the template
 teaches drift.
 
-The layer names under decision are:
-
-- **Service** (`app/Services/*`) — a use-case orchestrator behind a `...ServiceContract`,
-  normally bound as a singleton.
-- **Repository** (`app/Repositories/*`) — persistence mediation behind a
-  `...RepositoryContract`.
-- **Params** (`app/Params/*`) — a `final readonly` value object, framework-independent
-  and kept free of HTTP/session dependencies by architecture tests.
-- **ViewModel** (`app/ViewModels/*`) — assembles the data a page or fragment renders.
-
 ## Decision
 
 ### 1. Allow controller-direct Eloquent for simple CRUD
 
 For a single-model create/update/delete with no transaction, no cross-model coordination, and
 no external effect, the controller uses validated input directly against the model. Do **not**
-introduce a Service, Repository, or Params object for this shape. Keep array-shape annotations
-where Larastan needs them.
+introduce a Service, Repository, or Params object for this shape.
 
 ### 2. Introduce a Service (with a Repository) for orchestrated use cases
 
@@ -36,8 +25,8 @@ coordination across more than one model, an external API, or sending mail. Persi
 use case goes through a Repository contract, and Service / Repository contracts are covered by
 the binding-completeness test.
 
-Whether the Service also takes a Params object is decided by rule 3. A Service that consumes a
-small external callback payload may take scalar arguments directly.
+Whether the Service also takes a Params object is decided by rule 3; small external callback
+payloads may remain scalar arguments.
 
 Fortify Actions are the framework-defined variant of this rule: the Action is the orchestrator.
 Do not wrap a Fortify Action in an app Service unless a new boundary appears.
@@ -47,20 +36,16 @@ Do not wrap a Fortify Action in an app Service unless a new boundary appears.
 A Params object is created only in one of these two shapes. If a use case fits neither, it does
 not get a Params object.
 
-**(a) Write DTO at the Controller to Service boundary.** The typed input a Service consumes.
-It exists **only when a Service consumes it**. The FormRequest owns conversion to the Params so
-validation and the array-shape assertion stay together. The Params exposes typed properties;
-avoid array round-trips such as `fromInput()` / `toArray()` unless a real boundary requires them.
-Place it under `App\Params\<Domain>\`, name it `...Params`, and keep it `final readonly`.
-For write DTOs, FormRequest conversion is the boundary owner; the Params must not parse raw input
-or expose `toArray()` just to feed Eloquent.
+**(a) Write DTO at the Controller to Service boundary.** It exists only when a Service consumes
+typed input. The FormRequest owns conversion, while the Params exposes typed properties and does
+not parse raw input. Avoid array round-trips: array output is allowed only when a real boundary,
+such as an external API or serializer, requires it, and never merely to feed Eloquent. Place it
+under `App\Params\<Domain>\`.
 
-**(b) Search/filter normalization object.** A value object that leniently parses and normalizes
-GET query parameters (unknown/empty values become `null`, sort keys are constrained to an
-allow-list). Its input is an array, not a `Request`; the controller extracts the query first so
-Params stays framework-independent.
-This is the only Params form where a `toArray()`-style method is acceptable, and only for carrying
-normalized query parameters back into links or pagination.
+**(b) Search/filter normalization object.** It leniently normalizes a query array: unknown and empty
+values become `null`, and sort keys are constrained to an allow-list. It does not depend on
+`Request`. Outside the real-boundary exception above, this is the only Params form where array
+output is acceptable, and only to carry the normalized query back into links or pagination.
 
 ### 4. ViewModels exist in two kinds
 
@@ -71,6 +56,10 @@ normalized query parameters back into links or pagination.
   the detailed prop shapes.
 - **Fragment ViewModel** — formats a piece of a page and returns an array. It is not an Inertia
   page and does not implement `ProvidesInertiaProperties`.
+
+The remaining mechanical naming, framework-independence, page-contract, and container-binding
+rules are enforced by architecture tests and demonstrated by exemplar code rather than repeated
+here.
 
 ### 5. Authorization lives in Laravel Policies
 

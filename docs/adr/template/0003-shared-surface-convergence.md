@@ -28,11 +28,6 @@ Coverage and mutation gate values, mutation blocking, and the density of
 `@pest-mutate-ignore` annotations are calibrated per app. The shared workflow structure may
 converge, but the calibrated lines and adjacent rationale stay app-priority.
 
-`mise.toml` is handled conservatively. New tasks should first be considered for template
-promotion; app-local tasks are a last resort for unavoidable project-specific workflows. Template
-pulls should avoid changing it unless the shared command surface itself is intentionally updated
-and reviewed with `AGENTS.md` / `docs/commands.md`.
-
 The operational path classification and conflict-resolution procedure live in
 `/merge-template` and `/absorb-from-apps`; this ADR records the decision model only.
 

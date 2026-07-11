@@ -13,9 +13,9 @@ This file is the operational playbook — keep it terse.
 2. **Spec** — author `it('...')->todo()` cases: the `describe`/`it` tree + assertion sketch.
 3. **Approve** — reviewer approves the test cases **before** implementing. *Review happens here.*
 4. **Implement** — red → green (`tdd` skill).
-5. **Gates** — every CI check currently wired in this repo must pass. The target set
-   (TADR-0001 Gates) is: green + coverage floor + `arch()` + Larastan + scoped mutation
-   testing. Require only the checks already enabled.
+5. **Gates** — every CI check currently wired in this repo must pass. The target gate set defined
+   by TADR-0001 is: green + coverage floor + `arch()` + Larastan + scoped mutation testing. Require
+   only the checks already enabled.
 6. **Merge** — approved spec × green × gates → merge without reading the implementation.
 7. **Organize** — update only ADRs / `CONTEXT.md`. Don't reconstruct Kiro
    `requirements`/`design` after the fact (using them upfront is fine).

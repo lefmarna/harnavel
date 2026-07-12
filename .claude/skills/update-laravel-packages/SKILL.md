@@ -37,11 +37,11 @@ Before changing files:
   `composer update` / `pnpm update` for their own lockfiles.
 - Require a clean worktree before starting. If unrelated changes exist, stop unless the user has
   explicitly scoped and protected them.
-- Run PHP, Composer, Artisan, and Laravel Installer only inside the Docker `app` container. Run
-  Node, pnpm, and mise on the host. The single exception is reference generation (Phase 1 Step 3):
-  the throwaway container temporarily gets its own Node/pnpm because the current starter kit runs a
-  JS package manager inside the container during `laravel new`. This never changes how the template
-  itself runs Node/pnpm.
+- Run PHP, Composer, Artisan, and Laravel Installer only inside the Docker `app` container. Run the
+  template's Node, pnpm, and mise on the host. The `app` image itself bundles Node (see the
+  Dockerfile) solely so reference generation (Phase 1 Step 3) can run the starter kit's in-container
+  JS package manager; this does not change that the template's own frontend work uses host
+  Node/pnpm.
 - Do not change the Docker PHP image tag in this workflow, including patch updates. It is an exact
   production-compatibility pin chosen for XServer, not a toolchain version to make latest. A
   separately requested PHP change requires confirming XServer support first.
@@ -102,12 +102,12 @@ it.
 - Do not enable SSR or a production queue-worker requirement. XServer has no long-running process
   support.
 - Current starter kits run a post-create feature-selection step (e.g. Laravel Chisel's
-  `install:features`) that shells out to a JS package manager inside the container. The container
-  has no Node by default, so before `laravel new`: install a matching Node in the throwaway
-  container (e.g. fetch the `mise.toml` Node version) and enable pnpm via corepack, then run the
-  generator without `--no-node`. With `--no-node`, or with no package manager present, the step
+  `install:features`) that shells out to a JS package manager inside the container. The `app` image
+  bundles Node (see the Dockerfile), so enable pnpm via corepack in the container and run the
+  generator without `--no-node`. With `--no-node`, or with no package manager available, the step
   aborts and leaves a misleading pre-selection reference (PHPUnit instead of Pest, Boost and
-  Wayfinder unapplied, scaffolding not chiseled).
+  Wayfinder unapplied, scaffolding not chiseled). If a future base image ships without Node, install
+  a matching Node in the throwaway container first.
 - Verify the reference actually completed before trusting it: the feature-selection scaffold files
   are gone, the selected test framework and Boost are installed, and Wayfinder output exists.
 - Copy the completed reference to a host temporary directory for comparison. Record the exact

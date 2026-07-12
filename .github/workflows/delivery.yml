@@ -126,7 +126,7 @@ jobs:
             if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
               ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
               "cd $DEPLOY_DIRECTORY && \
-              /usr/bin/php8.5 ~/opt/bin/composer-2.9.7 install --no-dev --no-interaction --optimize-autoloader && \
+              /usr/bin/php8.5 ~/opt/bin/composer-2.10.2 install --no-dev --no-interaction --optimize-autoloader && \
               /usr/bin/php8.5 artisan config:cache && \
               /usr/bin/php8.5 artisan route:cache && \
               /usr/bin/php8.5 artisan view:cache && \

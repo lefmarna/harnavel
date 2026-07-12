@@ -4,6 +4,9 @@ FROM php:8.5.5-fpm-bookworm
 COPY --from=composer:2.10.2 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
+  && curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/nodesource_setup.sh \
+  && bash /tmp/nodesource_setup.sh \
+  && rm /tmp/nodesource_setup.sh \
   && apt-get install -y \
   bash \
   coreutils \
@@ -20,6 +23,7 @@ RUN apt-get update \
   libwebp-dev \
   libzip-dev \
   mariadb-client \
+  nodejs \
   unzip \
   # Configure GD with JPEG/WebP/FreeType support
   && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \

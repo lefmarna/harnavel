@@ -28,11 +28,7 @@ function findUnitTests(dir: string): string[] {
       continue
     }
 
-    const segments = path.relative(TEST_ROOT, absolutePath).split(path.sep)
-
-    if (segments.includes('__tests__')) {
-      files.push(absolutePath)
-    }
+    files.push(absolutePath)
   }
 
   return files.sort()
@@ -43,7 +39,7 @@ function main(): void {
 
   if (testFiles.length === 0) {
     console.log(
-      'No frontend unit tests found at resources/js/**/__tests__/**/*.test.{ts,tsx}; skipping.',
+      'No frontend unit tests found at resources/js/**/*.test.{ts,tsx}; skipping.',
     )
 
     return

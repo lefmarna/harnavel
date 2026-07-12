@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 return [
     'agents' => [
+        'antigravity' => [
+            'guidelines_path' => 'docs/generated/boost.md',
+        ],
         'codex' => [
             'guidelines_path' => 'docs/generated/boost.md',
         ],

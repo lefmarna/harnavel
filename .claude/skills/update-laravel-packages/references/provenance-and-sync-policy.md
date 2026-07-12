@@ -41,6 +41,9 @@ table.
 - Docker development through nginx, PHP-FPM, and MariaDB.
 - XServer deployment constraints: no SSR, queue workers, or other long-running production
   processes; synchronous jobs; protected remote data during `rsync --delete`.
+- Queue tables (`jobs`, `job_batches`, `failed_jobs`) are dropped by a template migration because
+  queues run synchronously. Do not adopt upstream schema changes to tables the template drops, and
+  do not restore them.
 - Host/container command boundary from `AGENTS.md`.
 - Japanese README and tests, English engineering docs, testing-as-spec workflow, ADR policy, and
   domain glossary policy.

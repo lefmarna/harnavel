@@ -38,7 +38,10 @@ Before changing files:
 - Require a clean worktree before starting. If unrelated changes exist, stop unless the user has
   explicitly scoped and protected them.
 - Run PHP, Composer, Artisan, and Laravel Installer only inside the Docker `app` container. Run
-  Node, pnpm, and mise on the host.
+  Node, pnpm, and mise on the host. The single exception is reference generation (Phase 1 Step 3):
+  the throwaway container temporarily gets its own Node/pnpm because the current starter kit runs a
+  JS package manager inside the container during `laravel new`. This never changes how the template
+  itself runs Node/pnpm.
 - Do not change the Docker PHP image tag in this workflow, including patch updates. It is an exact
   production-compatibility pin chosen for XServer, not a toolchain version to make latest. A
   separately requested PHP change requires confirming XServer support first.
@@ -76,6 +79,13 @@ it.
   rebuild installs the latest stable Laravel Installer. If it becomes pinned, update it explicitly.
 - Resolve the latest stable Node and pnpm versions using their official registries or mise and
   update `mise.toml`.
+- Treat a Node or pnpm major-version bump as a breaking toolchain change, not a silent number
+  update. A pnpm major upgrade changes the store version, so environments need
+  `rm -rf node_modules && pnpm install` rather than `pnpm update`, and it can escalate ignored
+  dependency build scripts to a hard `pnpm install` failure. Resolve that decision explicitly in
+  `pnpm-workspace.yaml` (`allowBuilds`) so install succeeds while `prepare`/lefthook still runs; the
+  reference's `.npmrc` `ignore-scripts=true` shortcut conflicts with this template's `prepare` hook.
+  Record the resulting derived-app steps in the report.
 - Keep the Docker PHP image tag byte-for-byte unchanged. Composer, Laravel Installer, Node, and
   pnpm being latest never authorizes a PHP patch, minor, or major update. Treat Composer's
   `require.php` constraint separately as a manifest constraint: adopt the reference only when the
@@ -91,6 +101,15 @@ it.
   authentication, database, and other features already present in the project.
 - Do not enable SSR or a production queue-worker requirement. XServer has no long-running process
   support.
+- Current starter kits run a post-create feature-selection step (e.g. Laravel Chisel's
+  `install:features`) that shells out to a JS package manager inside the container. The container
+  has no Node by default, so before `laravel new`: install a matching Node in the throwaway
+  container (e.g. fetch the `mise.toml` Node version) and enable pnpm via corepack, then run the
+  generator without `--no-node`. With `--no-node`, or with no package manager present, the step
+  aborts and leaves a misleading pre-selection reference (PHPUnit instead of Pest, Boost and
+  Wayfinder unapplied, scaffolding not chiseled).
+- Verify the reference actually completed before trusting it: the feature-selection scaffold files
+  are gone, the selected test framework and Boost are installed, and Wayfinder output exists.
 - Copy the completed reference to a host temporary directory for comparison. Record the exact
   installer version, command, prompt answers, and selected options.
 - Remove or exclude only runtime/generated comparison noise such as `.git`, `.env`, `vendor`,
@@ -178,9 +197,10 @@ machine-generated comparison in the report; a prose disposition table alone is i
 - Review direct and transitive changes before continuing.
 - Run `composer audit --locked` and `pnpm audit`. Resolve findings where possible. Require approval
   for accepted advisories, abandoned packages without a safe replacement, or fixes that exceed
-  the approved update scope. CI blocks `composer audit` and `pnpm audit --prod`, but this maintenance
-  workflow intentionally audits development dependencies too. Resolve dev-only advisories or
-  obtain explicit approval for a documented exception before either commit.
+  the approved update scope. CI blocks `composer audit` and `pnpm audit --prod`; this maintenance
+  workflow also audits development dependencies to surface them, but treats dev-only advisories as
+  best-effort: fix them when the fix is cheap and in scope, otherwise report them without blocking
+  the commit and flag any that warrant a tracked exception.
 - Prefer resolving advisories by updating lockfile resolutions within the reference constraints.
   If a fix requires changing a Laravel-owned manifest constraint, make the smallest compatible
   change, record it as an explicit reference exception, and obtain approval. Never replace all
@@ -235,7 +255,17 @@ not comparison noise.
 - Remove upstream-following files deleted by current Laravel when no retained template capability
   uses them.
 - For template-preserved files, port compatible upstream syntax and defaults around the preserved
-  behavior instead of replacing the whole file blindly.
+  behavior instead of replacing the whole file blindly. A file where the template is a stricter
+  superset is not automatically "nothing to adopt": examine it line by line for portable upstream
+  syntax, formatting, and path conventions to carry over around the preserved stricter rules.
+- Never edit an already-shipped migration to adopt an upstream schema change; existing databases
+  will not re-run it and the file would drift from the live schema. Add a new dated alter migration
+  and verify both `up` and `down` against a fresh migrate plus rollback. First confirm the target
+  table still exists in the template's final schema — some default framework tables are dropped
+  intentionally (see the sync policy), so their upstream schema changes do not apply.
+- Trace consumers before adopting a non-package skeleton file too. Do not add a `.gitignore` entry,
+  generated-artifact ignore, or config keyed to a reference feature the template does not use (for
+  example a fonts-manifest ignore tied to a build-time font plugin the template omits).
 - Prefer current Laravel APIs and idioms while keeping observable behavior unchanged.
 - Update related tests before behavior changes and obtain approval when behavior cannot be
   preserved.

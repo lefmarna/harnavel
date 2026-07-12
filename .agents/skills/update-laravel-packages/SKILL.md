@@ -7,7 +7,8 @@ description: Update this Laravel template's Composer, Laravel Installer, Node, p
 
 Use a fresh Laravel application as the upstream baseline. Preserve deliberate template behavior,
 remove obsolete dependencies inherited from older Laravel starters, and update deliberate
-template-only dependencies independently.
+template-only dependencies independently. Treat reference manifest constraints as Laravel's
+compatibility baseline, not as versions to maximize.
 
 ## Required Context
 
@@ -37,6 +38,9 @@ Before changing files:
   explicitly scoped and protected them.
 - Run PHP, Composer, Artisan, and Laravel Installer only inside the Docker `app` container. Run
   Node, pnpm, and mise on the host.
+- Do not change the Docker PHP image tag in this workflow, including patch updates. It is an exact
+  production-compatibility pin chosen for XServer, not a toolchain version to make latest. A
+  separately requested PHP change requires confirming XServer support first.
 - Never deploy, run production migrations, modify production data, or start unsupported
   long-running production processes.
 - Never delete `composer.lock` or `pnpm-lock.yaml`. Update them through their package managers and
@@ -55,6 +59,7 @@ Record in the execution report:
 
 - the starting commit and worktree status;
 - effective PHP, Composer, Laravel Installer, Node, and pnpm versions;
+- the exact Docker PHP image tag and the XServer compatibility evidence for keeping it fixed;
 - Laravel and major ecosystem package versions;
 - baseline audit and narrow verification results;
 - current `composer.json` / `package.json` scripts and lockfile state.
@@ -70,9 +75,10 @@ it.
   rebuild installs the latest stable Laravel Installer. If it becomes pinned, update it explicitly.
 - Resolve the latest stable Node and pnpm versions using their official registries or mise and
   update `mise.toml`.
-- Keep the current PHP line unless Laravel compatibility and the production XServer runtime both
-  support a deliberate change. Composer and Node being latest does not authorize a PHP major/minor
-  change.
+- Keep the Docker PHP image tag byte-for-byte unchanged. Composer, Laravel Installer, Node, and
+  pnpm being latest never authorizes a PHP patch, minor, or major update. Treat Composer's
+  `require.php` constraint separately as a manifest constraint: adopt the reference only when the
+  fixed XServer-compatible runtime satisfies it, and stop for approval before raising its minimum.
 - Rebuild without cache, start the containers, and verify the effective versions. Stop if the
   expected versions are not active.
 
@@ -98,22 +104,69 @@ provenance, intended action, evidence, compatibility notes, and related files.
 
 Apply these rules in order:
 
-1. If the package exists in the reference, treat it as current Laravel-owned and adopt the
-   reference constraint and manifest section by default.
-2. If it is absent from the reference and history proves this template added it for a retained
+1. Trace the reference package to its consumers before adopting it. If every consumer belongs to
+   frontend pages, components, layouts, styling, or another reference surface that this template
+   intentionally replaces rather than reuses, classify it as unadopted reference-surface and omit
+   both the package and its companion files. Presence in a fresh Laravel application alone is not
+   sufficient evidence that the template needs the package.
+2. Otherwise, if the package exists in the reference, treat it as current Laravel-owned and copy the
+   reference constraint string and manifest section exactly. Do this even when the repository's
+   current constraint has a numerically newer lower bound. Do not preserve or substitute a newer
+   registry constraint merely because this is an update workflow; the reference constraint is the
+   intended Laravel compatibility baseline, while the lockfile may still resolve a newer version
+   allowed by that constraint.
+3. If it is absent from the reference and history proves this template added it for a retained
    capability, treat it as template-owned and update it to the latest compatible stable release.
-3. If it is absent from the reference and history proves an older Laravel starter supplied it,
+4. If it is absent from the reference and history proves an older Laravel starter supplied it,
    treat it as legacy Laravel-owned. Remove it when no retained code, config, script, CI, or docs
    require it.
-4. If retained behavior still uses a legacy package, identify Laravel's current replacement and
+5. If retained behavior still uses a legacy package, identify Laravel's current replacement and
    migrate without changing behavior before removing the package.
-5. If provenance or safe replacement is unclear, do not change it; ask for approval with the
+6. If provenance or safe replacement is unclear, do not change it; ask for approval with the
    evidence gathered.
 
 Compare the complete manifests, including scripts, autoloading, Composer plugins, metadata,
 optional dependencies, package-manager settings, and lifecycle hooks. Do not restore scripts that
 history shows were intentionally removed. Adopt useful new upstream scripts only when they fit the
 Docker and XServer constraints.
+
+Build a separate disposition for every non-dependency manifest difference, including empty arrays
+and objects. Do not silently discard a field because it appears to be a no-op. Determine whether it
+is active configuration, a post-generation marker left after an installer hook was consumed, or an
+intentional template divergence. Prefer the completed reference form when it is harmless and
+records the current post-generation state; omit it only with explicit evidence and a recorded
+disposition.
+
+For scripts and lifecycle hooks, classify every key and every command as adopted, template
+equivalent, or rejected with a constraint. Do not leave a partially merged scripts object with
+unexplained omissions. When the template already has an equivalent canonical command used by mise,
+CI, or docs, preserve that command and add a compatible upstream alias when it improves convergence.
+Adopt new quality checks into aggregate test scripts when they match repository gates. Reject
+setup, development, SSR, queue, or package-manager commands that violate the host/container or
+XServer boundaries, and record the exact conflict.
+
+For every package newly present in the reference, trace all reference usages and companion files.
+When its capability is adopted, absorb the package together with the components, hooks, bootstrap
+wiring, flash-data handling, configuration, tests, and styles that make it useful. When the
+template intentionally replaces that surface, omit the package and companion files together and
+record the evidence. Do not add default frontend components or their dedicated dependencies merely
+because the fresh starter gained them; this template's frontend is not a byte-for-byte Laravel
+starter surface. Do not leave a new dependency orphaned or defer its integration without recording
+that disposition.
+
+Do not change existing observable behavior merely to exercise a newly added upstream package. It
+is acceptable to adopt inert infrastructure such as a mounted provider or event listener while
+preserving the template's current emitters and user feedback. If the reference companion code
+would replace an existing UX or application flow, classify that integration separately, preserve
+the current behavior by default, and obtain explicit approval before changing it. The approval
+request must explain how the behavior and its tests will flow to derived applications through
+template convergence; do not leave that downstream decision to each app implicitly.
+
+Before lockfile resolution, run a manifest-convergence gate that compares every adopted current
+Laravel-owned package's section and constraint string with the reference. Separately list every
+unadopted reference-surface package and the omitted consumer surface. The mismatch list must be
+empty except for individually documented, approved compatibility exceptions. Include this
+machine-generated comparison in the report; a prose disposition table alone is insufficient.
 
 ### 5. Resolve and audit
 
@@ -127,6 +180,10 @@ Docker and XServer constraints.
   the approved update scope. CI blocks `composer audit` and `pnpm audit --prod`, but this maintenance
   workflow intentionally audits development dependencies too. Resolve dev-only advisories or
   obtain explicit approval for a documented exception before either commit.
+- Prefer resolving advisories by updating lockfile resolutions within the reference constraints.
+  If a fix requires changing a Laravel-owned manifest constraint, make the smallest compatible
+  change, record it as an explicit reference exception, and obtain approval. Never replace all
+  reference constraints with registry-latest constraints as an audit shortcut.
 - Search code, configuration, scripts, CI, tests, and docs for every removed package and command.
 - Delete `vendor` and `node_modules`, then run `composer install --no-interaction` in the container
   and `pnpm install --frozen-lockfile` on the host. This is the reproducibility test; do not delete
@@ -169,6 +226,11 @@ not comparison noise.
 
 - Replace upstream-following files with the current Laravel form, including default comments and
   small configuration/style changes.
+- Prefer compatible backend framework, bootstrap, and configuration improvements. Treat default
+  frontend pages, components, layouts, hooks, and presentation as template-preserved unless this
+  template actually reuses that surface or the user explicitly approves adopting its behavior.
+- When Phase 1 adds a new Laravel-owned package, verify here that every related reference file and
+  integration point was either absorbed or explicitly classified as template-preserved.
 - Remove upstream-following files deleted by current Laravel when no retained template capability
   uses them.
 - For template-preserved files, port compatible upstream syntax and defaults around the preserved
@@ -200,10 +262,13 @@ Keep one concise report in the conversation throughout the run with:
 1. baseline and selected reference options;
 2. toolchain changes;
 3. package disposition table;
-4. audit findings and resolution;
-5. file disposition table;
-6. verification results;
-7. blockers, approvals, and the two commit IDs when created.
+4. non-dependency manifest disposition, including scripts, hooks, metadata, and empty values;
+5. machine-generated proof that Laravel-owned manifest sections and constraints match the
+   reference, including any approved exceptions;
+6. audit findings and resolution;
+7. file disposition table;
+8. verification results;
+9. blockers, approvals, and the two commit IDs when created.
 
 Mark the update complete only when clean installs, required checks, and the final classified
 reference comparison pass, and audits either pass or have explicit documented exceptions.

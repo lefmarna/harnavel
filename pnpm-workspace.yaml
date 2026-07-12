@@ -1,0 +1,9 @@
+allowBuilds:
+  esbuild: false
+  lefthook: false
+  unrs-resolver: false
+packages:
+  - '.'
+
+publicHoistPattern:
+  - '@inertiajs/core'

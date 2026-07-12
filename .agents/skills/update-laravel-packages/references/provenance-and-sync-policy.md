@@ -8,7 +8,8 @@ package assumptions.
 
 | Classification | Deciding evidence | Default action |
 | --- | --- | --- |
-| Current Laravel-owned | The fresh reference contains the package in the same capability area | Adopt the reference constraint and section |
+| Current Laravel-owned | The fresh reference contains the package in the same capability area | Copy the reference constraint string and section exactly, even when the repository currently declares a newer lower bound |
+| Unadopted reference-surface | The fresh reference contains the package, but all consumers belong to frontend or another starter surface intentionally replaced by this template | Omit the package and its companion files together; record the consumer evidence |
 | Legacy Laravel-owned | The fresh reference omits it and the repository's initial starter or an earlier Laravel synchronization introduced it | Remove it if unused; otherwise migrate to Laravel's current replacement |
 | Template-owned | A post-starter commit introduced it for an explicit retained template capability | Update to the latest compatible stable version |
 | Unresolved | History, reference output, and usages do not establish ownership | Preserve and request a decision |
@@ -45,6 +46,10 @@ table.
   domain glossary policy.
 - Project-specific Google authentication, SEO, observability, verification, CI, deployment, and
   test helpers.
+- Existing user-visible application and authentication flows, including success feedback, unless
+  the replacement behavior and its derived-application rollout are explicitly approved.
+- Frontend pages, components, layouts, hooks, and presentation that this template implements
+  independently from Laravel's default starter UI.
 - Layer decisions and PageViewModel/Wayfinder conventions established by Template ADRs and tests.
 - The one-line `CLAUDE.md` and `GEMINI.md` pointers to `AGENTS.md`.
 

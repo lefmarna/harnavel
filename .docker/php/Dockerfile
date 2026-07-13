@@ -3,6 +3,9 @@ FROM php:8.5.5-fpm-bookworm
 # Install Composer
 COPY --from=composer:2.10.2 /usr/bin/composer /usr/bin/composer
 
+# Node.js is bundled only so the update-laravel-packages skill can generate its fresh
+# Laravel reference (starter-kit JS tooling) inside this container. The template's own
+# frontend workflow still uses Node/pnpm on the host (AGENTS.md).
 RUN apt-get update \
   && curl -fsSL https://deb.nodesource.com/setup_24.x -o /tmp/nodesource_setup.sh \
   && bash /tmp/nodesource_setup.sh \

@@ -32,6 +32,38 @@ For exact commands, use `docs/commands.md`. Configurable ports and names are dec
   `production` and `develop` environments. See
   [`TADR-0004`](adr/template/0004-production-observability.md).
 
+## XServer Server Toolchain
+
+The post-deploy step in `.github/workflows/delivery.yml` runs on the XServer host with
+server-side binaries that are provisioned manually, outside this repository:
+
+- PHP CLI: `/usr/bin/php8.5` — provided by XServer. Its `major.minor` must match the
+  Docker PHP image tag in `.docker/php/Dockerfile` (the production-compatibility pin).
+  Changing the PHP series requires confirming XServer support first.
+- Composer: `~/opt/bin/composer-<version>` — a Composer PHAR uploaded manually to every
+  deploy target (Develop and Production), named with its exact version.
+
+Updating Composer is a three-surface change. Do it in this order:
+
+1. Upload the new `composer-<version>` PHAR to `~/opt/bin/` on every XServer environment.
+2. Update the Composer image tag in `.docker/php/Dockerfile` and the versioned path in
+   `.github/workflows/delivery.yml` in the same commit.
+3. Deploy.
+
+Merging the workflow change before step 1 breaks the next deploy at the post-deploy
+`composer install`. `pnpm test:toolchain-versions` (run in CI lint) keeps the Dockerfile
+and `delivery.yml` versions from drifting apart; it cannot see the server, so step 1 stays
+a manual precondition.
+
+### Production `vendor` handling
+
+`vendor` is excluded from the deploy `rsync --delete`, so the previous release's packages
+stay in place while files transfer. The post-deploy `composer install --no-dev` then
+reconciles `vendor/` against `composer.lock`: packages removed from the lock are
+uninstalled and changed packages are reinstalled wholesale, so stale files do not
+accumulate. Deleting `vendor` during rsync instead would take the site fully down until
+`composer install` finishes.
+
 ## Troubleshooting
 
 - Port conflicts: update `NGINX_PORT`, `VITE_PORT`, and `MARIADB_PORT` in `.env`.

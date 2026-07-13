@@ -194,3 +194,7 @@ depends = ["deploy:build", "deploy:package"]
 [tasks."test:deploy-rsync-excludes"]
 description = "Verify delivery rsync excludes protect remote-only XServer data"
 run = "pnpm test:deploy-rsync-excludes"
+
+[tasks."test:toolchain-versions"]
+description = "Verify Dockerfile and delivery.yml reference the same PHP/Composer versions"
+run = "pnpm test:toolchain-versions"

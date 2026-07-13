@@ -119,4 +119,5 @@ mise run deploy:build   # Build frontend assets
 mise run deploy:package # Create deployment package
 mise run deploy:prepare # Full deployment preparation
 mise run test:deploy-rsync-excludes # Verify rsync --delete protects remote-only data
+mise run test:toolchain-versions    # Verify Dockerfile and delivery.yml PHP/Composer versions match
 ```

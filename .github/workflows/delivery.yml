@@ -88,6 +88,9 @@ jobs:
       # rsync除外の方針:
       # - .deployignore: ローカルパッケージ作成時の除外（開発用ファイル等）
       # - rsync --exclude: サーバー側の既存データ保護（.env, storage, サブドメイン等）
+      # vendor は --delete で消さずに保持する。post-deploy の composer install --no-dev が
+      # composer.lock と整合を取り、lock から消えたパッケージは自動でアンインストールされる
+      # ため残骸は蓄積しない。削除すると install 完了までサイトが vendor 無しで停止する。
       # XServerへのSSH接続は稀に瞬断・スロットリングで失敗するため、
       # 接続タイムアウトを短めにして指数バックオフでリトライする。
       - name: Deploy to XServer via Rsync
@@ -100,6 +103,7 @@ jobs:
               -e "$ssh_opts" \
               --exclude='.env' \
               --exclude='.user.ini' \
+              --exclude='/vendor' \
               --exclude='storage/app/private/**' \
               --exclude='storage/app/public/**' \
               --exclude='storage/logs/*' \

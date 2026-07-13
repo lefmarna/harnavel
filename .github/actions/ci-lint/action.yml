@@ -98,3 +98,7 @@ runs:
     - name: Test Deploy Rsync Excludes
       shell: bash
       run: pnpm run test:deploy-rsync-excludes
+
+    - name: Test Toolchain Version Consistency
+      shell: bash
+      run: pnpm run test:toolchain-versions

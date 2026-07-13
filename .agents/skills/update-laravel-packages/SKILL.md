@@ -72,8 +72,14 @@ it.
 
 ### 2. Update the toolchain
 
-- Resolve the latest stable Composer image tag from official Composer sources and update the PHP
-  Dockerfile.
+- Resolve the latest stable Composer image tag from official Composer sources. A Composer update
+  is a three-surface change: the image tag in `.docker/php/Dockerfile`, the versioned
+  `~/opt/bin/composer-<version>` PHAR provisioned manually on every XServer environment, and the
+  path in the `.github/workflows/delivery.yml` post-deploy commands (see `docs/infrastructure.md`,
+  XServer Server Toolchain). Update the Dockerfile and `delivery.yml` together —
+  `pnpm test:toolchain-versions` enforces their agreement — and stop for approval until the user
+  confirms the new PHAR exists on every deploy target; merging without it breaks the next deploy
+  at the post-deploy `composer install`.
 - Keep the Dockerfile's unpinned `composer global require laravel/installer` behavior so a no-cache
   rebuild installs the latest stable Laravel Installer. If it becomes pinned, update it explicitly.
 - Resolve the latest stable Node and pnpm versions using their official registries or mise and

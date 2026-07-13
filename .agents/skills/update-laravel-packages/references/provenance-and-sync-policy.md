@@ -34,6 +34,17 @@ is permanent if Laravel or a better maintained replacement now provides it.
 If history after these commits changes the capability, follow the latest evidence rather than the
 table.
 
+## Recorded package dispositions
+
+Judgment records for packages whose classification is non-obvious. Re-verify each against the
+fresh reference on every run; these record past evidence, not permanent facts.
+
+- `laravel/chisel` (Composer `require`): the completed 2026-07 reference kept it in `require`
+  after `install:features` ran, so it is current Laravel-owned and mirrored as-is, even though
+  this template consumed its feature-selection step at generation time and never runs it again.
+  It reaches production through `composer install --no-dev` but is inert at runtime. If a future
+  reference drops it after chiseling, reclassify it as legacy Laravel-owned and remove it.
+
 ## Skeleton ownership
 
 ### Preserve as template behavior

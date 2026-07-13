@@ -6,6 +6,17 @@
   "schedule": ["* 0-6 * * 1"],
   "packageRules": [
     {
+      "description": "Composer constraint strings mirror the fresh Laravel reference and are changed only by the update-laravel-packages skill; Renovate updates lockfile resolutions within the existing ranges. Close any Renovate PR that edits composer.json and route it through the skill instead.",
+      "matchManagers": ["composer"],
+      "rangeStrategy": "update-lockfile"
+    },
+    {
+      "description": "Composer major updates go through the update-laravel-packages skill, which classifies provenance against a fresh Laravel reference before changing constraints.",
+      "matchManagers": ["composer"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
       "description": "Group Composer minor and patch updates.",
       "matchManagers": ["composer"],
       "matchUpdateTypes": ["minor", "patch"],

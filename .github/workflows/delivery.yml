@@ -8,7 +8,8 @@ on:
 
 concurrency:
   group: delivery-${{ github.ref }}
-  cancel-in-progress: true
+  # maintenance mode 中の実行を新しい push で中断しない。
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -85,12 +86,53 @@ jobs:
           fi
           printf '%s\n' "${{ secrets.XSERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
 
+      # PHP/Composer を実際に起動して、破壊的な rsync より前に未配置・破損・版違いを検出する。
+      - name: Verify XServer toolchain
+        run: |
+          for attempt in 1 2 3; do
+            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+              "test -x /usr/bin/php8.5 && \
+              test -r ~/opt/bin/composer-2.10.2 && \
+              composer_version=\$(/usr/bin/php8.5 ~/opt/bin/composer-2.10.2 --version --no-ansi) && \
+              printf '%s\n' \"\$composer_version\" && \
+              printf '%s\n' \"\$composer_version\" | grep -Eq '^Composer version 2\.10\.2([[:space:]]|$)'"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "toolchain preflight ssh attempt ${attempt} failed; retrying in $((attempt * 30))s..." >&2
+              sleep "$((attempt * 30))"
+            fi
+          done
+          echo "XServer toolchain preflight failed after 3 attempts" >&2
+          exit 1
+
+      - name: Enable maintenance mode
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
+        run: |
+          for attempt in 1 2 3; do
+            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+              "mkdir -p -- \"$DEPLOY_DIRECTORY\" && \
+              cd -- \"$DEPLOY_DIRECTORY\" && \
+              /usr/bin/php8.5" < .github/deploy/enable-maintenance.php; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "maintenance down ssh attempt ${attempt} failed; retrying in $((attempt * 30))s..." >&2
+              sleep "$((attempt * 30))"
+            fi
+          done
+          echo "failed to enable maintenance mode after 3 attempts" >&2
+          exit 1
+
       # rsync除外の方針:
       # - .deployignore: ローカルパッケージ作成時の除外（開発用ファイル等）
       # - rsync --exclude: サーバー側の既存データ保護（.env, storage, サブドメイン等）
       # vendor は --delete で消さずに保持する。post-deploy の composer install --no-dev が
-      # composer.lock と整合を取り、lock から消えたパッケージは自動でアンインストールされる
-      # ため残骸は蓄積しない。削除すると install 完了までサイトが vendor 無しで停止する。
+      # Composer 管理対象を composer.lock と整合させる。削除すると install 完了までサイトが
+      # vendor 無しで停止する。maintenance mode の状態と bootstrap 非依存の503応答も転送中は保持する。
       # XServerへのSSH接続は稀に瞬断・スロットリングで失敗するため、
       # 接続タイムアウトを短めにして指数バックオフでリトライする。
       - name: Deploy to XServer via Rsync
@@ -108,6 +150,8 @@ jobs:
               --exclude='storage/app/public/**' \
               --exclude='storage/logs/*' \
               --exclude='storage/framework/cache/data/*' \
+              --exclude='/storage/framework/down' \
+              --exclude='/storage/framework/maintenance.php' \
               --exclude='storage/framework/sessions/*' \
               --exclude='storage/framework/views/*' \
               --exclude='dev.laravel-app-template.com' \
@@ -143,4 +187,24 @@ jobs:
             fi
           done
           echo "post-deploy ssh failed after 3 attempts" >&2
+          exit 1
+
+      # 途中失敗時は壊れたリリースを公開せず、再実行または手動復旧まで maintenance mode を保つ。
+      - name: Disable maintenance mode
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
+        run: |
+          for attempt in 1 2 3; do
+            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+              "cd $DEPLOY_DIRECTORY && \
+              /usr/bin/php8.5 artisan up"; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "maintenance up ssh attempt ${attempt} failed; retrying in $((attempt * 30))s..." >&2
+              sleep "$((attempt * 30))"
+            fi
+          done
+          echo "failed to disable maintenance mode after 3 attempts" >&2
           exit 1

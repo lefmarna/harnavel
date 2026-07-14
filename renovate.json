@@ -6,15 +6,9 @@
   "schedule": ["* 0-6 * * 1"],
   "packageRules": [
     {
-      "description": "Composer constraint strings mirror the fresh Laravel reference and are changed only by the update-laravel-packages skill; Renovate updates lockfile resolutions within the existing ranges. Close any Renovate PR that edits composer.json and route it through the skill instead.",
+      "description": "Composer constraint strings mirror the fresh Laravel reference and are changed only by the update-laravel-packages skill. Routine Renovate updates resolve the lockfile within those constraints; the deny rules below block update types that can leave the current caret ranges. Close any exceptional security PR that still edits composer.json and route it through the skill.",
       "matchManagers": ["composer"],
       "rangeStrategy": "update-lockfile"
-    },
-    {
-      "description": "Composer major updates go through the update-laravel-packages skill, which classifies provenance against a fresh Laravel reference before changing constraints.",
-      "matchManagers": ["composer"],
-      "matchUpdateTypes": ["major"],
-      "enabled": false
     },
     {
       "description": "Group Composer minor and patch updates.",
@@ -29,6 +23,32 @@
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "pnpm minor and patch dependencies",
       "groupSlug": "pnpm-minor-patch"
+    },
+    {
+      "description": "Composer major updates go through the update-laravel-packages skill, which classifies provenance against a fresh Laravel reference before changing constraints.",
+      "matchManagers": ["composer"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Composer 0.x minor updates can fall outside caret constraints such as ^0.1; route those constraint changes through the update-laravel-packages skill.",
+      "matchManagers": ["composer"],
+      "matchCurrentVersion": "<1.0.0",
+      "matchUpdateTypes": ["minor"],
+      "enabled": false
+    },
+    {
+      "description": "Composer 0.0.x patch updates can fall outside caret constraints such as ^0.0.3; route those constraint changes through the update-laravel-packages skill.",
+      "matchManagers": ["composer"],
+      "matchCurrentVersion": "<0.1.0",
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    },
+    {
+      "description": "Dependency replacements edit composer.json and therefore go through the update-laravel-packages skill instead of Renovate.",
+      "matchManagers": ["composer"],
+      "matchUpdateTypes": ["replacement"],
+      "enabled": false
     }
   ]
 }

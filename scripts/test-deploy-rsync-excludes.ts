@@ -38,6 +38,15 @@ const PROTECTED_PATHS: ProtectedPath[] = [
     reason: 'runtime cache data',
   },
   {
+    path: 'storage/framework/down',
+    reason: 'Laravel maintenance mode state during an in-place deployment',
+  },
+  {
+    path: 'storage/framework/maintenance.php',
+    reason:
+      'standalone maintenance response loaded before Composer dependencies',
+  },
+  {
     path: 'storage/framework/sessions/session-id',
     reason: 'runtime session files',
   },

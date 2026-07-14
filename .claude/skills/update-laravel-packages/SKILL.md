@@ -76,11 +76,13 @@ it.
 - Resolve the latest stable Composer image tag from official Composer sources. A Composer update
   is a three-surface change: the image tag in `.docker/php/Dockerfile`, the versioned
   `~/opt/bin/composer-<version>` PHAR provisioned manually on every XServer environment, and the
-  path in the `.github/workflows/delivery.yml` post-deploy commands (see `docs/infrastructure.md`,
-  XServer Server Toolchain). Update the Dockerfile and `delivery.yml` together —
+  paths in the `.github/workflows/delivery.yml` preflight and post-deploy commands (see
+  `docs/infrastructure.md`, XServer Server Toolchain). Update the Dockerfile and every workflow
+  occurrence together —
   `pnpm test:toolchain-versions` enforces their agreement — and stop for approval until the user
   confirms the new PHAR exists on every deploy target; merging without it breaks the next deploy
-  at the post-deploy `composer install`.
+  at the preflight. The preflight executes the exact PHAR and checks its version before maintenance
+  mode or `rsync --delete`, but it does not provision the binary.
 - Keep the Dockerfile's unpinned `composer global require laravel/installer` behavior so a no-cache
   rebuild installs the latest stable Laravel Installer. If it becomes pinned, update it explicitly.
 - Resolve the latest stable Node and pnpm versions using their official registries or mise and
@@ -193,6 +195,12 @@ Laravel-owned package's section and constraint string with the reference. Separa
 unadopted reference-surface package and the omitted consumer surface. The mismatch list must be
 empty except for individually documented, approved compatibility exceptions. Include this
 machine-generated comparison in the report; a prose disposition table alone is insufficient.
+
+Renovate must not change routine Composer constraint strings. Its `update-lockfile` strategy falls
+back to replacing a constraint for an out-of-range update, so every constraint change must also be
+checked against the deny rules in `renovate.json`. The current rules block major updates, 0.x minor
+updates, 0.0.x patch updates, and dependency replacements. If a fresh reference introduces another
+constraint shape, update that policy and `pnpm test:renovate-composer-policy` in the same change.
 
 ### 5. Resolve and audit
 

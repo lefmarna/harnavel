@@ -95,9 +95,17 @@ runs:
       shell: bash
       run: pnpm run lint:docs
 
+    - name: Test Deploy Lifecycle
+      shell: bash
+      run: pnpm run test:deploy-lifecycle
+
     - name: Test Deploy Rsync Excludes
       shell: bash
       run: pnpm run test:deploy-rsync-excludes
+
+    - name: Test Renovate Composer Policy
+      shell: bash
+      run: pnpm run test:renovate-composer-policy
 
     - name: Test Toolchain Version Consistency
       shell: bash

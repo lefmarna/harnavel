@@ -17,10 +17,12 @@ Provide template-level observability that works entirely within the request life
 - Generate a request ID for every web request, ignoring untrusted incoming IDs. Add it and safe
   request/user metadata to log context and return it in `X-Request-Id`; never log request input,
   cookies, credentials, session payloads, or SQL bindings.
-- Render dependency-free Blade `500` and `503` pages containing the request ID as an inquiry ID.
-  For production-like `500` responses during an Inertia transition, use the Inertia server-error
-  page so the application shell and navigation state remain intact. Do not perform that conversion
-  while debugging; maintenance responses remain Blade-only.
+- Render dependency-free Blade `500` and runtime-generated `503` pages containing the request ID
+  as an inquiry ID. For production-like `500` responses during an Inertia transition, use the
+  Inertia server-error page so the application shell and navigation state remain intact. Do not
+  perform that conversion while debugging; maintenance responses remain Blade-only. The
+  standalone planned-maintenance response defined by [`TADR-0006`](0006-planned-maintenance-deployments.md)
+  runs before request middleware and intentionally omits an inquiry ID.
 - Notify Discord of 500-series and otherwise unhandled exceptions in `production` and `develop`
   when a webhook is configured. Include only concise diagnostic identity, request, user, and source
   metadata; redact database exception messages and omit sensitive request data.

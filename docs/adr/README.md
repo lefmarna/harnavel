@@ -34,6 +34,19 @@ future reader would otherwise re-derive — if there is nothing to re-derive, a 
 of the files above is enough. The measure of the ADR set is not completeness but that
 every entry is worth reading.
 
+## Deferred observations
+
+An unresolved observation is operational work, not yet an ADR or durable reference. Prefer a test
+or CI check when it can be detected automatically. Otherwise, keep it in the owning repository's
+issue tracker only when it records the current evidence, the question to resolve, a concrete
+revisit trigger or exit condition, and an owner or review date. Close the issue when resolved and
+move only the durable outcome to its proper home: test, ADR, `AGENTS.md`, `CONTEXT.md`, or `docs/`.
+
+Do not create a repository watchlist for unowned possibilities. Personal notes may be temporary
+scratch space, but they must not be the sole record of an observation another maintainer needs to
+act on. If an observation has neither a next action nor a meaningful revisit trigger, do not keep
+it.
+
 ## Lifecycle
 
 `Status`: `Proposed` → `Accepted` → `Superseded by ADR-NNNN` / `Deprecated`.

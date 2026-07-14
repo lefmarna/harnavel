@@ -195,6 +195,14 @@ depends = ["deploy:build", "deploy:package"]
 description = "Verify delivery rsync excludes protect remote-only XServer data"
 run = "pnpm test:deploy-rsync-excludes"
 
+[tasks."test:deploy-lifecycle"]
+description = "Verify XServer preflight and fail-closed maintenance deployment ordering"
+run = "pnpm test:deploy-lifecycle"
+
+[tasks."test:renovate-composer-policy"]
+description = "Verify Renovate cannot change routine Composer constraint strings"
+run = "pnpm test:renovate-composer-policy"
+
 [tasks."test:toolchain-versions"]
 description = "Verify Dockerfile and delivery.yml reference the same PHP/Composer versions"
 run = "pnpm test:toolchain-versions"

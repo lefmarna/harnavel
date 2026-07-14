@@ -34,7 +34,7 @@ For exact commands, use `docs/commands.md`. Configurable ports and names are dec
 
 ## XServer Server Toolchain
 
-The post-deploy step in `.github/workflows/delivery.yml` runs on the XServer host with
+The remote steps in `.github/workflows/delivery.yml` run on the XServer host with
 server-side binaries that are provisioned manually, outside this repository:
 
 - PHP CLI: `/usr/bin/php8.5` — provided by XServer. Its `major.minor` must match the
@@ -46,23 +46,53 @@ server-side binaries that are provisioned manually, outside this repository:
 Updating Composer is a three-surface change. Do it in this order:
 
 1. Upload the new `composer-<version>` PHAR to `~/opt/bin/` on every XServer environment.
-2. Update the Composer image tag in `.docker/php/Dockerfile` and the versioned path in
-   `.github/workflows/delivery.yml` in the same commit.
+2. Update the Composer image tag in `.docker/php/Dockerfile` and both versioned paths in
+   `.github/workflows/delivery.yml` (preflight and post-deploy) in the same commit.
 3. Deploy.
 
-Merging the workflow change before step 1 breaks the next deploy at the post-deploy
-`composer install`. `pnpm test:toolchain-versions` (run in CI lint) keeps the Dockerfile
-and `delivery.yml` versions from drifting apart; it cannot see the server, so step 1 stays
-a manual precondition.
+The delivery workflow executes PHP and the versioned Composer PHAR over SSH before entering
+maintenance mode or running `rsync --delete`. A missing, unreadable, corrupt, or mismatched PHAR
+therefore fails without changing the deployed application. This check does not provision the PHAR,
+so step 1 remains a manual precondition. `pnpm test:toolchain-versions` (run in CI lint) separately
+keeps the Dockerfile and every `delivery.yml` toolchain reference from drifting apart.
 
 ### Production `vendor` handling
 
 `vendor` is excluded from the deploy `rsync --delete`, so the previous release's packages
 stay in place while files transfer. The post-deploy `composer install --no-dev` then
-reconciles `vendor/` against `composer.lock`: packages removed from the lock are
-uninstalled and changed packages are reinstalled wholesale, so stale files do not
-accumulate. Deleting `vendor` during rsync instead would take the site fully down until
-`composer install` finishes.
+reconciles Composer-managed packages against `composer.lock`: packages removed from the lock are
+uninstalled and changed packages are reinstalled. This does not promise to remove arbitrary files
+that Composer does not manage. Deleting `vendor` during rsync instead would make the application
+unbootable until `composer install` finishes.
+
+## Deployment Availability and Recovery
+
+Delivery is an in-place update, so each environment's workflows are serialized and an active run
+is not cancelled by a newer push. After the remote toolchain preflight succeeds, deployment runs:
+
+1. Stream `.github/deploy/enable-maintenance.php` to the configured PHP binary in the deploy
+   directory. The workflow creates the directory when absent; the script uses only PHP core
+   functions and does not load the existing `artisan` or `vendor` tree.
+2. `rsync --delete`, preserving `vendor`, `storage/framework/down`, and
+   `storage/framework/maintenance.php`.
+3. Composer install, cache rebuilds, and forced migrations.
+4. `artisan up` only after every preceding command succeeds.
+
+The installer writes Laravel-compatible maintenance state and a standalone response through
+temporary files and same-directory renames. The response is loaded by `public/index.php` before
+Composer dependencies and request middleware, and always terminates with 503: JSON requests receive
+a static JSON body, while `/up` and other requests receive static HTML. It intentionally has no
+inquiry ID; runtime-generated 500/503 responses still carry their per-request inquiry ID as
+specified by [`TADR-0004`](adr/template/0004-production-observability.md). See
+[`TADR-0006`](adr/template/0006-planned-maintenance-deployments.md) for the availability decision.
+
+Deployment fails closed: an rsync, Composer, cache, migration, cancellation, or final SSH failure
+may leave the application in maintenance mode. Prefer rerunning the corrected workflow, which
+can recreate the maintenance files without booting an empty or partially transferred tree, then
+completes the normal `up` step. If manual recovery is necessary, first confirm the code,
+Composer-managed dependencies, caches, and migrations are coherent, then run
+`/usr/bin/php8.5 artisan up` from the deploy directory. Never bring the application up merely to
+clear a failed workflow while the release state is uncertain.
 
 ## Troubleshooting
 

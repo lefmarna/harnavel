@@ -73,26 +73,41 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
 1. Stream `.github/deploy/enable-maintenance.php` to the configured PHP binary in the deploy
    directory. The workflow creates the directory when absent; the script uses only PHP core
    functions and does not load the existing `artisan` or `vendor` tree.
-2. `rsync --delete`, preserving `vendor`, `storage/framework/down`, and
+2. Wait for in-flight synchronous requests admitted before maintenance to finish. The inline
+   duration in `delivery.yml` is app calibration and must exceed that app's longest synchronous
+   request; the template default is 120 seconds.
+3. `rsync --delete`, preserving `vendor`, `storage/framework/down`, and
    `storage/framework/maintenance.php`.
-3. Composer install, cache rebuilds, and forced migrations.
-4. `artisan up` only after every preceding command succeeds.
+4. Composer install, cache rebuilds, and forced migrations.
+5. `artisan up` only after every preceding command succeeds, followed by driver-independent
+   removal and absence checks for the standalone maintenance files.
 
 The installer writes Laravel-compatible maintenance state and a standalone response through
 temporary files and same-directory renames. The response is loaded by `public/index.php` before
-Composer dependencies and request middleware, and always terminates with 503: JSON requests receive
-a static JSON body, while `/up` and other requests receive static HTML. It intentionally has no
-inquiry ID; runtime-generated 500/503 responses still carry their per-request inquiry ID as
-specified by [`TADR-0004`](adr/template/0004-production-observability.md). See
+Composer dependencies and request middleware, and always terminates with 503: clients that prefer
+JSON receive a static JSON body, while clients that accept HTML receive static HTML. The latter
+includes Inertia XHR visits, which send `X-Requested-With` together with an HTML `Accept` header.
+It intentionally has no inquiry ID; runtime-generated 500/503 responses still carry their
+per-request inquiry ID as specified by
+[`TADR-0004`](adr/template/0004-production-observability.md). See
 [`TADR-0006`](adr/template/0006-planned-maintenance-deployments.md) for the availability decision.
 
 Deployment fails closed: an rsync, Composer, cache, migration, cancellation, or final SSH failure
 may leave the application in maintenance mode. Prefer rerunning the corrected workflow, which
 can recreate the maintenance files without booting an empty or partially transferred tree, then
 completes the normal `up` step. If manual recovery is necessary, first confirm the code,
-Composer-managed dependencies, caches, and migrations are coherent, then run
-`/usr/bin/php8.5 artisan up` from the deploy directory. Never bring the application up merely to
-clear a failed workflow while the release state is uncertain.
+Composer-managed dependencies, caches, and migrations are coherent, then run the following from
+the deploy directory:
+
+```bash
+/usr/bin/php8.5 artisan up &&
+    rm -f storage/framework/down storage/framework/maintenance.php &&
+    test ! -e storage/framework/down &&
+    test ! -e storage/framework/maintenance.php
+```
+
+Never bring the application up merely to clear a failed workflow while the release state is
+uncertain.
 
 ## Troubleshooting
 

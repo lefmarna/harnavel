@@ -62,6 +62,14 @@ function assertExcludes(
   throw new Error(`${subject} must not contain: ${unexpected}`)
 }
 
+function assertMatches(block: string, expected: RegExp, subject: string): void {
+  if (expected.test(block)) {
+    return
+  }
+
+  throw new Error(`${subject} was not found in the deployment step`)
+}
+
 function main(): void {
   const workflow = fs.readFileSync(WORKFLOW_PATH, 'utf8')
 
@@ -101,9 +109,10 @@ function main(): void {
     'non-cancelling deployment concurrency policy',
   )
   assertOrdered(workflow, 'Verify XServer toolchain', 'Enable maintenance mode')
+  assertOrdered(workflow, 'Enable maintenance mode', 'Drain in-flight requests')
   assertOrdered(
     workflow,
-    'Enable maintenance mode',
+    'Drain in-flight requests',
     'Deploy to XServer via Rsync',
   )
   assertOrdered(
@@ -118,7 +127,14 @@ function main(): void {
   )
 
   const enableMaintenance = stepBlock(workflow, 'Enable maintenance mode')
+  const drainInFlight = stepBlock(workflow, 'Drain in-flight requests')
   const disableMaintenance = stepBlock(workflow, 'Disable maintenance mode')
+
+  assertMatches(
+    drainInFlight,
+    /\brun:\s*sleep [1-9]\d*\b/,
+    'positive app-calibrated in-flight request drain',
+  )
 
   assertIncludes(
     enableMaintenance,
@@ -139,6 +155,21 @@ function main(): void {
     disableMaintenance,
     '/usr/bin/php8.5 artisan up',
     'maintenance recovery command',
+  )
+  assertIncludes(
+    disableMaintenance,
+    'rm -f storage/framework/down storage/framework/maintenance.php',
+    'driver-independent removal of the standalone responder',
+  )
+  assertIncludes(
+    disableMaintenance,
+    'test ! -e storage/framework/down',
+    'verification that the down state was removed',
+  )
+  assertIncludes(
+    disableMaintenance,
+    'test ! -e storage/framework/maintenance.php',
+    'verification that the standalone responder was removed',
   )
   assertExcludes(
     disableMaintenance,

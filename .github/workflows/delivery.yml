@@ -127,6 +127,12 @@ jobs:
           echo "failed to enable maintenance mode after 3 attempts" >&2
           exit 1
 
+      # maintenance mode は入口の新規リクエストだけを止める。破壊的な rsync より前に、
+      # 既存の同期リクエストが旧リリースだけで完了するまで待つ。
+      # 120秒はテンプレート既定値。最長同期リクエストを上回る値へアプリごとに較正する。
+      - name: Drain in-flight requests
+        run: sleep 120
+
       # rsync除外の方針:
       # - .deployignore: ローカルパッケージ作成時の除外（開発用ファイル等）
       # - rsync --exclude: サーバー側の既存データ保護（.env, storage, サブドメイン等）
@@ -190,6 +196,8 @@ jobs:
           exit 1
 
       # 途中失敗時は壊れたリリースを公開せず、再実行または手動復旧まで maintenance mode を保つ。
+      # standalone responder は設定された maintenance driver に依存せず書かれるため、
+      # artisan up の後にも明示的に削除し、残留していないことを確認する。
       - name: Disable maintenance mode
         env:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
@@ -198,7 +206,10 @@ jobs:
             if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
               ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
               "cd $DEPLOY_DIRECTORY && \
-              /usr/bin/php8.5 artisan up"; then
+              /usr/bin/php8.5 artisan up && \
+              rm -f storage/framework/down storage/framework/maintenance.php && \
+              test ! -e storage/framework/down && \
+              test ! -e storage/framework/maintenance.php"; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then

@@ -15,18 +15,21 @@ function enablePlannedDeploymentMaintenance(string $deployDirectory): Process
     return $process;
 }
 
+/**
+ * @param  array<string, string>  $serverHeaders
+ */
 function requestDeploymentFrontController(
     string $frontController,
     string $uri,
-    ?string $accept,
+    array $serverHeaders = [],
 ): Process {
     $command = [
         PHP_BINARY,
         '-r',
         <<<'PHP'
 $_SERVER['REQUEST_URI'] = $argv[2];
-if (isset($argv[3])) {
-    $_SERVER['HTTP_ACCEPT'] = $argv[3];
+foreach (json_decode($argv[3], true, flags: JSON_THROW_ON_ERROR) as $name => $value) {
+    $_SERVER[$name] = $value;
 }
 register_shutdown_function(static function (): void {
     fwrite(STDERR, 'STATUS:'.http_response_code());
@@ -36,11 +39,8 @@ echo 'BOOTSTRAP_REACHED';
 PHP,
         $frontController,
         $uri,
+        json_encode($serverHeaders, JSON_THROW_ON_ERROR),
     ];
-
-    if ($accept !== null) {
-        $command[] = $accept;
-    }
 
     $process = new Process($command);
     $process->run();
@@ -115,9 +115,13 @@ describe('計画メンテナンス', function () {
             $jsonResponse = requestDeploymentFrontController(
                 $frontController,
                 '/two-factor-authentication',
-                'application/json',
+                ['HTTP_ACCEPT' => 'application/json'],
             );
-            $healthResponse = requestDeploymentFrontController($frontController, '/up', 'text/html');
+            $healthResponse = requestDeploymentFrontController(
+                $frontController,
+                '/up',
+                ['HTTP_ACCEPT' => 'text/html'],
+            );
 
             expect($jsonResponse->getOutput())
                 ->toBe('{"message":"Service Unavailable"}')
@@ -127,6 +131,37 @@ describe('計画メンテナンス', function () {
                 ->toContain('現在メンテナンス中です')
                 ->not->toContain('BOOTSTRAP_REACHED')
                 ->and($healthResponse->getErrorOutput())->toBe('STATUS:503');
+        } finally {
+            File::deleteDirectory($deployDirectory);
+        }
+    });
+
+    it('InertiaのXHR遷移でも依存関係を読み込む前に静的HTMLの503を返せる', function () {
+        $deployDirectory = sys_get_temp_dir().'/laravel-app-template-maintenance-inertia-'.bin2hex(random_bytes(8));
+
+        File::ensureDirectoryExists($deployDirectory.'/public');
+        File::copy(base_path('public/index.php'), $deployDirectory.'/public/index.php');
+
+        try {
+            $enableMaintenance = enablePlannedDeploymentMaintenance($deployDirectory);
+
+            expect($enableMaintenance->isSuccessful())->toBeTrue($enableMaintenance->getErrorOutput());
+
+            $response = requestDeploymentFrontController(
+                $deployDirectory.'/public/index.php',
+                '/dashboard',
+                [
+                    'HTTP_ACCEPT' => 'text/html, application/xhtml+xml',
+                    'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+                    'HTTP_X_INERTIA' => 'true',
+                ],
+            );
+
+            expect($response->getOutput())
+                ->toContain('現在メンテナンス中です')
+                ->not->toContain('Service Unavailable')
+                ->not->toContain('BOOTSTRAP_REACHED')
+                ->and($response->getErrorOutput())->toBe('STATUS:503');
         } finally {
             File::deleteDirectory($deployDirectory);
         }
@@ -146,7 +181,7 @@ describe('計画メンテナンス', function () {
             $response = requestDeploymentFrontController(
                 $deployDirectory.'/public/index.php',
                 '/',
-                $accept,
+                $accept === null ? [] : ['HTTP_ACCEPT' => $accept],
             );
 
             expect($response->isSuccessful())

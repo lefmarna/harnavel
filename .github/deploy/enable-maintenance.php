@@ -71,9 +71,12 @@ header('Cache-Control: no-store');
 
 $acceptable = array_map('trim', explode(',', $_SERVER['HTTP_ACCEPT'] ?? ''));
 $firstAcceptable = strtolower((string) strtok($acceptable[0] ?? '', ';'));
+$prefersHtml = str_contains($firstAcceptable, 'text/html')
+    || str_contains($firstAcceptable, 'application/xhtml+xml');
 $expectsJson = str_contains($firstAcceptable, '/json')
     || str_contains($firstAcceptable, '+json')
-    || (isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+    || (! $prefersHtml
+        && isset($_SERVER['HTTP_X_REQUESTED_WITH'])
         && strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'], 'XMLHttpRequest') === 0);
 
 if ($expectsJson) {

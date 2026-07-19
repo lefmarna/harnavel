@@ -27,6 +27,9 @@ Files are treated in three categories:
 Coverage and mutation gate values, mutation blocking, and the density of
 `@pest-mutate-ignore` annotations are calibrated per app. The shared workflow structure may
 converge, but the calibrated lines and adjacent rationale stay app-priority.
+The bounded in-flight request drain in `delivery.yml` follows the same rule: its lifecycle step is
+shared, while its duration and adjacent rationale are calibrated to each app's longest synchronous
+request.
 
 The operational path classification and conflict-resolution procedure live in
 `/merge-template` and `/absorb-from-apps`; this ADR records the decision model only.
@@ -50,4 +53,4 @@ The operational path classification and conflict-resolution procedure live in
 - Shared tests and the production code they specify move together: a stricter shared test is
   upstreamed only with implementation that keeps the template green.
 - App-specific calibration remains visible in the app's workflow files instead of being hidden
-  behind template defaults.
+  behind external defaults.

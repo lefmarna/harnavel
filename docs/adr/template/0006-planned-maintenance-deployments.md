@@ -35,15 +35,20 @@ Use fail-closed planned maintenance for XServer delivery:
   load the target's `artisan`, Composer autoloader, or application bootstrap.
 - Use PHP core functions to write Laravel-compatible `down` state and a standalone
   `maintenance.php` through temporary files and same-directory renames.
-- Return 503 and terminate before autoload for every request. Return a static JSON body when JSON is
-  requested and static HTML for `/up` and all other requests; do not inherit Laravel maintenance
-  exclusions or bypass behavior for a planned deployment.
+- Return 503 and terminate before autoload for every request. Return a static JSON body only when
+  the client prefers JSON, and static HTML whenever the client accepts HTML, including Inertia XHR
+  visits that combine an HTML `Accept` header with `X-Requested-With`. Do not inherit Laravel
+  maintenance exclusions or bypass behavior for a planned deployment.
+- After the standalone response is active and before destructive rsync, wait for an app-calibrated
+  bounded drain interval that exceeds the longest synchronous request. Shared hosting cannot count
+  active requests, so this is a time-based approximation.
 - Preserve `vendor`, `storage/framework/down`, and `storage/framework/maintenance.php` during
   rsync.
 - Run Composer install, cache rebuilds, and migrations while the standalone response is active.
-- Run `artisan up` only after every post-deploy command succeeds. On failure or cancellation, keep
-  maintenance mode active until a corrected workflow completes or an operator verifies a coherent
-  release and brings it up manually.
+- Run `artisan up` only after every post-deploy command succeeds, then remove the standalone
+  `down` and `maintenance.php` files independently of the configured maintenance driver and verify
+  their removal. On failure or cancellation, keep maintenance mode active until a corrected
+  workflow completes or an operator verifies a coherent release and brings it up manually.
 
 The planned response is returned by `public/index.php` before Composer and request middleware. It
 therefore cannot have a request-specific ID or `X-Request-Id` header. Runtime-generated failures
@@ -64,12 +69,21 @@ correlation.
 - **Use Laravel's generated pre-render responder unchanged.** Rejected because it deliberately
   returns to `public/index.php` for JSON requests and excluded paths such as `/up`, allowing those
   requests to load Composer during the mixed-release window.
+- **Start rsync immediately after enabling maintenance.** Rejected because a request admitted
+  before activation can still execute while files and schema change.
+- **Rely on `artisan up` alone for recovery.** Rejected because the installer writes file-based
+  state independently of the configured maintenance driver; another driver can report the
+  application is already up while the standalone responder remains.
 - **Use atomic release directories and a symlink switch.** Deferred because it requires a larger
   XServer document-root, shared-storage, and rollback design than the current applications need.
 
 ## Consequences and accepted risks
 
-- Successful deployments return a short planned 503 instead of serving an inconsistent release.
+- Successful deployments return a bounded planned 503 window instead of serving an inconsistent
+  release.
+- Every deployment includes a fixed drain delay calibrated to the app's longest synchronous
+  request. It reduces mixed-release exposure but cannot guarantee completion of a request that
+  outlives the configured interval.
 - A failed or manually cancelled deployment may remain fully unavailable until rerun or manual
   recovery; this is intentional fail-closed behavior and requires the documented runbook.
 - An empty target and a target left partially transferred can both re-enter the normal rsync repair
@@ -78,4 +92,5 @@ correlation.
   planned outage instead of a misleading application-level success.
 - The planned 503 has no inquiry ID because it bypasses application bootstrap by design.
 - Delivery changes remain hybrid under [`TADR-0003`](0003-shared-surface-convergence.md): derived
-  applications adopt the lifecycle while preserving their app-specific rsync exclusions.
+  applications adopt the lifecycle while preserving their app-specific rsync exclusions and drain
+  duration.

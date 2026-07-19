@@ -6,6 +6,7 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 ## Architecture
 
 - Stack: PHP 8.5 / Laravel 13 / Inertia.js v3 (React 19) / Tailwind CSS v4 / Pest v4 / Larastan v3 / Pint v1 / MariaDB / mise.
+- Model property types are inference-first: migrations + a `casts()` method that directly returns an array literal + Larastan's `parseModelCastsMethod`. Retain `@property` PHPDoc only for a proven inference gap, with the reason; rationale in TADR-0007 (`docs/adr/template/0007-inference-first-model-types.md`).
 - XServer has no queue workers, SSR, or long-running processes. Run jobs synchronously (`dispatchSync()` or `QUEUE_CONNECTION=sync`), and prefer solutions that work in both Docker and XServer.
 - Run `php` / `php artisan` only inside the Docker app container (`docker compose exec app ...`, or `docker compose exec -T app ...` non-interactively) — never on the host.
 - Node.js, pnpm, and mise run on the host, not in the container.

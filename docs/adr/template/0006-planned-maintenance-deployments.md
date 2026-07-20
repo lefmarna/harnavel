@@ -49,6 +49,16 @@ Use fail-closed planned maintenance for XServer delivery:
   `down` and `maintenance.php` files independently of the configured maintenance driver and verify
   their removal. On failure or cancellation, keep maintenance mode active until a corrected
   workflow completes or an operator verifies a coherent release and brings it up manually.
+- After maintenance is lifted, verify over HTTP that the public health endpoint returns 200 and
+  that a built asset referenced by the deployed Vite manifest is served. `artisan up` proves CLI
+  bootstrap only, and the health endpoint does not load built assets, so both requests together
+  cover the path users receive. Retry across the server's file-cache revalidation window.
+- Withdraw a release whose verification did not end in success — persistent failure or manual
+  cancellation — by re-running the standalone installer from a separate step gated on a recorded
+  maintenance-lift attempt. The lift step's own outcome cannot gate withdrawal: a connection
+  lost after the remote `artisan up` completes reports failure or cancellation while the site is
+  already live. Withdrawal is idempotent when maintenance is still active; failures before the
+  lift attempt keep their existing fail-closed state and never take an intact old release down.
 
 The planned response is returned by `public/index.php` before Composer and request middleware. It
 therefore cannot have a request-specific ID or `X-Request-Id` header. Runtime-generated failures
@@ -74,6 +84,12 @@ correlation.
 - **Rely on `artisan up` alone for recovery.** Rejected because the installer writes file-based
   state independently of the configured maintenance driver; another driver can report the
   application is already up while the standalone responder remains.
+- **End the delivery at `artisan up`.** Rejected because CLI bootstrap does not prove the web
+  entry path serves requests; a release that boots for artisan but fails over HTTP would stay
+  live behind a green delivery.
+- **Leave an unhealthy release live and only fail the workflow.** Rejected because serving
+  known-broken responses contradicts the fail-closed decision; withdrawing behind the planned 503
+  restores the deterministic state the runbook already covers.
 - **Use atomic release directories and a symlink switch.** Deferred because it requires a larger
   XServer document-root, shared-storage, and rollback design than the current applications need.
 
@@ -90,6 +106,14 @@ correlation.
   path without booting their current application.
 - `/up` intentionally returns 503 during deployment; health monitoring therefore observes the
   planned outage instead of a misleading application-level success.
+- Release health verification requires a per-environment canonical HTTPS health URL,
+  parser-validated before any remote change so a missing value — or one the health request itself
+  could not pass, such as plain HTTP against an HTTPS-forcing `.htaccess` — cannot strand the
+  site in maintenance. The probes do not follow redirects, because following them would let an
+  absent build asset resolve to some other 200 response and defeat the asset check; a
+  non-canonical host is therefore surfaced as a redirect hint rather than silently accepted. A verification false negative
+  (for example runner egress failure) withdraws a healthy release; recovery is rerunning the
+  workflow.
 - The planned 503 has no inquiry ID because it bypasses application bootstrap by design.
 - Delivery changes remain hybrid under [`TADR-0003`](0003-shared-surface-convergence.md): derived
   applications adopt the lifecycle while preserving their app-specific rsync exclusions and drain

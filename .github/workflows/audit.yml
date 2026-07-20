@@ -1,0 +1,45 @@
+name: audit
+
+# 依存関係の脆弱性アドバイザリは push が無い期間にも公開される。push/PR 時の
+# composer audit / pnpm audit（ci-lint）だけでは、リポジトリが静かな間に公開された
+# アドバイザリへ気づけないため、週次で lockfile を監査し、失敗＝通知として扱う。
+# 依存のインストールは不要（composer audit --locked と pnpm audit は lockfile を読む）。
+# Composer と pnpm は独立したジョブにする。片方に未解決の advisory が残っている間も、
+# もう片方の監査が止まらないようにするため。
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Renovate の週次実行（月曜 0-6 JST）の後に監査する（月曜 07:00 JST = 日曜 22:00 UTC）。
+    - cron: '0 22 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  composer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+
+      - name: Audit Composer lockfile
+        run: composer audit --locked
+
+  pnpm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Audit pnpm production dependencies
+        run: pnpm audit --prod

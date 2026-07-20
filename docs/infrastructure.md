@@ -81,6 +81,24 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
 4. Composer install, cache rebuilds, and forced migrations.
 5. `artisan up` only after every preceding command succeeds, followed by driver-independent
    removal and absence checks for the standalone maintenance files.
+6. Verify the released application returns `200` from the public health endpoint and that a
+   built asset referenced by the deployed Vite manifest is served (the health endpoint does not
+   load built assets, so a missing or unservable `public/build` is only caught by the asset
+   request). The URL comes from the per-environment `HEALTHCHECK_URL` GitHub secret (normally
+   `https://<domain>/up`) and is URL-parser-validated before any remote change, so a missing
+   value — or one the health request could not pass — fails the run without touching the server.
+   It must be the **canonical HTTPS URL**, without whitespace, userinfo, query, or fragment:
+   the asset origin is derived from it, and the probes do not follow redirects, so any URL that
+   redirects fails verification and withdraws an otherwise healthy release. `.htaccess` and
+   `.htaccess.develop` redirect all plain HTTP to HTTPS, which is why `http://` is rejected up
+   front; a host that redirects (for example `www` when `www` redirects to the apex) cannot be
+   detected statically and is reported as a redirect hint when verification fails. The check retries across the server's file-cache revalidation
+   window. When verification ends without success — persistent failure or manual cancellation —
+   a separate workflow step re-runs the maintenance installer to withdraw the release behind the
+   planned 503. That step is gated on a recorded lift attempt rather than on the lift step's own
+   outcome, so a lift whose SSH connection dropped after the remote commands completed is still
+   withdrawn; failures before the lift attempt leave maintenance (or the intact old release)
+   untouched.
 
 The installer writes Laravel-compatible maintenance state and a standalone response through
 temporary files and same-directory renames. The response is loaded by `public/index.php` before
@@ -92,8 +110,9 @@ per-request inquiry ID as specified by
 [`TADR-0004`](adr/template/0004-production-observability.md). See
 [`TADR-0006`](adr/template/0006-planned-maintenance-deployments.md) for the availability decision.
 
-Deployment fails closed: an rsync, Composer, cache, migration, cancellation, or final SSH failure
-may leave the application in maintenance mode. Prefer rerunning the corrected workflow, which
+Deployment fails closed: an rsync, Composer, cache, migration, cancellation, final SSH, or
+release health verification failure may leave the application in maintenance mode. Prefer
+rerunning the corrected workflow, which
 can recreate the maintenance files without booting an empty or partially transferred tree, then
 completes the normal `up` step. If manual recovery is necessary, first confirm the code,
 Composer-managed dependencies, caches, and migrations are coherent, then run the following from

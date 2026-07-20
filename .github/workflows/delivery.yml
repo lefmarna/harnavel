@@ -32,12 +32,49 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: test
-    # Each environment must define its own XSERVER_* and DEPLOY_DIRECTORY secrets.
+    # Each environment must define its own XSERVER_*, DEPLOY_DIRECTORY, and HEALTHCHECK_URL secrets.
     environment: ${{ github.ref_name == 'main' && 'Production' || 'Develop' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # HEALTHCHECK_URL が health check を通り得ない値のままだと、サーバー更新と maintenance
+      # 解除まで進んでから初めて落ち、正常なリリースを 503 へ引き戻すことになる。
+      # 「検証を通らない値はリモートへ触れる前に fail する」契約を守るため、grep ではなく
+      # WHATWG URL パーサー（runner 標準の Node）で検証する。grep は行単位マッチのため末尾
+      # 改行付きの値を通し、範囲外ポートや空白も curl の拒否と一致しない。
+      # https スキームのみ許可する: .htaccess / .htaccess.develop は %{HTTPS} off を無条件に
+      # 301 するため、http URL は health check が追従しない 301 を受けて必ず失敗し、健全な
+      # リリースを withdraw させる。オリジン導出を壊す userinfo / query / fragment も禁止する
+      # （https://example.com#probe を通すと、アセット URL がルートページへ化けて検証が骨抜き
+      # になる）。href と一致する canonical 形だけを受理する。
+      - name: Validate deployment configuration
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          node -e '
+            const raw = process.env.HEALTHCHECK_URL ?? ""
+            let url
+            try {
+              url = new URL(raw)
+            } catch {
+              process.exit(1)
+            }
+            const ok =
+              url.protocol === "https:" &&
+              url.username === "" &&
+              url.password === "" &&
+              url.search === "" &&
+              url.hash === "" &&
+              !raw.includes("?") &&
+              !raw.includes("#") &&
+              (url.href === raw || url.href === raw + "/")
+            process.exit(ok ? 0 : 1)
+          ' || {
+            echo "HEALTHCHECK_URL environment secret is required and must be a canonical absolute https URL with a host and no whitespace, userinfo, query, or fragment (e.g. https://example.com/up). Use the canonical host: redirects are not followed, so an http URL or a host that redirects (such as www when www redirects to the apex) fails verification." >&2
+            exit 1
+          }
 
       # テストジョブでビルドした成果物をダウンロード
       - name: Download build artifacts
@@ -195,6 +232,15 @@ jobs:
           echo "post-deploy ssh failed after 3 attempts" >&2
           exit 1
 
+      # 「maintenance 解除をこれから試行する」事実を no-op の成功として記録する。
+      # Withdraw unhealthy release は解除ステップ自体の outcome ではなくこのマーカーを
+      # 条件にする。リモートで artisan up とファイル削除が完了した直後に SSH 切断や
+      # キャンセルが起きると、サイトは公開済みでも解除ステップの outcome は
+      # failure / cancelled になり、成功条件では未検証リリースが取り残されるため。
+      - name: Mark maintenance lift attempt
+        id: maintenance-lift-attempt
+        run: echo "maintenance lift will be attempted; an unverified release is withdrawn from here on"
+
       # 途中失敗時は壊れたリリースを公開せず、再実行または手動復旧まで maintenance mode を保つ。
       # standalone responder は設定された maintenance driver に依存せず書かれるため、
       # artisan up の後にも明示的に削除し、残留していないことを確認する。
@@ -218,4 +264,72 @@ jobs:
             fi
           done
           echo "failed to disable maintenance mode after 3 attempts" >&2
+          exit 1
+
+      # artisan up の成功は CLI ブートの証明でしかない。リライト・PHP-FPM・キャッシュ再検証を
+      # 含む web 経路が 200 を返し、かつ manifest が参照するビルド済みアセットが実際に配信
+      # されて初めてデプロイ成功とする（/up は @vite を読まないため、アセット欠落は /up の
+      # 200 だけでは検出できない）。リトライ窓は realpath cache / OPcache の再検証遅延
+      # （既定 ~120 秒）を上回るように取る。失敗・キャンセル時の maintenance への引き戻しは
+      # 次の Withdraw unhealthy release が担う。
+      - name: Verify release health
+        id: verify-release-health
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          # オリジンは / ・ ? ・ # の手前まで。query / fragment は Validate 済みだが多層防御。
+          origin=$(printf '%s\n' "$HEALTHCHECK_URL" | sed -E 's#^(https?://[^/?#]+).*$#\1#')
+          asset=$(jq -re 'first(.[] | select(.isEntry == true) | .file) // first(.[] | .file)' .deploy/public/build/manifest.json)
+          asset_url="${origin}/build/${asset}"
+          # --globoff: curl は既定で [ ] { } を URL glob と解釈する。WHATWG canonical な URL は
+          # パスに [ ] を raw のまま含み得るため、リテラル URL 動作に固定して Validate の
+          # 許可集合と curl の受理集合を一致させる（manifest 由来のアセットパスにも適用）。
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            app_status=$(curl -sS --globoff -o /dev/null --max-time 30 -w '%{http_code}' "$HEALTHCHECK_URL" || echo 'unreachable')
+            asset_status=$(curl -sS --globoff -o /dev/null --max-time 30 -w '%{http_code}' "$asset_url" || echo 'unreachable')
+            if [ "$app_status" = "200" ] && [ "$asset_status" = "200" ]; then
+              echo "release health check passed (app 200, built asset 200)"
+              exit 0
+            fi
+            echo "health check attempt ${attempt}: app=${app_status} asset=${asset_status} (${asset_url})" >&2
+            if [ "$attempt" -lt 10 ]; then
+              sleep 15
+            fi
+          done
+          echo "release health check failed" >&2
+          # 3xx は「リリースが壊れている」ではなく「URL が canonical ではない」ことが多い。
+          # Validate は https 強制までしか静的に判定できず、www→apex のようなホスト側
+          # リダイレクトは実際に叩くまで分からないため、ここで切り分けを出す。
+          case "$app_status" in
+            3??)
+              echo "the health endpoint returned a redirect; HEALTHCHECK_URL must be the canonical URL because redirects are not followed" >&2
+              ;;
+          esac
+          exit 1
+
+      # 検証が success で終わらなかったリリース（失敗だけでなく手動キャンセルも含む）を
+      # 公開したままにしない（TADR-0006 の fail-closed。復旧手順は docs/infrastructure.md）。
+      # 条件は解除ステップの outcome ではなく lift-attempt マーカー: リモート完了直後の
+      # SSH 切断・キャンセルで解除ステップが failure / cancelled になっても、サイトが
+      # 公開済みの可能性がある限り installer を再実行して計画503の裏へ引き戻す（再実行は
+      # 冪等で、maintenance が有効なままなら 503 を維持するだけ）。マーカー以前の失敗では
+      # 実行せず、無傷な旧リリースや有効な maintenance をそのまま保つ。
+      - name: Withdraw unhealthy release
+        if: ${{ always() && steps.maintenance-lift-attempt.outcome == 'success' && steps.verify-release-health.outcome != 'success' }}
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
+        run: |
+          for attempt in 1 2 3; do
+            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+              "cd -- \"$DEPLOY_DIRECTORY\" && /usr/bin/php8.5" < .github/deploy/enable-maintenance.php; then
+              echo "unhealthy release withdrawn behind maintenance mode; fix and rerun the workflow" >&2
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "maintenance re-down ssh attempt ${attempt} failed; retrying in $((attempt * 30))s..." >&2
+              sleep "$((attempt * 30))"
+            fi
+          done
+          echo "failed to re-enter maintenance mode; the unhealthy release is still live" >&2
           exit 1

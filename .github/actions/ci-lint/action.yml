@@ -103,6 +103,10 @@ runs:
       shell: bash
       run: pnpm run test:deploy-rsync-excludes
 
+    - name: Test Release Identity Verification
+      shell: bash
+      run: pnpm run test:release-identity
+
     - name: Test Renovate Composer Policy
       shell: bash
       run: pnpm run test:renovate-composer-policy

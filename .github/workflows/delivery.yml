@@ -35,6 +35,16 @@ jobs:
     # Each environment must define its own XSERVER_*, DEPLOY_DIRECTORY, and HEALTHCHECK_URL secrets.
     environment: ${{ github.ref_name == 'main' && 'Production' || 'Develop' }}
 
+    env:
+      # デプロイ試行固有ID。commit SHA だけでは同じコミットの再実行と区別できず、旧試行の
+      # 応答を成功として受け入れてしまうため、run id と試行番号を含める。
+      RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      # リリース同一性を支える OPcache 前提の扱い。導入は二段階（TADR-0006）:
+      # observe = Web SAPI の実測値を記録するだけで withdraw しない
+      # enforce = 再検証を前提にできない構成なら fail closed
+      # Develop と Production それぞれの実測値を記録してから enforce へ切り替える。
+      RELEASE_OPCACHE_ENFORCEMENT: observe
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -76,6 +86,24 @@ jobs:
             exit 1
           }
 
+          # リリースIDが空・不正なまま進むと、応答側の空 ID と一致して偽陽性になり得る。
+          # 期待値が確定しない状態ではリモートに触れない。
+          node -e '
+            const releaseId = process.env.RELEASE_ID ?? ""
+            process.exit(/^[0-9a-f]{40}-[1-9][0-9]*-[1-9][0-9]*$/.test(releaseId) ? 0 : 1)
+          ' || {
+            echo "RELEASE_ID must be <40 hex commit sha>-<run id>-<run attempt>. It is the deploy-attempt identity that release health verification must observe over HTTP." >&2
+            exit 1
+          }
+
+          case "$RELEASE_OPCACHE_ENFORCEMENT" in
+            observe | enforce) ;;
+            *)
+              echo "RELEASE_OPCACHE_ENFORCEMENT must be 'observe' or 'enforce'." >&2
+              exit 1
+              ;;
+          esac
+
       # テストジョブでビルドした成果物をダウンロード
       - name: Download build artifacts
         uses: actions/download-artifact@v7
@@ -109,6 +137,44 @@ jobs:
             printf 'User-agent: *\nDisallow: /\n' > .deploy/public/robots.txt
             rm -f .deploy/public/sitemap.xml
           fi
+
+      # リリースIDをフロントコントローラの PHP リテラルとして焼き込む。全 HTTP リクエストが
+      # 必ず実行する中央成果物なので、Web 側 OPcache がこのファイルの旧エントリを返している
+      # 間は旧リリースのIDしか返せず、検証は偽陽性ではなく fail closed に倒れる。
+      # 実行時に読み直せる補助ファイルへ書くと、旧バイトコードが新しいIDを読めてしまい保証が
+      # 消えるため、置換先は必ずこのファイルに限る（リポジトリ側は空のまま）。
+      - name: Stamp release identity
+        run: |
+          # Validate 済みでも多層防御で再確認する。不正な値をそのまま焼き込むと、後段の照合が
+          # 何と一致したのか説明できなくなる。許可集合を固定すると sed の置換文字列も安全になる。
+          node -e '
+            const releaseId = process.env.RELEASE_ID ?? ""
+            process.exit(/^[0-9a-f]{40}-[1-9][0-9]*-[1-9][0-9]*$/.test(releaseId) ? 0 : 1)
+          ' || {
+            echo "::error::RELEASE_ID must be <40 hex commit sha>-<run id>-<run attempt>" >&2
+            exit 1
+          }
+
+          front_controller=.deploy/public/index.php
+          placeholder="define('LARAVEL_DEPLOYMENT_RELEASE_ID', '');"
+          occurrences=$(grep -Fc "$placeholder" "$front_controller" || true)
+
+          # 0 個なら焼き込みが黙って消えている。複数なら書き換え対象が一意に決まらない。
+          if [ "$occurrences" != "1" ]; then
+            echo "::error::expected exactly one release identity placeholder in ${front_controller}, found ${occurrences}" >&2
+            exit 1
+          fi
+
+          # mktemp は 0600 で作るため、そのまま mv するとフロントコントローラのモードが
+          # 置き換わり、rsync -a がそれを本番へ複製する。SSH ユーザーと Web/FastCGI ユーザーが
+          # 異なる環境では index.php を読めず全リクエストが失敗するので、元のモードを引き継ぐ。
+          stamped="${front_controller}.stamped"
+          cp -p "$front_controller" "$stamped"
+          sed "s|${placeholder}|define('LARAVEL_DEPLOYMENT_RELEASE_ID', '${RELEASE_ID}');|" \
+            "$front_controller" > "$stamped"
+          mv "$stamped" "$front_controller"
+
+          grep -Fq "define('LARAVEL_DEPLOYMENT_RELEASE_ID', '${RELEASE_ID}');" "$front_controller"
 
       # SSH設定（XSERVER_KNOWN_HOSTSを必須にしてknown_hostsへ登録）
       - name: Setup SSH key
@@ -266,12 +332,19 @@ jobs:
           echo "failed to disable maintenance mode after 3 attempts" >&2
           exit 1
 
-      # artisan up の成功は CLI ブートの証明でしかない。リライト・PHP-FPM・キャッシュ再検証を
-      # 含む web 経路が 200 を返し、かつ manifest が参照するビルド済みアセットが実際に配信
-      # されて初めてデプロイ成功とする（/up は @vite を読まないため、アセット欠落は /up の
-      # 200 だけでは検出できない）。リトライ窓は realpath cache / OPcache の再検証遅延
-      # （既定 ~120 秒）を上回るように取る。失敗・キャンセル時の maintenance への引き戻しは
-      # 次の Withdraw unhealthy release が担う。
+      # artisan up の成功は CLI ブートの証明でしかない。デプロイ成功とみなす条件は3つ:
+      #   1. 到達性 — web 経路（リライト・PHP-FPM）が health エンドポイントで 200 を返す
+      #   2. アセット存在 — 今回の manifest が参照するビルド済みアセットが配信される
+      #      （/up は @vite を読まないため、アセット欠落は /up の 200 だけでは検出できない）
+      #   3. リリース同一性 — PHP 経由の応答が、今回のデプロイ試行IDを返す
+      # 1 と 2 だけでは「何らかのリリースが 200 を返した」ことしか言えない。アセットは静的
+      # 配信で PHP を経由せず、フロントエンド無変更なら旧リリースとファイル名まで一致し得る。
+      # 3 のIDは stamp 済みフロントコントローラのコンパイル時リテラルなので、Web 側 OPcache が
+      # 旧エントリを返す間は旧IDしか返らず、成功終了せずリトライを続ける。
+      # リトライ窓は realpath cache / OPcache の再検証遅延（既定 ~120 秒）を上回るように取る。
+      # ただし単なる待機延長は validate_timestamps=Off では解決にならないため、Web SAPI 側の
+      # 再検証設定そのものを応答から確認する（enforce では保証できなければ fail closed）。
+      # 失敗・キャンセル時の maintenance への引き戻しは次の Withdraw unhealthy release が担う。
       - name: Verify release health
         id: verify-release-health
         env:
@@ -281,17 +354,96 @@ jobs:
           origin=$(printf '%s\n' "$HEALTHCHECK_URL" | sed -E 's#^(https?://[^/?#]+).*$#\1#')
           asset=$(jq -re 'first(.[] | select(.isEntry == true) | .file) // first(.[] | .file)' .deploy/public/build/manifest.json)
           asset_url="${origin}/build/${asset}"
+          release_url="${origin}/up/release"
+          # app/Support/ReleaseVerification.php の MAX_REVALIDATE_FREQUENCY と一致させる。
+          max_revalidate_frequency=60
+
+          if [ -z "$RELEASE_ID" ]; then
+            echo "::error::RELEASE_ID is required; an empty expectation would match an empty response" >&2
+            exit 1
+          fi
+
+          case "$RELEASE_OPCACHE_ENFORCEMENT" in
+            observe | enforce) ;;
+            *)
+              echo "::error::RELEASE_OPCACHE_ENFORCEMENT must be 'observe' or 'enforce'" >&2
+              exit 1
+              ;;
+          esac
+
+          # リモートへの書き込みはすべて完了している。ここを基点に再検証期限を数える。
+          settle_from=$(date +%s)
+          first_snapshot=''
+
           # --globoff: curl は既定で [ ] { } を URL glob と解釈する。WHATWG canonical な URL は
           # パスに [ ] を raw のまま含み得るため、リテラル URL 動作に固定して Validate の
           # 許可集合と curl の受理集合を一致させる（manifest 由来のアセットパスにも適用）。
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             app_status=$(curl -sS --globoff -o /dev/null --max-time 30 -w '%{http_code}' "$HEALTHCHECK_URL" || echo 'unreachable')
             asset_status=$(curl -sS --globoff -o /dev/null --max-time 30 -w '%{http_code}' "$asset_url" || echo 'unreachable')
-            if [ "$app_status" = "200" ] && [ "$asset_status" = "200" ]; then
-              echo "release health check passed (app 200, built asset 200)"
+            # 中間キャッシュが返した旧リリースの応答を同一性の証拠にしない。
+            release_response=$(curl -sS --globoff --max-time 30 -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' -w '\n%{http_code}' "$release_url" || printf '\n000')
+            release_status=$(printf '%s\n' "$release_response" | tail -n 1)
+            release_body=$(printf '%s\n' "$release_response" | sed '$d')
+            observed_release=$(printf '%s' "$release_body" | jq -re '.release // empty' 2>/dev/null || true)
+            # リリースIDと OPcache 設定は必ず同じ応答から取り出し、組で評価する。
+            snapshot=$(printf '%s' "$release_body" | jq -Sce 'select(type == "object") | select(has("opcache")) | .opcache' 2>/dev/null || true)
+
+            if [ -z "$snapshot" ]; then
+              # 旧リリースにはこのエンドポイントが無い。まだ切り替わっていないだけなので待つ。
+              opcache_verdict='unobserved'
+            elif [ -n "$first_snapshot" ] && [ "$snapshot" != "$first_snapshot" ]; then
+              # 実行単位ごとに設定が異なるなら、環境が均一であることを証明できない。
+              opcache_verdict='inconsistent'
+            else
+              first_snapshot=$snapshot
+              opcache_verdict=$(printf '%s' "$snapshot" | jq -re --argjson max "$max_revalidate_frequency" '
+                if .extensionLoaded == false then "safe:0"
+                elif .extensionLoaded != true then "invalid"
+                elif .enabled == false then "safe:0"
+                elif .enabled != true then "invalid"
+                elif .validateTimestamps != true then "invalid"
+                elif .preload != "" then "invalid"
+                elif (.revalidateFrequency | type) != "number" then "invalid"
+                elif .revalidateFrequency < 0 or .revalidateFrequency > $max then "invalid"
+                else "safe:\(.revalidateFrequency)"
+                end' 2>/dev/null || echo 'invalid')
+            fi
+
+            settle_seconds=0
+
+            case "$opcache_verdict" in
+              safe:*)
+                settle_seconds=${opcache_verdict#safe:}
+                ;;
+              unobserved) ;;
+              *)
+                if [ "$RELEASE_OPCACHE_ENFORCEMENT" = 'enforce' ]; then
+                  echo "::error::the web runtime cannot guarantee release identity (${opcache_verdict}); OPcache must revalidate timestamps within ${max_revalidate_frequency}s without preloading application code: ${snapshot}" >&2
+                  exit 1
+                fi
+                echo "::warning::observe mode: the web runtime cannot guarantee release identity (${opcache_verdict}); record this before switching RELEASE_OPCACHE_ENFORCEMENT to enforce: ${snapshot}" >&2
+                ;;
+            esac
+
+            elapsed=$(( $(date +%s) - settle_from ))
+            # observe では、同一性を保証できない構成の 503 応答も観測結果として受け入れる。
+            release_observed=false
+            if [ "$release_status" = "200" ]; then
+              release_observed=true
+            elif [ "$RELEASE_OPCACHE_ENFORCEMENT" = 'observe' ] && [ "$release_status" = "503" ] && [ -n "$observed_release" ]; then
+              release_observed=true
+            fi
+
+            if [ "$app_status" = "200" ] && [ "$asset_status" = "200" ] &&
+              [ "$release_observed" = 'true' ] && [ -n "$snapshot" ] &&
+              [ -n "$observed_release" ] && [ "$observed_release" = "$RELEASE_ID" ] &&
+              [ "$elapsed" -ge "$settle_seconds" ]; then
+              echo "release health check passed (app 200, built asset 200, release ${RELEASE_ID} serving, opcache ${opcache_verdict}, settled ${elapsed}s)"
               exit 0
             fi
-            echo "health check attempt ${attempt}: app=${app_status} asset=${asset_status} (${asset_url})" >&2
+
+            echo "health check attempt ${attempt}: app=${app_status} asset=${asset_status} (${asset_url}) release=${release_status}/${observed_release:-none} expected=${RELEASE_ID} opcache=${opcache_verdict} settle=${elapsed}s/${settle_seconds}s" >&2
             if [ "$attempt" -lt 10 ]; then
               sleep 15
             fi
@@ -305,6 +457,9 @@ jobs:
               echo "the health endpoint returned a redirect; HEALTHCHECK_URL must be the canonical URL because redirects are not followed" >&2
               ;;
           esac
+          if [ "$observed_release" != "$RELEASE_ID" ]; then
+            echo "the deployed release did not serve its own identity: expected ${RELEASE_ID}, last observed ${observed_release:-none}" >&2
+          fi
           exit 1
 
       # 検証が success で終わらなかったリリース（失敗だけでなく手動キャンセルも含む）を

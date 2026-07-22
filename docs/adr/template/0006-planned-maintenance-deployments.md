@@ -49,10 +49,31 @@ Use fail-closed planned maintenance for XServer delivery:
   `down` and `maintenance.php` files independently of the configured maintenance driver and verify
   their removal. On failure or cancellation, keep maintenance mode active until a corrected
   workflow completes or an operator verifies a coherent release and brings it up manually.
-- After maintenance is lifted, verify over HTTP that the public health endpoint returns 200 and
-  that a built asset referenced by the deployed Vite manifest is served. `artisan up` proves CLI
-  bootstrap only, and the health endpoint does not load built assets, so both requests together
-  cover the path users receive. Retry across the server's file-cache revalidation window.
+- Stamp a deploy-attempt identity into the deployment package before rsync, as a PHP literal in
+  the front controller every request executes. The identity combines the commit SHA with the
+  workflow run and attempt, so redeploying the same commit does not accept the previous attempt's
+  response. Never resolve it from a file the application re-reads at request time: stale bytecode
+  can read a fresh data file and report an identity it is not running.
+- After maintenance is lifted, require three distinct HTTP observations before calling the
+  deployment successful: **reachability** — the public health endpoint returns 200;
+  **asset presence** — a built asset referenced by the deployed Vite manifest is served; and
+  **release identity** — a PHP-served endpoint returns the stamped identity of this deploy
+  attempt. `artisan up` proves CLI bootstrap only; the health endpoint carries no identity and
+  does not load built assets; the asset is static and never executes PHP, and an unchanged
+  frontend produces the previous release's file name. Only the third observation distinguishes
+  "some release answered" from "this release answered". A mismatch never succeeds: it keeps
+  retrying and then fails the verification.
+- Read the web runtime's OPcache revalidation directives from that same response, pair them with
+  the identity from the same response, and treat them as a precondition rather than an
+  observation. Timestamp revalidation must be enabled, application preloading must be unused, and
+  the revalidation interval must be interpretable and within a bounded maximum; the workflow also
+  waits out that interval, measured from the completion of the remote writes, before accepting a
+  match. Uninterpretable values, values that differ between responses, and configurations that
+  never revalidate all fail closed, because shared hosting cannot restart PHP-FPM and CLI OPcache
+  operations do not reach the web runtime. Waiting longer cannot repair them.
+- Adopt the identity gate in two stages per environment: first record each environment's
+  web-observed directives while the OPcache precondition only warns, then switch it to enforcing.
+  The directives cannot be predicted from another environment or from the CLI.
 - Withdraw a release whose verification did not end in success — persistent failure or manual
   cancellation — by re-running the standalone installer from a separate step gated on a recorded
   maintenance-lift attempt. The lift step's own outcome cannot gate withdrawal: a connection
@@ -87,6 +108,22 @@ correlation.
 - **End the delivery at `artisan up`.** Rejected because CLI bootstrap does not prove the web
   entry path serves requests; a release that boots for artisan but fails over HTTP would stay
   live behind a green delivery.
+- **Treat a health 200 plus an asset 200 as a successful deployment.** Rejected because neither
+  response carries release identity: the health endpoint is a generic 200, and the asset is
+  served without executing PHP and can be byte-identical to the previous release. A stale web
+  OPcache entry could therefore end the workflow successfully while the old code is still serving
+  against the new schema and caches, and the withdrawal step would never run.
+- **Publish the release identity from a data file the request reads.** Rejected because the old
+  bytecode can read the new file and report an identity it is not executing, converting a
+  fail-closed check into a false positive.
+- **Extend the retry window instead of checking revalidation settings.** Rejected because a
+  runtime that never revalidates timestamps never converges, and XServer grants no PHP-FPM
+  restart. The failure mode is not slowness but permanence.
+- **Restart PHP-FPM or reset OPcache after deployment.** Rejected because shared hosting grants
+  neither, and `opcache_reset()` from the CLI applies to the CLI process, not the web runtime.
+- **Serve the identity endpoint behind a shared secret.** Rejected for now because it adds a
+  per-environment secret to provision on both GitHub and the server before any deployment can
+  succeed; the exposed value is a deploy-attempt identifier for a private repository.
 - **Leave an unhealthy release live and only fail the workflow.** Rejected because serving
   known-broken responses contradicts the fail-closed decision; withdrawing behind the planned 503
   restores the deterministic state the runbook already covers.
@@ -106,6 +143,28 @@ correlation.
   path without booting their current application.
 - `/up` intentionally returns 503 during deployment; health monitoring therefore observes the
   planned outage instead of a misleading application-level success.
+- Release health verification states three different guarantees, and they must not be conflated.
+  **Reachability** covers the rewrite, PHP-FPM, and bootstrap path. **Asset presence** covers the
+  built assets a browser will request. **Release identity** covers only this: a PHP response
+  produced by a front controller compiled from this deploy attempt's bytes returned this deploy
+  attempt's identifier. It does not prove every deployed PHP file is fresh, does not prove every
+  FastCGI process is fresh — the probe reaches one of them — and is not an atomic switch. Its
+  soundness rests on the verified OPcache precondition: a match is only accepted when the runtime
+  revalidates timestamps within a bounded interval and that interval has elapsed since the remote
+  writes finished, which bounds how long any other process can still serve older bytes. Full
+  atomicity would require versioned release directories and a switch, which stays deferred.
+- The bounded maximum for the revalidation interval is chosen so the settle wait plus the
+  remaining attempts still fit inside the existing retry window; a larger configured interval is
+  rejected rather than waited out, because the workflow cannot distinguish it from a runtime that
+  will not converge at all.
+- The identity endpoint is public and unauthenticated. It exposes the deployed commit SHA, the
+  workflow run and attempt, and the runtime's OPcache revalidation directives, and it returns 503
+  whenever identity cannot be established so monitoring sees the same fail-closed state the
+  workflow does.
+- Because the OPcache precondition is discovered over HTTP after maintenance is lifted, enabling
+  it directly in an unmeasured environment can withdraw an otherwise healthy release into the
+  planned 503. The staged rollout exists to pay that cost as a recorded observation instead of an
+  outage.
 - Release health verification requires a per-environment canonical HTTPS health URL,
   parser-validated before any remote change so a missing value — or one the health request itself
   could not pass, such as plain HTTP against an HTTPS-forcing `.htaccess` — cannot strand the

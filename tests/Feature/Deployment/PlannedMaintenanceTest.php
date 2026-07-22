@@ -136,6 +136,32 @@ describe('計画メンテナンス', function () {
         }
     });
 
+    it('リリース同一性エンドポイントも依存関係を読み込む前に503で遮断される', function () {
+        $deployDirectory = sys_get_temp_dir().'/laravel-app-template-maintenance-release-'.bin2hex(random_bytes(8));
+
+        File::ensureDirectoryExists($deployDirectory.'/public');
+        File::copy(base_path('public/index.php'), $deployDirectory.'/public/index.php');
+
+        try {
+            $enableMaintenance = enablePlannedDeploymentMaintenance($deployDirectory);
+
+            expect($enableMaintenance->isSuccessful())->toBeTrue($enableMaintenance->getErrorOutput());
+
+            $response = requestDeploymentFrontController(
+                $deployDirectory.'/public/index.php',
+                '/up/release',
+                ['HTTP_ACCEPT' => 'application/json'],
+            );
+
+            expect($response->getOutput())
+                ->toBe('{"message":"Service Unavailable"}')
+                ->not->toContain('BOOTSTRAP_REACHED')
+                ->and($response->getErrorOutput())->toBe('STATUS:503');
+        } finally {
+            File::deleteDirectory($deployDirectory);
+        }
+    });
+
     it('InertiaのXHR遷移でも依存関係を読み込む前に静的HTMLの503を返せる', function () {
         $deployDirectory = sys_get_temp_dir().'/laravel-app-template-maintenance-inertia-'.bin2hex(random_bytes(8));
 

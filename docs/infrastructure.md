@@ -81,10 +81,40 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
 4. Composer install, cache rebuilds, and forced migrations.
 5. `artisan up` only after every preceding command succeeds, followed by driver-independent
    removal and absence checks for the standalone maintenance files.
-6. Verify the released application returns `200` from the public health endpoint and that a
-   built asset referenced by the deployed Vite manifest is served (the health endpoint does not
-   load built assets, so a missing or unservable `public/build` is only caught by the asset
-   request). The URL comes from the per-environment `HEALTHCHECK_URL` GitHub secret (normally
+6. Verify three separate properties over HTTP, all of which must hold before the deployment is
+   called successful:
+
+   | Guarantee | Probe | What it proves |
+   | --- | --- | --- |
+   | Reachability | `HEALTHCHECK_URL` returns `200` | rewrite, PHP-FPM, and bootstrap serve requests |
+   | Asset presence | the deployed manifest's asset returns `200` | `public/build` is present and servable |
+   | Release identity | `<origin>/up/release` returns this deploy attempt's ID | a PHP response came from a front controller compiled from this release's bytes |
+
+   The first two cannot distinguish releases: the health endpoint is a generic `200`, and the
+   asset is served without executing PHP and keeps the previous release's file name whenever the
+   frontend is unchanged. Release identity closes that gap. `Stamp release identity` rewrites the
+   `LARAVEL_DEPLOYMENT_RELEASE_ID` literal in the deployment package's `public/index.php` — the
+   file every request executes — to `<commit sha>-<run id>-<run attempt>`, so redeploying the same
+   commit is still a distinct expectation. The identity is never read from a file at request time:
+   stale bytecode could read a fresh file and report a release it is not running.
+
+   The same response also reports the web runtime's OPcache revalidation directives, which are
+   evaluated as a pair with the identity from that response. On XServer PHP 8.5, FastCGI and
+   OPcache are always on, so this is the normal path rather than an edge case, and the workflow
+   requires `opcache.validate_timestamps` enabled, no application `opcache.preload`, and an
+   interpretable `opcache.revalidate_freq` no larger than 60 seconds — then waits out that
+   interval, measured from the end of the remote writes, before accepting a matching identity.
+   Values that are uninterpretable, that differ between responses, or that never revalidate fail
+   closed: PHP-FPM cannot be restarted on shared hosting and a CLI `opcache_reset()` does not
+   reach the web runtime, so waiting cannot repair them.
+
+   `RELEASE_OPCACHE_ENFORCEMENT` in `delivery.yml` stages this per environment. Under `observe`
+   the directives are recorded as warnings and a mismatching identity still fails; under `enforce`
+   an unusable configuration fails the verification. Roll it out per environment: deploy with
+   `observe`, read the recorded directives from the Develop **and** Production workflow logs —
+   they cannot be inferred from the other environment or from the CLI — then switch to `enforce`.
+
+   The URL comes from the per-environment `HEALTHCHECK_URL` GitHub secret (normally
    `https://<domain>/up`) and is URL-parser-validated before any remote change, so a missing
    value — or one the health request could not pass — fails the run without touching the server.
    It must be the **canonical HTTPS URL**, without whitespace, userinfo, query, or fragment:
@@ -92,8 +122,12 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
    redirects fails verification and withdraws an otherwise healthy release. `.htaccess` and
    `.htaccess.develop` redirect all plain HTTP to HTTPS, which is why `http://` is rejected up
    front; a host that redirects (for example `www` when `www` redirects to the apex) cannot be
-   detected statically and is reported as a redirect hint when verification fails. The check retries across the server's file-cache revalidation
-   window. When verification ends without success — persistent failure or manual cancellation —
+   detected statically and is reported as a redirect hint when verification fails. The deploy
+   attempt identity is validated in the same pre-remote step, because an empty expectation would
+   match an empty response. The check retries across the server's file-cache revalidation window,
+   so a release that has not propagated yet is retried rather than failed. When verification ends
+   without success — persistent failure, an identity that never matched, an unusable OPcache
+   configuration under `enforce`, or manual cancellation —
    a separate workflow step re-runs the maintenance installer to withdraw the release behind the
    planned 503. That step is gated on a recorded lift attempt rather than on the lift step's own
    outcome, so a lift whose SSH connection dropped after the remote commands completed is still
@@ -127,6 +161,14 @@ the deploy directory:
 
 Never bring the application up merely to clear a failed workflow while the release state is
 uncertain.
+
+When the workflow reports that the release did not serve its own identity, the deployed files
+reached the server but the web runtime is still executing older bytecode, so rerunning the
+workflow only helps once the runtime revalidates. When it reports that identity cannot be
+guaranteed, the runtime configuration itself is the blocker: fix `opcache.validate_timestamps`,
+`opcache.preload`, or `opcache.revalidate_freq` for the web SAPI (the XServer PHP settings for
+that directory, not the CLI), then rerun. `<origin>/up/release` reports the live values whenever
+the application is up.
 
 ## Troubleshooting
 

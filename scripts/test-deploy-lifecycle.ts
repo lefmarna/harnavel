@@ -163,6 +163,14 @@ function main(): void {
     'Drain in-flight requests',
     'Deploy to XServer via Rsync',
   )
+  // リリースIDは配布物へ焼き込んでから転送する。転送後に焼き込むと、検証が一致を見ても
+  // その ID を持つコードがサーバーにあるとは限らない。
+  assertOrdered(workflow, 'Create deployment package', 'Stamp release identity')
+  assertOrdered(
+    workflow,
+    'Stamp release identity',
+    'Deploy to XServer via Rsync',
+  )
   assertOrdered(
     workflow,
     'Deploy to XServer via Rsync',
@@ -276,8 +284,20 @@ function main(): void {
     ' https://example.com/up',
   ]
 
+  // リリース同一性の期待値も同じステップで検証する。網羅的なケースは
+  // scripts/test-release-identity.ts が持つので、ここでは URL 判定の前提だけ満たす。
+  const validReleaseEnv = {
+    RELEASE_ID: `${'a'.repeat(40)}-4242-1`,
+    RELEASE_OPCACHE_ENFORCEMENT: 'enforce',
+  }
+
   for (const url of acceptedHealthcheckUrls) {
-    if (runShellStep(validateScript, { HEALTHCHECK_URL: url }) !== 0) {
+    if (
+      runShellStep(validateScript, {
+        ...validReleaseEnv,
+        HEALTHCHECK_URL: url,
+      }) !== 0
+    ) {
       throw new Error(
         `Validate deployment configuration must accept ${JSON.stringify(url)}`,
       )
@@ -285,7 +305,12 @@ function main(): void {
   }
 
   for (const url of rejectedHealthcheckUrls) {
-    if (runShellStep(validateScript, { HEALTHCHECK_URL: url }) === 0) {
+    if (
+      runShellStep(validateScript, {
+        ...validReleaseEnv,
+        HEALTHCHECK_URL: url,
+      }) === 0
+    ) {
       throw new Error(
         `Validate deployment configuration must reject ${JSON.stringify(url)}`,
       )
@@ -334,15 +359,40 @@ function main(): void {
     '"$asset_status" = "200"',
     'strict 200 requirement for a deployed built asset',
   )
+  // 到達性とアセット存在だけでは「今回のリリースが応答した」ことを示せない。PHP 経由の
+  // 応答が期待するデプロイ試行IDを返すことまで求める（振る舞いは test-release-identity.ts）。
+  assertIncludes(
+    verifyHealth,
+    '"$observed_release" = "$RELEASE_ID"',
+    'release identity requirement for the deployed application',
+  )
+  assertIncludes(
+    verifyHealth,
+    'release_url="${origin}/up/release"',
+    'PHP-served release identity probe',
+  )
+
+  const stampReleaseIdentity = stepBlock(workflow, 'Stamp release identity')
+
+  assertIncludes(
+    stampReleaseIdentity,
+    'front_controller=.deploy/public/index.php',
+    'release identity stamped into the front controller every request executes',
+  )
+  assertExcludes(
+    stampReleaseIdentity,
+    'bootstrap/release',
+    'release identity written to a file that stale bytecode could still read',
+  )
   // curl は既定で [ ] { } を URL glob と解釈し、Validate が受理した canonical URL を
   // 拒否・複数 URL へ展開し得る。検証ステップの curl はすべてリテラル URL 動作に固定する。
   const curlInvocations = verifyHealth
     .split('\n')
     .filter((line) => line.includes('$(curl '))
 
-  if (curlInvocations.length < 2) {
+  if (curlInvocations.length < 3) {
     throw new Error(
-      'Release health verification must curl both the health endpoint and a built asset',
+      'Release health verification must curl the health endpoint, a built asset, and the release identity endpoint',
     )
   }
 

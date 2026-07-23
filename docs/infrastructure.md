@@ -81,8 +81,9 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
 4. Composer install, cache rebuilds, and forced migrations.
 5. `artisan up` only after every preceding command succeeds, followed by driver-independent
    removal and absence checks for the standalone maintenance files.
-6. Verify three separate properties over HTTP, all of which must hold before the deployment is
-   called successful:
+6. Verify three separate properties over HTTP. Under `enforce` all three must hold before the
+   deployment is called successful; under `observe` only the first two do (see the staging note
+   below):
 
    | Guarantee | Probe | What it proves |
    | --- | --- | --- |
@@ -102,17 +103,31 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
    evaluated as a pair with the identity from that response. On XServer PHP 8.5, FastCGI and
    OPcache are always on, so this is the normal path rather than an edge case, and the workflow
    requires `opcache.validate_timestamps` enabled, no application `opcache.preload`, and an
-   interpretable `opcache.revalidate_freq` no larger than 60 seconds — then waits out that
+   interpretable `opcache.revalidate_freq` no larger than 60 seconds (the response reports whether
+   preloading is configured, never the configured path) — then waits out that
    interval, measured from the end of the remote writes, before accepting a matching identity.
-   Values that are uninterpretable, that differ between responses, or that never revalidate fail
-   closed: PHP-FPM cannot be restarted on shared hosting and a CLI `opcache_reset()` does not
+   Only a response carrying this deploy attempt's identity is authoritative about this release's
+   runtime — a response still carrying an older identity is retried rather than judged, whatever
+   its schema, so changing the response format cannot fail a deployment before the new release
+   answers. Values that are uninterpretable, that differ between such responses, or that never
+   revalidate fail closed: PHP-FPM cannot be restarted on shared hosting and a CLI `opcache_reset()` does not
    reach the web runtime, so waiting cannot repair them.
 
-   `RELEASE_OPCACHE_ENFORCEMENT` in `delivery.yml` stages this per environment. Under `observe`
-   the directives are recorded as warnings and a mismatching identity still fails; under `enforce`
-   an unusable configuration fails the verification. Roll it out per environment: deploy with
-   `observe`, read the recorded directives from the Develop **and** Production workflow logs —
-   they cannot be inferred from the other environment or from the CLI — then switch to `enforce`.
+   `RELEASE_IDENTITY_ENFORCEMENT` in `delivery.yml` stages this per environment.
+
+   - `observe` — the release identity and the runtime directives are probed and logged as
+     warnings, but the deployment still succeeds on reachability and asset presence alone, judged
+     exactly as before this gate existed: any single attempt where both returned `200` is enough,
+     so continuing to probe for identity never turns a healthy release into a withdrawal.
+     Nothing new can withdraw a release. This matters because the endpoint itself may be
+     invisible behind the previous release's bytecode, which is precisely what happens when
+     `opcache.validate_timestamps` is off; failing there would take the site down before the
+     configuration was ever measured. While observing, release identity is **not** yet verified.
+   - `enforce` — identity and the OPcache precondition become success conditions and fail closed.
+
+   Roll it out per environment: deploy with `observe`, read the recorded values from the Develop
+   **and** Production workflow logs — one environment's directives never imply the other's, and
+   the CLI's never imply the web SAPI's — then switch to `enforce` in a follow-up commit.
 
    The URL comes from the per-environment `HEALTHCHECK_URL` GitHub secret (normally
    `https://<domain>/up`) and is URL-parser-validated before any remote change, so a missing
@@ -126,8 +141,8 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
    attempt identity is validated in the same pre-remote step, because an empty expectation would
    match an empty response. The check retries across the server's file-cache revalidation window,
    so a release that has not propagated yet is retried rather than failed. When verification ends
-   without success — persistent failure, an identity that never matched, an unusable OPcache
-   configuration under `enforce`, or manual cancellation —
+   without success — persistent failure, an identity that never matched under `enforce`, an
+   unusable OPcache configuration under `enforce`, or manual cancellation —
    a separate workflow step re-runs the maintenance installer to withdraw the release behind the
    planned 503. That step is gated on a recorded lift attempt rather than on the lift step's own
    outcome, so a lift whose SSH connection dropped after the remote commands completed is still

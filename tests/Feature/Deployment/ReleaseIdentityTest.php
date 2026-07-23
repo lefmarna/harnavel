@@ -135,7 +135,7 @@ function safeOpcacheRevalidation(): OpcacheRevalidation
         enabled: true,
         validateTimestamps: true,
         revalidateFrequency: 2,
-        preload: '',
+        preloadConfigured: false,
     );
 }
 
@@ -191,7 +191,7 @@ describe('リリース同一性', function () {
                         'enabled' => true,
                         'validateTimestamps' => true,
                         'revalidateFrequency' => 2,
-                        'preload' => '',
+                        'preloadConfigured' => false,
                     ],
                 ]);
         });
@@ -214,10 +214,10 @@ describe('リリース同一性', function () {
                 ->assertJsonPath('release', 'release-a')
                 ->assertJsonPath('opcache.enabled', $revalidation->enabled);
         })->with([
-            'タイムスタンプ再検証が無効' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, false, 2, ''),
-            'preload が設定済み' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, true, 2, '/var/www/preload.php'),
-            '再検証間隔が上限超過' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, true, 61, ''),
-            'ini 値が解釈不能' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, null, true, 2, ''),
+            'タイムスタンプ再検証が無効' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, false, 2, false),
+            'preload が設定済み' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, true, 2, true),
+            '再検証間隔が上限超過' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, true, 61, false),
+            'ini 値が解釈不能' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, null, true, 2, false),
         ]);
 
         it('応答に実行中PHPランタイムのOPcache再検証設定が含まれる', function () {
@@ -225,6 +225,21 @@ describe('リリース同一性', function () {
 
             $this->get('/up/release')
                 ->assertJsonPath('opcache.extensionLoaded', extension_loaded('Zend OPcache'));
+        });
+
+        // 認証なしの公開エンドポイントなので、起動時スクリプトの絶対パスは載せない。
+        // ワークフローが必要とするのは「preload が設定されているか」だけ。
+        it('preloadの絶対パスを公開せず設定有無だけを返す', function () {
+            fakeReleaseIdentity('release-a');
+            fakeOpcacheRevalidation(
+                OpcacheRevalidation::fromIniValues(true, '1', '1', '2', '/var/www/preload.php'),
+            );
+
+            $response = $this->get('/up/release');
+
+            $response->assertJsonPath('opcache.preloadConfigured', true);
+
+            expect($response->getContent())->not->toContain('/var/www/preload.php');
         });
 
         it('応答を保存させないキャッシュ制御ヘッダーを返す', function () {
@@ -286,35 +301,35 @@ describe('リリース同一性', function () {
         });
 
         it('OPcacheが無効なら経過秒数によらず安全と判定する', function () {
-            $revalidation = new OpcacheRevalidation(true, false, false, null, '');
+            $revalidation = new OpcacheRevalidation(true, false, false, null, false);
 
             expect(ReleaseVerification::verdict($revalidation, 0))
                 ->toBe(ReleaseVerification::VERDICT_SAFE);
         });
 
         it('タイムスタンプ再検証が無効なら失敗と判定する', function () {
-            $revalidation = new OpcacheRevalidation(true, true, false, 2, '');
+            $revalidation = new OpcacheRevalidation(true, true, false, 2, false);
 
             expect(ReleaseVerification::verdict($revalidation, 999))
                 ->toBe(ReleaseVerification::VERDICT_FAIL);
         });
 
         it('preloadが設定されていれば失敗と判定する', function () {
-            $revalidation = new OpcacheRevalidation(true, true, true, 2, '/var/www/preload.php');
+            $revalidation = new OpcacheRevalidation(true, true, true, 2, true);
 
             expect(ReleaseVerification::verdict($revalidation, 999))
                 ->toBe(ReleaseVerification::VERDICT_FAIL);
         });
 
         it('再検証間隔が上限を超える場合は失敗と判定する', function () {
-            $revalidation = new OpcacheRevalidation(true, true, true, 61, '');
+            $revalidation = new OpcacheRevalidation(true, true, true, 61, false);
 
             expect(ReleaseVerification::verdict($revalidation, 999))
                 ->toBe(ReleaseVerification::VERDICT_FAIL);
         });
 
         it('再検証間隔が上限ちょうどなら経過後に安全と判定する', function () {
-            $revalidation = new OpcacheRevalidation(true, true, true, 60, '');
+            $revalidation = new OpcacheRevalidation(true, true, true, 60, false);
 
             expect(ReleaseVerification::verdict($revalidation, 60))
                 ->toBe(ReleaseVerification::VERDICT_SAFE)
@@ -326,21 +341,21 @@ describe('リリース同一性', function () {
             expect(ReleaseVerification::verdict($revalidation, 999))
                 ->toBe(ReleaseVerification::VERDICT_FAIL);
         })->with([
-            '有効状態が不明' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, null, true, 2, ''),
-            '再検証設定が不明' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, null, 2, ''),
-            '再検証間隔が不明' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, true, null, ''),
+            '有効状態が不明' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, null, true, 2, false),
+            '再検証設定が不明' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, null, 2, false),
+            '再検証間隔が不明' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, true, null, false),
             'preload 設定が不明' => fn (): OpcacheRevalidation => new OpcacheRevalidation(true, true, true, 2, null),
         ]);
 
         it('再検証間隔が経過していない場合は待機と判定する', function () {
-            $revalidation = new OpcacheRevalidation(true, true, true, 30, '');
+            $revalidation = new OpcacheRevalidation(true, true, true, 30, false);
 
             expect(ReleaseVerification::verdict($revalidation, 29))
                 ->toBe(ReleaseVerification::VERDICT_WAIT);
         });
 
         it('経過秒数が不明な場合は待機を判定せず安全と判定する', function () {
-            $revalidation = new OpcacheRevalidation(true, true, true, 30, '');
+            $revalidation = new OpcacheRevalidation(true, true, true, 30, false);
 
             expect(ReleaseVerification::verdict($revalidation, null))
                 ->toBe(ReleaseVerification::VERDICT_SAFE);
@@ -356,7 +371,7 @@ describe('リリース同一性', function () {
                 'enabled' => false,
                 'validateTimestamps' => false,
                 'revalidateFrequency' => null,
-                'preload' => null,
+                'preloadConfigured' => null,
             ]);
         });
 
@@ -410,6 +425,14 @@ describe('リリース同一性', function () {
             '数値以外' => ['garbage', false],
         ]);
 
+        it('preloadは設定有無の真偽値へ正規化する', function (string $iniValue, bool $expected) {
+            expect(OpcacheRevalidation::fromIniValues(true, '1', '1', '2', $iniValue)->preloadConfigured)
+                ->toBe($expected);
+        })->with([
+            '未設定' => ['', false],
+            '設定済み' => ['/var/www/preload.php', true],
+        ]);
+
         it('ini値が整数として解釈できない場合は再検証間隔を未確定として報告する', function () {
             $revalidation = OpcacheRevalidation::fromIniValues(true, '1', '1', 'never', '');
 
@@ -423,7 +446,7 @@ describe('リリース同一性', function () {
                 ->toBeNull()
                 ->and($revalidation->validateTimestamps)->toBeNull()
                 ->and($revalidation->revalidateFrequency)->toBeNull()
-                ->and($revalidation->preload)->toBeNull();
+                ->and($revalidation->preloadConfigured)->toBeNull();
         });
     });
 });

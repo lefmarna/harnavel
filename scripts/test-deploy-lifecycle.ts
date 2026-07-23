@@ -288,7 +288,7 @@ function main(): void {
   // scripts/test-release-identity.ts が持つので、ここでは URL 判定の前提だけ満たす。
   const validReleaseEnv = {
     RELEASE_ID: `${'a'.repeat(40)}-4242-1`,
-    RELEASE_OPCACHE_ENFORCEMENT: 'enforce',
+    RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
   }
 
   for (const url of acceptedHealthcheckUrls) {
@@ -376,7 +376,7 @@ function main(): void {
 
   assertIncludes(
     stampReleaseIdentity,
-    'front_controller=.deploy/public/index.php',
+    'const file = ".deploy/public/index.php"',
     'release identity stamped into the front controller every request executes',
   )
   assertExcludes(

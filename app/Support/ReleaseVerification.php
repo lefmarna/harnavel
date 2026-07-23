@@ -50,7 +50,8 @@ final class ReleaseVerification
         }
 
         // preload されたコードはプロセス終了までタイムスタンプ再検証の対象外になる。
-        if ($opcache->preload !== '') {
+        // 設定の有無が確定しない（null）場合も前提を置けないので失敗にする。
+        if ($opcache->preloadConfigured !== false) {
             return self::VERDICT_FAIL;
         }
 

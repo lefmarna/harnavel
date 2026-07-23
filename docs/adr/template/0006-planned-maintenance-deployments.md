@@ -61,18 +61,26 @@ Use fail-closed planned maintenance for XServer delivery:
   attempt. `artisan up` proves CLI bootstrap only; the health endpoint carries no identity and
   does not load built assets; the asset is static and never executes PHP, and an unchanged
   frontend produces the previous release's file name. Only the third observation distinguishes
-  "some release answered" from "this release answered". A mismatch never succeeds: it keeps
-  retrying and then fails the verification.
+  "some release answered" from "this release answered". Under enforcement a mismatch never
+  succeeds: it keeps retrying and then fails the verification. The staged rollout below defines
+  what the observing stage does instead.
 - Read the web runtime's OPcache revalidation directives from that same response, pair them with
   the identity from the same response, and treat them as a precondition rather than an
-  observation. Timestamp revalidation must be enabled, application preloading must be unused, and
+  observation. Only a response that carries this deploy attempt's identity is authoritative about
+  this release's runtime; a response still carrying an older identity is treated as "not switched
+  over yet" and retried, whatever its schema, so that changing the response format cannot make the
+  first deployment fail before the new release ever answers. Timestamp revalidation must be enabled, application preloading must be unused, and
   the revalidation interval must be interpretable and within a bounded maximum; the workflow also
   waits out that interval, measured from the completion of the remote writes, before accepting a
   match. Uninterpretable values, values that differ between responses, and configurations that
   never revalidate all fail closed, because shared hosting cannot restart PHP-FPM and CLI OPcache
   operations do not reach the web runtime. Waiting longer cannot repair them.
-- Adopt the identity gate in two stages per environment: first record each environment's
-  web-observed directives while the OPcache precondition only warns, then switch it to enforcing.
+- Adopt the identity gate in two stages per environment. In the observing stage the deployment
+  still succeeds on reachability and asset presence alone, while the identity and the runtime
+  directives are probed and recorded as warnings; only then is the gate switched to enforcing.
+  Observing must not fail on identity: the new endpoint may be invisible behind the previous
+  release's bytecode — which is exactly what happens on the runtimes worth measuring — so an
+  identity-failing observation stage would withdraw healthy releases before anything is measured.
   The directives cannot be predicted from another environment or from the CLI.
 - Withdraw a release whose verification did not end in success — persistent failure or manual
   cancellation — by re-running the standalone installer from a separate step gated on a recorded
@@ -161,10 +169,14 @@ correlation.
   workflow run and attempt, and the runtime's OPcache revalidation directives, and it returns 503
   whenever identity cannot be established so monitoring sees the same fail-closed state the
   workflow does.
-- Because the OPcache precondition is discovered over HTTP after maintenance is lifted, enabling
-  it directly in an unmeasured environment can withdraw an otherwise healthy release into the
-  planned 503. The staged rollout exists to pay that cost as a recorded observation instead of an
-  outage.
+- Because both the endpoint's reachability and the OPcache precondition are discovered over HTTP
+  after maintenance is lifted, enabling the gate directly in an unmeasured environment can
+  withdraw an otherwise healthy release into the planned 503. The observing stage exists to pay
+  that cost as a recorded observation instead of an outage, and it deliberately keeps the old
+  two-probe success condition until the measurement exists. While observing, the defect this
+  decision addresses is still present; that is the accepted price of measuring first.
+- The identity response reports whether preloading is configured, not the configured path. The
+  endpoint is unauthenticated and the decision only needs the presence of the setting.
 - Release health verification requires a per-environment canonical HTTPS health URL,
   parser-validated before any remote change so a missing value — or one the health request itself
   could not pass, such as plain HTTP against an HTTPS-forcing `.htaccess` — cannot strand the

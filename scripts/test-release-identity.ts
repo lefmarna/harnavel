@@ -101,7 +101,7 @@ function attemptCount(result: ShellResult): number {
 interface OpcacheSnapshot {
   enabled: boolean | null
   extensionLoaded: boolean
-  preload: string | null
+  preloadConfigured: boolean | null
   revalidateFrequency: number | null
   validateTimestamps: boolean | null
 }
@@ -109,7 +109,7 @@ interface OpcacheSnapshot {
 const SAFE_OPCACHE: OpcacheSnapshot = {
   enabled: true,
   extensionLoaded: true,
-  preload: '',
+  preloadConfigured: false,
   revalidateFrequency: 0,
   validateTimestamps: true,
 }
@@ -136,10 +136,26 @@ function releaseBody(response: ReleaseResponse): string {
 }
 
 interface StubOptions {
-  appStatus?: number
-  assetStatus?: number
+  /** 単一値のほか、試行順に消費する系列も渡せる（尽きたら最後の値を繰り返す）。 */
+  appStatus?: number | number[]
+  assetStatus?: number | number[]
   /** 応答は試行順に消費し、尽きたら最後の応答を繰り返す。 */
   releaseResponses: ReleaseResponse[]
+}
+
+function statusAt(
+  status: number | number[] | undefined,
+  index: number,
+): number {
+  if (status === undefined) {
+    return 200
+  }
+
+  if (!Array.isArray(status)) {
+    return status
+  }
+
+  return status[Math.min(index, status.length - 1)] ?? 200
 }
 
 interface Stub {
@@ -150,6 +166,8 @@ interface Stub {
 
 async function startStub(options: StubOptions): Promise<Stub> {
   const releaseRequestHeaders: http.IncomingHttpHeaders[] = []
+  let appRequests = 0
+  let assetRequests = 0
   const server = http.createServer((request, response) => {
     const url = request.url ?? '/'
 
@@ -178,12 +196,16 @@ async function startStub(options: StubOptions): Promise<Stub> {
     }
 
     if (url.startsWith('/build/')) {
-      response.writeHead(options.assetStatus ?? 200).end('asset')
+      response
+        .writeHead(statusAt(options.assetStatus, assetRequests))
+        .end('asset')
+      assetRequests += 1
 
       return
     }
 
-    response.writeHead(options.appStatus ?? 200).end('up')
+    response.writeHead(statusAt(options.appStatus, appRequests)).end('up')
+    appRequests += 1
   })
 
   await new Promise<void>((resolve) => {
@@ -260,7 +282,7 @@ async function verifyReleaseHealth(
         HEALTHCHECK_URL: `${stub.origin}/up`,
         PATH: stubbedPath,
         RELEASE_ID: options.releaseId ?? VALID_RELEASE_ID,
-        RELEASE_OPCACHE_ENFORCEMENT: options.enforcement ?? 'enforce',
+        RELEASE_IDENTITY_ENFORCEMENT: options.enforcement ?? 'enforce',
       },
       verifyWorkspace,
     )
@@ -402,7 +424,7 @@ describe('OPcacheゲート（enforce）', () => {
     const result = await verifyReleaseHealth({
       releaseResponses: [
         {
-          opcache: snapshot({ preload: '/var/www/preload.php' }),
+          opcache: snapshot({ preloadConfigured: true }),
           release: VALID_RELEASE_ID,
           status: 200,
         },
@@ -463,10 +485,16 @@ describe('OPcacheゲート（enforce）', () => {
     assert.match(result.stderr, /invalid/)
   })
 
-  it('応答ごとにOPcache設定が異なる場合は失敗する', async () => {
+  // 比較対象は期待IDを返した応答同士。settle 待ちの間に別の実行単位が別の設定を返したら、
+  // 環境が均一であることを証明できない。
+  it('期待IDを返す応答ごとにOPcache設定が異なる場合は失敗する', async () => {
     const result = await verifyReleaseHealth({
       releaseResponses: [
-        { release: 'previous-release', status: 200 },
+        {
+          opcache: snapshot({ revalidateFrequency: 5 }),
+          release: VALID_RELEASE_ID,
+          status: 200,
+        },
         {
           opcache: snapshot({ revalidateFrequency: 3 }),
           release: VALID_RELEASE_ID,
@@ -479,25 +507,31 @@ describe('OPcacheゲート（enforce）', () => {
     assert.match(result.stderr, /inconsistent/)
   })
 
+  // date +%s は秒精度なので「初回は必ず 0s」とは仮定できない（秒の切り替わり直前に
+  // 開始すると初回から 1s になる）。経過が settle を下回る試行が記録されたことだけを見る。
   it('再検証間隔が経過するまではID一致でも成功しない', async () => {
     const result = await verifyReleaseHealth({
       releaseResponses: [
         {
-          opcache: snapshot({ revalidateFrequency: 1 }),
+          opcache: snapshot({ revalidateFrequency: 2 }),
           release: VALID_RELEASE_ID,
           status: 200,
         },
       ],
     })
 
-    assert.match(result.stderr, /health check attempt 1:.*settle=0s\/1s/)
+    const waited = [...result.stderr.matchAll(/settle=(\d+)s\/(\d+)s/g)].some(
+      ([, elapsed, settle]) => Number(elapsed) < Number(settle),
+    )
+
+    assert.ok(waited, result.stderr)
   })
 
   it('再検証間隔の経過後にID一致が観測されれば成功する', async () => {
     const result = await verifyReleaseHealth({
       releaseResponses: [
         {
-          opcache: snapshot({ revalidateFrequency: 1 }),
+          opcache: snapshot({ revalidateFrequency: 2 }),
           release: VALID_RELEASE_ID,
           status: 200,
         },
@@ -505,7 +539,50 @@ describe('OPcacheゲート（enforce）', () => {
     })
 
     assert.equal(result.status, 0, result.stderr)
-    assert.ok(attemptCount(result) >= 1)
+    assert.match(result.stdout, /settled \d+s/)
+  })
+
+  // 応答スキーマを変更したデプロイでは、旧バイトコードが旧IDと旧形式で応答し得る。
+  // 期待IDを返していない応答でゲートを適用すると、切り替わりを待たずに即失敗してしまう。
+  it('旧形式の応答が旧IDを返す間はリトライし、期待IDの応答が届けば成功する', async () => {
+    const legacyBody = JSON.stringify({
+      opcache: {
+        enabled: true,
+        extensionLoaded: true,
+        preload: '',
+        revalidateFrequency: 0,
+        validateTimestamps: true,
+      },
+      release: 'previous-release',
+    })
+    const result = await verifyReleaseHealth({
+      releaseResponses: [
+        { body: legacyBody, status: 200 },
+        { body: legacyBody, status: 200 },
+        { release: VALID_RELEASE_ID, status: 200 },
+      ],
+    })
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(attemptCount(result), 2)
+  })
+
+  it('期待IDを返さない応答のOPcache設定では即座に失敗しない', async () => {
+    const result = await verifyReleaseHealth({
+      releaseResponses: [
+        {
+          opcache: snapshot({ validateTimestamps: false }),
+          release: 'previous-release',
+          status: 200,
+        },
+      ],
+    })
+
+    assert.equal(attemptCount(result), 10)
+    assert.doesNotMatch(
+      result.stderr,
+      /::error::the web runtime cannot guarantee/,
+    )
   })
 
   it('OPcache拡張が未ロードなら待機なしで最初の試行で成功する', async () => {
@@ -515,7 +592,7 @@ describe('OPcacheゲート（enforce）', () => {
           opcache: snapshot({
             enabled: null,
             extensionLoaded: false,
-            preload: null,
+            preloadConfigured: null,
             revalidateFrequency: null,
             validateTimestamps: null,
           }),
@@ -530,7 +607,10 @@ describe('OPcacheゲート（enforce）', () => {
   })
 })
 
-describe('OPcacheゲート（observe）', () => {
+// observe は「同一性ゲートを入れる前に各環境の実測値を測る」段階。ここで同一性を成功条件に
+// 含めると、新エンドポイントが旧バイトコードの裏に隠れている環境（validate_timestamps=Off が
+// まさにそれ）では測る前に健全なリリースを計画503へ引き戻してしまう。
+describe('リリース同一性ゲート（observe）', () => {
   it('同一性を保証できない構成でもID一致なら成功し警告を残す', async () => {
     const result = await verifyReleaseHealth({
       enforcement: 'observe',
@@ -547,19 +627,73 @@ describe('OPcacheゲート（observe）', () => {
     assert.match(result.stderr, /::warning::observe mode/)
   })
 
-  it('同一性を保証できない構成でリリースIDが不一致なら成功しない', async () => {
+  it('リリースIDが最後まで不一致でも到達性とアセット存在が満たされれば成功する', async () => {
+    const result = await verifyReleaseHealth({
+      enforcement: 'observe',
+      releaseResponses: [{ release: 'previous-release', status: 200 }],
+    })
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(attemptCount(result), 10)
+    assert.match(
+      result.stderr,
+      /::warning::observe mode: release identity was not confirmed/,
+    )
+  })
+
+  it('旧リリースにエンドポイントが無く観測できなくても成功する', async () => {
     const result = await verifyReleaseHealth({
       enforcement: 'observe',
       releaseResponses: [
-        {
-          opcache: snapshot({ validateTimestamps: false }),
-          release: 'previous-release',
-          status: 503,
-        },
+        { body: '<!doctype html><title>Not Found</title>', status: 404 },
       ],
     })
 
-    assert.notEqual(result.status, 0)
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stderr, /last observed none/)
+  })
+
+  // 旧仕様は2プローブが揃った時点で成功していた。同一性の観測を続けるために試行を
+  // 重ねた結果、その後の一過性の 5xx で健全なリリースを引き戻してはならない。
+  it('一度到達性とアセットが揃えばその後一過性の5xxが続いても成功する', async () => {
+    const result = await verifyReleaseHealth({
+      appStatus: [200, 500],
+      enforcement: 'observe',
+      releaseResponses: [{ release: 'previous-release', status: 200 }],
+    })
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /on attempt 1/)
+  })
+
+  it('アセットが一度揃った後に404が続いても成功する', async () => {
+    const result = await verifyReleaseHealth({
+      assetStatus: [200, 404],
+      enforcement: 'observe',
+      releaseResponses: [{ release: 'previous-release', status: 200 }],
+    })
+
+    assert.equal(result.status, 0, result.stderr)
+  })
+
+  it('アプリが200を返さなければ同一性を問わず失敗する', async () => {
+    const result = await verifyReleaseHealth({
+      appStatus: 500,
+      enforcement: 'observe',
+      releaseResponses: [{ release: VALID_RELEASE_ID, status: 200 }],
+    })
+
+    assert.equal(result.status, 1)
+  })
+
+  it('アセットが200を返さなければ同一性を問わず失敗する', async () => {
+    const result = await verifyReleaseHealth({
+      assetStatus: 404,
+      enforcement: 'observe',
+      releaseResponses: [{ release: VALID_RELEASE_ID, status: 200 }],
+    })
+
+    assert.equal(result.status, 1)
   })
 })
 
@@ -653,13 +787,20 @@ describe('リリースID焼き込み', () => {
     fs.rmSync(result.workspace, { force: true, recursive: true })
   })
 
+  // 行数ではなく出現数で判定する。同じ行に2つ並んでいると grep -Fc は 1 を返し、
+  // 置換は先頭だけに当たって空のプレースホルダが配布物に残る。
   it('プレースホルダが複数存在する場合は書き換えずに失敗する', async () => {
-    const source = `<?php\n\n${PLACEHOLDER}\n${PLACEHOLDER}\n`
-    const result = await stamp(source)
+    for (const source of [
+      `<?php\n\n${PLACEHOLDER}\n${PLACEHOLDER}\n`,
+      `<?php\n\n${PLACEHOLDER} ${PLACEHOLDER}\n`,
+    ]) {
+      const result = await stamp(source)
 
-    assert.equal(result.status, 1)
-    assert.equal(result.stamped, source)
-    fs.rmSync(result.workspace, { force: true, recursive: true })
+      assert.equal(result.status, 1, result.stderr)
+      assert.equal(result.stamped, source)
+      assert.match(result.stderr, /found 2/)
+      fs.rmSync(result.workspace, { force: true, recursive: true })
+    }
   })
 
   it('不正な形式のリリースIDでは書き換えずに失敗する', async () => {
@@ -686,7 +827,7 @@ describe('デプロイ設定の検証', () => {
     return runShellStep(stepRunScript('Validate deployment configuration'), {
       HEALTHCHECK_URL: 'https://example.com/up',
       RELEASE_ID: VALID_RELEASE_ID,
-      RELEASE_OPCACHE_ENFORCEMENT: 'enforce',
+      RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
       ...env,
     })
   }
@@ -715,7 +856,7 @@ describe('デプロイ設定の検証', () => {
   it('列挙外の適用モードを拒否する', async () => {
     for (const enforcement of ['', 'soft', 'ENFORCE']) {
       assert.notEqual(
-        (await validate({ RELEASE_OPCACHE_ENFORCEMENT: enforcement })).status,
+        (await validate({ RELEASE_IDENTITY_ENFORCEMENT: enforcement })).status,
         0,
         `must reject ${JSON.stringify(enforcement)}`,
       )

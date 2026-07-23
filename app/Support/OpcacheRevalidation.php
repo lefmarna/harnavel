@@ -20,7 +20,7 @@ final readonly class OpcacheRevalidation
         public ?bool $enabled,
         public ?bool $validateTimestamps,
         public ?int $revalidateFrequency,
-        public ?string $preload,
+        public ?bool $preloadConfigured,
     ) {}
 
     /**
@@ -60,12 +60,14 @@ final readonly class OpcacheRevalidation
             self::toBool($enable),
             self::toBool($validateTimestamps),
             self::toInt($revalidateFrequency),
-            $preload === false ? null : $preload,
+            // 値そのもの（起動時スクリプトの絶対パス）は公開エンドポイントに載せない。
+            // 判定に必要なのは「設定されているか」だけ。
+            $preload === false ? null : $preload !== '',
         );
     }
 
     /**
-     * @return array{extensionLoaded: bool, enabled: bool|null, validateTimestamps: bool|null, revalidateFrequency: int|null, preload: string|null}
+     * @return array{extensionLoaded: bool, enabled: bool|null, validateTimestamps: bool|null, revalidateFrequency: int|null, preloadConfigured: bool|null}
      */
     public function toArray(): array
     {
@@ -74,7 +76,7 @@ final readonly class OpcacheRevalidation
             'enabled' => $this->enabled,
             'validateTimestamps' => $this->validateTimestamps,
             'revalidateFrequency' => $this->revalidateFrequency,
-            'preload' => $this->preload,
+            'preloadConfigured' => $this->preloadConfigured,
         ];
     }
 

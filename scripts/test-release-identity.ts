@@ -19,6 +19,10 @@ const RELEASE_VERIFICATION_PATH = path.join(
   ROOT,
   'app/Support/ReleaseVerification.php',
 )
+const OPCACHE_REVALIDATION_PATH = path.join(
+  ROOT,
+  'app/Support/OpcacheRevalidation.php',
+)
 const PLACEHOLDER = "define('LARAVEL_DEPLOYMENT_RELEASE_ID', '');"
 const VALID_RELEASE_ID = `${'a'.repeat(40)}-4242-1`
 const ASSET_FILE = 'assets/app-DEADBEEF.js'
@@ -585,6 +589,51 @@ describe('OPcacheゲート（enforce）', () => {
     )
   })
 
+  // 応答スキーマを変更したデプロイでは、旧バイトコードが index.php の定数だけを読んで
+  // 「新IDだが旧 payload」を返し得る（リリースIDは定数由来で先に新しくなる）。opcache payload の
+  // 構造は生成元バイトコードそのものなので、必須キーが揃わない間はゲートをかけずにリトライし、
+  // 現行構造の応答で判定する。旧 payload は preloadConfigured を欠く点で現行と区別できる。
+  it('期待ID一致でも現行スキーマの必須キーを欠く応答が続く間はリトライし現行構造で成功する', async () => {
+    const legacyBody = JSON.stringify({
+      opcache: {
+        enabled: true,
+        extensionLoaded: true,
+        preload: '',
+        revalidateFrequency: 0,
+        validateTimestamps: true,
+      },
+      release: VALID_RELEASE_ID,
+    })
+    const result = await verifyReleaseHealth({
+      releaseResponses: [
+        { body: legacyBody, status: 200 },
+        { body: legacyBody, status: 200 },
+        { release: VALID_RELEASE_ID, status: 200 },
+      ],
+    })
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(attemptCount(result), 2)
+  })
+
+  // 現行構造の応答なら、危険な設定は従来どおり即座に fail closed する
+  // （構造ゲートで緩めすぎていないことの確認）。
+  it('現行スキーマ構造の応答で危険な設定ならID一致で即座に失敗する', async () => {
+    const result = await verifyReleaseHealth({
+      releaseResponses: [
+        {
+          opcache: snapshot({ validateTimestamps: false }),
+          release: VALID_RELEASE_ID,
+          status: 200,
+        },
+      ],
+    })
+
+    assert.equal(result.status, 1)
+    assert.equal(attemptCount(result), 0)
+    assert.match(result.stderr, /::error::the web runtime cannot guarantee/)
+  })
+
   it('OPcache拡張が未ロードなら待機なしで最初の試行で成功する', async () => {
     const result = await verifyReleaseHealth({
       releaseResponses: [
@@ -651,6 +700,32 @@ describe('リリース同一性ゲート（observe）', () => {
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stderr, /last observed none/)
+  })
+
+  // 期待IDでも現行スキーマの必須キーを欠く応答は同一性の確認に数えない。observe では
+  // 到達性で成功しつつ「同一性は未確認」を記録する（旧構造の応答を誤って確定にしない）。
+  it('期待ID一致でも現行スキーマの必須キーを欠く応答は同一性確認に数えない', async () => {
+    const legacyBody = JSON.stringify({
+      opcache: {
+        enabled: true,
+        extensionLoaded: true,
+        preload: '',
+        revalidateFrequency: 0,
+        validateTimestamps: true,
+      },
+      release: VALID_RELEASE_ID,
+    })
+    const result = await verifyReleaseHealth({
+      enforcement: 'observe',
+      releaseResponses: [{ body: legacyBody, status: 200 }],
+    })
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(attemptCount(result), 10)
+    assert.match(
+      result.stderr,
+      /::warning::observe mode: release identity was not confirmed/,
+    )
   })
 
   // 旧仕様は2プローブが揃った時点で成功していた。同一性の観測を続けるために試行を
@@ -873,5 +948,28 @@ describe('再検証上限の一貫性', () => {
 
     assert.ok(workflowMax !== undefined)
     assert.equal(workflowMax, phpMax)
+  })
+
+  // payload の必須キー集合はワークフローの構造ゲートと OpcacheRevalidation::toArray の
+  // 両方が持つ。片方だけ増減すると現行 payload が構造ゲートを通らず（or 旧 payload が通り）
+  // デプロイ時にしか気づけないため、キー集合の一致をここで固定する。
+  it('ワークフローの必須キー集合がPHPのopcache payloadと一致する', () => {
+    // 構造ゲート（schema_current 判定）の has(...) だけを対象にする。snapshot 抽出側の
+    // select(has("opcache")) を含めないよう schema_current の区間に絞る。
+    const structuralBlock = workflow.slice(
+      workflow.indexOf('schema_current=false'),
+      workflow.indexOf('schema_current=true'),
+    )
+    const workflowKeys = [
+      ...structuralBlock.matchAll(/has\("([a-zA-Z]+)"\)/g),
+    ].map((match) => match[1])
+    const phpKeys = [
+      ...fs
+        .readFileSync(OPCACHE_REVALIDATION_PATH, 'utf8')
+        .matchAll(/'([a-zA-Z]+)' => \$this->/g),
+    ].map((match) => match[1])
+
+    assert.ok(workflowKeys.length > 0)
+    assert.deepEqual([...workflowKeys].sort(), [...phpKeys].sort())
   })
 })

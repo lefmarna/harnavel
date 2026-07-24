@@ -106,10 +106,14 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
    interpretable `opcache.revalidate_freq` no larger than 60 seconds (the response reports whether
    preloading is configured, never the configured path) — then waits out that
    interval, measured from the end of the remote writes, before accepting a matching identity.
-   Only a response carrying this deploy attempt's identity is authoritative about this release's
-   runtime — a response still carrying an older identity is retried rather than judged, whatever
-   its schema, so changing the response format cannot fail a deployment before the new release
-   answers. Values that are uninterpretable, that differ between such responses, or that never
+   A response is authoritative about this release's runtime only when it carries this deploy
+   attempt's identity and an OPcache payload whose structure matches the current schema (every
+   required key present). The identity is a compile-time constant, so stale bytecode can return the
+   new identity while still emitting the previous release's payload shape; the gate keys authority
+   on the payload's own structure, which one method in one file produces, rather than a separate
+   version number another file could revalidate out of step. A response with an older identity, or
+   whose payload is missing the current keys, is retried rather than judged, so changing the
+   response format cannot fail a deployment before the new release answers. Values that are uninterpretable, that differ between such responses, or that never
    revalidate fail closed: PHP-FPM cannot be restarted on shared hosting and a CLI `opcache_reset()` does not
    reach the web runtime, so waiting cannot repair them.
 
@@ -122,7 +126,10 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
      Nothing new can withdraw a release. This matters because the endpoint itself may be
      invisible behind the previous release's bytecode, which is precisely what happens when
      `opcache.validate_timestamps` is off; failing there would take the site down before the
-     configuration was ever measured. While observing, release identity is **not** yet verified.
+     configuration was ever measured. When identity cannot be confirmed, observing keeps polling up
+     to the whole retry window, lengthening workflow completion — not downtime, since maintenance is
+     already lifted; a release that confirms identity quickly still exits early. While observing,
+     release identity is **not** yet verified.
    - `enforce` — identity and the OPcache precondition become success conditions and fail closed.
 
    Roll it out per environment: deploy with `observe`, read the recorded values from the Develop

@@ -399,10 +399,24 @@ jobs:
             observed_release=$(printf '%s' "$release_body" | jq -re '.release // empty' 2>/dev/null || true)
             # リリースIDと OPcache 設定は必ず同じ応答から取り出し、組で評価する。
             snapshot=$(printf '%s' "$release_body" | jq -Sce 'select(type == "object") | select(has("opcache")) | .opcache' 2>/dev/null || true)
+            # 現行スキーマの必須キーが揃っているか。判定材料は opcache payload だけで、これを
+            # 生成する PHP は単一ファイル（OpcacheRevalidation::toArray）なので、payload の構造
+            # そのものが版の証拠になる。別ファイルの版番号を信じると OPcache の file 単位再検証で
+            # 「新しい版番号＋旧 payload」に食い違い得るため、payload の構造で直接判定する。
+            schema_current=false
+            if [ -n "$snapshot" ] && printf '%s' "$snapshot" | jq -e '
+              has("extensionLoaded") and has("enabled") and has("validateTimestamps")
+              and has("revalidateFrequency") and has("preloadConfigured")' >/dev/null 2>&1; then
+              schema_current=true
+            fi
 
             if [ -z "$snapshot" ]; then
               # 旧リリースにはこのエンドポイントが無い。まだ切り替わっていないだけなので待つ。
               opcache_verdict='unobserved'
+            elif [ "$schema_current" != 'true' ]; then
+              # opcache キーはあるが現行スキーマの必須キーを欠く。旧バイトコードが新IDだけ読んで
+              # 旧形式を返した状態であり得るので、ゲートを適用せず切り替わりを待つ。
+              opcache_verdict='unrecognized-schema'
             else
               opcache_verdict=$(printf '%s' "$snapshot" | jq -re --argjson max "$max_revalidate_frequency" '
                 if .extensionLoaded == false then "safe:0"
@@ -417,12 +431,14 @@ jobs:
                 end' 2>/dev/null || echo 'invalid')
             fi
 
-            # 今回のリリースの実行環境を語れるのは、今回のIDを返した応答だけ。旧IDの応答は
-            # 旧コードが返したものなので、応答スキーマが違って解釈できなくても「まだ
-            # 切り替わっていない」だけであり、ゲートを適用せずリトライ対象にする。
+            # 今回のリリースの実行環境を語れるのは「今回のIDを返し、かつ現行スキーマの payload
+            # を持つ応答」だけ。リリースIDは index.php の定数由来なので旧バイトコードでも新IDを
+            # 返し得るが、opcache payload の構造は生成元バイトコードそのものなので、構造が現行
+            # なら opcache を判定・first_snapshot 化してよい。ID一致でも構造が古い/欠ける応答は
+            # 「まだ切り替わっていない」とみなしリトライする。
             # そうしないと、この応答形式を変更するたびに初回デプロイが即失敗する。
             authoritative=false
-            if [ -n "$snapshot" ] && [ "$observed_release" = "$RELEASE_ID" ]; then
+            if [ "$schema_current" = 'true' ] && [ "$observed_release" = "$RELEASE_ID" ]; then
               authoritative=true
 
               if [ -n "$first_snapshot" ] && [ "$snapshot" != "$first_snapshot" ]; then
@@ -464,8 +480,7 @@ jobs:
             fi
 
             if [ "$app_status" = "200" ] && [ "$asset_status" = "200" ] &&
-              [ "$release_observed" = 'true' ] && [ -n "$snapshot" ] &&
-              [ -n "$observed_release" ] && [ "$observed_release" = "$RELEASE_ID" ] &&
+              [ "$release_observed" = 'true' ] && [ "$authoritative" = 'true' ] &&
               [ "$elapsed" -ge "$settle_seconds" ]; then
               echo "release health check passed (app 200, built asset 200, release ${RELEASE_ID} serving, opcache ${opcache_verdict}, settled ${elapsed}s)"
               exit 0

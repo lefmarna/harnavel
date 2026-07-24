@@ -54,22 +54,30 @@ Use fail-closed planned maintenance for XServer delivery:
   workflow run and attempt, so redeploying the same commit does not accept the previous attempt's
   response. Never resolve it from a file the application re-reads at request time: stale bytecode
   can read a fresh data file and report an identity it is not running.
-- After maintenance is lifted, require three distinct HTTP observations before calling the
-  deployment successful: **reachability** — the public health endpoint returns 200;
+- After maintenance is lifted, under enforcement require three distinct HTTP observations before
+  calling the deployment successful: **reachability** — the public health endpoint returns 200;
   **asset presence** — a built asset referenced by the deployed Vite manifest is served; and
   **release identity** — a PHP-served endpoint returns the stamped identity of this deploy
   attempt. `artisan up` proves CLI bootstrap only; the health endpoint carries no identity and
   does not load built assets; the asset is static and never executes PHP, and an unchanged
   frontend produces the previous release's file name. Only the third observation distinguishes
   "some release answered" from "this release answered". Under enforcement a mismatch never
-  succeeds: it keeps retrying and then fails the verification. The staged rollout below defines
-  what the observing stage does instead.
+  succeeds: it keeps retrying and then fails the verification. The observing stage below succeeds
+  on the first two observations alone.
 - Read the web runtime's OPcache revalidation directives from that same response, pair them with
   the identity from the same response, and treat them as a precondition rather than an
-  observation. Only a response that carries this deploy attempt's identity is authoritative about
-  this release's runtime; a response still carrying an older identity is treated as "not switched
-  over yet" and retried, whatever its schema, so that changing the response format cannot make the
-  first deployment fail before the new release ever answers. Timestamp revalidation must be enabled, application preloading must be unused, and
+  observation. A response is authoritative about this release's runtime only when it carries this
+  deploy attempt's identity and an OPcache payload whose structure matches the current schema —
+  every required key present — and only such a response establishes the snapshot compared across
+  attempts. The identity is a compile-time constant, so stale bytecode can return the new identity
+  while still emitting the previous release's payload shape. The gate keys authority on the
+  payload's own structure rather than a separate version number: the payload is produced by one
+  method in one file, so its shape is a per-file-atomic signal of which release's bytecode built
+  it, whereas a version field in another file could be revalidated by OPcache out of step with the
+  payload it is supposed to describe and wrongly certify a stale payload. A response carrying an
+  older identity, or whose payload is missing the current schema's keys, is treated as "not switched
+  over yet" and retried, so that changing the response format cannot fail a deployment before the
+  new release actually answers. Timestamp revalidation must be enabled, application preloading must be unused, and
   the revalidation interval must be interpretable and within a bounded maximum; the workflow also
   waits out that interval, measured from the completion of the remote writes, before accepting a
   match. Uninterpretable values, values that differ between responses, and configurations that
@@ -81,7 +89,14 @@ Use fail-closed planned maintenance for XServer delivery:
   Observing must not fail on identity: the new endpoint may be invisible behind the previous
   release's bytecode — which is exactly what happens on the runtimes worth measuring — so an
   identity-failing observation stage would withdraw healthy releases before anything is measured.
-  The directives cannot be predicted from another environment or from the CLI.
+  The directives cannot be predicted from another environment or from the CLI. A deployment whose
+  identity cannot yet be confirmed keeps probing up to the whole retry window before it succeeds on
+  reachability and asset presence, adding up to that window's duration to workflow completion — not
+  to downtime, since maintenance is already lifted; a release that confirms identity quickly still
+  exits early. That bounded latency is the accepted cost of measuring first. Switch an environment
+  to enforcing once its recorded observations from at least one real deployment show the identity
+  served and the OPcache directives safe (timestamp revalidation on, no application preload, an
+  interpretable interval within the bound); until then keep observing.
 - Withdraw a release whose verification did not end in success — persistent failure or manual
   cancellation — by re-running the standalone installer from a separate step gated on a recorded
   maintenance-lift attempt. The lift step's own outcome cannot gate withdrawal: a connection

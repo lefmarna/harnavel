@@ -62,5 +62,7 @@ The operational path classification and conflict-resolution procedure live in
 
 - Shared tests and the production code they specify move together: a stricter shared test is
   upstreamed only with implementation that keeps the template green.
-- App-specific calibration remains visible in the app's workflow files instead of being hidden
-  behind external defaults.
+- App-specific calibration normally remains visible in the app's workflow files instead of being
+  hidden behind external defaults. Where the exception above applies, the value is deliberately
+  outside the file and its resolved setting is echoed to the run log and step summary, so the
+  effective calibration stays observable per run rather than in the diff.

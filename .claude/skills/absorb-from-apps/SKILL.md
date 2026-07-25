@@ -13,7 +13,7 @@ The decision model is [`TADR-0003`](../../../docs/adr/template/0003-shared-surfa
 
 ## Principles
 
-Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) for the classification model, and use the operational path classification below for concrete paths.
+Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) for the classification model, the tier rules below to classify a concrete path, and the Path Exceptions section when a path resists those rules.
 
 - **Convergence uses three tiers** (TADR-0003):
   - **T1 Shared**: files with no app-specific content. Aim for byte identity.
@@ -26,14 +26,12 @@ Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
 - **Keep PRs small, verified, and uncommitted**. Split by file kind, verify each PR, and stop before commit so the user can review and commit.
 - **Do not commit working logs**. Per-app checklists and concrete diff notes are transient working material and should stay in `/tmp` or similar locations.
 
-## Operational Path Classification
+## Path Exceptions
 
-There is no legacy manifest. The concrete classification used for convergence lives in this procedure.
-
-- **T1 Shared**: `tests/TestCase.php`, `tests/Feature/Architecture/**` (`tests/Feature/Architecture/ArchTest.php` excluded), `app/Concerns/PasswordValidationRules.php`, `e2e/support/**`, `e2e/tsconfig.json`, `playwright.config.ts`, `scripts/lint-docs.ts`, `scripts/run-unit-tests.ts`, `scripts/test-release-identity.ts`, `scripts/test-renovate-composer-policy.ts`, `app/Http/Controllers/ReleaseHealthController.php`, `app/Support/OpcacheRevalidation.php`, `app/Support/ReleaseIdentity.php`, `app/Support/ReleaseVerification.php`, `renovate.json`, `scripts/tsconfig.json`, `scripts/hooks/**`, `.agents/hooks.json`, `.github/workflows/reusable-test.yml`, `.github/workflows/mutation.yml`, `.github/workflows/audit.yml`, `.github/actions/**`, `docs/testing-as-spec.md`, `docs/adr/template/**`, `.claude/skills/absorb-from-apps/**`, `.claude/skills/merge-template/**`, `.claude/skills/add-page/**`, `.claude/skills/adr-compact/**`, `.claude/skills/update-laravel-packages/**`, `.agents/skills/add-page/**`, `.agents/skills/adr-compact/**`, `.agents/skills/update-laravel-packages/**`
-- **T2 Hybrid**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `app/Models/User.php`, `app/Providers/FortifyServiceProvider.php`, `app/Http/Controllers/Settings/**`, `app/Http/Controllers/Auth/GoogleAuthController.php`, `app/Http/Requests/Settings/**`, `app/Repositories/User/EloquentUserRepository.php`, `app/Services/GoogleAuth/**`, `app/ViewModels/**`, `tests/Pest.php`, `tests/Feature/Auth/**`, `tests/Feature/Settings/**`, `tests/Feature/Architecture/ArchTest.php`, `resources/js/components/ui/**`, `scripts/test-deploy-lifecycle.ts`, `scripts/test-deploy-rsync-excludes.ts`, `.github/deploy/**`, `bootstrap/app.php`, `app/Providers/AppServiceProvider.php`, `public/index.php`, `tests/Feature/Deployment/**`, `.github/workflows/check.yml`, `.github/workflows/quality.yml`, `.github/workflows/delivery.yml`, `phpstan.neon.dist`, `docs/adr/README.md`, `docs/infrastructure.md`, `mise.toml`
-- **T3 App-owned**: `resources/js/pages/**`, `resources/js/components/**` (`resources/js/components/ui/**` excluded), `resources/css/**`, `public/**` (`public/index.php` excluded), `routes/**`, `app/Http/Controllers/**` (`Settings/**`, `Auth/GoogleAuthController.php`, and `ReleaseHealthController.php` excluded), `composer.lock`, `pnpm-lock.yaml`, `.env.example`, `.env`, `README.md`, `CONTEXT.md`, `docs/adr/[0-9][0-9][0-9][0-9]-*.md`
-- **Calibration lines**: `--min`, `continue-on-error`, their immediately adjacent reason comments in `reusable-test.yml` / `mutation.yml`, `@pest-mutate-ignore` annotation density, the `Drain in-flight requests` duration with its immediately adjacent app rationale, and the `RELEASE_IDENTITY_ENFORCEMENT` value in `delivery.yml` are app-priority. The enforcement value records how far that app's environments have progressed through the staged rollout in [`TADR-0006`](../../../docs/adr/template/0006-planned-maintenance-deployments.md); the steps that read it are shared.
+Ownership is the same in both directions, so the paths that resist the tier rules are listed once,
+in [`merge-template`](../merge-template/SKILL.md). Read its Path Exceptions section before
+classifying a file for upstreaming. Keeping a second copy here is the duplicated manifest that
+[`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) rejects.
 
 ## Arguments
 

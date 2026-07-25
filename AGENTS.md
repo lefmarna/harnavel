@@ -40,6 +40,7 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 - Any agent (Claude Code, Codex, Gemini, ...) works this repo: durable knowledge lives in versioned repo Markdown, never a single tool's private memory. Placement: constraint every session needs → here; behavior → test; domain term → `CONTEXT.md`; durable decision with rationale → ADR; how-to/reference → `docs/`; everything else stays in code or is not kept.
 - Before planning, specifying, designing, or refactoring an area, read its glossary and ADRs. `CONTEXT.md` is the domain glossary — domain language only, no implementation details (use `CONTEXT-MAP.md` if present); ADRs live in `docs/adr/` (ADR-NNNN) and `docs/adr/template/` (TADR-NNNN) — policy in `docs/adr/README.md`.
 - Use glossary terms and surface ADR conflicts instead of overriding them silently. After completing work, organize only ADRs and `CONTEXT.md` (TADR-0001); when and how to author, squash, or delete an ADR is defined in `docs/adr/README.md`.
+- Repo-owned skills a non-Claude agent may need for ordinary implementation work are mirrored to both `.claude/skills/<name>/` and `.agents/skills/<name>/` (`add-page`, `adr-compact`, `update-laravel-packages`); `pnpm lint:docs` keeps the shared content equivalent. Claude-specific repository operations (`absorb-from-apps`, `merge-template`, `project-docs-init`) live in `.claude/skills/` only and are followed by path.
 
 ## Reference Docs
 

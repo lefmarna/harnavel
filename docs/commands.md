@@ -118,8 +118,17 @@ pnpm exec lefthook run pre-commit # Fix/format staged files, then run local chec
 mise run deploy:build   # Build frontend assets
 mise run deploy:package # Create deployment package
 mise run deploy:prepare # Full deployment preparation
-mise run test:deploy-lifecycle # Verify preflight and maintenance deployment ordering
-mise run test:deploy-rsync-excludes # Verify rsync --delete protects remote-only data
-mise run test:renovate-composer-policy # Verify routine Composer updates cannot change constraints
-mise run test:toolchain-versions    # Verify Dockerfile and delivery.yml PHP/Composer versions match
+```
+
+## Deployment Verification
+
+These run on host Node, so invoke them with pnpm rather than mise. CI runs all of them
+in the `ci-lint` action.
+
+```bash
+pnpm test:deploy-lifecycle          # Verify preflight and maintenance deployment ordering
+pnpm test:deploy-rsync-excludes     # Verify rsync --delete protects remote-only data
+pnpm test:release-identity          # Verify release identity stamping and health verification
+pnpm test:renovate-composer-policy  # Verify routine Composer updates cannot change constraints
+pnpm test:toolchain-versions        # Verify Dockerfile and delivery.yml PHP/Composer versions match
 ```

@@ -48,7 +48,6 @@ test-results
 .zed
 
 # ビルド設定
-vite.config.js
 vite.config.ts
 lefthook.yml
 mise.toml

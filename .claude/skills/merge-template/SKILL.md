@@ -11,7 +11,7 @@ Resolve conflicts from `git pull <remote> <branch>` using the repository rules f
 
 ## Resolution Policy
 
-Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) for the classification model, and use the operational path classification below for concrete paths.
+Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) for the classification model, the per-file rules below to classify a concrete path, and the Path Exceptions section when a path resists those rules.
 
 - **Prefer the template side**: template-origin hunks for common foundations such as auth, mail, and settings; scaffolding; test helpers; naming and coding conventions; library updates; generic UI primitive scaffolds; and testing-as-spec files (`docs/testing-as-spec.md`, template ADRs under `docs/adr/template/**`, architecture test scaffolds, `reusable-test.yml` / `mutation.yml` / `.github/actions/**`).
 - **Prefer the app side**: domain logic, custom UI components / design tokens, custom ViewModel / Service / Repository patterns, i18n and multilingual tests, app-specific routes/controllers, numbered App ADRs (`docs/adr/NNNN-*.md`, flat namespace), and `CONTEXT.md` (domain glossary; the template only provides the seed and the app owns it).
@@ -25,14 +25,39 @@ Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
 - **Tests**: if both sides cover the same behavior, merge them or delete one side as appropriate. When aligning, prefer the template side. Preserve app-specific coverage such as i18n tests.
 - **ADR namespace**: after the pull, follow `docs/adr/README.md` for cleanup such as deleting old template ADRs, retargeting references to `TADR-0001`, and compacting App ADR numbers.
 
-## Operational Path Classification
+## Path Exceptions
 
-There is no legacy manifest. The concrete classification used for convergence lives in this procedure.
+The rules above decide most paths. Listed here are only the cases where the obvious reading gives
+the wrong answer. This list is deliberately not exhaustive: an unlisted path is classified by the
+rules above, not by its absence here. [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
+rejects an exhaustive manifest, because it turns every new file into a second place to update.
 
-- **T1 Shared**: `tests/TestCase.php`, `tests/Feature/Architecture/**` (`tests/Feature/Architecture/ArchTest.php` excluded), `app/Concerns/PasswordValidationRules.php`, `e2e/support/**`, `e2e/tsconfig.json`, `playwright.config.ts`, `scripts/lint-docs.ts`, `scripts/run-unit-tests.ts`, `scripts/test-release-identity.ts`, `scripts/test-renovate-composer-policy.ts`, `app/Http/Controllers/ReleaseHealthController.php`, `app/Support/OpcacheRevalidation.php`, `app/Support/ReleaseIdentity.php`, `app/Support/ReleaseVerification.php`, `renovate.json`, `scripts/tsconfig.json`, `scripts/hooks/**`, `.agents/hooks.json`, `.github/workflows/reusable-test.yml`, `.github/workflows/mutation.yml`, `.github/workflows/audit.yml`, `.github/actions/**`, `docs/testing-as-spec.md`, `docs/adr/template/**`, `.claude/skills/absorb-from-apps/**`, `.claude/skills/merge-template/**`, `.claude/skills/add-page/**`, `.claude/skills/adr-compact/**`, `.claude/skills/update-laravel-packages/**`, `.agents/skills/add-page/**`, `.agents/skills/adr-compact/**`, `.agents/skills/update-laravel-packages/**`
-- **T2 Hybrid**: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `app/Models/User.php`, `app/Providers/FortifyServiceProvider.php`, `app/Http/Controllers/Settings/**`, `app/Http/Controllers/Auth/GoogleAuthController.php`, `app/Http/Requests/Settings/**`, `app/Repositories/User/EloquentUserRepository.php`, `app/Services/GoogleAuth/**`, `app/ViewModels/**`, `tests/Pest.php`, `tests/Feature/Auth/**`, `tests/Feature/Settings/**`, `tests/Feature/Architecture/ArchTest.php`, `resources/js/components/ui/**`, `scripts/test-deploy-lifecycle.ts`, `scripts/test-deploy-rsync-excludes.ts`, `.github/deploy/**`, `bootstrap/app.php`, `app/Providers/AppServiceProvider.php`, `public/index.php`, `tests/Feature/Deployment/**`, `.github/workflows/check.yml`, `.github/workflows/quality.yml`, `.github/workflows/delivery.yml`, `phpstan.neon.dist`, `docs/adr/README.md`, `docs/infrastructure.md`, `mise.toml`
-- **T3 App-owned**: `resources/js/pages/**`, `resources/js/components/**` (`resources/js/components/ui/**` excluded), `resources/css/**`, `public/**` (`public/index.php` excluded), `routes/**`, `app/Http/Controllers/**` (`Settings/**`, `Auth/GoogleAuthController.php`, and `ReleaseHealthController.php` excluded), `composer.lock`, `pnpm-lock.yaml`, `.env.example`, `.env`, `README.md`, `CONTEXT.md`, `docs/adr/[0-9][0-9][0-9][0-9]-*.md`
-- **Calibration lines**: `--min`, `continue-on-error`, their immediately adjacent reason comments in `reusable-test.yml` / `mutation.yml`, `@pest-mutate-ignore` annotation density, the `Drain in-flight requests` duration with its immediately adjacent app rationale, and the `RELEASE_IDENTITY_ENFORCEMENT` value in `delivery.yml` are app-priority. The enforcement value records how far that app's environments have progressed through the staged rollout in [`TADR-0006`](../../../docs/adr/template/0006-planned-maintenance-deployments.md); the steps that read it are shared.
+- **Template-owned inside an otherwise app-owned tree**: `app/Http/Controllers/ReleaseHealthController.php`,
+  `app/Support/ReleaseIdentity.php`, `app/Support/OpcacheRevalidation.php`,
+  `app/Support/ReleaseVerification.php`, and `app/Concerns/PasswordValidationRules.php`. These are
+  fully template-owned; do not read this as making their whole directory template-owned.
+- **Hybrid even though the tree suggests one side owns it**: `public/index.php` (the release
+  identity literal and Laravel bootstrap are template-origin; app additions stay), and
+  `tests/Feature/Architecture/ArchTest.php` (template rules converge, app rules accumulate — the
+  rest of `tests/Feature/Architecture/**` is template-owned). `app/Http/Controllers/Settings/**` and
+  `app/Http/Controllers/Auth/GoogleAuthController.php` are likewise Hybrid, not app-owned, even
+  though `app/Http/Controllers/**` generally is: they carry the shared auth and settings
+  foundations from the Resolution Policy above.
+- **App-owned inside a template-owned tree**: App ADRs (`docs/adr/NNNN-*.md`) and the `## App ADRs`
+  section of `docs/adr/README.md`.
+- **Lockfiles are app-owned**: `composer.lock` and `pnpm-lock.yaml` hold the app's own dependency
+  set, so never resolve a conflict by taking the template's copy — that silently drops app
+  dependencies or breaks the next frozen install. The "prefer the template side for library
+  updates" rule applies to the manifests (`composer.json`, `package.json`), not to the lockfiles.
+  After merging the manifests, regenerate the lockfiles with the package managers and verify with a
+  clean install rather than merging them by hand.
+- **Calibration lines (app-priority)**: `--min` and `continue-on-error` with their immediately
+  adjacent reason comments in `reusable-test.yml` / `mutation.yml`; `@pest-mutate-ignore`
+  annotation density; the `Drain in-flight requests` duration with its immediately adjacent app
+  rationale; and the `RELEASE_IDENTITY_ENFORCEMENT` value in `delivery.yml`, which records how far
+  that app's environments have progressed through the staged rollout in
+  [`TADR-0006`](../../../docs/adr/template/0006-planned-maintenance-deployments.md). The steps that
+  read these values are shared.
 
 ## Arguments
 

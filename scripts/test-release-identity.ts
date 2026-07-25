@@ -19,6 +19,7 @@ const RELEASE_VERIFICATION_PATH = path.join(
   ROOT,
   'app/Support/ReleaseVerification.php',
 )
+const VERIFY_SCRIPT_PATH = path.join(ROOT, 'scripts/verify-release-health.mjs')
 const OPCACHE_REVALIDATION_PATH = path.join(
   ROOT,
   'app/Support/OpcacheRevalidation.php',
@@ -247,20 +248,9 @@ async function startStub(options: StubOptions): Promise<Stub> {
  * リトライ待機を実測で縮める。実時間は進めたいので 0 にはしない: settle window の検証は
  * 経過秒数に依存するため、待たない置き換えでは「経過後に成功する」経路を通せない。
  */
-let stubbedPath = ''
 let verifyWorkspace = ''
 
 before(() => {
-  const stubBin = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'release-identity-bin-'),
-  )
-  const sleepStub = path.join(stubBin, 'sleep')
-
-  fs.writeFileSync(sleepStub, '#!/bin/sh\nexec /bin/sleep 0.25\n')
-  fs.chmodSync(sleepStub, 0o755)
-
-  stubbedPath = `${stubBin}:${process.env.PATH ?? ''}`
-
   verifyWorkspace = fs.mkdtempSync(
     path.join(os.tmpdir(), 'release-identity-deploy-'),
   )
@@ -293,11 +283,14 @@ async function verifyReleaseHealth(
   const stub = await startStub(options)
 
   try {
+    // ワークフローから抽出した shell ではなく、delivery.yml が実際に呼ぶ CLI をそのまま
+    // 実行する。以下のケース群は「curl 実装から fetch 実装へ移しても HTTP 契約が変わって
+    // いない」ことの検証でもあるので、モジュール直呼びではなくプロセス越しに回す。
     const result = await runShellStep(
-      stepRunScript('Verify release health'),
+      `node ${JSON.stringify(VERIFY_SCRIPT_PATH)}`,
       {
         HEALTHCHECK_URL: `${stub.origin}/up`,
-        PATH: stubbedPath,
+        RELEASE_HEALTH_RETRY_MS: '250',
         RELEASE_ID: options.releaseId ?? VALID_RELEASE_ID,
         RELEASE_IDENTITY_ENFORCEMENT: options.enforcement ?? 'enforce',
       },
@@ -1058,36 +1051,210 @@ describe('デプロイ設定の検証', () => {
 })
 
 describe('再検証上限の一貫性', () => {
-  it('ワークフローの再検証上限がPHPの判定モジュールと一致する', () => {
-    const workflowMax = /max_revalidate_frequency=(\d+)/.exec(workflow)?.[1]
+  const verifyScript = fs.readFileSync(VERIFY_SCRIPT_PATH, 'utf8')
+
+  it('検証スクリプトの再検証上限がPHPの判定モジュールと一致する', () => {
+    const scriptMax = /MAX_REVALIDATE_FREQUENCY = (\d+)/.exec(verifyScript)?.[1]
     const phpMax = /MAX_REVALIDATE_FREQUENCY = (\d+)/.exec(
       fs.readFileSync(RELEASE_VERIFICATION_PATH, 'utf8'),
     )?.[1]
 
-    assert.ok(workflowMax !== undefined)
-    assert.equal(workflowMax, phpMax)
+    assert.ok(scriptMax !== undefined)
+    assert.equal(scriptMax, phpMax)
   })
 
-  // payload の必須キー集合はワークフローの構造ゲートと OpcacheRevalidation::toArray の
+  // payload の必須キー集合は検証スクリプトの構造ゲートと OpcacheRevalidation::toArray の
   // 両方が持つ。片方だけ増減すると現行 payload が構造ゲートを通らず（or 旧 payload が通り）
   // デプロイ時にしか気づけないため、キー集合の一致をここで固定する。
-  it('ワークフローの必須キー集合がPHPのopcache payloadと一致する', () => {
-    // 構造ゲート（schema_current 判定）の has(...) だけを対象にする。snapshot 抽出側の
-    // select(has("opcache")) を含めないよう schema_current の区間に絞る。
-    const structuralBlock = workflow.slice(
-      workflow.indexOf('schema_current=false'),
-      workflow.indexOf('schema_current=true'),
+  it('検証スクリプトの必須キー集合がPHPのopcache payloadと一致する', () => {
+    const keyBlock = verifyScript.slice(
+      verifyScript.indexOf('REQUIRED_OPCACHE_KEYS = ['),
+      verifyScript.indexOf(
+        ']',
+        verifyScript.indexOf('REQUIRED_OPCACHE_KEYS = ['),
+      ),
     )
-    const workflowKeys = [
-      ...structuralBlock.matchAll(/has\("([a-zA-Z]+)"\)/g),
-    ].map((match) => match[1])
+    const scriptKeys = [...keyBlock.matchAll(/'([a-zA-Z]+)'/g)].map(
+      (match) => match[1],
+    )
     const phpKeys = [
       ...fs
         .readFileSync(OPCACHE_REVALIDATION_PATH, 'utf8')
         .matchAll(/'([a-zA-Z]+)' => \$this->/g),
     ].map((match) => match[1])
 
-    assert.ok(workflowKeys.length > 0)
-    assert.deepEqual([...workflowKeys].sort(), [...phpKeys].sort())
+    assert.ok(scriptKeys.length > 0)
+    assert.deepEqual([...scriptKeys].sort(), [...phpKeys].sort())
+  })
+
+  // deploy ジョブは pnpm install も setup-node もしない。外部依存が入ると、検証段階に
+  // 到達した時点で初めて落ちる（= maintenance 解除後に健全なリリースを引き戻す）。
+  it('検証スクリプトはNode同梱以外の依存を持たない', () => {
+    const imports = [
+      ...verifyScript.matchAll(/(?:^|\s)(?:import|from)\s*\(?\s*'([^']+)'/g),
+    ].map((match) => match[1])
+
+    for (const specifier of imports) {
+      assert.ok(
+        specifier?.startsWith('node:'),
+        `verify-release-health.mjs must not import ${specifier}`,
+      )
+    }
+  })
+})
+
+describe('HTTP契約', () => {
+  // curl の --globoff は「WHATWG canonical な URL をリテラルに送る」ための指定だった。
+  // fetch へ移した後も同じ受理集合であることを、サーバーが実際に受け取ったリクエスト
+  // ターゲットで固定する。ここがずれると、Validate が通した URL を検証側が別表現で叩く。
+  it('Validateが受理する記号付きURLをそのままのパスで要求する', async () => {
+    const requested: string[] = []
+    const server = http.createServer((request, response) => {
+      requested.push(request.url ?? '')
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(
+        JSON.stringify({ opcache: SAFE_OPCACHE, release: VALID_RELEASE_ID }),
+      )
+    })
+
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+
+    const port = (server.address() as AddressInfo).port
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'release-target-'))
+    const buildDirectory = path.join(workspace, '.deploy/public/build')
+
+    fs.mkdirSync(buildDirectory, { recursive: true })
+    fs.writeFileSync(
+      path.join(buildDirectory, 'manifest.json'),
+      JSON.stringify({
+        'resources/js/app.tsx': {
+          file: 'assets/[canary]-DEAD.js',
+          isEntry: true,
+        },
+      }),
+    )
+
+    try {
+      await runShellStep(
+        `node ${JSON.stringify(VERIFY_SCRIPT_PATH)}`,
+        {
+          HEALTHCHECK_URL: `http://127.0.0.1:${port}/health/[canary]`,
+          RELEASE_HEALTH_RETRY_MS: '0',
+          RELEASE_ID: VALID_RELEASE_ID,
+          RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
+        },
+        workspace,
+      )
+    } finally {
+      // fetch は keep-alive で接続を残す。破棄しないと close が待たされる。
+      server.closeAllConnections()
+      await new Promise<void>((resolve) => server.close(() => resolve()))
+      fs.rmSync(workspace, { force: true, recursive: true })
+    }
+
+    assert.ok(
+      requested.includes('/health/[canary]'),
+      `health probe target was re-encoded: ${JSON.stringify(requested)}`,
+    )
+    assert.ok(
+      requested.includes('/build/assets/[canary]-DEAD.js'),
+      `asset probe target was re-encoded: ${JSON.stringify(requested)}`,
+    )
+    assert.ok(requested.includes('/up/release'))
+  })
+
+  it('リダイレクトを追従せず、3xxのアセットを成功と見なさない', async () => {
+    // 追従すると、欠落したアセットがリダイレクト先の 200 に解決して検証が骨抜きになる。
+    const stub = await startStub({
+      assetStatus: 302,
+      releaseResponses: [
+        { opcache: snapshot(), release: VALID_RELEASE_ID, status: 200 },
+      ],
+    })
+
+    try {
+      const result = await runShellStep(
+        `node ${JSON.stringify(VERIFY_SCRIPT_PATH)}`,
+        {
+          HEALTHCHECK_URL: `${stub.origin}/up`,
+          RELEASE_HEALTH_RETRY_MS: '0',
+          RELEASE_ID: VALID_RELEASE_ID,
+          RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
+        },
+        verifyWorkspace,
+      )
+
+      assert.notEqual(result.status, 0)
+      assert.match(result.stderr, /asset=302/)
+    } finally {
+      await stub.close()
+    }
+  })
+})
+
+describe('本文転送の完了確認', () => {
+  // 旧実装の `curl -o /dev/null` は本文を EOF まで消費するため、途中で切れた転送は
+  // 非ゼロ終了となり 200 として扱われなかった。fetch でヘッダーだけ見て転送を打ち切ると、
+  // 壊れたアセット配信を「存在する」と誤判定して fail-closed の保証が破れる。
+  async function runAgainstTruncatingAsset(): Promise<ShellResult> {
+    const server = http.createServer((request, response) => {
+      const url = request.url ?? '/'
+
+      if (url.startsWith('/build/')) {
+        // Content-Length を宣言し、本文の一部だけ送ってから「止まる」。
+        // 即時に切断すると fetch の解決時点で既にエラーになり、本文を読むかどうかに
+        // かかわらず失敗するため、実装差が出ない。ヘッダーが正常に解決した後で
+        // 転送が完了しない配信こそが、読み切りでしか検出できない状態。
+        response.writeHead(200, { 'Content-Length': '4096' })
+        response.write('partial')
+        setTimeout(() => request.socket.destroy(), 150)
+
+        return
+      }
+
+      if (url === '/up/release') {
+        response.writeHead(200, { 'Content-Type': 'application/json' })
+        response.end(
+          JSON.stringify({ opcache: SAFE_OPCACHE, release: VALID_RELEASE_ID }),
+        )
+
+        return
+      }
+
+      response.writeHead(200).end('up')
+    })
+
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+
+    const port = (server.address() as AddressInfo).port
+
+    try {
+      return await runShellStep(
+        `node ${JSON.stringify(VERIFY_SCRIPT_PATH)}`,
+        {
+          HEALTHCHECK_URL: `http://127.0.0.1:${port}/up`,
+          RELEASE_HEALTH_RETRY_MS: '0',
+          RELEASE_ID: VALID_RELEASE_ID,
+          RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
+        },
+        verifyWorkspace,
+      )
+    } finally {
+      server.closeAllConnections()
+      await new Promise<void>((resolve) => server.close(() => resolve()))
+    }
+  }
+
+  it('ヘッダーが200でも本文が切れたアセットを成功と見なさない', async () => {
+    const result = await runAgainstTruncatingAsset()
+
+    assert.notEqual(result.status, 0)
+    assert.doesNotMatch(result.stdout, /release health check passed/)
+  })
+
+  it('切れた転送はステータスではなく到達不能として記録される', async () => {
+    const result = await runAgainstTruncatingAsset()
+
+    assert.match(result.stderr, /asset=unreachable/)
   })
 })

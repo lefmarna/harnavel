@@ -424,43 +424,30 @@ function main(): void {
     'id: verify-release-health',
     'step id referenced by the withdrawal condition',
   )
+  // 判定ロジックは scripts/verify-release-health.mjs にあり、その振る舞い（3プローブ・
+  // リダイレクト非追従・30秒タイムアウト・リトライ・OPcache 前提）は実 CLI を通す
+  // test-release-identity.ts が固定する。ここは配線だけを見る。
   assertIncludes(
     verifyHealth,
-    "sed -E 's#^(https?://[^/?#]+).*$#\\1#'",
-    'origin extraction that stops before path, query, and fragment',
+    'run: node scripts/verify-release-health.mjs',
+    'release health verification delegated to the dependency-free script',
   )
-  assertIncludes(
-    verifyHealth,
-    "-w '%{http_code}'",
-    'HTTP status observation of the released application',
-  )
-  assertIncludes(
-    verifyHealth,
-    '"$app_status" = "200"',
-    'strict 200 requirement for the released application',
-  )
-  assertIncludes(
-    verifyHealth,
-    '.deploy/public/build/manifest.json',
-    'manifest-driven selection of a deployed built asset',
-  )
-  assertIncludes(
-    verifyHealth,
-    '"$asset_status" = "200"',
-    'strict 200 requirement for a deployed built asset',
-  )
-  // 到達性とアセット存在だけでは「今回のリリースが応答した」ことを示せない。PHP 経由の
-  // 応答が期待するデプロイ試行IDを返すことまで求める（振る舞いは test-release-identity.ts）。
-  assertIncludes(
-    verifyHealth,
-    '"$observed_release" = "$RELEASE_ID"',
-    'release identity requirement for the deployed application',
-  )
-  assertIncludes(
-    verifyHealth,
-    'release_url="${origin}/up/release"',
-    'PHP-served release identity probe',
-  )
+
+  if (!fs.existsSync(path.join(ROOT, 'scripts/verify-release-health.mjs'))) {
+    throw new Error(
+      'The release health verification step points at a script that does not exist',
+    )
+  }
+
+  // deploy ジョブは pnpm install も setup-node もしないため、ランナー同梱コマンド以外を
+  // 増やさない。curl / jq へ戻すと、この 1 行に集約した HTTP 契約が再び YAML へ散る。
+  for (const command of ['curl ', 'jq ', 'npx ', 'pnpm ', 'tsx ']) {
+    assertExcludes(
+      verifyHealth,
+      command,
+      'release health verification kept free of extra runner dependencies',
+    )
+  }
 
   const stampReleaseIdentity = stepBlock(workflow, 'Stamp release identity')
 
@@ -474,26 +461,6 @@ function main(): void {
     'bootstrap/release',
     'release identity written to a file that stale bytecode could still read',
   )
-  // curl は既定で [ ] { } を URL glob と解釈し、Validate が受理した canonical URL を
-  // 拒否・複数 URL へ展開し得る。検証ステップの curl はすべてリテラル URL 動作に固定する。
-  const curlInvocations = verifyHealth
-    .split('\n')
-    .filter((line) => line.includes('$(curl '))
-
-  if (curlInvocations.length < 3) {
-    throw new Error(
-      'Release health verification must curl the health endpoint, a built asset, and the release identity endpoint',
-    )
-  }
-
-  for (const line of curlInvocations) {
-    assertIncludes(
-      line,
-      '--globoff',
-      'literal-URL curl matching the validated accept set',
-    )
-  }
-
   assertExcludes(
     verifyHealth,
     'if: always()',

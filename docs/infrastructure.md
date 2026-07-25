@@ -91,6 +91,13 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
    | Asset presence | the deployed manifest's asset returns `200` | `public/build` is present and servable |
    | Release identity | `<origin>/up/release` returns this deploy attempt's ID | a PHP response came from a front controller compiled from this release's bytes |
 
+   All three probes, the retry loop, and the OPcache precondition live in
+   `scripts/verify-release-health.mjs`, which `delivery.yml` invokes in one line. It deliberately
+   has no dependencies: the deploy job runs neither `pnpm install` nor `setup-node`, so anything
+   beyond the runner's bundled Node would fail only after maintenance had already been lifted.
+   `pnpm test:release-identity` exercises that script as a real process against a local HTTP
+   server.
+
    The first two cannot distinguish releases: the health endpoint is a generic `200`, and the
    asset is served without executing PHP and keeps the previous release's file name whenever the
    frontend is unchanged. Release identity closes that gap. `Stamp release identity` rewrites the

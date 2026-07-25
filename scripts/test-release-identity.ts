@@ -71,6 +71,16 @@ interface ShellResult {
   stdout: string
 }
 
+// 抽出した run block はランナーの書き込み先ファイルを継承してはならない。CI 上で
+// このテストを走らせると、テスト用の enforcement 値が lint ジョブの実サマリへ
+// 追記され、サマリで適用段階を確認する運用者を誤認させる。
+const RUNNER_WRITE_TARGETS = {
+  GITHUB_STEP_SUMMARY: '',
+  GITHUB_ENV: '',
+  GITHUB_OUTPUT: '',
+  GITHUB_PATH: '',
+} as const
+
 /**
  * GitHub Actions と同じ bash -e で実行し、終了コードとログを検証する。
  * スタブ HTTP サーバは同じプロセスで動くため、同期実行するとイベントループが止まり
@@ -80,11 +90,14 @@ function runShellStep(
   script: string,
   env: Record<string, string>,
   cwd: string = ROOT,
+  // 「ランナーから継承される環境」の注入口。RUNNER_WRITE_TARGETS が継承値を実際に
+  // 打ち消していることを検証するために使う（既定は本物の process.env）。
+  inherited: NodeJS.ProcessEnv = process.env,
 ): Promise<ShellResult> {
   return new Promise((resolve, reject) => {
     const child = spawn('bash', ['-e', '-c', script], {
       cwd,
-      env: { ...process.env, ...env },
+      env: { ...inherited, ...RUNNER_WRITE_TARGETS, ...env },
     })
     let stdout = ''
     let stderr = ''
@@ -898,13 +911,21 @@ describe('リリースID焼き込み', () => {
 })
 
 describe('デプロイ設定の検証', () => {
-  function validate(env: Record<string, string>): Promise<ShellResult> {
-    return runShellStep(stepRunScript('Validate deployment configuration'), {
-      HEALTHCHECK_URL: 'https://example.com/up',
-      RELEASE_ID: VALID_RELEASE_ID,
-      RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
-      ...env,
-    })
+  function validate(
+    env: Record<string, string>,
+    inherited?: NodeJS.ProcessEnv,
+  ): Promise<ShellResult> {
+    return runShellStep(
+      stepRunScript('Validate deployment configuration'),
+      {
+        HEALTHCHECK_URL: 'https://example.com/up',
+        RELEASE_ID: VALID_RELEASE_ID,
+        RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
+        ...env,
+      },
+      ROOT,
+      inherited,
+    )
   }
 
   it('デプロイ試行固有のリリースIDを受理する', async () => {
@@ -936,6 +957,103 @@ describe('デプロイ設定の検証', () => {
         `must reject ${JSON.stringify(enforcement)}`,
       )
     }
+  })
+
+  const deploymentTarget = {
+    DEPLOY_ENVIRONMENT: 'Production',
+    GITHUB_REPOSITORY: 'owner/app',
+    GITHUB_REPOSITORY_ID: '123456789',
+  }
+
+  it('設定変数が未設定・observe・リポジトリIDと環境名を伴う enforce なら受理する', async () => {
+    for (const setting of [
+      '',
+      'observe',
+      'enforce:owner/app@123456789:Production',
+    ]) {
+      assert.equal(
+        (
+          await validate({
+            ...deploymentTarget,
+            RELEASE_IDENTITY_ENFORCEMENT_SETTING: setting,
+          })
+        ).status,
+        0,
+        `must accept ${JSON.stringify(setting)}`,
+      )
+    }
+  })
+
+  it('リポジトリID・slug・環境名のいずれかを欠く設定変数を拒否する', async () => {
+    // 素の "enforce" や環境名だけの値を許すと、organization スコープに置かれた 1 つの値が
+    // 同名環境を持つ全派生アプリを enforce にできてしまう。slug だけでは、改名で空いた
+    // slug を再利用した別アプリに届く余地が残るため、数値 ID も必須にする。
+    for (const setting of [
+      'enforce',
+      'enforce:Production',
+      'enforce:owner/app',
+      'enforce:owner/app:Production',
+      'enforce:owner/app@123456789',
+      'enforce:owner/app@:Production',
+      'enforce:@123456789:Production',
+      'enforce:owner/app@123456789:',
+      'Enforce:owner/app@123456789:Production',
+      'on',
+    ]) {
+      assert.notEqual(
+        (
+          await validate({
+            ...deploymentTarget,
+            RELEASE_IDENTITY_ENFORCEMENT_SETTING: setting,
+          })
+        ).status,
+        0,
+        `must reject ${JSON.stringify(setting)}`,
+      )
+    }
+  })
+
+  it('他リポジトリ・改名前slug・他環境を名乗る設定変数は観測に畳まれたことを警告する', async () => {
+    for (const setting of [
+      'enforce:owner/app@123456789:Develop',
+      'enforce:owner/other@987654321:Production',
+      // 同じ slug でもリポジトリIDが違えば別リポジトリ（改名で空いた slug の再利用）。
+      'enforce:owner/app@987654321:Production',
+    ]) {
+      const result = await validate({
+        ...deploymentTarget,
+        RELEASE_IDENTITY_ENFORCEMENT: 'observe',
+        RELEASE_IDENTITY_ENFORCEMENT_SETTING: setting,
+      })
+
+      assert.equal(result.status, 0, `must accept ${JSON.stringify(setting)}`)
+      assert.match(result.stderr, /::warning::/)
+      assert.match(result.stderr, /enforce:owner\/app@123456789:Production/)
+    }
+  })
+
+  it('継承したランナーのサマリへ書き込まない', async () => {
+    // CI では ci-lint がこのテストを実行する。GITHUB_STEP_SUMMARY を継承すると、
+    // テスト用の適用段階が lint ジョブの実サマリに混ざり、運用者の確認を誤らせる。
+    // env 引数で空文字を渡すだけでは打ち消しが無くても通ってしまうため、
+    // 「ランナーから継承される環境」側に実在のファイルを置いて検証する。
+    const summaryDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'release-summary-'),
+    )
+    const summaryPath = path.join(summaryDir, 'summary.md')
+
+    fs.writeFileSync(summaryPath, '')
+
+    const result = await validate(
+      {},
+      { ...process.env, GITHUB_STEP_SUMMARY: summaryPath },
+    )
+    const leaked = fs.readFileSync(summaryPath, 'utf8')
+
+    fs.rmSync(summaryDir, { force: true, recursive: true })
+
+    assert.equal(result.status, 0)
+    assert.equal(leaked, '', 'the run block wrote to the inherited summary')
   })
 })
 

@@ -85,6 +85,36 @@ runtimes worth measuring — so an identity-failing observation stage would with
 before anything is measured. The directives cannot be predicted from another environment or from
 the CLI, so this applies to every new environment, not only to the initial rollout.
 
+The stage is therefore per-environment configuration rather than a value committed to the
+deployment workflow, and the workflow observes unless the configuration explicitly enforces. A
+committed value would serve two roles at once — the runtime setting for the template's own
+environments and the initial setting inherited by every newly derived application — and an
+unmeasured environment that starts out enforcing withdraws its first healthy release into the
+planned 503.
+
+The configured value must name the repository, its immutable identifier, and the environment it
+applies to, because the CI platform merges its organization, repository, and environment scopes
+into one lookup and does not reveal which scope a value came from. Naming the environment alone is
+insufficient: one value at the broadest scope would then enforce every application using that
+environment name, which is exactly the unmeasured-application case this decision exists to prevent.
+The repository name alone is also insufficient, because renaming a repository releases its name for
+reuse. Both identifiers are available to the workflow expression itself, so the check costs no API
+call, no additional token permission, and no new failure mode in a fail-closed path.
+
+This bounds blast radius rather than detecting scope, and the resulting guarantee is narrow: a
+stray broad-scope value cannot reach a *different* application, but within one repository a
+same-named value at a broader scope shadows the per-environment one, because the platform
+documents that environment-level variables do not overwrite values already resolved into the
+workflow's variable context. Shadowing does not have a fixed safe direction: a broader value that
+names this deployment enforces regardless of what the environment says, so clearing an
+environment's variable does not necessarily return it to observing and an environment can enforce
+without being measured. Defining this variable at exactly one scope is therefore a precondition of
+the staged adoption, not a preference. The gate also cannot notice that an
+environment now points at a different host or a changed PHP configuration; re-measuring after such
+a change is an operational obligation, not something the deployment can detect. Every deployment
+therefore records its effective stage, and a value folded to observing because it named another
+target is reported rather than silently ignored.
+
 **Withdrawal.** Withdraw a release whose verification did not end in success — persistent failure or
 manual cancellation — by re-running the standalone installer from a separate step gated on a
 recorded maintenance-lift attempt. The lift step's own outcome cannot gate withdrawal: a connection

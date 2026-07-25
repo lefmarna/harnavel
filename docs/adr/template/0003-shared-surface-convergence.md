@@ -31,14 +31,24 @@ The bounded in-flight request drain in `delivery.yml` follows the same rule: its
 shared, while its duration and adjacent rationale are calibrated to each app's longest synchronous
 request.
 
+Calibration normally stays inline in the pulled file. The exception is a calibration whose in-file
+value would also seed a newly derived application: the template cannot simultaneously hold a
+correct runtime value for its own environments and a safe initial value for an unmeasured app. Such
+a value moves to per-environment configuration, with the workflow defaulting to the safe setting
+when no configuration supplies one. Because the platform resolves such configuration through a
+single merged lookup, this only holds while the name is defined at one scope; keeping it there is
+part of adopting the exception. The release identity enforcement stage in `delivery.yml` is the
+only current case (see [`TADR-0006`](0006-planned-maintenance-deployments.md)).
+
 The operational path classification and conflict-resolution procedure live in
 `/merge-template` and `/absorb-from-apps`; this ADR records the decision model only.
 
 ## Considered alternatives
 
-- **Extract calibration values out of the pulled files** (GitHub Actions `vars`/inputs) so the
-  workflow YAML is byte-identical. Rejected for now: more CI wiring, and an inline value is
-  easier to read and review. Revisit if calibration churn becomes painful.
+- **Extract every calibration value out of the pulled files** (GitHub Actions `vars`/inputs) so the
+  workflow YAML is byte-identical. Rejected: more CI wiring, and an inline value is easier to read
+  and review. The narrow exception above is not this alternative — it moves one value because its
+  in-file default would seed new applications wrongly, not to make the file byte-identical.
 - **Unify the thresholds across all projects.** Rejected: it contradicts TADR-0001's per-project
   calibration — a content app and a compiler service have different defensible mutation-score
   ceilings.

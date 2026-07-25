@@ -117,7 +117,60 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
    revalidate fail closed: PHP-FPM cannot be restarted on shared hosting and a CLI `opcache_reset()` does not
    reach the web runtime, so waiting cannot repair them.
 
-   `RELEASE_IDENTITY_ENFORCEMENT` in `delivery.yml` stages this per environment.
+   The stage is the `RELEASE_IDENTITY_ENFORCEMENT` **configuration variable on each GitHub
+   Environment** (Develop and Production), not a value in `delivery.yml`. To enforce, its value
+   must name the repository, its numeric id, and the environment it applies to —
+   `enforce:<owner>/<repo>@<repository id>:Production`.
+
+   Assuming no variable of this name exists at a broader scope (see the scope caveat below, which
+   overrides this whole paragraph), the other outcomes are:
+
+   - unset, `observe`, or a well-formed value naming another repository or environment — the
+     deployment observes, and a mistargeted value is reported as a warning;
+   - any other value — the deployment fails in `Validate deployment configuration`, before the
+     workflow touches the server, and the error prints the exact string this deployment expects.
+
+   The target is part of the value because GitHub merges organization, repository, and environment
+   variables into one `vars` context and does not expose which scope a value came from. A workflow
+   therefore cannot read "only the environment-scoped variable". The numeric id is included
+   alongside the slug because renaming a repository frees its old slug for reuse, so a slug alone
+   could later match a different application; the slug stays in the value so a human can tell at a
+   glance what a variable targets. Both `github.repository` and `github.repository_id` resolve in
+   the expression itself, so this costs no API call, no extra token permission, and adds no new
+   failure mode in a fail-closed path.
+
+   Every run prints the effective stage and writes it to the job summary, and a value that was
+   folded to observing because it names another target is reported as a warning. Read those before
+   concluding that a switch took effect.
+
+   What this does and does not guarantee:
+
+   - **Prevented mechanically** — a variable at repository or organization scope reaching a
+     *different* repository. It would have to name that repository and its id, and ids are never
+     reused.
+   - **Your responsibility** — re-measuring after anything that changes the runtime behind an
+     environment: recreating the environment, repointing it at another host or directory, or
+     changing that host's PHP / OPcache configuration. Clear the environment's variable, deploy to
+     observe, and re-read the values before setting it again — after confirming the scope caveat
+     below, which can keep an environment enforcing even with its own variable cleared. The gate
+     cannot detect any of these.
+   - **Accepted risk** — defining a variable of this name at repository or organization scope
+     *within this repository*. GitHub documents that environment-level variables "won't overwrite
+     variables in the `env` and `vars` contexts", and this workflow reads `vars` into a job-level
+     `env`. A same-named variable at a broader scope therefore **shadows** the environment one, and
+     which way that fails depends entirely on the broader value:
+
+     | Broader-scope value | Result, whatever the environment says |
+     | --- | --- |
+     | absent | the environment's own value decides |
+     | `observe`, or naming another repository or environment | observing |
+     | exactly this repository, id, and environment | **enforcing** |
+
+     The last row is the dangerous one: clearing or unsetting the environment variable does **not**
+     return that environment to observing, so an environment can enforce without ever being
+     measured and a re-measurement cycle silently cannot start. Define this variable only on
+     environments, and delete any broader-scope one before relying on any procedure in this
+     section.
 
    - `observe` — the release identity and the runtime directives are probed and logged as
      warnings, but the deployment still succeeds on reachability and asset presence alone, judged
@@ -132,9 +185,36 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
      release identity is **not** yet verified.
    - `enforce` — identity and the OPcache precondition become success conditions and fail closed.
 
-   Roll it out per environment: deploy with `observe`, read the recorded values from the Develop
-   **and** Production workflow logs — one environment's directives never imply the other's, and
-   the CLI's never imply the web SAPI's — then switch to `enforce` in a follow-up commit.
+   Roll it out per environment, and note that this is not a one-time migration: a newly derived
+   application starts unmeasured, and so does any environment whose runtime changed under it.
+
+   Every step below assumes **no variable of this name exists at repository or organization
+   scope**. Confirm that first: while one does, it decides the stage for every environment it
+   names, so neither "deploy with the variable unset" nor "clear the variable" does what it says.
+   Read the first run's summary line rather than assuming an environment observes.
+
+   1. Deploy with the variable unset, so the environment observes.
+   2. Read the recorded values from that environment's workflow log. One environment's directives
+      never imply the other's, and the CLI's never imply the web SAPI's, so Develop and Production
+      are measured separately.
+   3. Confirm the environment served this deploy attempt's identity, that the OPcache payload
+      carried the current keys, and that `validateTimestamps` is true, `preloadConfigured` is
+      false, and `revalidateFrequency` is at most 60.
+   4. Set that environment's `RELEASE_IDENTITY_ENFORCEMENT` variable to
+      `enforce:<owner>/<repo>@<repository id>:<environment>` — this repository, its numeric id, and
+      this environment, such as `enforce:lefmarna/laravel-app-template@123456789:Production`
+      (Settings → Environments → the environment → Variables) — and deploy again, checking the job
+      summary line to confirm the run actually enforced. A rejected or mistargeted value is
+      reported by the run itself, and the error message prints the exact string this deployment
+      expects.
+
+   Setting the variable takes effect on the next run without a commit, and — with no broader-scope
+   variable present — clearing it returns the environment to observing. If a run's stage does not
+   match what the environment says, in either direction, look for a variable of the same name at
+   repository or organization scope and delete it: per GitHub's documented exception it shadows the
+   environment value in the `vars` context. A mistargeted broader value is reported by the run's
+   warning; one that happens to match this deployment is not distinguishable from a correct
+   environment setting, which is why the check is a precondition rather than a diagnosis.
 
    The URL comes from the per-environment `HEALTHCHECK_URL` GitHub secret (normally
    `https://<domain>/up`) and is URL-parser-validated before any remote change, so a missing

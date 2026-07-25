@@ -16,7 +16,7 @@ Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
 - **Prefer the template side**: template-origin hunks for common foundations such as auth, mail, and settings; scaffolding; test helpers; naming and coding conventions; library updates; generic UI primitive scaffolds; and testing-as-spec files (`docs/testing-as-spec.md`, template ADRs under `docs/adr/template/**`, architecture test scaffolds, `reusable-test.yml` / `mutation.yml` / `.github/actions/**`).
 - **Prefer the app side**: domain logic, custom UI components / design tokens, custom ViewModel / Service / Repository patterns, i18n and multilingual tests, app-specific routes/controllers, numbered App ADRs (`docs/adr/NNNN-*.md`, flat namespace), and `CONTEXT.md` (domain glossary; the template only provides the seed and the app owns it).
 - **Hybrid (`AGENTS.md`)**: keep template-aligned structure and operational rules such as Verification / Testing / Documentation, while preserving app-specific Project Context. Agent entry files (`CLAUDE.md` / `GEMINI.md`) stay one-line pointers aligned with the template.
-- **Hybrid (CI entry workflows)**: for `.github/workflows/check.yml` / `.github/workflows/quality.yml`, keep the shared `ci-lint` call structure aligned with the template and preserve app-specific steps such as additional frontend unit tests. For `.github/workflows/delivery.yml`, keep the shared deploy structure, ssh/retry hardening, Laravel internal excludes, in-flight drain step, release identity stamping, and fail-closed release health verification / withdrawal steps (the URL lives in each environment's `HEALTHCHECK_URL` secret, not in the file) aligned with the template, while preserving sibling-subdomain / server-layout `--exclude` values, the release-critical asset list, app-specific extra steps, the drain duration with its adjacent app rationale, and the `RELEASE_IDENTITY_ENFORCEMENT` value.
+- **Hybrid (CI entry workflows)**: for `.github/workflows/check.yml` / `.github/workflows/quality.yml`, keep the shared `ci-lint` call structure aligned with the template and preserve app-specific steps such as additional frontend unit tests. For `.github/workflows/delivery.yml`, keep the shared deploy structure, ssh/retry hardening, Laravel internal excludes, in-flight drain step, release identity stamping, and fail-closed release health verification / withdrawal steps (the URL lives in each environment's `HEALTHCHECK_URL` secret and the enforcement stage in its `RELEASE_IDENTITY_ENFORCEMENT` configuration variable, neither in the file) aligned with the template, while preserving sibling-subdomain / server-layout `--exclude` values, the release-critical asset list, app-specific extra steps, and the drain duration with its adjacent app rationale.
 - **Hybrid (`docs/infrastructure.md`)**: keep the shared XServer toolchain and deployment availability/recovery runbook aligned with the template, while preserving app-specific local ports, scheduled jobs, paths, and operational procedures.
 - **Hybrid (`docs/adr/README.md`)**: keep the ADR policy body aligned with the template and preserve the app-owned ADR index section such as `## App ADRs`.
 - **Hybrid (`mise.toml`)**: first consider promoting new tasks to the template. Allow app-side additions only for unavoidable project-specific workflows. When pulling from the template, avoid touching this file unless the shared command surface must change; if it must, review it together with `AGENTS.md` / `docs/commands.md`.
@@ -53,11 +53,40 @@ rejects an exhaustive manifest, because it turns every new file into a second pl
   clean install rather than merging them by hand.
 - **Calibration lines (app-priority)**: `--min` and `continue-on-error` with their immediately
   adjacent reason comments in `reusable-test.yml` / `mutation.yml`; `@pest-mutate-ignore`
-  annotation density; the `Drain in-flight requests` duration with its immediately adjacent app
-  rationale; and the `RELEASE_IDENTITY_ENFORCEMENT` value in `delivery.yml`, which records how far
-  that app's environments have progressed through the staged rollout in
-  [`TADR-0006`](../../../docs/adr/template/0006-planned-maintenance-deployments.md). The steps that
-  read these values are shared.
+  annotation density; and the `Drain in-flight requests` duration with its immediately adjacent app
+  rationale. The steps that read these values are shared.
+- **Not in any file**: the release identity enforcement stage lives in each GitHub Environment's
+  `RELEASE_IDENTITY_ENFORCEMENT` configuration variable, whose value names the repository and
+  environment it applies to (`enforce:<owner>/<repo>@<repository id>:Production`, the numeric id
+  because a renamed repository frees its slug for reuse); `delivery.yml` observes unless
+  the value names the repository and environment being deployed
+  ([`TADR-0006`](../../../docs/adr/template/0006-planned-maintenance-deployments.md)). Converge the
+  workflow's resolution expression with the template and never resolve a conflict by hardcoding a
+  stage: a committed `enforce` becomes the initial value for the next derived app and withdraws its
+  first healthy release. Because the value names the repository, it is app-specific data and is
+  never copied between repositories — an app that renamed its repository or environments must
+  update its own variable values.
+
+  **Migration, when the app's `delivery.yml` still carries an inline stage.** Earlier templates kept
+  `RELEASE_IDENTITY_ENFORCEMENT` in the file as a calibration line, so an app that already measured
+  an environment may hold `enforce` there and have no configuration variable yet. Taking the
+  template's expression in that state resolves to observing and silently disables the identity and
+  OPcache gates from the next deployment onward. Before resolving that conflict:
+
+  1. Record the inline value and which environments it covered.
+  2. Confirm no variable of this name exists at repository or organization scope, and delete it if
+     it does. Environment-level variables do not overwrite values already in the `vars` context, so
+     a broader-scope one shadows every environment value, and its content — not the environment's —
+     then decides the stage: a mistargeted value keeps observing, while one naming this deployment
+     enforces even where the environment variable is unset or cleared.
+  3. Set `enforce:<owner>/<repo>@<repository id>:<environment>` on each environment that was
+     already measured and enforcing.
+  4. Only then take the template's expression, and confirm the effective stage in the next
+     deployment's job summary.
+
+  If the environments were never measured, or their recorded stage was observing, drop the inline
+  value and leave the variables unset. Do not remove an inline `enforce` before its environment
+  variable exists.
 
 ## Arguments
 

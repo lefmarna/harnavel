@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -99,10 +100,26 @@ function stepRunScript(workflow: string, name: string): string {
   return lines.join('\n')
 }
 
+// 抽出した run block はランナーの書き込み先ファイルを継承してはならない。CI 上で
+// このテストを走らせると、テスト用の enforcement 値が lint ジョブの実サマリへ
+// 追記され、サマリで適用段階を確認する運用者を誤認させる。
+const RUNNER_WRITE_TARGETS = {
+  GITHUB_STEP_SUMMARY: '',
+  GITHUB_ENV: '',
+  GITHUB_OUTPUT: '',
+  GITHUB_PATH: '',
+} as const
+
 // GitHub Actions と同じ bash -e で実際に実行し、終了コードで許可 / 拒否を判定する。
-function runShellStep(script: string, env: Record<string, string>): number {
+// inherited は「ランナーから継承される環境」を再現するための注入口。RUNNER_WRITE_TARGETS が
+// 継承値を実際に打ち消していることを検証するために使う（既定は本物の process.env）。
+function runShellStep(
+  script: string,
+  env: Record<string, string>,
+  inherited: NodeJS.ProcessEnv = process.env,
+): number {
   const result = spawnSync('bash', ['-e', '-c', script], {
-    env: { ...process.env, ...env },
+    env: { ...inherited, ...RUNNER_WRITE_TARGETS, ...env },
     encoding: 'utf8',
   })
 
@@ -250,6 +267,53 @@ function main(): void {
   const verifyHealth = stepBlock(workflow, 'Verify release health')
   const withdrawRelease = stepBlock(workflow, 'Withdraw unhealthy release')
 
+  // 適用段階は各 GitHub Environment の設定変数が正典で、同名変数が上位スコープに無ければ
+  // 未設定は observe（上位にあると、その値の内容が段階を決める）。ファイルへ enforce を
+  // 焼き込むと、その値が新規派生アプリの初期値も兼ねてしまい、Web SAPI の OPcache 設定を
+  // 一度も測っていない環境が初回デプロイでいきなり fail closed になる
+  // （TADR-0006 の staged adoption はこれを防ぐためにある）。
+  // vars は organization / repository / environment をマージした結果で、スコープは式から
+  // 判別できない。値自身にリポジトリと環境名を名乗らせることで、上位スコープの 1 つの値が
+  // 他リポジトリの同名環境へ波及することを防ぐ。環境名だけでは organization スコープの
+  // enforce:Production が全派生アプリに効き、slug だけでは改名後に slug を再利用した
+  // 別アプリへ届く。再利用されない数値 ID まで含める。
+  assertMatches(
+    workflow,
+    /RELEASE_IDENTITY_ENFORCEMENT: \$\{\{ vars\.RELEASE_IDENTITY_ENFORCEMENT == format\('enforce:\{0\}@\{1\}:\{2\}', github\.repository, github\.repository_id, .+\) && 'enforce' \|\| 'observe' \}\}/,
+    'the enforcement stage must only resolve to enforce when the variable names this repository, its id, and this environment',
+  )
+  assertExcludes(
+    workflow,
+    'RELEASE_IDENTITY_ENFORCEMENT: enforce',
+    'the enforcement stage must never be hardcoded to enforce in the workflow file',
+  )
+
+  // 環境名の三項式が environment: と enforcement 式で食い違うと、どの環境でも
+  // enforce に解決できない（または誤った環境で解決する）。同一であることを固定する。
+  const environmentExpressions = [
+    ...workflow.matchAll(
+      /github\.ref_name == 'main' && '([^']+)' \|\| '([^']+)'/g,
+    ),
+  ].map((match) => `${match[1]}/${match[2]}`)
+
+  if (
+    environmentExpressions.length < 2 ||
+    new Set(environmentExpressions).size !== 1
+  ) {
+    throw new Error(
+      `The environment name expression must be identical in "environment:" and the enforcement expression, found: ${JSON.stringify(environmentExpressions)}`,
+    )
+  }
+
+  // 実効段階はファイルから読めず、上位スコープの同名変数に遮蔽されると Environment の
+  // 設定と食い違う（対象一致なら未設定でも enforce になる）。実行ごとに記録して、
+  // 「設定したつもりで効いていない」「解除したつもりで効いたまま」を両方検出できるようにする。
+  assertIncludes(
+    stepBlock(workflow, 'Validate deployment configuration'),
+    'GITHUB_STEP_SUMMARY',
+    'the effective enforcement stage must be recorded in the run summary',
+  )
+
   // 検証文字列の固定ではなく、Validate ステップの script を実際に実行して許可 / 拒否を
   // 確認する。curl が拒否する値（末尾改行・空白・範囲外ポート等）が Validate を通過すると、
   // サーバー更新と maintenance 解除の後の health check で初めて落ちて正常なリリースを
@@ -315,6 +379,32 @@ function main(): void {
         `Validate deployment configuration must reject ${JSON.stringify(url)}`,
       )
     }
+  }
+
+  // ランナーが渡す GITHUB_STEP_SUMMARY を継承したまま抽出スクリプトを実行すると、CI 上で
+  // このテストが lint ジョブの実サマリへテスト用の適用段階を書き込む。継承環境を明示的に
+  // 注入して、RUNNER_WRITE_TARGETS が実際にそれを打ち消していることを確かめる
+  // （env 引数で空文字を渡すだけでは、打ち消しが無くても通ってしまう）。
+  const summaryDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'lifecycle-summary-'),
+  )
+  const summaryPath = path.join(summaryDir, 'summary.md')
+
+  fs.writeFileSync(summaryPath, '')
+  runShellStep(
+    validateScript,
+    { ...validReleaseEnv, HEALTHCHECK_URL: 'https://example.com/up' },
+    { ...process.env, GITHUB_STEP_SUMMARY: summaryPath },
+  )
+
+  const leakedSummary = fs.readFileSync(summaryPath, 'utf8')
+
+  fs.rmSync(summaryDir, { force: true, recursive: true })
+
+  if (leakedSummary !== '') {
+    throw new Error(
+      `The extracted run block must not write to an inherited GITHUB_STEP_SUMMARY, found: ${JSON.stringify(leakedSummary)}`,
+    )
   }
 
   // Withdraw の if 条件は step outcome を参照する。id が欠けると参照が空に評価され、

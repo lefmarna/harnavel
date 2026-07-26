@@ -231,7 +231,17 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
    redirects fails verification and withdraws an otherwise healthy release. `.htaccess` and
    `.htaccess.develop` redirect all plain HTTP to HTTPS, which is why `http://` is rejected up
    front; a host that redirects (for example `www` when `www` redirects to the apex) cannot be
-   detected statically and is reported as a redirect hint when verification fails. The deploy
+   detected statically and is reported as a redirect hint when verification fails.
+
+   An environment whose document root is protected by Basic authentication — `.htaccess.develop`
+   does this in some applications — also needs the optional per-environment
+   `HEALTHCHECK_BASIC_AUTH` secret, in `user:pass` form. When it is set, all three probes send the
+   credential; when it is unset, none of them do, so leave it unset on environments without Basic
+   authentication. All three matter: the health endpoint, the built asset, and the release identity
+   endpoint all sit behind the same protection, and a single unauthenticated probe returns `401`,
+   which fails reachability and withdraws a healthy release even while observing. Do not put the
+   credential in `HEALTHCHECK_URL` — userinfo is rejected there — and it is never written to the
+   log; a run that keeps seeing `401` prints a hint to set this secret. The deploy
    attempt identity is validated in the same pre-remote step, because an empty expectation would
    match an empty response. The check retries across the server's file-cache revalidation window,
    so a release that has not propagated yet is retried rather than failed. When verification ends

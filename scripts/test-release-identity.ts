@@ -984,6 +984,9 @@ describe('デプロイ設定の検証', () => {
       '',
       'observe',
       'enforce:owner/app@123456789:Production',
+      // GitHub の Environment 名に空白制約は無い。`Pre Production` のような名前でも
+      // 解決式は enforce を返すため、検証がそれより厳しくてはならない。
+      'enforce:owner/app@123456789:Pre Production',
     ]) {
       assert.equal(
         (
@@ -1013,6 +1016,13 @@ describe('デプロイ設定の検証', () => {
       'enforce:owner/app@123456789:',
       'Enforce:owner/app@123456789:Production',
       'on',
+      // repository id は数値でなければならない。非数値を通すと「改名で空いた slug の
+      // 再利用を数値 ID で塞ぐ」という設計が成立しない。
+      'enforce:owner/app@abc:Production',
+      // 余分な ":" 区切りを通すと、意図と違う環境名を名乗る値が well-formed に見える。
+      'enforce:owner/app@123456789:Production:extra',
+      // 末尾空白付きは == 比較に一致せず静かに observe へ落ちる。typo として弾く。
+      'enforce:owner/app@123456789:Production ',
     ]) {
       assert.notEqual(
         (

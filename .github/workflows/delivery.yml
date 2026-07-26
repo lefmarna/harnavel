@@ -120,13 +120,21 @@ jobs:
 
           # 生の設定値の形式を検証する。解決後の値は式が observe / enforce のどちらかに
           # 畳んでしまうため、typo は「静かに observe」になり切り替え忘れと区別できない。
-          case "${RELEASE_IDENTITY_ENFORCEMENT_SETTING:-}" in
-            '' | observe | enforce:?*/?*@?*:?*) ;;
-            *)
-              echo "RELEASE_IDENTITY_ENFORCEMENT must be unset, 'observe', or 'enforce:<owner>/<repo>@<repository id>:<environment>' (for this deployment: 'enforce:${GITHUB_REPOSITORY:-<owner>/<repo>}@${GITHUB_REPOSITORY_ID:-<repository id>}:${DEPLOY_ENVIRONMENT:-<environment>}'). It names the repository and environment it applies to because GitHub merges organization, repository, and environment variables into one context and the scope cannot be recovered here. The numeric repository id is included because a renamed repository frees its slug for reuse." >&2
-              exit 1
-              ;;
-          esac
+          # glob の case では非数値の repository id・余分な ":" 区切り・末尾空白を取りこぼし、
+          # 「well-formed 以外はリモート変更前に失敗する」という文書上の契約と食い違うため、
+          # 他の2つの検証と同じく厳密な正規表現で判定する。
+          # 環境名セグメントは内部の空白を許す: GitHub の Environment 名に空白制約は無く
+          # （255 文字・大小無視・リポジトリ内一意のみ）、`Pre Production` のような名前を
+          # 使うアプリで解決式が enforce を返す値をこの検証だけが弾いてはならない。
+          # 検証は解決式より厳しくしない。弾くのは前後の空白と余分な ":" 区切りだけ。
+          node -e '
+            const setting = process.env.RELEASE_IDENTITY_ENFORCEMENT_SETTING ?? ""
+            const wellFormed = /^enforce:[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+@[1-9][0-9]*:[^\s:](?:[^:]*[^\s:])?$/
+            process.exit(setting === "" || setting === "observe" || wellFormed.test(setting) ? 0 : 1)
+          ' || {
+            echo "RELEASE_IDENTITY_ENFORCEMENT must be unset, 'observe', or 'enforce:<owner>/<repo>@<repository id>:<environment>' (for this deployment: 'enforce:${GITHUB_REPOSITORY:-<owner>/<repo>}@${GITHUB_REPOSITORY_ID:-<repository id>}:${DEPLOY_ENVIRONMENT:-<environment>}'). The repository id must be numeric, and no extra ':' segment or surrounding whitespace is allowed. It names the repository and environment it applies to because GitHub merges organization, repository, and environment variables into one context and the scope cannot be recovered here. The numeric repository id is included because a renamed repository frees its slug for reuse." >&2
+            exit 1
+          }
 
           # 解決後の値の多層防御。以降のステップはこの値だけを読む。
           case "$RELEASE_IDENTITY_ENFORCEMENT" in

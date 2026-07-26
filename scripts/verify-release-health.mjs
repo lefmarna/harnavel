@@ -29,6 +29,22 @@ export const MAX_ATTEMPTS = 10
 export const RETRY_INTERVAL_MS = 15_000
 export const PROBE_TIMEOUT_MS = 30_000
 
+/**
+ * 終了前に stdout/stderr の送出を待つ上限。ここで待ち続けると健全なリリースが
+ * withdraw されるため、drain は必ず打ち切れるようにする。
+ */
+export const DRAIN_TIMEOUT_MS = 2_000
+
+/**
+ * 書き込み済みデータが送出されるまで待つ。空書き込みのコールバックは順序保証により
+ * 先行する書き込みが片付いた後に発火する。
+ */
+function drainStream(stream) {
+  return new Promise((resolve) => {
+    stream.write('', () => resolve())
+  })
+}
+
 /** オリジンは / ・ ? ・ # の手前まで。query / fragment は Validate 済みだが多層防御。 */
 export function originOf(healthcheckUrl) {
   const match = /^(https?:\/\/[^/?#]+)/.exec(healthcheckUrl)
@@ -421,8 +437,19 @@ if (
   process.argv[1] !== undefined &&
   import.meta.url === `file://${process.argv[1]}`
 ) {
+  const exitCode = await main()
+
   // 明示的に終了する。fetch は keep-alive の接続をプールに残すため、判定が出た後も
-  // プロセスが生きたまま数秒〜無期限に居座り得る。POSIX のパイプ宛て stdout は
-  // 同期書き込みなので、ここで exit しても出力は欠けない。
-  process.exit(await main())
+  // プロセスが生きたまま数秒〜無期限に居座り得る（process.exitCode に変えると再発する）。
+  // ただし process.exit() は未送出の stdout/stderr を切り捨てる。パイプ宛ての書き込みが
+  // 同期かどうかはプラットフォーム依存なので前提にできず、observe の証跡（OPcache 実測値）
+  // を落とすと enforce へ切り替える判断材料が失われる。明示的に drain してから終了する。
+  // drain 自体では止まらない: ここで固まると健全なリリースが withdraw されるため、
+  // 上限を設けて打ち切る。
+  await Promise.race([
+    Promise.all([drainStream(process.stdout), drainStream(process.stderr)]),
+    new Promise((resolve) => setTimeout(resolve, DRAIN_TIMEOUT_MS)),
+  ])
+
+  process.exit(exitCode)
 }

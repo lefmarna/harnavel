@@ -147,11 +147,24 @@ export function opcacheVerdict(snapshot, max = MAX_REVALIDATE_FREQUENCY) {
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
+ * Basic 認証ヘッダー。develop のようにディレクトリ全体が保護された環境では、
+ * **3プローブすべて**に付ける必要がある。1つでも欠けると 401 になり、observe でも
+ * 到達性を満たせずに健全なリリースが withdraw される。
+ * 資格情報はヘッダーにだけ載せ、ログ・エラー文には出さない。
+ */
+function basicAuthHeaders(basicAuth) {
+  return basicAuth === ''
+    ? {}
+    : { Authorization: `Basic ${Buffer.from(basicAuth).toString('base64')}` }
+}
+
+/**
  * ステータスだけが必要なプローブ。ネットワーク失敗は 'unreachable' に落とす。
  */
-async function probeStatus(fetchImpl, url) {
+async function probeStatus(fetchImpl, url, headers = {}) {
   try {
     const response = await fetchImpl(url, {
+      headers,
       redirect: 'manual',
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     })
@@ -177,10 +190,10 @@ async function probeStatus(fetchImpl, url) {
  * リリースプローブ。中間キャッシュが返した旧リリースの応答を同一性の証拠にしない。
  * ネットワーク失敗は curl の `printf '\n000'` と同じく status 000 / 本文なしにする。
  */
-async function probeRelease(fetchImpl, url) {
+async function probeRelease(fetchImpl, url, headers = {}) {
   try {
     const response = await fetchImpl(url, {
-      headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+      headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache', ...headers },
       redirect: 'manual',
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     })
@@ -215,6 +228,7 @@ function parseReleaseBody(body) {
  * @returns {Promise<{ok: boolean, message: string}>}
  */
 export async function verifyReleaseHealth({
+  basicAuth = '',
   enforcement,
   fetchImpl = fetch,
   healthcheckUrl,
@@ -244,6 +258,7 @@ export async function verifyReleaseHealth({
   const origin = originOf(healthcheckUrl)
   const assetUrl = `${origin}/build/${selectAsset(manifest)}`
   const releaseUrl = `${origin}/up/release`
+  const authHeaders = basicAuthHeaders(basicAuth)
 
   // リモートへの書き込みはすべて完了している。ここを基点に再検証期限を数える。
   const settleFrom = now()
@@ -258,10 +273,10 @@ export async function verifyReleaseHealth({
   let lastSnapshotJson = ''
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    appStatus = await probeStatus(fetchImpl, healthcheckUrl)
+    appStatus = await probeStatus(fetchImpl, healthcheckUrl, authHeaders)
 
-    const assetStatus = await probeStatus(fetchImpl, assetUrl)
-    const release = await probeRelease(fetchImpl, releaseUrl)
+    const assetStatus = await probeStatus(fetchImpl, assetUrl, authHeaders)
+    const release = await probeRelease(fetchImpl, releaseUrl, authHeaders)
     const parsed = parseReleaseBody(release.body)
 
     observedRelease = parsed.observedRelease
@@ -386,6 +401,13 @@ export async function verifyReleaseHealth({
     )
   }
 
+  // develop のように Basic 認証で保護された環境では、secret 未設定だと全プローブが 401 になる。
+  if (appStatus === '401') {
+    logError(
+      'the health endpoint required authentication; set the HEALTHCHECK_BASIC_AUTH environment secret to user:pass for a Basic-auth protected environment such as develop',
+    )
+  }
+
   if (observedRelease !== releaseId) {
     logError(
       `the deployed release did not serve its own identity: expected ${releaseId}, last observed ${observedRelease || 'none'}`,
@@ -415,6 +437,9 @@ export async function main({ env = process.env, readFile } = {}) {
       : RETRY_INTERVAL_MS
 
   const result = await verifyReleaseHealth({
+    // 資格情報は URL へ埋め込めない（Validate が userinfo 付き URL を拒否する）。
+    // Basic 認証で保護された環境だけが設定する任意の secret。
+    basicAuth: env.HEALTHCHECK_BASIC_AUTH ?? '',
     enforcement: env.RELEASE_IDENTITY_ENFORCEMENT ?? '',
     healthcheckUrl: env.HEALTHCHECK_URL ?? '',
     manifest,

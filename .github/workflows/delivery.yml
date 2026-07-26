@@ -408,6 +408,10 @@ jobs:
         id: verify-release-health
         env:
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          # Basic 認証で保護された環境（develop など）だけが設定する任意の secret。
+          # 資格情報は URL へ埋め込めないため（Validate が userinfo 付き URL を拒否する）、
+          # 別の secret として渡し、3プローブすべてに付与する。未設定なら無認証のまま。
+          HEALTHCHECK_BASIC_AUTH: ${{ secrets.HEALTHCHECK_BASIC_AUTH }}
         run: node scripts/verify-release-health.mjs
 
       # 検証が success で終わらなかったリリース（失敗だけでなく手動キャンセルも含む）を

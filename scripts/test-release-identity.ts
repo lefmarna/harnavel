@@ -177,12 +177,16 @@ function statusAt(
 }
 
 interface Stub {
+  appRequestHeaders: http.IncomingHttpHeaders[]
+  assetRequestHeaders: http.IncomingHttpHeaders[]
   close: () => Promise<void>
   origin: string
   releaseRequestHeaders: http.IncomingHttpHeaders[]
 }
 
 async function startStub(options: StubOptions): Promise<Stub> {
+  const appRequestHeaders: http.IncomingHttpHeaders[] = []
+  const assetRequestHeaders: http.IncomingHttpHeaders[] = []
   const releaseRequestHeaders: http.IncomingHttpHeaders[] = []
   let appRequests = 0
   let assetRequests = 0
@@ -214,6 +218,7 @@ async function startStub(options: StubOptions): Promise<Stub> {
     }
 
     if (url.startsWith('/build/')) {
+      assetRequestHeaders.push(request.headers)
       response
         .writeHead(statusAt(options.assetStatus, assetRequests))
         .end('asset')
@@ -222,6 +227,7 @@ async function startStub(options: StubOptions): Promise<Stub> {
       return
     }
 
+    appRequestHeaders.push(request.headers)
     response.writeHead(statusAt(options.appStatus, appRequests)).end('up')
     appRequests += 1
   })
@@ -239,6 +245,8 @@ async function startStub(options: StubOptions): Promise<Stub> {
         server.closeAllConnections()
         server.close((error) => (error ? reject(error) : resolve()))
       }),
+    appRequestHeaders,
+    assetRequestHeaders,
     origin: `http://127.0.0.1:${address.port}`,
     releaseRequestHeaders,
   }
@@ -271,14 +279,17 @@ after(() => {
 })
 
 interface VerifyOptions extends StubOptions {
+  basicAuth?: string
   enforcement?: string
   releaseId?: string
 }
 
-async function verifyReleaseHealth(
-  options: VerifyOptions,
-): Promise<
-  ShellResult & { releaseRequestHeaders: http.IncomingHttpHeaders[] }
+async function verifyReleaseHealth(options: VerifyOptions): Promise<
+  ShellResult & {
+    appRequestHeaders: http.IncomingHttpHeaders[]
+    assetRequestHeaders: http.IncomingHttpHeaders[]
+    releaseRequestHeaders: http.IncomingHttpHeaders[]
+  }
 > {
   const stub = await startStub(options)
 
@@ -293,11 +304,19 @@ async function verifyReleaseHealth(
         RELEASE_HEALTH_RETRY_MS: '250',
         RELEASE_ID: options.releaseId ?? VALID_RELEASE_ID,
         RELEASE_IDENTITY_ENFORCEMENT: options.enforcement ?? 'enforce',
+        // 未指定でもキーを省かない。省くと親プロセスの export 値が子へ残り、
+        // 「未設定」ケースが環境依存で落ちて資格情報が assert 差分に出る。
+        HEALTHCHECK_BASIC_AUTH: options.basicAuth ?? '',
       },
       verifyWorkspace,
     )
 
-    return { ...result, releaseRequestHeaders: stub.releaseRequestHeaders }
+    return {
+      ...result,
+      appRequestHeaders: stub.appRequestHeaders,
+      assetRequestHeaders: stub.assetRequestHeaders,
+      releaseRequestHeaders: stub.releaseRequestHeaders,
+    }
   } finally {
     await stub.close()
   }
@@ -401,6 +420,78 @@ describe('リリース健全性検証', () => {
 
     assert.equal(result.status, 1)
     assert.equal(result.releaseRequestHeaders.length, 0)
+  })
+
+  // develop のようにディレクトリ全体が Basic 認証で保護された環境では、3プローブすべてに
+  // 認証が要る。1つでも欠けると 401 になり、observe でも到達性を満たせず健全なリリースが
+  // withdraw される（派生アプリの develop が実際にこの構成）。
+  it('Basic認証secretを設定すると3プローブすべてに認証ヘッダーを付ける', async () => {
+    const result = await verifyReleaseHealth({
+      basicAuth: 'deploy:s3cret',
+      releaseResponses: [{ release: VALID_RELEASE_ID, status: 200 }],
+    })
+    const expected = `Basic ${Buffer.from('deploy:s3cret').toString('base64')}`
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.appRequestHeaders[0]?.authorization, expected)
+    assert.equal(result.assetRequestHeaders[0]?.authorization, expected)
+    assert.equal(result.releaseRequestHeaders[0]?.authorization, expected)
+  })
+
+  it('Basic認証secretが未設定なら認証ヘッダーを送らない', async () => {
+    const result = await verifyReleaseHealth({
+      releaseResponses: [{ release: VALID_RELEASE_ID, status: 200 }],
+    })
+
+    assert.equal(result.appRequestHeaders[0]?.authorization, undefined)
+    assert.equal(result.assetRequestHeaders[0]?.authorization, undefined)
+    assert.equal(result.releaseRequestHeaders[0]?.authorization, undefined)
+  })
+
+  // 親プロセスが HEALTHCHECK_BASIC_AUTH を export している環境でも結果を変えない。
+  // 継承を許すと「未設定」ケースが実環境依存で落ち、assert の差分に Base64 化した
+  // 実資格情報が出力され得る（RUNNER_WRITE_TARGETS と同じ隔離方針）。
+  it('親環境のBasic認証値を継承しない', async () => {
+    const previous = process.env.HEALTHCHECK_BASIC_AUTH
+
+    process.env.HEALTHCHECK_BASIC_AUTH = 'inherited:leaked'
+
+    try {
+      const result = await verifyReleaseHealth({
+        releaseResponses: [{ release: VALID_RELEASE_ID, status: 200 }],
+      })
+
+      assert.equal(result.appRequestHeaders[0]?.authorization, undefined)
+      assert.equal(result.assetRequestHeaders[0]?.authorization, undefined)
+      assert.equal(result.releaseRequestHeaders[0]?.authorization, undefined)
+    } finally {
+      if (previous === undefined) {
+        delete process.env.HEALTHCHECK_BASIC_AUTH
+      } else {
+        process.env.HEALTHCHECK_BASIC_AUTH = previous
+      }
+    }
+  })
+
+  it('資格情報をログへ出さない', async () => {
+    const result = await verifyReleaseHealth({
+      appStatus: 401,
+      basicAuth: 'deploy:s3cret',
+      releaseResponses: [{ release: VALID_RELEASE_ID, status: 401 }],
+    })
+
+    assert.doesNotMatch(result.stdout, /s3cret/)
+    assert.doesNotMatch(result.stderr, /s3cret/)
+  })
+
+  it('401が続く場合はBasic認証secretの設定を促す', async () => {
+    const result = await verifyReleaseHealth({
+      appStatus: 401,
+      releaseResponses: [{ release: VALID_RELEASE_ID, status: 401 }],
+    })
+
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /HEALTHCHECK_BASIC_AUTH/)
   })
 
   it('リリースエンドポイントへのリクエストがキャッシュ無効化ヘッダーを送る', async () => {
@@ -935,6 +1026,9 @@ describe('デプロイ設定の検証', () => {
         HEALTHCHECK_URL: 'https://example.com/up',
         RELEASE_ID: VALID_RELEASE_ID,
         RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
+        // 親プロセスの export 値を子へ残さない。省くと「設定変数なし」のケースが
+        // 実環境依存で落ちる（HEALTHCHECK_BASIC_AUTH と同じ隔離方針）。
+        RELEASE_IDENTITY_ENFORCEMENT_SETTING: '',
         ...env,
       },
       ROOT,

@@ -327,7 +327,9 @@ export async function verifyReleaseHealth({
       elapsed >= settleSeconds
     ) {
       return {
-        message: `release health check passed (app 200, built asset 200, release ${releaseId} serving, opcache ${opcacheState}, settled ${elapsed}s)`,
+        // 判定結果（safe:0）は「拡張なし」「無効」「有効かつ freq=0」を区別できないため、
+        // enforce へ切り替える前の証跡には実測値そのものが要る（TADR-0006 の段階導入）。
+        message: `release health check passed (app 200, built asset 200, release ${releaseId} serving, opcache ${opcacheState}, values ${firstSnapshot}, settled ${elapsed}s)`,
         ok: true,
       }
     }

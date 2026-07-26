@@ -552,6 +552,27 @@ describe('OPcacheゲート（enforce）', () => {
     assert.match(result.stdout, /settled \d+s/)
   })
 
+  // observe 段の目的は「enforce へ切り替える前に Web SAPI の実測値を記録する」こと（TADR-0006）。
+  // 判定結果 safe:0 は「拡張が無い」「無効」「有効かつ freq=0」を区別できないため、証跡には
+  // ならない。成功時こそ実測値そのものをログへ残す（失敗時だけ出しても記録目的を満たさない）。
+  it('成功ログにOPcacheの実測値そのものを含める', async () => {
+    const result = await verifyReleaseHealth({
+      enforcement: 'observe',
+      releaseResponses: [
+        {
+          opcache: snapshot({ revalidateFrequency: 0 }),
+          release: VALID_RELEASE_ID,
+          status: 200,
+        },
+      ],
+    })
+
+    assert.equal(result.status, 0, result.stderr)
+    assert.match(result.stdout, /"validateTimestamps":true/)
+    assert.match(result.stdout, /"preloadConfigured":false/)
+    assert.match(result.stdout, /"revalidateFrequency":0/)
+  })
+
   // 応答スキーマを変更したデプロイでは、旧バイトコードが旧IDと旧形式で応答し得る。
   // 期待IDを返していない応答でゲートを適用すると、切り替わりを待たずに即失敗してしまう。
   it('旧形式の応答が旧IDを返す間はリトライし、期待IDの応答が届けば成功する', async () => {

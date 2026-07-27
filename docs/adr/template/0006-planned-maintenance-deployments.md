@@ -35,7 +35,9 @@ only PHP core functions through temporary files and same-directory renames.
 **Response during maintenance.** Return 503 and terminate before autoload for every request: static
 JSON when the client prefers JSON, static HTML whenever the client accepts HTML, including Inertia
 XHR visits that combine an HTML `Accept` header with `X-Requested-With`. Do not inherit Laravel's
-maintenance exclusions or bypass behavior for a planned deployment.
+maintenance exclusions or bypass behavior for a planned deployment. The responder runs from
+`public/index.php`, so requests the web server resolves directly from an existing file or directory
+never reach it — see the accepted risk below.
 
 **Ordering.** After the standalone response is active and before destructive rsync, wait a bounded,
 app-calibrated drain interval exceeding the longest synchronous request; shared hosting cannot count
@@ -185,6 +187,17 @@ Operational procedure, per-environment rollout, and recovery live in
 - A failed or manually cancelled deployment may remain fully unavailable until rerun or manual
   recovery. `/up` intentionally returns 503 during deployment, so health monitoring observes the
   planned outage rather than a misleading success.
+- Static assets the web server resolves directly — hashed build files, `manifest.webmanifest`,
+  images — bypass the front-controller responder, because the maintenance response is loaded by
+  `public/index.php` and the `.htaccess` front-controller rewrite only applies to paths that are not
+  an existing file or directory. During the rsync `--delete` window such a request can transiently
+  return 404 or serve a mismatched hashed chunk to an already-loaded SPA tab. This is an accepted
+  risk because the exposure is bounded to asset skew, never a mixed combination of application
+  code, dependencies, caches, or schema. It is not self-healing: a failed lazy chunk raises Vite's
+  `vite:preloadError` and rethrows, and no handler here reloads on it, so that tab stays broken
+  until the user reloads — after which it receives the planned 503. Serving every path through the
+  responder would require a maintenance-gated web-server rewrite and is deferred with the
+  atomic-release design; an automatic reload handler would be a separate frontend decision.
 - The three guarantees must not be conflated. Release identity covers only this: a PHP response
   produced by a front controller compiled from this deploy attempt's bytes returned this attempt's
   identifier. It does not prove every deployed PHP file is fresh, does not prove every FastCGI

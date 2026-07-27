@@ -240,11 +240,23 @@ jobs:
           echo "post-deploy ssh failed after 3 attempts" >&2
           exit 1
 
+      # Web SAPI の OPcache はファイル更新を opcache.revalidate_freq 秒に一度しか見に行かない。
+      # rsync 直後は旧バイトコードが応答し得るので、migrate 済みの新スキーマに対して旧コードが
+      # 走る窓ができる。**必ず maintenance 解除より前にここで待つ**: 解除後に待つと、その窓に
+      # 実ユーザーのリクエストが入る（計画503が守っているのは解除までの区間だけ）。
+      # 10 秒は XServer 実測（revalidate_freq = 2）に対する余裕込みの値で、アプリ較正ではない。
+      # 受入条件は revalidate_freq <= 10（docs/infrastructure.md の OPcache Revalidation）。
+      # 検証側は解除直後にそのまま probe する（scripts/verify-release-health.mjs は待たない）。
+      - name: Wait for OPcache revalidation
+        run: sleep 10
+
       # 「maintenance 解除をこれから試行する」事実を no-op の成功として記録する。
       # Withdraw unhealthy release は解除ステップ自体の outcome ではなくこのマーカーを
       # 条件にする。リモートで artisan up とファイル削除が完了した直後に SSH 切断や
       # キャンセルが起きると、サイトは公開済みでも解除ステップの outcome は
       # failure / cancelled になり、成功条件では未検証リリースが取り残されるため。
+      # settle をこのマーカーより前に置くのは、待機中のキャンセルで maintenance を
+      # そのまま維持するため（マーカー以降のキャンセルは withdraw 経路に入る）。
       - name: Mark maintenance lift attempt
         id: maintenance-lift-attempt
         run: echo "maintenance lift will be attempted; an unverified release is withdrawn from here on"
@@ -279,8 +291,8 @@ jobs:
       #   2. アセット存在 — 今回の manifest が参照するビルド済みアセットが配信される
       #      （/up は @vite を読まないため、アセット欠落は /up の 200 だけでは検出できない）
       # どちらのプローブも「今回のリリースが応答した」ことまでは示さない。Web SAPI の OPcache が
-      # 旧バイトコードを返している間も両方 200 になり得るため、最初のプローブ前に再検証窓
-      # （SETTLE_MS）を待つ。この前提は docs/infrastructure.md の手順で実測・確認する。
+      # 旧バイトコードを返している間も両方 200 になり得る。その窓は maintenance 解除より前の
+      # Wait for OPcache revalidation で閉じてあるので、ここは待たずに即座に測る。
       # 判定・リトライの詳細は scripts/verify-release-health.mjs と TADR-0006。
       # このスクリプトは依存を持たない: deploy ジョブは pnpm install も setup-node もしない。
       # 失敗・キャンセル時の maintenance への引き戻しは次の Withdraw unhealthy release が担う。

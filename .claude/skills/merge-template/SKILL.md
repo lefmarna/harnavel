@@ -42,6 +42,8 @@ rejects an exhaustive manifest, because it turns every new file into a second pl
   deletion: do not resurrect them, and delete any `RELEASE_IDENTITY_ENFORCEMENT` variable left on an
   environment. Verification is now two probes, so an app carrying a `/up/release` route or a
   release-identity literal in `public/index.php` drops both in the same merge.
+  **Delete this entry once every derived application has taken the deletion** — it exists only to
+  stop a merge from restoring files the template no longer has, and becomes archaeology after that.
 - **Hybrid even though the tree suggests one side owns it**: `public/index.php` (the Laravel
   bootstrap is template-origin; app additions stay), and
   `tests/Feature/Architecture/ArchTest.php` (template rules converge, app rules accumulate — the

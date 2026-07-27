@@ -172,7 +172,6 @@ async function verifyReleaseHealth(options: VerifyOptions): Promise<
       {
         HEALTHCHECK_URL: `${stub.origin}/up`,
         RELEASE_HEALTH_RETRY_MS: '250',
-        RELEASE_HEALTH_SETTLE_MS: '0',
         // 未指定でもキーを省かない。省くと親プロセスの export 値が子へ残り、
         // 「未設定」ケースが環境依存で落ちて資格情報が assert 差分に出る。
         HEALTHCHECK_BASIC_AUTH: options.basicAuth ?? '',
@@ -201,35 +200,19 @@ describe('リリース健全性検証', () => {
     assert.equal(result.status, 0, result.stderr)
   })
 
-  // Web SAPI の OPcache は opcache.revalidate_freq 秒に一度しかファイル更新を見ない。
-  // rsync 直後に測ると、旧バイトコードが /up に 200 を返し、アセットは PHP を経由せず
-  // 200 を返すため、両プローブが揃っても旧リリースが応答している可能性がある。
-  // post-deploy シーケンスの所要時間には下限保証が無いので、明示的に待つ。
-  it('最初のプローブ前に再検証窓を待つ', async () => {
-    const stub = await startStub({})
-    const settleMs = 400
+  // OPcache の再検証待ちは delivery.yml の `Wait for OPcache revalidation` が maintenance
+  // 解除より前に行う。ここで待ち直すと、計画503が明けた後の無防備な区間が延びるだけになる。
+  // 解除直後の最初の probe は即座に投げる契約を、実時間で固定する。
+  it('解除後の最初のプローブを待機なしで投げる', async () => {
     const startedAt = Date.now()
+    const result = await verifyReleaseHealth({})
+    const elapsed = Date.now() - startedAt
 
-    try {
-      const result = await runShellStep(
-        `node ${JSON.stringify(VERIFY_SCRIPT_PATH)}`,
-        {
-          HEALTHCHECK_URL: `${stub.origin}/up`,
-          RELEASE_HEALTH_RETRY_MS: '0',
-          RELEASE_HEALTH_SETTLE_MS: String(settleMs),
-          HEALTHCHECK_BASIC_AUTH: '',
-        },
-        verifyWorkspace,
-      )
-
-      assert.equal(result.status, 0, result.stderr)
-      assert.ok(
-        Date.now() - startedAt >= settleMs,
-        'the first probe was issued before the revalidation window elapsed',
-      )
-    } finally {
-      await stub.close()
-    }
+    assert.equal(result.status, 0, result.stderr)
+    assert.ok(
+      elapsed < 5_000,
+      `the first probe must not be delayed by a settle wait, took ${elapsed}ms`,
+    )
   })
 
   // 揃った時点で打ち切らないと、健全なリリースでも 10 回 × 15 秒を待つ。
@@ -381,7 +364,6 @@ describe('HTTP契約', () => {
         {
           HEALTHCHECK_URL: `http://127.0.0.1:${port}/up`,
           RELEASE_HEALTH_RETRY_MS: '0',
-          RELEASE_HEALTH_SETTLE_MS: '0',
         },
         workspace,
       )
@@ -414,7 +396,6 @@ describe('HTTP契約', () => {
         {
           HEALTHCHECK_URL: `${stub.origin}/up`,
           RELEASE_HEALTH_RETRY_MS: '0',
-          RELEASE_HEALTH_SETTLE_MS: '0',
         },
         verifyWorkspace,
       )
@@ -460,7 +441,6 @@ describe('本文転送の完了確認', () => {
         {
           HEALTHCHECK_URL: `http://127.0.0.1:${port}/up`,
           RELEASE_HEALTH_RETRY_MS: '0',
-          RELEASE_HEALTH_SETTLE_MS: '0',
         },
         verifyWorkspace,
       )

@@ -35,10 +35,10 @@ Calibration stays inline in the pulled file. A calibration whose in-file value w
 newly derived application is the one case where that fails — the template cannot simultaneously hold
 a correct runtime value for its own environments and a safe initial value for a new app — and such a
 value belongs in per-environment configuration instead, with the workflow defaulting to the safe
-setting when none is supplied. No current calibration needs this: the release identity enforcement
-stage was the only one, and it went away with the gate it configured (see
-[`TADR-0006`](0006-planned-maintenance-deployments.md)). Reach for it only when a value genuinely
-carries both roles, because configuration outside the file cannot be reviewed in the diff.
+setting when none is supplied. **No current calibration needs this**, and none should be introduced
+casually: configuration outside the file cannot be reviewed in the diff, and each such value becomes
+a manual step every environment must complete before it can deploy. Reach for it only when a value
+genuinely carries both roles at once.
 
 The operational path classification and conflict-resolution procedure live in
 `/merge-template` and `/absorb-from-apps`; this ADR records the decision model only.

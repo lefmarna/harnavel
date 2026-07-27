@@ -14,18 +14,9 @@ export const MAX_ATTEMPTS = 10
 export const RETRY_INTERVAL_MS = 15_000
 export const PROBE_TIMEOUT_MS = 30_000
 
-/**
- * 最初のプローブ前に必ず待つ時間。Web SAPI の OPcache はファイル更新を
- * `opcache.revalidate_freq` 秒に一度しか見に行かないため、rsync 直後は旧バイトコードが
- * 応答し得る。到達性もアセットも旧リリースで 200 になり得る（アセットは PHP を経由せず、
- * /up は旧リリースにも存在する）ので、プローブ自体はこのズレを検出できない。
- *
- * post-deploy シーケンス（composer install → キャッシュ再構築 → migrate → SSH）は実測上
- * これより遥かに長いが、その所要時間には下限の保証が無い。ここで明示的に待つことで、
- * 保証を「たまたま長い処理があること」から「revalidate_freq がこの値以下であること」へ
- * 移す。後者は docs/infrastructure.md の手順で実測・確認できる（実測値は 2 秒）。
- */
-export const SETTLE_MS = 10_000
+// OPcache の再検証待ちはここではなく delivery.yml の `Wait for OPcache revalidation` が行う。
+// maintenance 解除より前に待つ必要があるため（解除後に待つと、旧バイトコードと新スキーマが
+// 組み合わさる窓へ実ユーザーのリクエストが入る）。解除後の最初の probe は即座に実行する。
 
 /**
  * 終了前に stdout/stderr の送出を待つ上限。ここで待ち続けると健全なリリースが
@@ -127,16 +118,11 @@ export async function verifyReleaseHealth({
   healthcheckUrl,
   logError = (line) => console.error(line),
   manifest,
-  settle = () => defaultSleep(SETTLE_MS),
   sleep = defaultSleep,
 }) {
   const origin = originOf(healthcheckUrl)
   const assetUrl = `${origin}/build/${selectAsset(manifest)}`
   const authHeaders = basicAuthHeaders(basicAuth)
-
-  // OPcache の再検証窓を跨いでから測る。最初の 200/200 で即成功すると、旧バイトコードが
-  // 新しいスキーマに対して応答している最中でも green になり得る。
-  await settle()
 
   let appStatus = ''
 
@@ -188,17 +174,15 @@ export async function main({ env = process.env, readFile } = {}) {
   const read = readFile ?? (await import('node:fs')).readFileSync
   const manifest = JSON.parse(read(manifestPath, 'utf8'))
 
-  // 待機時間の上書きは契約テスト専用。実 CLI をそのまま回して settle と 10 回 × 15 秒を
+  // リトライ間隔の上書きは契約テスト専用。実 CLI をそのまま回して 10 回 × 15 秒を
   // 待たずに済ませるためだけにあり、デプロイでは設定しない（既定が正典）。
-  const readDuration = (name, fallback) => {
-    const override = Number(env[name])
-
-    return env[name] !== undefined && Number.isFinite(override) && override >= 0
+  const override = Number(env.RELEASE_HEALTH_RETRY_MS)
+  const interval =
+    env.RELEASE_HEALTH_RETRY_MS !== undefined &&
+    Number.isFinite(override) &&
+    override >= 0
       ? override
-      : fallback
-  }
-  const interval = readDuration('RELEASE_HEALTH_RETRY_MS', RETRY_INTERVAL_MS)
-  const settleMs = readDuration('RELEASE_HEALTH_SETTLE_MS', SETTLE_MS)
+      : RETRY_INTERVAL_MS
 
   const result = await verifyReleaseHealth({
     // 資格情報は URL へ埋め込めない（Validate が userinfo 付き URL を拒否する）。
@@ -206,7 +190,6 @@ export async function main({ env = process.env, readFile } = {}) {
     basicAuth: env.HEALTHCHECK_BASIC_AUTH ?? '',
     healthcheckUrl: env.HEALTHCHECK_URL ?? '',
     manifest,
-    settle: () => defaultSleep(settleMs),
     sleep: () => defaultSleep(interval),
   })
 

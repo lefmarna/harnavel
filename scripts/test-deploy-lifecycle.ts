@@ -192,6 +192,31 @@ function main(): void {
     'Run Post-Deploy Commands',
     'Disable maintenance mode',
   )
+  // OPcache の再検証待ちは maintenance 解除より前でなければ意味を成さない。解除後に待つと、
+  // 旧バイトコードと migrate 済みの新スキーマが組み合わさる窓へ実ユーザーのリクエストが入る。
+  // 計画503が守っているのは解除までの区間だけ。
+  assertOrdered(
+    workflow,
+    'Run Post-Deploy Commands',
+    'Wait for OPcache revalidation',
+  )
+  assertOrdered(
+    workflow,
+    'Wait for OPcache revalidation',
+    'Disable maintenance mode',
+  )
+  // マーカーより前に置くのは、待機中のキャンセルで maintenance を維持するため。
+  // マーカー以降のキャンセルは withdraw 経路に入る。
+  assertOrdered(
+    workflow,
+    'Wait for OPcache revalidation',
+    'Mark maintenance lift attempt',
+  )
+  assertMatches(
+    stepBlock(workflow, 'Wait for OPcache revalidation'),
+    /\brun:\s*sleep [1-9]\d*\b/,
+    'positive OPcache revalidation settle',
+  )
 
   const enableMaintenance = stepBlock(workflow, 'Enable maintenance mode')
   const drainInFlight = stepBlock(workflow, 'Drain in-flight requests')

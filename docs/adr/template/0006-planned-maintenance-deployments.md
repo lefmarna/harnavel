@@ -65,24 +65,29 @@ applications, and environments without such protection leave it unset.
 in July 2026 across three environments — two production domains and one develop subdomain, spanning
 two independent applications. Every environment reported `opcache.validate_timestamps = 1` and
 `opcache.revalidate_freq = 2` with no application preload.
-Verification therefore waits a fixed settle interval before its first probe, rather than reading the
-directives back per run or gating on them. The wait is what makes the guarantee checkable: an
-environment whose revalidation interval is at or below the settle interval has necessarily
-revalidated by the time any `200` is observed, so a release identity gate would be checking a
-question the clock has already answered. The measured 2 seconds sits well under it.
+The deployment therefore waits a fixed settle interval **after the post-deploy commands and before
+maintenance is lifted**, rather than reading the directives back per run or gating on them. The
+position is the substance of this decision, not an implementation detail: the planned 503 only
+covers the window up to the lift, so waiting afterwards would let real requests into exactly the
+combination the wait exists to prevent — previous bytecode against the migrated schema. Waiting
+while the 503 is still up removes the window instead of observing it, and the first probe after the
+lift then runs immediately. The wait also precedes the recorded lift attempt, so a cancellation
+during it leaves maintenance in place rather than entering withdrawal.
 
 The condition is exactly that — `validate_timestamps` on, no preload, and a revalidation interval at
 or below the settle interval — and nothing weaker. In particular, "the post-deployment sequence runs
 longer than the revalidation window" is not a substitute, however reliably true it looks: nothing
-bounds that sequence from below, so it cannot carry a fail-closed guarantee. The measurement
-procedure — a one-file PHP probe that reads `ini_get()` values, deployed to a non-guessable filename
-and deleted immediately — is documented in `docs/infrastructure.md` for re-measurement after hosting
-changes.
+bounds that sequence from below, so it cannot carry a fail-closed guarantee.
 
-This holds only while the measurement holds. Re-measure after changing the PHP version, the OPcache
-configuration, or the hosting provider; an environment that has not been measured is unknown, not
-covered. An environment above the settle interval needs a longer wait or a different runtime, and a
-runtime that never revalidates needs a different decision here, because waiting cannot repair it.
+The condition is treated as a property of the hosting platform, established once, rather than a
+per-application prerequisite. Requiring every application to measure every environment before its
+first deployment would reintroduce the manual per-environment gating this decision removed, for a
+value that is set by the platform and was identical across every environment measured. Re-measuring
+belongs to the events that can move it — leaving the platform, changing the PHP version, a
+`.user.ini` appearing in the document root, or old behaviour surviving a green deployment — and the
+procedure lives in [`docs/infrastructure.md`](../../infrastructure.md). An environment above the
+settle interval needs a longer wait or a different runtime, and a runtime that never revalidates
+needs a different decision here, because waiting cannot repair it.
 
 **Withdrawal.** Withdraw a release whose verification did not end in success — persistent failure or
 manual cancellation — by re-running the standalone installer from a separate step gated on a
@@ -156,12 +161,13 @@ Operational procedure, per-environment rollout, and recovery live in
 - Verification proves that *a* release answers and that the deployed manifest's asset is served, not
   that *this* deployment's bytecode produced the response. Nothing in the workflow observes release
   identity any more; the guarantee rests on the environment's revalidation interval being at or below
-  the settle interval verification waits. If it is not, the deployment reports success while the
+  the settle interval waited before the lift. If it is not, the deployment reports success while the
   previous release serves — and it does so silently, because the only signal is the symptom (old
   behaviour after a green deployment). The runbook in
   [`docs/infrastructure.md`](../../infrastructure.md) exists to establish and re-check that bound.
-- Every deployment pays the settle interval, whether or not the environment needs it. That is the
-  price of not measuring the directives per run.
+- Every deployment pays the settle interval inside its planned 503 window, whether or not the
+  environment needs it. That is the price of not measuring the directives per run, and it lengthens
+  the planned outage rather than exposing traffic.
 - Verification requires a per-environment canonical HTTPS health URL, parser-validated before any
   remote change so a missing or unusable value cannot strand the site in maintenance. The probes do
   not follow redirects, because following them would let an absent build asset resolve to some other

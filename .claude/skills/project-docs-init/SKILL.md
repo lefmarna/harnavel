@@ -131,23 +131,11 @@ per-environment GitHub settings the first deployment needs, for Develop and Prod
   authentication. Both verification probes then send it; without it they receive 401 and a healthy
   release is withdrawn.
 
-Also tell the user to **measure each environment's web SAPI OPcache directives** before relying on
-the deployment, following "OPcache Revalidation Measurement" in `docs/infrastructure.md`, and to
-record the values in that file's table. Release verification proves that *a* release answers, not
-that *this* deployment's bytecode does
-([`TADR-0006`](../../../docs/adr/template/0006-planned-maintenance-deployments.md)). It closes that
-gap by sleeping `SETTLE_MS` (`scripts/verify-release-health.mjs`) before its first probe, so an
-environment is only covered when all three hold:
-
-- `opcache.validate_timestamps = 1`
-- no `opcache.preload`
-- `opcache.revalidate_freq` at or below `SETTLE_MS`
-
-Do not substitute "the post-deploy sequence takes longer than the window" — nothing bounds that
-duration from below, so it cannot carry the guarantee. An environment failing any of the three
-accepts the previous release's `200` while the new schema is already migrated, and nothing in the
-workflow detects it. Treat an unmeasured environment as unknown, not as covered by the template's
-baseline.
+No OPcache measurement is required to start deploying. The deployment waits out the revalidation
+window while the planned 503 is still up, and XServer's default configuration is a measured platform
+assumption rather than a per-application prerequisite (see "OPcache Revalidation Measurement" in
+`docs/infrastructure.md`). Point the user at that section only if the environment leaves XServer,
+changes PHP version, gains a `.user.ini`, or shows old behaviour after a green deployment.
 
 ## Step 7: Review and Verify
 

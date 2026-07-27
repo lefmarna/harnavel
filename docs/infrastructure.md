@@ -191,37 +191,42 @@ OPcache configuration, or hosting provider.
 | Directive | Required value | Rationale |
 | --- | --- | --- |
 | `validate_timestamps` | `1` (On) | Without timestamp validation, stale bytecode persists until the process exits |
-| `revalidate_freq` | ≤ `SETTLE_MS` in `scripts/verify-release-health.mjs` (10 s) | Verification waits exactly that long before its first probe |
+| `revalidate_freq` | ≤ the `sleep` in `Wait for OPcache revalidation` (10 seconds) | The deployment waits exactly that long, while the planned 503 is still up |
 | `preload` | empty / unset | Preloaded code is never re-checked against timestamps |
 
-The `revalidate_freq` threshold is not a judgement call: verification sleeps `SETTLE_MS` before
-probing, so any environment at or below that value has already revalidated by the time the first
-`200` is observed. The baseline below is 2 seconds against a 10-second wait.
+Both sides of the `revalidate_freq` row are seconds. Raising one means raising the other: the wait
+must cover the interval, or the release is published before the runtime has re-read it.
 
 Do not lean on the post-deploy sequence instead. It runs far longer than the window in practice —
 `composer install`, three cache rebuilds, `migrate`, and an SSH round trip — but nothing bounds it
 from below, so it cannot carry the guarantee.
 
-An environment above the threshold fails silently: both probes answer `200` from the previous
-release's bytecode while the new schema is already migrated, and the workflow reports success. If
-you measure one, raise `SETTLE_MS` to cover it or move the environment to a runtime that revalidates
-promptly — do not simply record the value.
+An environment above the threshold fails silently: maintenance lifts while the previous release's
+bytecode is still resident, both probes answer `200`, and the workflow reports success while old
+code runs against the migrated schema.
 
-### Baseline (July 2026)
+### The platform assumption (measured July 2026)
 
-Three XServer environments — two production domains and one develop subdomain, across two
-independent applications — all reported `cgi-fcgi`, PHP 8.5.5, `validate_timestamps=1`,
-`revalidate_freq=2`, and no preload. Every value clears the acceptance criteria above with room to
-spare, which is why the deployment waits the settle interval instead of gating on these directives
-per run.
+**XServer's default configuration satisfies the criteria above.** Three environments — two
+production domains and one develop subdomain, across two independent applications — all reported
+`cgi-fcgi`, PHP 8.5.5, `validate_timestamps=1`, `revalidate_freq=2`, and no preload.
 
-This is the template's baseline, not a statement about your environments. Record this application's
-own measurements below when you take them, one row per environment, and treat an unmeasured
-environment as unknown rather than as covered by the baseline.
+This is a property of the hosting platform, not of any one application, so it is **not** a
+per-application prerequisite. A newly derived application deploys on this assumption without
+measuring anything first.
 
-| Environment | Date | SAPI | PHP | validate_timestamps | revalidate_freq | preload |
-| --- | --- | --- | --- | --- | --- | --- |
-| _(none recorded yet)_ | | | | | | |
+Re-measure when the assumption itself could have moved:
+
+- the environment leaves XServer, or moves to a different plan or server
+- the domain's PHP version changes
+- a `.user.ini` lands in the document root — `delivery.yml` excludes it from rsync, so it is
+  server-side state the repository never sees and can override these directives
+- the symptom appears: old behaviour after a green deployment
+
+There is no automatic check, and adding one is not cheap: the directives differ between the CLI and
+the web SAPI, so a per-run check would have to serve the web runtime's own configuration over HTTP
+from the deployed application. [`TADR-0006`](adr/template/0006-planned-maintenance-deployments.md)
+weighs that against a measured platform assumption and takes the assumption.
 
 ## Troubleshooting
 

@@ -7,6 +7,7 @@ namespace App\Services\Observability;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -198,34 +199,20 @@ class ProductionExceptionNotifier
         return is_string($webhookUrl) && $webhookUrl !== '' ? $webhookUrl : null;
     }
 
+    // config/observability.php が env を型付きで正規化済みのため、既定値とキャストはそこに一本化する。
     private function deduplicationSeconds(): int
     {
-        // config/observability.php が既定値を持つため、第二引数の数値差分は通常到達しない。
-        // @pest-mutate-ignore: DecrementInteger,IncrementInteger
-        $seconds = config('observability.discord.deduplication_seconds', 300);
-
-        // config は mixed 由来で Larastan のため cast を維持するが、実設定値では runtime 上等価。
-        return is_numeric($seconds) ? (int) $seconds : 300; // @pest-mutate-ignore: RemoveIntegerCast,TernaryNegated,DecrementInteger,IncrementInteger
+        return Config::integer('observability.discord.deduplication_seconds');
     }
 
     private function discordTimeout(): float
     {
-        // config/observability.php が既定値を持つため、第二引数の数値差分は通常到達しない。
-        // @pest-mutate-ignore: DecrementFloat,IncrementFloat
-        $timeout = config('observability.discord.timeout', 2.0);
-
-        // config は mixed 由来で Larastan のため cast を維持するが、実設定値では runtime 上等価。
-        return is_numeric($timeout) ? (float) $timeout : 2.0; // @pest-mutate-ignore: RemoveDoubleCast,TernaryNegated,DecrementFloat,IncrementFloat
+        return Config::float('observability.discord.timeout');
     }
 
     private function discordConnectTimeout(): float
     {
-        // config/observability.php が既定値を持つため、第二引数の数値差分は通常到達しない。
-        // @pest-mutate-ignore: DecrementFloat,IncrementFloat
-        $timeout = config('observability.discord.connect_timeout', 1.0);
-
-        // config は mixed 由来で Larastan のため cast を維持するが、実設定値では runtime 上等価。
-        return is_numeric($timeout) ? (float) $timeout : 1.0; // @pest-mutate-ignore: RemoveDoubleCast,TernaryNegated,DecrementFloat,IncrementFloat
+        return Config::float('observability.discord.connect_timeout');
     }
 
     private function userAgent(?Request $request): ?string

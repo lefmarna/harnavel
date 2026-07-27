@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { getInitials } from './use-initials'
+import { getInitials } from './initials'
 
 describe('イニシャル生成', function () {
   it('姓と名から両方の頭文字を大文字で返す', function () {
@@ -22,6 +22,12 @@ describe('イニシャル生成', function () {
 
   it('語の間に空白が連続する場合も最初と最後の頭文字を返す', function () {
     assert.equal(getInitials('taro   yamada'), 'TY')
+  })
+
+  // 区切りは半角スペースに限らない。タブや改行を含む表示名でも語として分割する。
+  it('タブや改行区切りでも最初と最後の頭文字を返す', function () {
+    assert.equal(getInitials('taro\tyamada'), 'TY')
+    assert.equal(getInitials('john\nronald\treuel tolkien'), 'JT')
   })
 
   it('空文字の場合は空文字を返す', function () {

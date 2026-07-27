@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/tooltip'
 import { UserMenuContent } from '@/components/user-menu-content'
 import { useCurrentUrl } from '@/hooks/use-current-url'
-import { useInitials } from '@/hooks/use-initials'
+import { getInitials } from '@/lib/initials'
 import { cn, toUrl } from '@/lib/utils'
 import { dashboard } from '@/routes'
 import type { BreadcrumbItem, NavItem, SharedData } from '@/types'
@@ -67,7 +67,6 @@ const activeItemStyles =
 export function AppHeader({ breadcrumbs = [] }: Props) {
   const page = usePage<SharedData>()
   const { auth } = page.props
-  const getInitials = useInitials()
   const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl()
   const user = auth.user
 

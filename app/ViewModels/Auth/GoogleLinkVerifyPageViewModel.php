@@ -25,8 +25,11 @@ final readonly class GoogleLinkVerifyPageViewModel extends PageViewModel
      */
     public function toInertiaProperties(RenderContext $context): array
     {
-        $isSuccess = $this->status === 'success';
-        $isConfirm = $this->status === 'confirm';
+        [$title, $description] = match ($this->status) {
+            'success' => ['Googleログイン連携完了', 'Googleログイン連携が完了しました。'],
+            'confirm' => ['Googleログイン連携の確認', 'Googleログイン連携を確認してください。'],
+            default => ['Googleログイン連携エラー', 'Googleログイン連携に失敗しました。'],
+        };
 
         $props = [
             'status' => $this->status,
@@ -40,14 +43,7 @@ final readonly class GoogleLinkVerifyPageViewModel extends PageViewModel
             $props['email'] = $this->email;
         }
 
-        $props['seo'] = $this->noIndexSeo(
-            $isSuccess
-                ? 'Googleログイン連携完了'
-                : ($isConfirm ? 'Googleログイン連携の確認' : 'Googleログイン連携エラー'),
-            $isSuccess
-                ? 'Googleログイン連携が完了しました。'
-                : ($isConfirm ? 'Googleログイン連携を確認してください。' : 'Googleログイン連携に失敗しました。'),
-        );
+        $props['seo'] = $this->noIndexSeo($title, $description);
 
         return $props;
     }

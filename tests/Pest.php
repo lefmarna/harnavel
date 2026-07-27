@@ -78,3 +78,19 @@ function assertInertiaShape(AssertableInertia $page, string $component, array $k
 
     return $page;
 }
+
+/**
+ * リポジトリ直下の設定ファイルから、指定プレフィックスで始まる行を trim して返す。
+ *
+ * 「設定ファイルにこの一行が残っていること」を固定する制約テスト用。
+ */
+function settingLine(string $relativePath, string $prefix): ?string
+{
+    $contents = file_get_contents(base_path($relativePath));
+
+    expect($contents)->not->toBeFalse();
+
+    return collect(explode("\n", (string) $contents))
+        ->map(fn (string $line): string => trim($line))
+        ->first(fn (string $line): bool => str_starts_with($line, $prefix));
+}

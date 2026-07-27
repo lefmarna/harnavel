@@ -39,14 +39,10 @@ arch('ドメイン層はコントローラに依存しない')
     ->expect('App\Http\Controllers')
     ->not->toBeUsedIn(['App\Services', 'App\Repositories', 'App\Models', 'App\Params', 'App\ViewModels']);
 
-arch('Params は readonly class である')
+arch('Params は final readonly class で Params サフィックスを持つ')
     ->expect('App\Params')
     ->classes()
-    ->toBeReadonly();
-
-arch('Params は final class で Params サフィックスを持つ')
-    ->expect('App\Params')
-    ->classes()
+    ->toBeReadonly()
     ->toBeFinal()
     ->toHaveSuffix('Params');
 

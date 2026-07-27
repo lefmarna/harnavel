@@ -7,10 +7,9 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Support\GoogleOAuth;
-use App\ViewModels\Auth\ForgotPasswordPageViewModel;
 use App\ViewModels\Auth\LoginPageViewModel;
 use App\ViewModels\Auth\ResetPasswordPageViewModel;
-use App\ViewModels\Auth\VerifyEmailPageViewModel;
+use App\ViewModels\Auth\StatusPageViewModel;
 use App\ViewModels\StaticPageViewModel;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -23,14 +22,6 @@ use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
-
     /**
      * Bootstrap any application services.
      */
@@ -80,7 +71,7 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render(
             'auth/forgot-password',
-            new ForgotPasswordPageViewModel(
+            new StatusPageViewModel(
                 title: 'パスワードをお忘れの方',
                 description: 'メールアドレスを入力してパスワード再設定リンクを受け取ります。',
                 status: $this->sessionString($request, 'status'),
@@ -89,7 +80,7 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render(
             'auth/verify-email',
-            new VerifyEmailPageViewModel(
+            new StatusPageViewModel(
                 title: 'メール認証',
                 description: 'メールアドレスの認証を完了してください。',
                 status: $this->sessionString($request, 'status'),

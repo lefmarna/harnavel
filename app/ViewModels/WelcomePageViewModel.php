@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\ViewModels;
 
+use Illuminate\Support\Facades\Config;
 use Inertia\RenderContext;
 
 final readonly class WelcomePageViewModel extends PageViewModel
@@ -20,11 +21,9 @@ final readonly class WelcomePageViewModel extends PageViewModel
      */
     public function toInertiaProperties(RenderContext $context): array
     {
-        $description = config('app.description');
-
         return [
             'canRegister' => $this->canRegister,
-            'seo' => $this->basicSeo('ホーム', is_string($description) ? $description : ''),
+            'seo' => $this->basicSeo('ホーム', Config::string('app.description')),
         ];
     }
 }

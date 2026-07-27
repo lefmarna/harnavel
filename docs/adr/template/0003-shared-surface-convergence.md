@@ -31,14 +31,14 @@ The bounded in-flight request drain in `delivery.yml` follows the same rule: its
 shared, while its duration and adjacent rationale are calibrated to each app's longest synchronous
 request.
 
-Calibration normally stays inline in the pulled file. The exception is a calibration whose in-file
-value would also seed a newly derived application: the template cannot simultaneously hold a
-correct runtime value for its own environments and a safe initial value for an unmeasured app. Such
-a value moves to per-environment configuration, with the workflow defaulting to the safe setting
-when no configuration supplies one. Because the platform resolves such configuration through a
-single merged lookup, this only holds while the name is defined at one scope; keeping it there is
-part of adopting the exception. The release identity enforcement stage in `delivery.yml` is the
-only current case (see [`TADR-0006`](0006-planned-maintenance-deployments.md)).
+Calibration stays inline in the pulled file. A calibration whose in-file value would also seed a
+newly derived application is the one case where that fails — the template cannot simultaneously hold
+a correct runtime value for its own environments and a safe initial value for a new app — and such a
+value belongs in per-environment configuration instead, with the workflow defaulting to the safe
+setting when none is supplied. No current calibration needs this: the release identity enforcement
+stage was the only one, and it went away with the gate it configured (see
+[`TADR-0006`](0006-planned-maintenance-deployments.md)). Reach for it only when a value genuinely
+carries both roles, because configuration outside the file cannot be reviewed in the diff.
 
 The operational path classification and conflict-resolution procedure live in
 `/merge-template` and `/absorb-from-apps`; this ADR records the decision model only.
@@ -62,7 +62,7 @@ The operational path classification and conflict-resolution procedure live in
 
 - Shared tests and the production code they specify move together: a stricter shared test is
   upstreamed only with implementation that keeps the template green.
-- App-specific calibration normally remains visible in the app's workflow files instead of being
-  hidden behind external defaults. Where the exception above applies, the value is deliberately
-  outside the file and its resolved setting is echoed to the run log and step summary, so the
-  effective calibration stays observable per run rather than in the diff.
+- App-specific calibration remains visible in the app's workflow files instead of being hidden
+  behind external defaults. Should the exception above ever apply again, the value would sit outside
+  the file, so the workflow must echo its resolved setting to the run log to keep the effective
+  calibration observable per run rather than in the diff.

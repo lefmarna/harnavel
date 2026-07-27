@@ -7,27 +7,25 @@
 // - リダイレクトを追従しない（redirect: 'manual'）。追従すると、欠落したビルドアセットが
 //   別の 200 応答へ解決してアセット検証が骨抜きになる。
 // - 各プローブに 30 秒のタイムアウト。
-// - リリースプローブだけキャッシュ無効化ヘッダーを送る。
 // - ネットワーク失敗はセンチネル（unreachable / 000）へ落として**リトライを継続**する。
 //   例外を投げると、一過性の DNS / TLS 失敗で検証全体が即死する。
-// - 10 回 × 15 秒、OPcache の settle 判定、observe の「いずれかの試行で 2 プローブが
-//   揃えば成功」を維持する。
-
-/** app/Support/ReleaseVerification.php の MAX_REVALIDATE_FREQUENCY と一致させる。 */
-export const MAX_REVALIDATE_FREQUENCY = 60
-
-/** OpcacheRevalidation::toArray() が返すキー。構造そのものが版の証拠になる。 */
-export const REQUIRED_OPCACHE_KEYS = [
-  'extensionLoaded',
-  'enabled',
-  'validateTimestamps',
-  'revalidateFrequency',
-  'preloadConfigured',
-]
 
 export const MAX_ATTEMPTS = 10
 export const RETRY_INTERVAL_MS = 15_000
 export const PROBE_TIMEOUT_MS = 30_000
+
+/**
+ * 最初のプローブ前に必ず待つ時間。Web SAPI の OPcache はファイル更新を
+ * `opcache.revalidate_freq` 秒に一度しか見に行かないため、rsync 直後は旧バイトコードが
+ * 応答し得る。到達性もアセットも旧リリースで 200 になり得る（アセットは PHP を経由せず、
+ * /up は旧リリースにも存在する）ので、プローブ自体はこのズレを検出できない。
+ *
+ * post-deploy シーケンス（composer install → キャッシュ再構築 → migrate → SSH）は実測上
+ * これより遥かに長いが、その所要時間には下限の保証が無い。ここで明示的に待つことで、
+ * 保証を「たまたま長い処理があること」から「revalidate_freq がこの値以下であること」へ
+ * 移す。後者は docs/infrastructure.md の手順で実測・確認できる（実測値は 2 秒）。
+ */
+export const SETTLE_MS = 10_000
 
 /**
  * 終了前に stdout/stderr の送出を待つ上限。ここで待ち続けると健全なリリースが
@@ -78,77 +76,11 @@ export function selectAsset(manifest) {
   return first.file
 }
 
-/** キー順に依存しない比較のための正規化（jq -S 相当）。 */
-export function canonicalJson(value) {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonicalJson).join(',')}]`
-  }
-
-  if (value !== null && typeof value === 'object') {
-    return `{${Object.keys(value)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
-      .join(',')}}`
-  }
-
-  return JSON.stringify(value) ?? 'null'
-}
-
-export function hasCurrentSchema(snapshot) {
-  return (
-    snapshot !== null &&
-    typeof snapshot === 'object' &&
-    !Array.isArray(snapshot) &&
-    REQUIRED_OPCACHE_KEYS.every((key) => key in snapshot)
-  )
-}
-
-/**
- * 現行スキーマの payload だけを判定する。戻り値は `safe:<秒>` / `invalid`。
- * 「待てば直る」以外はすべて invalid（fail closed）。
- */
-export function opcacheVerdict(snapshot, max = MAX_REVALIDATE_FREQUENCY) {
-  if (snapshot.extensionLoaded === false) {
-    return 'safe:0'
-  }
-
-  if (snapshot.extensionLoaded !== true) {
-    return 'invalid'
-  }
-
-  if (snapshot.enabled === false) {
-    return 'safe:0'
-  }
-
-  if (snapshot.enabled !== true) {
-    return 'invalid'
-  }
-
-  if (snapshot.validateTimestamps !== true) {
-    return 'invalid'
-  }
-
-  // preload されたコードはプロセス終了までタイムスタンプ再検証の対象外になる。
-  if (snapshot.preloadConfigured !== false) {
-    return 'invalid'
-  }
-
-  if (typeof snapshot.revalidateFrequency !== 'number') {
-    return 'invalid'
-  }
-
-  if (snapshot.revalidateFrequency < 0 || snapshot.revalidateFrequency > max) {
-    return 'invalid'
-  }
-
-  return `safe:${snapshot.revalidateFrequency}`
-}
-
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * Basic 認証ヘッダー。develop のようにディレクトリ全体が保護された環境では、
- * **3プローブすべて**に付ける必要がある。1つでも欠けると 401 になり、observe でも
+ * **2プローブすべて**に付ける必要がある。1つでも欠けると 401 になり、
  * 到達性を満たせずに健全なリリースが withdraw される。
  * 資格情報はヘッダーにだけ載せ、ログ・エラー文には出さない。
  */
@@ -187,212 +119,44 @@ async function probeStatus(fetchImpl, url, headers = {}) {
 }
 
 /**
- * リリースプローブ。中間キャッシュが返した旧リリースの応答を同一性の証拠にしない。
- * ネットワーク失敗は curl の `printf '\n000'` と同じく status 000 / 本文なしにする。
- */
-async function probeRelease(fetchImpl, url, headers = {}) {
-  try {
-    const response = await fetchImpl(url, {
-      headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache', ...headers },
-      redirect: 'manual',
-      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
-    })
-
-    return { body: await response.text(), status: String(response.status) }
-  } catch {
-    return { body: '', status: '000' }
-  }
-}
-
-function parseReleaseBody(body) {
-  let parsed
-
-  try {
-    parsed = JSON.parse(body)
-  } catch {
-    return { observedRelease: '', snapshot: undefined }
-  }
-
-  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return { observedRelease: '', snapshot: undefined }
-  }
-
-  return {
-    observedRelease: typeof parsed.release === 'string' ? parsed.release : '',
-    // キーの有無で「観測できなかった」と「旧形式だった」を区別する。
-    snapshot: 'opcache' in parsed ? parsed.opcache : undefined,
-  }
-}
-
-/**
  * @returns {Promise<{ok: boolean, message: string}>}
  */
 export async function verifyReleaseHealth({
   basicAuth = '',
-  enforcement,
   fetchImpl = fetch,
   healthcheckUrl,
   logError = (line) => console.error(line),
-  logInfo = (line) => console.log(line),
   manifest,
-  now = () => Date.now(),
-  releaseId,
+  settle = () => defaultSleep(SETTLE_MS),
   sleep = defaultSleep,
 }) {
-  if (!releaseId) {
-    return {
-      message:
-        '::error::RELEASE_ID is required; an empty expectation would match an empty response',
-      ok: false,
-    }
-  }
-
-  if (enforcement !== 'observe' && enforcement !== 'enforce') {
-    return {
-      message:
-        "::error::RELEASE_IDENTITY_ENFORCEMENT must be 'observe' or 'enforce'",
-      ok: false,
-    }
-  }
-
   const origin = originOf(healthcheckUrl)
   const assetUrl = `${origin}/build/${selectAsset(manifest)}`
-  const releaseUrl = `${origin}/up/release`
   const authHeaders = basicAuthHeaders(basicAuth)
 
-  // リモートへの書き込みはすべて完了している。ここを基点に再検証期限を数える。
-  const settleFrom = now()
-  let firstSnapshot = ''
-  // observe の成功判定は「いずれかの試行で到達性とアセットが揃った」ことに固定する。
-  // 最後の試行だけを見ると、一度健全と観測した後の一過性の 5xx で、旧仕様なら成功して
-  // いたリリースを maintenance へ引き戻してしまう。
-  let reachableAttempt = 0
+  // OPcache の再検証窓を跨いでから測る。最初の 200/200 で即成功すると、旧バイトコードが
+  // 新しいスキーマに対して応答している最中でも green になり得る。
+  await settle()
+
   let appStatus = ''
-  let observedRelease = ''
-  let opcacheState = 'unobserved'
-  let lastSnapshotJson = ''
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    // 経過判定はこの試行の**開始時刻**で行う。3プローブは逐次なので、開始時点が settle
-    // 期限を過ぎていれば3つとも期限後に開始したことになる。3プローブ後の時刻で判定すると、
-    // 期限前に旧リリースが返した /up の 200 を到達性の証拠に流用でき、期限後の新リリースの
-    // /up を一度も確認しないまま成功してしまう（アセット取得が期限をまたぐ場合に発生）。
-    const attemptStartedAt = now()
-
     appStatus = await probeStatus(fetchImpl, healthcheckUrl, authHeaders)
-
     const assetStatus = await probeStatus(fetchImpl, assetUrl, authHeaders)
-    const release = await probeRelease(fetchImpl, releaseUrl, authHeaders)
-    const parsed = parseReleaseBody(release.body)
 
-    observedRelease = parsed.observedRelease
-
-    const schemaCurrent = hasCurrentSchema(parsed.snapshot)
-    const snapshotJson =
-      parsed.snapshot === undefined ? '' : canonicalJson(parsed.snapshot)
-
-    lastSnapshotJson = snapshotJson
-
-    if (parsed.snapshot === undefined) {
-      // 旧リリースにはこのエンドポイントが無い。まだ切り替わっていないだけなので待つ。
-      opcacheState = 'unobserved'
-    } else if (!schemaCurrent) {
-      // opcache キーはあるが現行スキーマの必須キーを欠く。旧バイトコードが新IDだけ読んで
-      // 旧形式を返した状態であり得るので、ゲートを適用せず切り替わりを待つ。
-      opcacheState = 'unrecognized-schema'
-    } else {
-      opcacheState = opcacheVerdict(parsed.snapshot)
-    }
-
-    // 今回のリリースの実行環境を語れるのは「今回のIDを返し、かつ現行スキーマの payload
-    // を持つ応答」だけ。リリースIDは index.php の定数由来なので旧バイトコードでも新IDを
-    // 返し得るが、opcache payload の構造は生成元バイトコードそのものなので、構造が現行
-    // なら opcache を判定・firstSnapshot 化してよい。ID一致でも構造が古い/欠ける応答は
-    // 「まだ切り替わっていない」とみなしリトライする。
-    // そうしないと、この応答形式を変更するたびに初回デプロイが即失敗する。
-    let authoritative = false
-
-    if (schemaCurrent && observedRelease === releaseId) {
-      authoritative = true
-
-      if (firstSnapshot !== '' && snapshotJson !== firstSnapshot) {
-        // 実行単位ごとに設定が異なるなら、環境が均一であることを証明できない。
-        opcacheState = 'inconsistent'
-      } else {
-        firstSnapshot = snapshotJson
-      }
-    }
-
-    let settleSeconds = 0
-
-    if (authoritative) {
-      if (opcacheState.startsWith('safe:')) {
-        settleSeconds = Number(opcacheState.slice('safe:'.length))
-      } else if (enforcement === 'enforce') {
-        return {
-          message: `::error::the web runtime cannot guarantee release identity (${opcacheState}); OPcache must revalidate timestamps within ${MAX_REVALIDATE_FREQUENCY}s without preloading application code: ${snapshotJson}`,
-          ok: false,
-        }
-      } else {
-        logError(
-          `::warning::observe mode: the web runtime cannot guarantee release identity (${opcacheState}); record this before switching RELEASE_IDENTITY_ENFORCEMENT to enforce: ${snapshotJson}`,
-        )
-      }
-    }
-
-    const elapsed = Math.floor((attemptStartedAt - settleFrom) / 1000)
-    // observe では、同一性を保証できない構成の 503 応答も観測結果として受け入れる。
-    const releaseObserved =
-      release.status === '200' ||
-      (enforcement === 'observe' &&
-        release.status === '503' &&
-        observedRelease !== '')
-
-    if (
-      appStatus === '200' &&
-      assetStatus === '200' &&
-      reachableAttempt === 0
-    ) {
-      reachableAttempt = attempt
-    }
-
-    if (
-      appStatus === '200' &&
-      assetStatus === '200' &&
-      releaseObserved &&
-      authoritative &&
-      elapsed >= settleSeconds
-    ) {
+    if (appStatus === '200' && assetStatus === '200') {
       return {
-        // 判定結果（safe:0）は「拡張なし」「無効」「有効かつ freq=0」を区別できないため、
-        // enforce へ切り替える前の証跡には実測値そのものが要る（TADR-0006 の段階導入）。
-        message: `release health check passed (app 200, built asset 200, release ${releaseId} serving, opcache ${opcacheState}, values ${firstSnapshot}, settled ${elapsed}s)`,
+        message: `release health check passed (app 200, built asset 200)`,
         ok: true,
       }
     }
 
     logError(
-      `health check attempt ${attempt}: app=${appStatus} asset=${assetStatus} (${assetUrl}) release=${release.status}/${observedRelease || 'none'} expected=${releaseId} opcache=${opcacheState} settle=${elapsed}s/${settleSeconds}s`,
+      `health check attempt ${attempt}: app=${appStatus} asset=${assetStatus} (${assetUrl})`,
     )
 
     if (attempt < MAX_ATTEMPTS) {
       await sleep(RETRY_INTERVAL_MS)
-    }
-  }
-
-  // observe は導入前に実測値を記録するための段階。リリース同一性はまだ成功条件に
-  // 含めない: 新エンドポイントは旧バイトコードの裏に隠れて現れないことがあり
-  // （validate_timestamps=Off ではまさにその状態）、ここで失敗させると測る前に
-  // 健全なリリースを計画503へ引き戻してしまう。判定は旧仕様と同じ2プローブのままで、
-  // 一度でも揃った試行があれば成功とする（観測のためのリトライで結果を変えない）。
-  if (enforcement === 'observe' && reachableAttempt !== 0) {
-    logError(
-      `::warning::observe mode: release identity was not confirmed (expected ${releaseId}, last observed ${observedRelease || 'none'}, opcache ${opcacheState}, values ${firstSnapshot || lastSnapshotJson || 'none'}); record the web runtime values from this log before switching RELEASE_IDENTITY_ENFORCEMENT to enforce`,
-    )
-
-    return {
-      message: `release health check passed without release identity (app 200, built asset 200 on attempt ${reachableAttempt}, observe mode)`,
-      ok: true,
     }
   }
 
@@ -414,14 +178,6 @@ export async function verifyReleaseHealth({
     )
   }
 
-  if (observedRelease !== releaseId) {
-    logError(
-      `the deployed release did not serve its own identity: expected ${releaseId}, last observed ${observedRelease || 'none'}`,
-    )
-  }
-
-  void logInfo
-
   return { message: '', ok: false }
 }
 
@@ -432,24 +188,25 @@ export async function main({ env = process.env, readFile } = {}) {
   const read = readFile ?? (await import('node:fs')).readFileSync
   const manifest = JSON.parse(read(manifestPath, 'utf8'))
 
-  // リトライ間隔の上書きは契約テスト専用。実 CLI をそのまま回して 10 回 × 15 秒を
+  // 待機時間の上書きは契約テスト専用。実 CLI をそのまま回して settle と 10 回 × 15 秒を
   // 待たずに済ませるためだけにあり、デプロイでは設定しない（既定が正典）。
-  const override = Number(env.RELEASE_HEALTH_RETRY_MS)
-  const interval =
-    env.RELEASE_HEALTH_RETRY_MS !== undefined &&
-    Number.isFinite(override) &&
-    override >= 0
+  const readDuration = (name, fallback) => {
+    const override = Number(env[name])
+
+    return env[name] !== undefined && Number.isFinite(override) && override >= 0
       ? override
-      : RETRY_INTERVAL_MS
+      : fallback
+  }
+  const interval = readDuration('RELEASE_HEALTH_RETRY_MS', RETRY_INTERVAL_MS)
+  const settleMs = readDuration('RELEASE_HEALTH_SETTLE_MS', SETTLE_MS)
 
   const result = await verifyReleaseHealth({
     // 資格情報は URL へ埋め込めない（Validate が userinfo 付き URL を拒否する）。
     // Basic 認証で保護された環境だけが設定する任意の secret。
     basicAuth: env.HEALTHCHECK_BASIC_AUTH ?? '',
-    enforcement: env.RELEASE_IDENTITY_ENFORCEMENT ?? '',
     healthcheckUrl: env.HEALTHCHECK_URL ?? '',
     manifest,
-    releaseId: env.RELEASE_ID ?? '',
+    settle: () => defaultSleep(settleMs),
     sleep: () => defaultSleep(interval),
   })
 
@@ -473,8 +230,8 @@ if (
   // 明示的に終了する。fetch は keep-alive の接続をプールに残すため、判定が出た後も
   // プロセスが生きたまま数秒〜無期限に居座り得る（process.exitCode に変えると再発する）。
   // ただし process.exit() は未送出の stdout/stderr を切り捨てる。パイプ宛ての書き込みが
-  // 同期かどうかはプラットフォーム依存なので前提にできず、observe の証跡（OPcache 実測値）
-  // を落とすと enforce へ切り替える判断材料が失われる。明示的に drain してから終了する。
+  // 同期かどうかはプラットフォーム依存なので前提にできず、ログを落とすと
+  // 失敗原因などの判断材料が失われる。明示的に drain してから終了する。
   // drain 自体では止まらない: ここで固まると健全なリリースが withdraw されるため、
   // 上限を設けて打ち切る。
   await Promise.race([

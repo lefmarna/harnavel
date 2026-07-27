@@ -135,6 +135,6 @@ in the `ci-lint` action.
 ```bash
 pnpm test:deploy-lifecycle          # Verify preflight and maintenance deployment ordering
 pnpm test:deploy-rsync-excludes     # Verify rsync --delete protects remote-only data
-pnpm test:release-identity          # Verify release identity stamping and health verification
+pnpm test:release-health            # Verify release health probes (reachability and asset presence)
 pnpm test:toolchain-versions        # Verify Dockerfile and delivery.yml PHP/Composer versions match
 ```

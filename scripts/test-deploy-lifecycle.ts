@@ -100,8 +100,8 @@ function stepRunScript(workflow: string, name: string): string {
 }
 
 // 抽出した run block はランナーの書き込み先ファイルを継承してはならない。CI 上で
-// このテストを走らせると、テスト用の enforcement 値が lint ジョブの実サマリへ
-// 追記され、サマリで適用段階を確認する運用者を誤認させる。
+// このテストを走らせると、テスト用の値が lint ジョブの実サマリへ
+// 追記され、サマリを確認する運用者を誤認させる。
 const RUNNER_WRITE_TARGETS = {
   GITHUB_STEP_SUMMARY: '',
   GITHUB_ENV: '',
@@ -180,14 +180,6 @@ function main(): void {
   assertOrdered(
     workflow,
     'Drain in-flight requests',
-    'Deploy to XServer via Rsync',
-  )
-  // リリースIDは配布物へ焼き込んでから転送する。転送後に焼き込むと、検証が一致を見ても
-  // その ID を持つコードがサーバーにあるとは限らない。
-  assertOrdered(workflow, 'Create deployment package', 'Stamp release identity')
-  assertOrdered(
-    workflow,
-    'Stamp release identity',
     'Deploy to XServer via Rsync',
   )
   assertOrdered(
@@ -269,33 +261,6 @@ function main(): void {
   const verifyHealth = stepBlock(workflow, 'Verify release health')
   const withdrawRelease = stepBlock(workflow, 'Withdraw unhealthy release')
 
-  // 適用段階は各 GitHub Environment の設定変数が正典で、同名変数が上位スコープに無ければ
-  // 未設定は observe（上位にあると、その値の内容が段階を決める）。ファイルへ enforce を
-  // 焼き込むと、その値が新規派生アプリの初期値も兼ねてしまい、Web SAPI の OPcache 設定を
-  // 一度も測っていない環境が初回デプロイでいきなり fail closed になる
-  // （TADR-0006 の staged adoption はこれを防ぐためにある）。
-  // 未設定は observe に解決する。ファイルに enforce を焼くとその値が新規派生アプリの
-  // 初期値も兼ねてしまうため、既定は必ず observe 側に倒す。
-  assertMatches(
-    workflow,
-    /RELEASE_IDENTITY_ENFORCEMENT: \$\{\{ vars\.RELEASE_IDENTITY_ENFORCEMENT \|\| 'observe' \}\}/,
-    'the enforcement stage must come from the environment variable and default to observe',
-  )
-  assertExcludes(
-    workflow,
-    'RELEASE_IDENTITY_ENFORCEMENT: enforce',
-    'the enforcement stage must never be hardcoded to enforce in the workflow file',
-  )
-
-  // 実効段階はファイルから読めず、上位スコープの同名変数に遮蔽されると Environment の
-  // 設定と食い違う。実行ごとに記録して、「設定したつもりで効いていない」
-  // 「解除したつもりで効いたまま」を両方検出できるようにする。
-  assertIncludes(
-    stepBlock(workflow, 'Validate deployment configuration'),
-    'GITHUB_STEP_SUMMARY',
-    'the effective enforcement stage must be recorded in the run summary',
-  )
-
   // 検証文字列の固定ではなく、Validate ステップの script を実際に実行して許可 / 拒否を
   // 確認する。curl が拒否する値（末尾改行・空白・範囲外ポート等）が Validate を通過すると、
   // サーバー更新と maintenance 解除の後の health check で初めて落ちて正常なリリースを
@@ -306,15 +271,19 @@ function main(): void {
   )
   const acceptedHealthcheckUrls = [
     'https://example.com/up',
-    'https://example.com',
-    'https://sub.example.co.jp:8443/health/up',
-    // WHATWG canonical はパスに [ ] を raw のまま含み得る。Validate が受理する以上、
-    // curl 側は --globoff でリテラルに受理させて許可集合を一致させる（下の curl 検査）。
-    'https://example.com/health/[canary]',
+    'https://sub.example.co.jp:8443/up',
   ]
   const rejectedHealthcheckUrls = [
     '',
     'example.com/up',
+    // 到達性プローブが PHP を通らない URL。静的ファイルやオリジン直下を指すと、
+    // アプリが起動できない状態でもアセットと合わせて 200 が揃い、壊れたリリースを
+    // 公開したまま検証が通ってしまう。末尾一致では防げないので完全一致で弾く。
+    'https://example.com',
+    'https://example.com/manifest.webmanifest',
+    'https://example.com/up/',
+    'https://example.com/static/up',
+    'https://example.com/health/up',
     'https:///up',
     'http://',
     // .htaccess / .htaccess.develop は HTTPS を無条件に 301 する。curl は追従しないため、
@@ -330,17 +299,9 @@ function main(): void {
     ' https://example.com/up',
   ]
 
-  // リリース同一性の期待値も同じステップで検証する。網羅的なケースは
-  // scripts/test-release-identity.ts が持つので、ここでは URL 判定の前提だけ満たす。
-  const validReleaseEnv = {
-    RELEASE_ID: `${'a'.repeat(40)}-4242-1`,
-    RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
-  }
-
   for (const url of acceptedHealthcheckUrls) {
     if (
       runShellStep(validateScript, {
-        ...validReleaseEnv,
         HEALTHCHECK_URL: url,
       }) !== 0
     ) {
@@ -353,7 +314,6 @@ function main(): void {
   for (const url of rejectedHealthcheckUrls) {
     if (
       runShellStep(validateScript, {
-        ...validReleaseEnv,
         HEALTHCHECK_URL: url,
       }) === 0
     ) {
@@ -362,9 +322,6 @@ function main(): void {
       )
     }
   }
-
-  // 継承した GITHUB_STEP_SUMMARY へ書き込まないことは test-release-identity.ts が
-  // 名前付きテストで固定している。ここでは重複させない。
 
   // Withdraw の if 条件は step outcome を参照する。id が欠けると参照が空に評価され、
   // 成功時にも withdraw が走る（または全く走らない）ため、配線ごと固定する。
@@ -383,9 +340,9 @@ function main(): void {
     'id: verify-release-health',
     'step id referenced by the withdrawal condition',
   )
-  // 判定ロジックは scripts/verify-release-health.mjs にあり、その振る舞い（3プローブ・
-  // リダイレクト非追従・30秒タイムアウト・リトライ・OPcache 前提）は実 CLI を通す
-  // test-release-identity.ts が固定する。ここは配線だけを見る。
+  // 判定ロジックは scripts/verify-release-health.mjs にあり、その振る舞い（2プローブ・
+  // 再検証窓の settle・リダイレクト非追従・30秒タイムアウト・リトライ）は実 CLI を通す
+  // test-release-health.ts が固定する。ここは配線だけを見る。
   assertIncludes(
     verifyHealth,
     'run: node scripts/verify-release-health.mjs',
@@ -408,18 +365,6 @@ function main(): void {
     )
   }
 
-  const stampReleaseIdentity = stepBlock(workflow, 'Stamp release identity')
-
-  assertIncludes(
-    stampReleaseIdentity,
-    'const file = ".deploy/public/index.php"',
-    'release identity stamped into the front controller every request executes',
-  )
-  assertExcludes(
-    stampReleaseIdentity,
-    'bootstrap/release',
-    'release identity written to a file that stale bytecode could still read',
-  )
   assertExcludes(
     verifyHealth,
     'if: always()',

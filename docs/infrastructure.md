@@ -81,141 +81,30 @@ is not cancelled by a newer push. After the remote toolchain preflight succeeds,
 4. Composer install, cache rebuilds, and forced migrations.
 5. `artisan up` only after every preceding command succeeds, followed by driver-independent
    removal and absence checks for the standalone maintenance files.
-6. Verify three separate properties over HTTP. Under `enforce` all three must hold before the
-   deployment is called successful; under `observe` only the first two do (see the staging note
-   below):
+6. Verify two separate properties over HTTP. Both must hold before the deployment is called successful:
 
    | Guarantee | Probe | What it proves |
    | --- | --- | --- |
    | Reachability | `HEALTHCHECK_URL` returns `200` | rewrite, PHP-FPM, and bootstrap serve requests |
    | Asset presence | the deployed manifest's asset returns `200` | `public/build` is present and servable |
-   | Release identity | `<origin>/up/release` returns this deploy attempt's ID | a PHP response came from a front controller compiled from this release's bytes |
 
-   All three probes, the retry loop, and the OPcache precondition live in
-   `scripts/verify-release-health.mjs`, which `delivery.yml` invokes in one line. It deliberately
-   has no dependencies: the deploy job runs neither `pnpm install` nor `setup-node`, so anything
-   beyond the runner's bundled Node would fail only after maintenance had already been lifted.
-   `pnpm test:release-identity` exercises that script as a real process against a local HTTP
-   server.
-
-   The first two cannot distinguish releases: the health endpoint is a generic `200`, and the
-   asset is served without executing PHP and keeps the previous release's file name whenever the
-   frontend is unchanged. Release identity closes that gap. `Stamp release identity` rewrites the
-   `LARAVEL_DEPLOYMENT_RELEASE_ID` literal in the deployment package's `public/index.php` — the
-   file every request executes — to `<commit sha>-<run id>-<run attempt>`, so redeploying the same
-   commit is still a distinct expectation. The identity is never read from a file at request time:
-   stale bytecode could read a fresh file and report a release it is not running.
-
-   The same response also reports the web runtime's OPcache revalidation directives, which are
-   evaluated as a pair with the identity from that response. On XServer PHP 8.5, FastCGI and
-   OPcache are always on, so this is the normal path rather than an edge case, and the workflow
-   requires `opcache.validate_timestamps` enabled, no application `opcache.preload`, and an
-   interpretable `opcache.revalidate_freq` no larger than 60 seconds (the response reports whether
-   preloading is configured, never the configured path) — then waits out that
-   interval, measured from the end of the remote writes, before accepting a matching identity.
-   A response is authoritative about this release's runtime only when it carries this deploy
-   attempt's identity and an OPcache payload whose structure matches the current schema (every
-   required key present). The identity is a compile-time constant, so stale bytecode can return the
-   new identity while still emitting the previous release's payload shape; the gate keys authority
-   on the payload's own structure, which one method in one file produces, rather than a separate
-   version number another file could revalidate out of step. A response with an older identity, or
-   whose payload is missing the current keys, is retried rather than judged, so changing the
-   response format cannot fail a deployment before the new release answers. Values that are uninterpretable, that differ between such responses, or that never
-   revalidate fail closed: PHP-FPM cannot be restarted on shared hosting and a CLI `opcache_reset()` does not
-   reach the web runtime, so waiting cannot repair them.
-
-   The stage is the `RELEASE_IDENTITY_ENFORCEMENT` **configuration variable on each GitHub
-   Environment** (Develop and Production), not a value in `delivery.yml`. Its value is `enforce`
-   or `observe`; unset means observing. Any other value fails the deployment in
-   `Validate deployment configuration`, before the workflow touches the server.
-
-   Every run prints the effective stage and writes it to the job summary. Read that before
-   concluding that a switch took effect.
-
-   What this does and does not guarantee:
-
-   - **Your responsibility** — re-measuring after anything that changes the runtime behind an
-     environment: recreating the environment, repointing it at another host or directory, or
-     changing that host's PHP / OPcache configuration. Clear the environment's variable, deploy to
-     observe, and re-read the values before setting it again — after confirming the scope caveat
-     below, which can keep an environment enforcing even with its own variable cleared. The gate
-     cannot detect any of these.
-   - **Accepted risk** — defining a variable of this name at repository or organization scope.
-     GitHub documents that environment-level variables "won't overwrite variables in the `env` and
-     `vars` contexts", and this workflow reads `vars` into a job-level `env`. A same-named variable
-     at a broader scope therefore **shadows** the environment one, and a broader `enforce` makes
-     **every** environment of this repository enforce, measured or not. Clearing or unsetting the
-     environment variable does not return that environment to observing, so a re-measurement cycle
-     silently cannot start. Define this variable only on environments, and delete any
-     broader-scope one before relying on any procedure in this section.
-
-   - `observe` — the release identity and the runtime directives are probed and logged as
-     warnings, but the deployment still succeeds on reachability and asset presence alone, judged
-     exactly as before this gate existed: any single attempt where both returned `200` is enough,
-     so continuing to probe for identity never turns a healthy release into a withdrawal.
-     Nothing new can withdraw a release. This matters because the endpoint itself may be
-     invisible behind the previous release's bytecode, which is precisely what happens when
-     `opcache.validate_timestamps` is off; failing there would take the site down before the
-     configuration was ever measured. When identity cannot be confirmed, observing keeps polling up
-     to the whole retry window, lengthening workflow completion — not downtime, since maintenance is
-     already lifted; a release that confirms identity quickly still exits early. While observing,
-     release identity is **not** yet verified.
-   - `enforce` — identity and the OPcache precondition become success conditions and fail closed.
-
-   Roll it out per environment, and note that this is not a one-time migration: a newly derived
-   application starts unmeasured, and so does any environment whose runtime changed under it.
-
-   Every step below assumes **no variable of this name exists at repository or organization
-   scope**. Confirm that first: while one does, it decides the stage for every environment its
-   scope reaches — every environment of this repository, and for an organization variable every
-   repository that variable is exposed to — so neither "deploy with the variable unset" nor "clear
-   the variable" does what it says. Read the first run's summary line rather than assuming an
-   environment observes.
-
-   1. Deploy with the variable unset, so the environment observes.
-   2. Read the recorded values from that environment's workflow log. One environment's directives
-      never imply the other's, and the CLI's never imply the web SAPI's, so Develop and Production
-      are measured separately.
-   3. Confirm the environment served this deploy attempt's identity, that the OPcache payload
-      carried the current keys, and that `validateTimestamps` is true, `preloadConfigured` is
-      false, and `revalidateFrequency` is at most 60.
-   4. Set that environment's `RELEASE_IDENTITY_ENFORCEMENT` variable to `enforce`
-      (Settings → Environments → the environment → Variables) and deploy again, checking the job
-      summary line to confirm the run actually enforced.
-
-   Setting the variable takes effect on the next run without a commit, and — with no broader-scope
-   variable present — clearing it returns the environment to observing. If a run's stage does not
-   match what the environment says, in either direction, look for a variable of the same name at
-   repository or organization scope and delete it: per GitHub's documented exception it shadows the
-   environment value in the `vars` context. The run cannot report that this happened — a shadowing
-   value is indistinguishable from a correct environment setting once resolved — so checking the
-   scopes is a precondition, not something to diagnose from the run afterwards. The only signal the
-   run gives is the effective stage it prints; compare that against what you set.
-
-   The URL comes from the per-environment `HEALTHCHECK_URL` GitHub secret (normally
-   `https://<domain>/up`) and is URL-parser-validated before any remote change, so a missing
-   value — or one the health request could not pass — fails the run without touching the server.
-   It must be the **canonical HTTPS URL**, without whitespace, userinfo, query, or fragment:
-   the asset origin is derived from it, and the probes do not follow redirects, so any URL that
-   redirects fails verification and withdraws an otherwise healthy release. `.htaccess` and
-   `.htaccess.develop` redirect all plain HTTP to HTTPS, which is why `http://` is rejected up
-   front; a host that redirects (for example `www` when `www` redirects to the apex) cannot be
-   detected statically and is reported as a redirect hint when verification fails.
+   Both probes and the retry loop live in `scripts/verify-release-health.mjs`, which
+   `delivery.yml` invokes in one line. It deliberately has no dependencies: the deploy job runs
+   neither `pnpm install` nor `setup-node`, so anything beyond the runner's bundled Node would
+   fail only after maintenance had already been lifted. `pnpm test:release-health` exercises that
+   script as a real process against a local HTTP server.
 
    An environment whose document root is protected by Basic authentication — `.htaccess.develop`
    does this in some applications — also needs the optional per-environment
-   `HEALTHCHECK_BASIC_AUTH` secret, in `user:pass` form. When it is set, all three probes send the
-   credential; when it is unset, none of them do, so leave it unset on environments without Basic
-   authentication. All three matter: the health endpoint, the built asset, and the release identity
-   endpoint all sit behind the same protection, and a single unauthenticated probe returns `401`,
-   which fails reachability and withdraws a healthy release even while observing. Do not put the
-   credential in `HEALTHCHECK_URL` — userinfo is rejected there — and it is never written to the
-   log; a run that keeps seeing `401` prints a hint to set this secret. The deploy
-   attempt identity is validated in the same pre-remote step, because an empty expectation would
-   match an empty response. The check retries across the server's file-cache revalidation window,
+   `HEALTHCHECK_BASIC_AUTH` secret, in `user:pass` form. When it is set, both probes send the
+   credential; when it is unset, neither does, so leave it unset on environments without Basic
+   authentication. Both matter: the health endpoint and the built asset sit behind the same
+   protection, and a single unauthenticated probe returns `401`, which fails reachability and
+   withdraws a healthy release. Do not put the credential in `HEALTHCHECK_URL` — userinfo is
+   rejected there — and it is never written to the log; a run that keeps seeing `401` prints a
+   hint to set this secret. The check retries across the server's file-cache revalidation window,
    so a release that has not propagated yet is retried rather than failed. When verification ends
-   without success — persistent failure, an identity that never matched under `enforce`, an
-   unusable OPcache configuration under `enforce`, or manual cancellation —
+   without success — persistent failure or manual cancellation —
    a separate workflow step re-runs the maintenance installer to withdraw the release behind the
    planned 503. That step is gated on a recorded lift attempt rather than on the lift step's own
    outcome, so a lift whose SSH connection dropped after the remote commands completed is still
@@ -250,13 +139,89 @@ the deploy directory:
 Never bring the application up merely to clear a failed workflow while the release state is
 uncertain.
 
-When the workflow reports that the release did not serve its own identity, the deployed files
-reached the server but the web runtime is still executing older bytecode, so rerunning the
-workflow only helps once the runtime revalidates. When it reports that identity cannot be
-guaranteed, the runtime configuration itself is the blocker: fix `opcache.validate_timestamps`,
-`opcache.preload`, or `opcache.revalidate_freq` for the web SAPI (the XServer PHP settings for
-that directory, not the CLI), then rerun. `<origin>/up/release` reports the live values whenever
-the application is up.
+## OPcache Revalidation Measurement
+
+The deployment no longer gates on OPcache revalidation settings at runtime, but the
+precondition — that the web SAPI revalidates timestamps fast enough for stale bytecode to
+self-resolve before verification runs — still holds. Re-measure after changing the PHP version,
+OPcache configuration, or hosting provider.
+
+### Procedure
+
+1. Generate a non-guessable probe filename:
+   ```bash
+   PROBE="opcache-probe-$(openssl rand -hex 8).php"
+   ```
+
+2. From the environment's `public/` directory over SSH (`ssh -p 10022 <user>@<host>`), create it,
+   read it, and delete it in one block. Read `ini_get()` rather than
+   `opcache_get_configuration()`: the latter can be sealed off by `opcache.restrict_api`.
+   ```bash
+   cat > "$PROBE" <<'PHP'
+   <?php
+   header('Content-Type: application/json');
+   $loaded = extension_loaded('Zend OPcache');
+   $preload = ini_get('opcache.preload');
+   echo json_encode([
+       'sapi' => php_sapi_name(),
+       'phpVersion' => PHP_VERSION,
+       'extensionLoaded' => $loaded,
+       'enable' => $loaded ? ini_get('opcache.enable') : null,
+       'validate_timestamps' => $loaded ? ini_get('opcache.validate_timestamps') : null,
+       'revalidate_freq' => $loaded ? ini_get('opcache.revalidate_freq') : null,
+       'preloadConfigured' => $loaded ? ($preload === false ? null : $preload !== '') : null,
+   ], JSON_PRETTY_PRINT);
+   PHP
+   chmod 644 "$PROBE"
+   # Basic 認証のある環境では -u '<user>' だけを渡す。curl がパスワードを対話的に尋ねる。
+   # user:pass をそのまま書くと、共有ホストの shell history と ps の引数に平文で残る。
+   curl -s "https://<canonical-host>/$PROBE"
+   rm -f "$PROBE" && ls "$PROBE"
+   ```
+
+3. Confirm `sapi` is a web SAPI (`cgi-fcgi`, `fpm-fcgi`, `apache2handler`). A `cli` value means the
+   request never reached the web runtime and the reading is worthless.
+
+4. **Confirm the probe is gone** — the trailing `ls` must report "No such file". On an environment
+   without Basic authentication the file is publicly readable while it exists, which is why the
+   filename is randomised and the block deletes it in the same run.
+
+### Acceptance criteria
+
+| Directive | Required value | Rationale |
+| --- | --- | --- |
+| `validate_timestamps` | `1` (On) | Without timestamp validation, stale bytecode persists until the process exits |
+| `revalidate_freq` | ≤ `SETTLE_MS` in `scripts/verify-release-health.mjs` (10 s) | Verification waits exactly that long before its first probe |
+| `preload` | empty / unset | Preloaded code is never re-checked against timestamps |
+
+The `revalidate_freq` threshold is not a judgement call: verification sleeps `SETTLE_MS` before
+probing, so any environment at or below that value has already revalidated by the time the first
+`200` is observed. The baseline below is 2 seconds against a 10-second wait.
+
+Do not lean on the post-deploy sequence instead. It runs far longer than the window in practice —
+`composer install`, three cache rebuilds, `migrate`, and an SSH round trip — but nothing bounds it
+from below, so it cannot carry the guarantee.
+
+An environment above the threshold fails silently: both probes answer `200` from the previous
+release's bytecode while the new schema is already migrated, and the workflow reports success. If
+you measure one, raise `SETTLE_MS` to cover it or move the environment to a runtime that revalidates
+promptly — do not simply record the value.
+
+### Baseline (July 2026)
+
+Three XServer environments — two production domains and one develop subdomain, across two
+independent applications — all reported `cgi-fcgi`, PHP 8.5.5, `validate_timestamps=1`,
+`revalidate_freq=2`, and no preload. Every value clears the acceptance criteria above with room to
+spare, which is why the deployment waits the settle interval instead of gating on these directives
+per run.
+
+This is the template's baseline, not a statement about your environments. Record this application's
+own measurements below when you take them, one row per environment, and treat an unmeasured
+environment as unknown rather than as covered by the baseline.
+
+| Environment | Date | SAPI | PHP | validate_timestamps | revalidate_freq | preload |
+| --- | --- | --- | --- | --- | --- | --- |
+| _(none recorded yet)_ | | | | | | |
 
 ## Troubleshooting
 

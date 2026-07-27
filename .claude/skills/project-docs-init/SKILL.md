@@ -125,17 +125,29 @@ Deployment settings are not files and are therefore outside this skill's edits. 
 per-environment GitHub settings the first deployment needs, for Develop and Production separately:
 
 - `XSERVER_*` and `DEPLOY_DIRECTORY` secrets, and the `HEALTHCHECK_URL` secret (the canonical HTTPS
-  URL; `delivery.yml` validates it before touching the server).
-- The `RELEASE_IDENTITY_ENFORCEMENT` variable stays **unset**. A new environment has never had its
-  web SAPI measured, so it must observe first; `delivery.yml` observes unless the variable says
-  `enforce`, and `docs/infrastructure.md` documents how to move an environment to `enforce` after
-  measuring it. Do not set it during initialization.
-- Check that no variable of this name already exists at repository or organization scope, and
-  delete it if one does — inheriting an organization variable is the likely case for a new
-  repository. Environment-level variables do not overwrite values already in the `vars` context, so
-  a broader-scope one decides the stage for every environment of this repository: a broader
-  `enforce` enforces even while the environment variable is unset, which is
-  exactly the unmeasured-first-deployment case the observing stage exists to prevent.
+  URL ending at the Laravel health route, such as `https://example.com/up`; `delivery.yml` validates
+  it before touching the server, and rejects a path that would not reach PHP).
+- `HEALTHCHECK_BASIC_AUTH`, only for an environment whose document root is protected by Basic
+  authentication. Both verification probes then send it; without it they receive 401 and a healthy
+  release is withdrawn.
+
+Also tell the user to **measure each environment's web SAPI OPcache directives** before relying on
+the deployment, following "OPcache Revalidation Measurement" in `docs/infrastructure.md`, and to
+record the values in that file's table. Release verification proves that *a* release answers, not
+that *this* deployment's bytecode does
+([`TADR-0006`](../../../docs/adr/template/0006-planned-maintenance-deployments.md)). It closes that
+gap by sleeping `SETTLE_MS` (`scripts/verify-release-health.mjs`) before its first probe, so an
+environment is only covered when all three hold:
+
+- `opcache.validate_timestamps = 1`
+- no `opcache.preload`
+- `opcache.revalidate_freq` at or below `SETTLE_MS`
+
+Do not substitute "the post-deploy sequence takes longer than the window" — nothing bounds that
+duration from below, so it cannot carry the guarantee. An environment failing any of the three
+accepts the previous release's `200` while the new schema is already migrated, and nothing in the
+workflow detects it. Treat an unmeasured environment as unknown, not as covered by the template's
+baseline.
 
 ## Step 7: Review and Verify
 

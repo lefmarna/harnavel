@@ -48,71 +48,41 @@ only after every post-deploy command succeeds, then remove the standalone files 
 configured maintenance driver and verify their removal. On failure or cancellation, keep maintenance
 active until a corrected workflow completes or an operator verifies a coherent release manually.
 
-**Release identity.** Stamp a deploy-attempt identity into the deployment package before rsync, as a
-PHP literal in the front controller every request executes. The identity combines the commit SHA
-with the workflow run and attempt, so redeploying the same commit does not accept the previous
-attempt's response. Never resolve it from a file the application re-reads at request time: stale
-bytecode can read a fresh data file and report an identity it is not running.
-
-**Verification.** After maintenance is lifted, under enforcement require three distinct HTTP
-observations before calling the deployment successful: **reachability** (the public health endpoint
-returns 200), **asset presence** (a built asset referenced by the deployed Vite manifest is served),
-and **release identity** (a PHP-served endpoint returns this deploy attempt's identity). `artisan
-up` proves CLI bootstrap only; the health endpoint carries no identity and does not load built
-assets; the asset is static and an unchanged frontend produces the previous release's file name.
-Only the third observation distinguishes "some release answered" from "this release answered".
-Under enforcement a mismatch never succeeds: it keeps retrying and then fails the verification. An
-observing environment succeeds on the first two observations alone.
+**Verification.** After maintenance is lifted, require two distinct HTTP observations before calling
+the deployment successful: **reachability** (the public health endpoint returns 200) and **asset
+presence** (a built asset referenced by the deployed Vite manifest is served). `artisan up` proves
+CLI bootstrap only; the health endpoint carries no identity and does not load built assets.
 
 Verification introduces no authentication of its own, but an environment whose document root is
 already protected — Basic authentication on a develop host, for example — must have that existing
-credential presented on **all three** probes: they share one protection, and a single
+credential presented on **both probes**: they share one protection, and a single
 unauthenticated probe returns 401, failing reachability and withdrawing a healthy release even
 while observing. The credential is an optional per-environment secret, never embedded in the health
 URL and never logged. It belongs to the environment, not to the template: it is not copied between
 applications, and environments without such protection leave it unset.
 
-**OPcache precondition.** Read the web runtime's OPcache revalidation directives from that same
-response and treat them as a precondition rather than an observation. A response is authoritative
-only when it carries this deploy attempt's identity **and** an OPcache payload whose structure
-matches the current schema. The identity is a compile-time constant, so stale bytecode can return
-the new identity while still emitting the previous release's payload shape; keying authority on the
-payload's own structure works because one method in one file produces it, making its shape a
-per-file-atomic signal of which release's bytecode built it, whereas a version field in another file
-could be revalidated out of step. A response with an older identity or a payload missing current
-keys is treated as "not switched over yet" and retried, so changing the response format cannot fail
-a deployment before the new release answers. Timestamp revalidation must be enabled, application
-preloading unused, and the revalidation interval interpretable and within a bounded maximum; the
-workflow waits out that interval, measured from completion of the remote writes, before accepting a
-match. Uninterpretable values, values differing between responses, and configurations that never
-revalidate all fail closed under enforcement, and are recorded as warnings while observing.
+**OPcache revalidation (measured, not gated).** XServer's web SAPI (cgi-fcgi, PHP 8.5) was measured
+in July 2026 across three environments — two production domains and one develop subdomain, spanning
+two independent applications. Every environment reported `opcache.validate_timestamps = 1` and
+`opcache.revalidate_freq = 2` with no application preload.
+Verification therefore waits a fixed settle interval before its first probe, rather than reading the
+directives back per run or gating on them. The wait is what makes the guarantee checkable: an
+environment whose revalidation interval is at or below the settle interval has necessarily
+revalidated by the time any `200` is observed, so a release identity gate would be checking a
+question the clock has already answered. The measured 2 seconds sits well under it.
 
-**Staged adoption.** An environment whose web SAPI has not been measured adopts the identity gate in
-an observing stage first, where identity and the runtime directives are recorded but the deployment
-still succeeds on reachability and asset presence alone. Observing must not fail on identity: the
-new endpoint may be invisible behind the previous release's bytecode — exactly what happens on the
-runtimes worth measuring — so an identity-failing observation stage would withdraw healthy releases
-before anything is measured. The directives cannot be predicted from another environment or from
-the CLI, so this applies to every new environment, not only to the initial rollout.
+The condition is exactly that — `validate_timestamps` on, no preload, and a revalidation interval at
+or below the settle interval — and nothing weaker. In particular, "the post-deployment sequence runs
+longer than the revalidation window" is not a substitute, however reliably true it looks: nothing
+bounds that sequence from below, so it cannot carry a fail-closed guarantee. The measurement
+procedure — a one-file PHP probe that reads `ini_get()` values, deployed to a non-guessable filename
+and deleted immediately — is documented in `docs/infrastructure.md` for re-measurement after hosting
+changes.
 
-The stage is therefore per-environment configuration rather than a value committed to the
-deployment workflow, and the workflow observes unless the configuration explicitly enforces. A
-committed value would serve two roles at once — the runtime setting for the template's own
-environments and the initial setting inherited by every newly derived application — and an
-unmeasured environment that starts out enforcing withdraws its first healthy release into the
-planned 503.
-
-Because the CI platform merges its organization, repository, and environment scopes into one lookup
-and does not reveal which scope a value came from, the configuration must be defined at environment
-scope only. A same-named value at a broader scope shadows the per-environment one — the platform
-documents that environment-level variables do not overwrite values already resolved into the
-workflow's variable context — so a broader enforcing value enforces every environment of that
-repository regardless of what each environment says, and clearing an environment's variable does not
-return it to observing. Defining this variable at exactly one scope is a precondition of the staged
-adoption, not a preference. The gate also cannot notice that an environment now points at a
-different host or a changed PHP configuration; re-measuring after such a change is an operational
-obligation, not something the deployment can detect. Every deployment therefore records its
-effective stage.
+This holds only while the measurement holds. Re-measure after changing the PHP version, the OPcache
+configuration, or the hosting provider; an environment that has not been measured is unknown, not
+covered. An environment above the settle interval needs a longer wait or a different runtime, and a
+runtime that never revalidates needs a different decision here, because waiting cannot repair it.
 
 **Withdrawal.** Withdraw a release whose verification did not end in success — persistent failure or
 manual cancellation — by re-running the standalone installer from a separate step gated on a
@@ -149,20 +119,16 @@ Operational procedure, per-environment rollout, and recovery live in
   already up while the standalone responder remains.
 - **End the delivery at `artisan up`.** Rejected: CLI bootstrap does not prove the web entry path
   serves requests.
-- **Treat a health 200 plus an asset 200 as success.** Rejected: neither response carries release
-  identity, so a stale web OPcache entry could end the workflow successfully while old code serves
-  against the new schema, and withdrawal would never run.
-- **Publish the release identity from a data file the request reads.** Rejected: old bytecode can
-  read the new file and report an identity it is not executing, converting a fail-closed check into
-  a false positive.
-- **Extend the retry window instead of checking revalidation settings.** Rejected: a runtime that
-  never revalidates never converges. The failure mode is permanence, not slowness.
+- **Gate the deployment on release identity and OPcache directives.** Rejected on measurement: stamp
+  a deploy-attempt identity into the front controller, serve it from a PHP endpoint, read the web
+  SAPI's revalidation directives from the same response, and fail closed unless this attempt's
+  identity answers under a safe configuration. It withstands a runtime that never revalidates — but
+  the measurement above found none, and the cost is high: the endpoint publishes the deployed commit
+  and the runtime's configuration, an unmeasured environment must first run in an observing stage or
+  it withdraws its own first healthy release, and that stage is per-environment configuration the
+  workflow cannot read back. Measuring a runtime once is cheaper than carrying a permanent gate
+  against a condition it does not have.
 - **Restart PHP-FPM or reset OPcache after deployment.** Rejected: shared hosting grants neither.
-- **Serve the identity endpoint behind a shared secret.** Rejected for now: it adds a
-  per-environment secret to provision before any deployment can succeed, and the exposed value is a
-  deploy-attempt identifier for a private repository. This rejects introducing authentication *for
-  the identity endpoint*; it does not apply to an environment already protected as a whole, where
-  verification presents that environment's existing credential (see the decision above).
 - **Leave an unhealthy release live and only fail the workflow.** Rejected: serving known-broken
   responses contradicts the fail-closed decision.
 - **Use atomic release directories and a symlink switch.** Deferred: it requires a larger document
@@ -187,29 +153,20 @@ Operational procedure, per-environment rollout, and recovery live in
   until the user reloads — after which it receives the planned 503. Serving every path through the
   responder would require a maintenance-gated web-server rewrite and is deferred with the
   atomic-release design; an automatic reload handler would be a separate frontend decision.
-- The three guarantees must not be conflated. Release identity covers only this: a PHP response
-  produced by a front controller compiled from this deploy attempt's bytes returned this attempt's
-  identifier. It does not prove every deployed PHP file is fresh, does not prove every FastCGI
-  process is fresh — the probe reaches one of them — and is not an atomic switch. Its soundness
-  rests on the verified OPcache precondition, which bounds how long another process can still serve
-  older bytes. Full atomicity would require versioned release directories and a switch.
-- The bounded maximum for the revalidation interval is chosen so the settle wait plus the remaining
-  attempts fit inside the retry window; a larger configured interval is rejected rather than waited
-  out, because the workflow cannot distinguish it from a runtime that will not converge.
-- The identity endpoint carries no authentication of its own, so it is public wherever the
-  environment serving it is. It exposes the deployed commit SHA, the
-  workflow run and attempt, and the runtime's whole OPcache revalidation snapshot — whether the
-  extension is loaded and enabled, whether timestamps are validated, the revalidation interval, and
-  whether preloading is configured (the presence of the setting only, never the configured path).
-  It returns 503 whenever identity cannot be established, so monitoring sees the same fail-closed
-  state the workflow does.
+- Verification proves that *a* release answers and that the deployed manifest's asset is served, not
+  that *this* deployment's bytecode produced the response. Nothing in the workflow observes release
+  identity any more; the guarantee rests on the environment's revalidation interval being at or below
+  the settle interval verification waits. If it is not, the deployment reports success while the
+  previous release serves — and it does so silently, because the only signal is the symptom (old
+  behaviour after a green deployment). The runbook in
+  [`docs/infrastructure.md`](../../infrastructure.md) exists to establish and re-check that bound.
+- Every deployment pays the settle interval, whether or not the environment needs it. That is the
+  price of not measuring the directives per run.
 - Verification requires a per-environment canonical HTTPS health URL, parser-validated before any
   remote change so a missing or unusable value cannot strand the site in maintenance. The probes do
   not follow redirects, because following them would let an absent build asset resolve to some other
   200 response and defeat the asset check. A verification false negative (for example runner egress
   failure) withdraws a healthy release; recovery is rerunning the workflow.
-- While an environment is observing, the defect this decision addresses is still present there. That
-  is the accepted price of measuring a runtime before gating on it.
 - Delivery changes remain hybrid under [`TADR-0003`](0003-shared-surface-convergence.md): derived
-  applications adopt the lifecycle while preserving their app-specific rsync exclusions, drain
-  duration, and per-environment adoption stage.
+  applications adopt the lifecycle while preserving their app-specific rsync exclusions and drain
+  duration.

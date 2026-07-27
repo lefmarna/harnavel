@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Listeners\ShareAuthenticatedUserLogContext;
-use App\Support\OpcacheRevalidation;
-use App\Support\ReleaseIdentity;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Database\Eloquent\Model;
@@ -18,17 +16,6 @@ use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        // リリース同一性の観測値は「収集」と「判定」を分離する。ここは収集側の adapter を
-        // 差し替え可能な形で束ねるだけで、判定は ReleaseVerification が担う（TADR-0006）。
-        $this->app->singleton(ReleaseIdentity::class, static fn (): ReleaseIdentity => ReleaseIdentity::fromFrontController());
-        $this->app->singleton(OpcacheRevalidation::class, static fn (): OpcacheRevalidation => OpcacheRevalidation::fromRuntime());
-    }
-
     /**
      * Bootstrap any application services.
      */

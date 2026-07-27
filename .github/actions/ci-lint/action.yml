@@ -100,9 +100,9 @@ runs:
       shell: bash
       run: pnpm run test:deploy-rsync-excludes
 
-    - name: Test Release Identity Verification
+    - name: Test Release Health Verification
       shell: bash
-      run: pnpm run test:release-identity
+      run: pnpm run test:release-health
 
     - name: Test Toolchain Version Consistency
       shell: bash

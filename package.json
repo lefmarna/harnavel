@@ -16,7 +16,7 @@
     "lint:docs": "tsx scripts/lint-docs.ts",
     "test:deploy-lifecycle": "node --import tsx scripts/test-deploy-lifecycle.ts",
     "test:deploy-rsync-excludes": "node --import tsx scripts/test-deploy-rsync-excludes.ts",
-    "test:release-identity": "node --import tsx --test scripts/test-release-identity.ts",
+    "test:release-health": "node --import tsx --test scripts/test-release-health.ts",
     "test:toolchain-versions": "node --import tsx scripts/test-toolchain-versions.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

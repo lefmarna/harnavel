@@ -406,7 +406,7 @@ describe('リリース同一性', function () {
 
         // PHP が有効と解釈する値を無効と報告すると、ワークフローは「OPcache が無いから
         // 同一性は厳密」と結論づけ、再検証しないランタイムを承認してしまう（fail open）。
-        it('PHPのINI真偽値と同じ規則で有効状態を解釈する', function (string $iniValue, bool $expected) {
+        it('PHPのINI真偽値と同じ規則で有効状態を解釈する', function (string $iniValue, ?bool $expected) {
             $revalidation = OpcacheRevalidation::fromIniValues(true, $iniValue, $iniValue, '2', '');
 
             expect($revalidation->enabled)
@@ -423,6 +423,22 @@ describe('リリース同一性', function () {
             '空文字' => ['', false],
             'Off' => ['Off', false],
             '数値以外' => ['garbage', false],
+            // zend_ini_parse_bool は atoi 相当で先頭の整数部だけを読む。PHP の (int) キャストは
+            // 指数表記を float 経由で解釈するため "1e-1" を 0 にし、PHP が有効と解釈する値を
+            // 無効と報告してしまう。
+            '指数表記で小数へ落ちる値' => ['1e-1', true],
+            '指数表記で小数へ落ちる値（先頭2）' => ['2e-1', true],
+            '指数表記だが先頭が0' => ['0e5', false],
+            '先頭が0埋めの非ゼロ' => ['007', true],
+            '負の0' => ['-0', false],
+            // atoi の戻り値は C int。2^32 の倍数は切り詰めで 0 になり Zend は無効と解釈する。
+            // 真偽を確定できない値を true と報告すると、再検証しないランタイムを承認して
+            // しまう（fail open）ため、範囲外は null（判定不能）にして fail closed へ倒す。
+            'C int 範囲外（2^32）' => ['4294967296', null],
+            'C int 範囲外（2^33）' => ['8589934592', null],
+            'C int 範囲外（INT_MAX+1）' => ['2147483648', null],
+            'INT_MAX ちょうど' => ['2147483647', true],
+            'INT_MIN ちょうど' => ['-2147483648', true],
         ]);
 
         it('preloadは設定有無の真偽値へ正規化する', function (string $iniValue, bool $expected) {

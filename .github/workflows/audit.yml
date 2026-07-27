@@ -1,17 +1,20 @@
 name: audit
 
-# 依存関係の脆弱性アドバイザリは push が無い期間にも公開される。push/PR 時の
-# composer audit / pnpm audit（ci-lint）だけでは、リポジトリが静かな間に公開された
-# アドバイザリへ気づけないため、週次で lockfile を監査し、失敗＝通知として扱う。
+# 依存関係の脆弱性アドバイザリを検知する唯一の経路（TADR-0001）。判定は advisory
+# データベースというリポジトリ外の可変状態に依存し、コードが変わらなくても結果が変わるため、
+# マージやデプロイのゲートには置かず、ここで日次に観測して失敗＝通知として扱う。
 # 依存のインストールは不要（composer audit --locked と pnpm audit は lockfile を読む）。
 # Composer と pnpm は独立したジョブにする。片方に未解決の advisory が残っている間も、
 # もう片方の監査が止まらないようにするため。
+#
+# 唯一の経路なので、静かに止まると検知がゼロになる。GitHub はリポジトリが一定期間無活動だと
+# schedule を自動停止するため、実行実績を時折確認すること（gh run list --workflow=audit.yml）。
 
 on:
   workflow_dispatch:
   schedule:
-    # Renovate の週次実行（月曜 0-6 JST）の後に監査する（月曜 07:00 JST = 日曜 22:00 UTC）。
-    - cron: '0 22 * * 0'
+    # 毎日 07:00 JST（= 22:00 UTC）。
+    - cron: '0 22 * * *'
 
 permissions:
   contents: read

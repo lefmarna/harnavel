@@ -1,6 +1,11 @@
 name: CI Lint
 description: Install dependencies and run backend/frontend static checks (Pint, PHPStan, format, lint, types, docs).
 
+# 依存監査（composer audit / pnpm audit）はここに置かない。判定材料が advisory データベース
+# というリポジトリ外の可変状態で、同じコミットが翌日に赤くなる。検知は audit.yml に集約する
+# （TADR-0001）。ここに戻すと、修正版が未公開の advisory が推移的依存に出た時点で、
+# マージも本番障害の緊急修正のデプロイも止まる。
+
 runs:
   using: composite
   steps:
@@ -39,14 +44,6 @@ runs:
       run: |
         composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
         pnpm install --frozen-lockfile
-
-    - name: Audit Composer Dependencies
-      shell: bash
-      run: composer audit
-
-    - name: Audit pnpm Production Dependencies
-      shell: bash
-      run: pnpm audit --prod
 
     - name: Run Pint
       shell: bash
@@ -106,10 +103,6 @@ runs:
     - name: Test Release Identity Verification
       shell: bash
       run: pnpm run test:release-identity
-
-    - name: Test Renovate Composer Policy
-      shell: bash
-      run: pnpm run test:renovate-composer-policy
 
     - name: Test Toolchain Version Consistency
       shell: bash

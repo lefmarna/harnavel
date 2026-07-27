@@ -89,9 +89,28 @@ function main(): void {
     /composer-(\d+\.\d+\.\d+)/g,
     'composer-<version> references in delivery.yml',
   )
+  // The preflight also asserts the PHAR's own `composer --version` output against a literal
+  // version, written with escaped dots for grep -E. That literal is not a composer-<version>
+  // path, so the check above never sees it: updating the Dockerfile and the PHAR paths while
+  // leaving this pattern behind passes every static check and then stops the deployment at the
+  // preflight, where the new binary's output fails the old pattern.
+  const workflowComposerGrepVersions = [
+    ...workflow.matchAll(/Composer version (\d+)\\\.(\d+)\\\.(\d+)/g),
+  ].map((match) => `${match[1]}.${match[2]}.${match[3]}`)
+
+  if (workflowComposerGrepVersions.length === 0) {
+    throw new Error(
+      "Could not find the preflight's `Composer version <version>` match pattern in delivery.yml.",
+    )
+  }
 
   assertAllEqual(workflowPhpSeries, phpSeries, 'PHP series')
   assertAllEqual(workflowComposerVersions, composerVersion, 'Composer version')
+  assertAllEqual(
+    workflowComposerGrepVersions,
+    composerVersion,
+    'Composer version asserted by the preflight match pattern',
+  )
 
   console.log(
     `OK: delivery.yml matches Dockerfile toolchain (php ${phpSeries}, composer ${composerVersion}).`,

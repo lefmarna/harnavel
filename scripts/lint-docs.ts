@@ -5,9 +5,8 @@
 // - CLAUDE.md / GEMINI.md are one-line @AGENTS.md pointers.
 // - .claude/skills/<name>/SKILL.md and .agents/skills/<name>/SKILL.md frontmatter
 //   has `name` matching directory name and non-empty `description`.
-// - Repo-owned skills listed in MIRRORED_SKILLS have the same shared files in
-//   .claude/skills and .agents/skills after agent-specific metadata is excluded
-//   and SKILL.md frontmatter is normalized.
+// - Repo-owned skills listed in REPO_OWNED_SKILLS keep one canonical body under
+//   .agents/skills, and their .claude counterpart points at it instead of copying it.
 import fs from 'node:fs'
 import { glob } from 'node:fs/promises'
 import path from 'node:path'
@@ -253,177 +252,114 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
 }
 
 // ---------------------------------------------------------------------------
-// Skill duplication sync check
+// Repo-owned skill pointer check
 //
-// Only repo-owned skills that are intentionally mirrored to both
-// .claude/skills and .agents/skills are checked for content equivalence.
+// Repo-owned skills keep one canonical body under .agents/skills/<name>/SKILL.md,
+// shared with every agent toolchain that works this repository. The .claude copy is
+// a pointer that exists only to carry Claude-specific frontmatter a symlink would
+// destroy (disable-model-invocation, argument-hint). Duplicating the body instead
+// would need a synchronization checker to keep the copies equivalent; a pointer
+// removes the divergence rather than policing it.
 //
-// External skills (kiro-*, etc.) are deliberately maintained in different
-// formats per agent toolchain (.claude adds allowed-tools/argument-hint
-// frontmatter; .agents uses <background_information>/<instructions> tags).
-// Including them would produce permanent false positives and bury real drift.
-//
-// Which repo-owned skills get mirrored:
-//   Mirror a skill when any agent doing ordinary implementation work in this
-//   repository needs it (adding a page, compacting ADRs, updating packages).
-//   Keep a skill in .claude only when it drives Claude-specific repository
-//   operations that other toolchains do not run (template convergence and
-//   project bootstrapping: absorb-from-apps, merge-template, project-docs-init).
-//   AGENTS.md points non-Claude agents at those by path when they need them.
-//
-// Mirroring means duplicated files, not symlinks: the two trees carry different
-// runtime metadata that a link would destroy (.claude SKILL.md has
-// disable-model-invocation / argument-hint; .agents has agents/openai.yaml).
-// That divergence is the reason this checker normalizes before comparing.
-//
-// When a repo-owned skill is placed in both directories, add its name here.
+// External skills (kiro-*, etc.) are vendored per toolchain in their own formats and
+// are not pointers. Only repo-owned skills are listed here.
 // ---------------------------------------------------------------------------
 
-const MIRRORED_SKILLS: readonly string[] = [
-  // repo-owned skills mirrored to both .claude/skills and .agents/skills.
-  // Add a skill here when its SKILL.md body and shared frontmatter are intentionally identical in both trees.
+const REPO_OWNED_SKILLS: readonly string[] = [
   'adr-compact',
   'add-page',
   'update-laravel-packages',
 ]
 
-const AGENT_SPECIFIC_FRONTMATTER_KEYS = new Set([
-  'argument-hint',
-  'disable-model-invocation',
-])
+// The pointer body is fixed text, not a style to approximate: comparing against it exactly is both
+// stricter and simpler than trying to describe what an acceptable pointer may not contain. Prose,
+// bullets, and fenced blocks are all ways to smuggle instructions back into the second copy, and a
+// heuristic has to enumerate them; an equality does not.
+function expectedPointerBody(title: string, canonical: string): string {
+  return [
+    `# ${title}`,
+    '',
+    `Read \`${canonical}\` and follow it. That file is the canonical body of this skill, shared`,
+    'with every agent toolchain that works this repository. Skill-local paths it gives, such as',
+    '`references/`, resolve next to that file, not next to this one.',
+    '',
+    'This file exists only to register the skill with the Claude-specific frontmatter above, which',
+    'a symlink would destroy. It carries no instructions of its own — never add any here, or the',
+    'two copies diverge again.',
+  ].join('\n')
+}
 
-function normalizeMirroredSkillContent(content: string): string {
+function bodyOf(content: string): string {
   if (!content.startsWith('---')) {
     return content
   }
 
   const end = content.indexOf('\n---', 3)
 
-  if (end === -1) {
-    return content
-  }
+  return end === -1 ? content : content.slice(end + 4)
+}
 
-  const block = content.slice(3, end)
-  const filteredBlock = block
+function normalize(body: string): string {
+  return body
+    .replace(/\r\n/g, '\n')
     .split('\n')
-    .filter((line) => {
-      const match = line.match(/^(\w[\w-]*):/)
-
-      return match === null || !AGENT_SPECIFIC_FRONTMATTER_KEYS.has(match[1])
-    })
+    .map((line) => line.replace(/\s+$/, ''))
     .join('\n')
-
-  return `---${filteredBlock}${content.slice(end)}`
+    .trim()
 }
 
-function listMirroredSkillFiles(skillDir: string): string[] {
-  const files: string[] = []
-
-  function visit(currentDir: string, relativeDir = ''): void {
-    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
-      const relativePath = path.join(relativeDir, entry.name)
-
-      // Agent-specific UI and invocation metadata intentionally differs.
-      if (
-        relativePath === 'agents' ||
-        relativePath.startsWith(`agents${path.sep}`)
-      ) {
-        continue
-      }
-
-      const absolutePath = path.join(currentDir, entry.name)
-
-      if (entry.isDirectory()) {
-        visit(absolutePath, relativePath)
-      } else if (entry.isFile()) {
-        files.push(relativePath)
-      }
-    }
-  }
-
-  visit(skillDir)
-
-  return files.sort()
-}
-
-function checkSkillSync(): LintError[] {
+function checkSkillPointers(): LintError[] {
   const errors: LintError[] = []
-  const claudeSkillsRoot = path.join(ROOT, '.claude', 'skills')
-  const agentsSkillsRoot = path.join(ROOT, '.agents', 'skills')
 
-  for (const name of MIRRORED_SKILLS) {
-    const claudeDir = path.join(claudeSkillsRoot, name)
-    const agentsDir = path.join(agentsSkillsRoot, name)
+  for (const name of REPO_OWNED_SKILLS) {
+    // Markdown always spells paths with forward slashes, so the text the pointer must contain
+    // is a POSIX path. Filesystem access uses path.join separately: on Windows the two differ,
+    // and matching a `.agents\skills\...` path against the document would fail every time.
+    const canonical = `.agents/skills/${name}/SKILL.md`
+    const pointer = `.claude/skills/${name}/SKILL.md`
+    const canonicalPath = path.join(ROOT, '.agents', 'skills', name, 'SKILL.md')
+    const pointerPath = path.join(ROOT, '.claude', 'skills', name, 'SKILL.md')
 
-    if (!fs.existsSync(claudeDir)) {
+    if (!fs.existsSync(canonicalPath)) {
       errors.push({
-        file: `.claude/skills/${name}`,
-        reason: `Mirrored skill "${name}" is missing from .claude/skills. Add it or remove from MIRRORED_SKILLS.`,
+        file: canonical,
+        reason: `Canonical body for repo-owned skill "${name}" is missing. Add it or remove the name from REPO_OWNED_SKILLS.`,
       })
       continue
     }
 
-    if (!fs.existsSync(agentsDir)) {
+    if (!fs.existsSync(pointerPath)) {
       errors.push({
-        file: `.agents/skills/${name}`,
-        reason: `Mirrored skill "${name}" is missing from .agents/skills. Add it or remove from MIRRORED_SKILLS.`,
+        file: pointer,
+        reason: `Claude pointer for repo-owned skill "${name}" is missing. Add it or remove the name from REPO_OWNED_SKILLS.`,
       })
       continue
     }
 
-    const claudeFiles = listMirroredSkillFiles(claudeDir)
-    const agentsFiles = listMirroredSkillFiles(agentsDir)
-    const claudeFileSet = new Set(claudeFiles)
-    const agentsFileSet = new Set(agentsFiles)
-    const allFiles = [...new Set([...claudeFiles, ...agentsFiles])].sort()
+    const title = /^#\s+(.+)$/m.exec(
+      bodyOf(fs.readFileSync(canonicalPath, 'utf-8')),
+    )?.[1]
 
-    if (!claudeFileSet.has('SKILL.md')) {
+    if (title === undefined) {
       errors.push({
-        file: `.claude/skills/${name}/SKILL.md`,
-        reason: `Mirrored skill "${name}" is missing required file "SKILL.md" in .claude/skills.`,
+        file: canonical,
+        reason:
+          'Canonical body must open with a `# <title>` heading; the pointer reuses it.',
       })
+      continue
     }
 
-    if (!agentsFileSet.has('SKILL.md')) {
+    const expected = expectedPointerBody(title.trim(), canonical)
+    const actual = normalize(bodyOf(fs.readFileSync(pointerPath, 'utf-8')))
+
+    if (actual !== normalize(expected)) {
       errors.push({
-        file: `.agents/skills/${name}/SKILL.md`,
-        reason: `Mirrored skill "${name}" is missing required file "SKILL.md" in .agents/skills.`,
+        file: pointer,
+        reason: `Body must match the pointer template exactly. Replace everything below the frontmatter with:\n\n${expected
+          .split('\n')
+          .map((line) => `      ${line}`)
+          .join('\n')}`,
       })
-    }
-
-    for (const relativeFile of allFiles) {
-      if (!claudeFileSet.has(relativeFile)) {
-        errors.push({
-          file: `.claude/skills/${name}/${relativeFile}`,
-          reason: `Mirrored skill "${name}" is missing shared file "${relativeFile}" in .claude/skills.`,
-        })
-        continue
-      }
-
-      if (!agentsFileSet.has(relativeFile)) {
-        errors.push({
-          file: `.agents/skills/${name}/${relativeFile}`,
-          reason: `Mirrored skill "${name}" is missing shared file "${relativeFile}" in .agents/skills.`,
-        })
-        continue
-      }
-
-      const claudeFile = path.join(claudeDir, relativeFile)
-      const agentsFile = path.join(agentsDir, relativeFile)
-      const contentsMatch =
-        relativeFile === 'SKILL.md'
-          ? normalizeMirroredSkillContent(
-              fs.readFileSync(claudeFile, 'utf-8'),
-            ) ===
-            normalizeMirroredSkillContent(fs.readFileSync(agentsFile, 'utf-8'))
-          : fs.readFileSync(claudeFile).equals(fs.readFileSync(agentsFile))
-
-      if (!contentsMatch) {
-        errors.push({
-          file: `.claude/skills/${name}/${relativeFile}`,
-          reason: `Mirrored skill "${name}" shared file "${relativeFile}" has diverged between .claude/skills and .agents/skills.`,
-        })
-      }
     }
   }
 
@@ -441,13 +377,13 @@ async function main() {
 
   const pointerErrors = checkPointerFiles()
   const frontmatterErrors = await checkSkillFrontmatter()
-  const syncErrors = checkSkillSync()
+  const pointerSkillErrors = checkSkillPointers()
 
   const hasErrors =
     allLinkErrors.length > 0 ||
     pointerErrors.length > 0 ||
     frontmatterErrors.length > 0 ||
-    syncErrors.length > 0
+    pointerSkillErrors.length > 0
 
   if (!hasErrors) {
     console.log(
@@ -458,7 +394,7 @@ async function main() {
       '✓ Skill frontmatter valid in .claude/skills and .agents/skills.',
     )
     console.log(
-      `✓ Mirrored skills (${MIRRORED_SKILLS.join(', ')}) are content-equivalent.`,
+      `✓ Repo-owned skills (${REPO_OWNED_SKILLS.join(', ')}) point at their canonical body.`,
     )
     process.exit(0)
   }
@@ -492,10 +428,12 @@ async function main() {
     }
   }
 
-  if (syncErrors.length > 0) {
-    console.error(`✗ Found ${syncErrors.length} skill sync error(s):\n`)
+  if (pointerSkillErrors.length > 0) {
+    console.error(
+      `✗ Found ${pointerSkillErrors.length} repo-owned skill pointer error(s):\n`,
+    )
 
-    for (const err of syncErrors) {
+    for (const err of pointerSkillErrors) {
       console.error(`  ${err.file}`)
       console.error(`    ${err.reason}\n`)
     }

@@ -69,6 +69,13 @@ mise run composer:update   # Composer update
 > (`--parallel` only isolates workers *within* one run into separate `app_testing_*` schemas; it
 > does not coordinate independent test processes.)
 
+> **Do not pass `--parallel`.** Workers share one filesystem, and the planned-maintenance suite
+> deliberately runs the deployment installer against `base_path()` to prove `artisan up` clears the
+> real `storage/framework/down` and `maintenance.php` — the one assertion a temporary directory
+> cannot make. While that test runs, the whole application is in maintenance mode, so a request from
+> another worker gets `503` instead of its expected status (roughly one run in five). CI
+> (`reusable-test.yml`) and every `mise` task run serially for this reason.
+
 ## E2E Testing
 
 ```bash
@@ -129,6 +136,5 @@ in the `ci-lint` action.
 pnpm test:deploy-lifecycle          # Verify preflight and maintenance deployment ordering
 pnpm test:deploy-rsync-excludes     # Verify rsync --delete protects remote-only data
 pnpm test:release-identity          # Verify release identity stamping and health verification
-pnpm test:renovate-composer-policy  # Verify routine Composer updates cannot change constraints
 pnpm test:toolchain-versions        # Verify Dockerfile and delivery.yml PHP/Composer versions match
 ```

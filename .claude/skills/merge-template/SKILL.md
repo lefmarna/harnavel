@@ -56,16 +56,14 @@ rejects an exhaustive manifest, because it turns every new file into a second pl
   annotation density; and the `Drain in-flight requests` duration with its immediately adjacent app
   rationale. The steps that read these values are shared.
 - **Not in any file**: the release identity enforcement stage lives in each GitHub Environment's
-  `RELEASE_IDENTITY_ENFORCEMENT` configuration variable, whose value names the repository and
-  environment it applies to (`enforce:<owner>/<repo>@<repository id>:Production`, the numeric id
-  because a renamed repository frees its slug for reuse); `delivery.yml` observes unless
-  the value names the repository and environment being deployed
+  `RELEASE_IDENTITY_ENFORCEMENT` configuration variable (`enforce` or `observe`); `delivery.yml`
+  observes unless the variable says `enforce`
   ([`TADR-0006`](../../../docs/adr/template/0006-planned-maintenance-deployments.md)). Converge the
   workflow's resolution expression with the template and never resolve a conflict by hardcoding a
   stage: a committed `enforce` becomes the initial value for the next derived app and withdraws its
-  first healthy release. Because the value names the repository, it is app-specific data and is
-  never copied between repositories — an app that renamed its repository or environments must
-  update its own variable values.
+  first healthy release. Define the variable only at environment scope — a same-named variable at
+  repository or organization scope shadows every environment value and makes an unmeasured
+  environment enforce.
 
   The optional `HEALTHCHECK_BASIC_AUTH` environment secret is app-specific in the same way. An
   environment whose document root is protected by Basic authentication (a develop host behind
@@ -83,17 +81,24 @@ rejects an exhaustive manifest, because it turns every new file into a second pl
   1. Record the inline value and which environments it covered.
   2. Confirm no variable of this name exists at repository or organization scope, and delete it if
      it does. Environment-level variables do not overwrite values already in the `vars` context, so
-     a broader-scope one shadows every environment value, and its content — not the environment's —
-     then decides the stage: a mistargeted value keeps observing, while one naming this deployment
-     enforces even where the environment variable is unset or cleared.
-  3. Set `enforce:<owner>/<repo>@<repository id>:<environment>` on each environment that was
-     already measured and enforcing.
+     a broader-scope one shadows every environment value and decides the stage on its own — a
+     broader `enforce` enforces even where the environment variable is unset or cleared.
+  3. Set `enforce` on each environment that was already measured and enforcing.
   4. Only then take the template's expression, and confirm the effective stage in the next
      deployment's job summary.
 
   If the environments were never measured, or their recorded stage was observing, drop the inline
   value and leave the variables unset. Do not remove an inline `enforce` before its environment
   variable exists.
+
+  **Migration, when an environment holds a targeted enforcement value.** A briefly-shipped template
+  required the value to name its own target
+  (`enforce:<owner>/<repo>@<repository id>:<environment>`) so that a value inherited from a broader
+  scope could not reach a different repository. The value is now plain `enforce` / `observe`, and
+  the targeted form is rejected. Replace any such variable with `enforce` before taking this
+  template. Missing it costs nothing but a rerun: the deployment fails in `Validate deployment
+  configuration`, which runs before anything touches the server, and its message names the accepted
+  values.
 
 ## Arguments
 

@@ -36,11 +36,11 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 ## Documentation
 
 - `README.md` is Japanese; `docs/` is English. `docs/generated/` is auto-generated — never edit by hand.
-- This file is the single agent entry point; `CLAUDE.md` / `GEMINI.md` are one-line pointers to it. Put content here, never in a pointer file; supporting a new agent tool means adding another pointer, nothing else.
+- This file is the single agent entry point; `CLAUDE.md` / `GEMINI.md` are one-line pointers to it. Put content here, never in a pointer file. A new agent tool reaches these guidelines with one more pointer, but its hook and MCP wiring is its own: each toolchain reads its own config file in its own format (`.claude/settings.json`, `.codex/config.toml`, `.agents/hooks.json`, `.mcp.json`), and one needed an 87-line adapter (`scripts/hooks/agy-stop-adapter.mjs`) to reach the shared `scripts/hooks/stop-verify.mjs`. Keep the verification logic in one place and wire each tool to it.
 - Any agent (Claude Code, Codex, Gemini, ...) works this repo: durable knowledge lives in versioned repo Markdown, never a single tool's private memory. Placement: constraint every session needs → here; behavior → test; domain term → `CONTEXT.md`; durable decision with rationale → ADR; how-to/reference → `docs/`; everything else stays in code or is not kept.
 - Before planning, specifying, designing, or refactoring an area, read its glossary and ADRs. `CONTEXT.md` is the domain glossary — domain language only, no implementation details (use `CONTEXT-MAP.md` if present); ADRs live in `docs/adr/` (ADR-NNNN) and `docs/adr/template/` (TADR-NNNN) — policy in `docs/adr/README.md`.
 - Use glossary terms and surface ADR conflicts instead of overriding them silently. After completing work, organize only ADRs and `CONTEXT.md` (TADR-0001); when and how to author, squash, or delete an ADR is defined in `docs/adr/README.md`.
-- Repo-owned skills a non-Claude agent may need for ordinary implementation work are mirrored to both `.claude/skills/<name>/` and `.agents/skills/<name>/` (`add-page`, `adr-compact`, `update-laravel-packages`); `pnpm lint:docs` keeps the shared content equivalent. Claude-specific repository operations (`absorb-from-apps`, `merge-template`, `project-docs-init`) live in `.claude/skills/` only and are followed by path.
+- Repo-owned skills a non-Claude agent may need for ordinary implementation work (`add-page`, `adr-compact`, `update-laravel-packages`) keep one canonical body under `.agents/skills/<name>/SKILL.md`. The `.claude/skills/<name>/SKILL.md` counterpart is a pointer to it, carrying only the Claude-specific frontmatter a symlink would destroy; never put instructions there. `pnpm lint:docs` checks the pointer resolves. Claude-specific repository operations (`absorb-from-apps`, `merge-template`, `project-docs-init`) live in `.claude/skills/` only and are followed by path.
 
 ## Reference Docs
 
@@ -50,4 +50,4 @@ Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hos
 - Infrastructure: `docs/infrastructure.md`
 - Spec workflow: `docs/generated/specs.md`
 - Cross-app convergence: upstream (apps → template) `/absorb-from-apps`, downstream (template → app) `/merge-template`; decision model in TADR-0003 (`docs/adr/template/0003-shared-surface-convergence.md`). These procedures are plain Markdown under `.claude/skills/<name>/SKILL.md` — non-Claude agents follow them by path.
-- New Inertia pages: follow `.claude/skills/add-page/SKILL.md` (mirrored at `.agents/skills/add-page/SKILL.md`) so route, PageViewModel, Wayfinder, React props, Feature spec, and smoke E2E stay aligned.
+- New Inertia pages: follow `.agents/skills/add-page/SKILL.md` so route, PageViewModel, Wayfinder, React props, Feature spec, and smoke E2E stay aligned.

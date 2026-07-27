@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -142,25 +141,28 @@ function main(): void {
 
   const preflight = stepBlock(workflow, 'Verify XServer toolchain')
 
-  assertIncludes(
+  // 版番号そのものは Dockerfile から導出して test-toolchain-versions.ts が照合する。
+  // ここで固定するのは preflight の作り方のほう: 存在確認だけで済ませず PHAR を実際に
+  // 実行し、前方一致ではなく厳密一致で版を確かめる（前方一致は 2.10.20 を通す）。
+  assertMatches(
     preflight,
-    'test -x /usr/bin/php8.5',
+    /test -x \/usr\/bin\/php\d+\.\d+/,
     'XServer PHP executable check',
   )
-  assertIncludes(
+  assertMatches(
     preflight,
-    'test -r ~/opt/bin/composer-2.10.2',
+    /test -r ~\/opt\/bin\/composer-\d+\.\d+\.\d+/,
     'XServer Composer PHAR readability check',
   )
-  assertIncludes(
+  assertMatches(
     preflight,
-    '/usr/bin/php8.5 ~/opt/bin/composer-2.10.2 --version --no-ansi',
+    /\/usr\/bin\/php\d+\.\d+ ~\/opt\/bin\/composer-\d+\.\d+\.\d+ --version --no-ansi/,
     'XServer Composer execution check',
   )
-  assertIncludes(
+  assertMatches(
     preflight,
-    "grep -Eq '^Composer version 2\\.10\\.2([[:space:]]|$)'",
-    'exact XServer Composer version check',
+    /grep -Eq '\^Composer version [0-9\\.]+\(\[\[:space:\]\]\|\$\)'/,
+    'exact XServer Composer version match, not a prefix',
   )
 
   assertIncludes(
@@ -272,15 +274,12 @@ function main(): void {
   // 焼き込むと、その値が新規派生アプリの初期値も兼ねてしまい、Web SAPI の OPcache 設定を
   // 一度も測っていない環境が初回デプロイでいきなり fail closed になる
   // （TADR-0006 の staged adoption はこれを防ぐためにある）。
-  // vars は organization / repository / environment をマージした結果で、スコープは式から
-  // 判別できない。値自身にリポジトリと環境名を名乗らせることで、上位スコープの 1 つの値が
-  // 他リポジトリの同名環境へ波及することを防ぐ。環境名だけでは organization スコープの
-  // enforce:Production が全派生アプリに効き、slug だけでは改名後に slug を再利用した
-  // 別アプリへ届く。再利用されない数値 ID まで含める。
+  // 未設定は observe に解決する。ファイルに enforce を焼くとその値が新規派生アプリの
+  // 初期値も兼ねてしまうため、既定は必ず observe 側に倒す。
   assertMatches(
     workflow,
-    /RELEASE_IDENTITY_ENFORCEMENT: \$\{\{ vars\.RELEASE_IDENTITY_ENFORCEMENT == format\('enforce:\{0\}@\{1\}:\{2\}', github\.repository, github\.repository_id, .+\) && 'enforce' \|\| 'observe' \}\}/,
-    'the enforcement stage must only resolve to enforce when the variable names this repository, its id, and this environment',
+    /RELEASE_IDENTITY_ENFORCEMENT: \$\{\{ vars\.RELEASE_IDENTITY_ENFORCEMENT \|\| 'observe' \}\}/,
+    'the enforcement stage must come from the environment variable and default to observe',
   )
   assertExcludes(
     workflow,
@@ -288,26 +287,9 @@ function main(): void {
     'the enforcement stage must never be hardcoded to enforce in the workflow file',
   )
 
-  // 環境名の三項式が environment: と enforcement 式で食い違うと、どの環境でも
-  // enforce に解決できない（または誤った環境で解決する）。同一であることを固定する。
-  const environmentExpressions = [
-    ...workflow.matchAll(
-      /github\.ref_name == 'main' && '([^']+)' \|\| '([^']+)'/g,
-    ),
-  ].map((match) => `${match[1]}/${match[2]}`)
-
-  if (
-    environmentExpressions.length < 2 ||
-    new Set(environmentExpressions).size !== 1
-  ) {
-    throw new Error(
-      `The environment name expression must be identical in "environment:" and the enforcement expression, found: ${JSON.stringify(environmentExpressions)}`,
-    )
-  }
-
   // 実効段階はファイルから読めず、上位スコープの同名変数に遮蔽されると Environment の
-  // 設定と食い違う（対象一致なら未設定でも enforce になる）。実行ごとに記録して、
-  // 「設定したつもりで効いていない」「解除したつもりで効いたまま」を両方検出できるようにする。
+  // 設定と食い違う。実行ごとに記録して、「設定したつもりで効いていない」
+  // 「解除したつもりで効いたまま」を両方検出できるようにする。
   assertIncludes(
     stepBlock(workflow, 'Validate deployment configuration'),
     'GITHUB_STEP_SUMMARY',
@@ -381,31 +363,8 @@ function main(): void {
     }
   }
 
-  // ランナーが渡す GITHUB_STEP_SUMMARY を継承したまま抽出スクリプトを実行すると、CI 上で
-  // このテストが lint ジョブの実サマリへテスト用の適用段階を書き込む。継承環境を明示的に
-  // 注入して、RUNNER_WRITE_TARGETS が実際にそれを打ち消していることを確かめる
-  // （env 引数で空文字を渡すだけでは、打ち消しが無くても通ってしまう）。
-  const summaryDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'lifecycle-summary-'),
-  )
-  const summaryPath = path.join(summaryDir, 'summary.md')
-
-  fs.writeFileSync(summaryPath, '')
-  runShellStep(
-    validateScript,
-    { ...validReleaseEnv, HEALTHCHECK_URL: 'https://example.com/up' },
-    { ...process.env, GITHUB_STEP_SUMMARY: summaryPath },
-  )
-
-  const leakedSummary = fs.readFileSync(summaryPath, 'utf8')
-
-  fs.rmSync(summaryDir, { force: true, recursive: true })
-
-  if (leakedSummary !== '') {
-    throw new Error(
-      `The extracted run block must not write to an inherited GITHUB_STEP_SUMMARY, found: ${JSON.stringify(leakedSummary)}`,
-    )
-  }
+  // 継承した GITHUB_STEP_SUMMARY へ書き込まないことは test-release-identity.ts が
+  // 名前付きテストで固定している。ここでは重複させない。
 
   // Withdraw の if 条件は step outcome を参照する。id が欠けると参照が空に評価され、
   // 成功時にも withdraw が走る（または全く走らない）ため、配線ごと固定する。

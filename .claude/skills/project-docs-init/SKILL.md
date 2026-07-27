@@ -127,15 +127,14 @@ per-environment GitHub settings the first deployment needs, for Develop and Prod
 - `XSERVER_*` and `DEPLOY_DIRECTORY` secrets, and the `HEALTHCHECK_URL` secret (the canonical HTTPS
   URL; `delivery.yml` validates it before touching the server).
 - The `RELEASE_IDENTITY_ENFORCEMENT` variable stays **unset**. A new environment has never had its
-  web SAPI measured, so it must observe first; `delivery.yml` observes unless the variable names
-  this repository and the environment being deployed, and `docs/infrastructure.md` documents how to
-  move an environment to `enforce:<owner>/<repo>@<repository id>:<environment>` after measuring it.
-  Do not set it during initialization.
+  web SAPI measured, so it must observe first; `delivery.yml` observes unless the variable says
+  `enforce`, and `docs/infrastructure.md` documents how to move an environment to `enforce` after
+  measuring it. Do not set it during initialization.
 - Check that no variable of this name already exists at repository or organization scope, and
   delete it if one does — inheriting an organization variable is the likely case for a new
   repository. Environment-level variables do not overwrite values already in the `vars` context, so
-  a broader-scope one decides the stage for every environment it names: a value matching this
-  repository and environment enforces even while the environment variable is unset, which is
+  a broader-scope one decides the stage for every environment of this repository: a broader
+  `enforce` enforces even while the environment variable is unset, which is
   exactly the unmeasured-first-deployment case the observing stage exists to prevent.
 
 ## Step 7: Review and Verify

@@ -1055,9 +1055,6 @@ describe('デプロイ設定の検証', () => {
         HEALTHCHECK_URL: 'https://example.com/up',
         RELEASE_ID: VALID_RELEASE_ID,
         RELEASE_IDENTITY_ENFORCEMENT: 'enforce',
-        // 親プロセスの export 値を子へ残さない。省くと「設定変数なし」のケースが
-        // 実環境依存で落ちる（HEALTHCHECK_BASIC_AUTH と同じ隔離方針）。
-        RELEASE_IDENTITY_ENFORCEMENT_SETTING: '',
         ...env,
       },
       ROOT,
@@ -1093,89 +1090,6 @@ describe('デプロイ設定の検証', () => {
         0,
         `must reject ${JSON.stringify(enforcement)}`,
       )
-    }
-  })
-
-  const deploymentTarget = {
-    DEPLOY_ENVIRONMENT: 'Production',
-    GITHUB_REPOSITORY: 'owner/app',
-    GITHUB_REPOSITORY_ID: '123456789',
-  }
-
-  it('設定変数が未設定・observe・リポジトリIDと環境名を伴う enforce なら受理する', async () => {
-    for (const setting of [
-      '',
-      'observe',
-      'enforce:owner/app@123456789:Production',
-      // GitHub の Environment 名に空白制約は無い。`Pre Production` のような名前でも
-      // 解決式は enforce を返すため、検証がそれより厳しくてはならない。
-      'enforce:owner/app@123456789:Pre Production',
-    ]) {
-      assert.equal(
-        (
-          await validate({
-            ...deploymentTarget,
-            RELEASE_IDENTITY_ENFORCEMENT_SETTING: setting,
-          })
-        ).status,
-        0,
-        `must accept ${JSON.stringify(setting)}`,
-      )
-    }
-  })
-
-  it('リポジトリID・slug・環境名のいずれかを欠く設定変数を拒否する', async () => {
-    // 素の "enforce" や環境名だけの値を許すと、organization スコープに置かれた 1 つの値が
-    // 同名環境を持つ全派生アプリを enforce にできてしまう。slug だけでは、改名で空いた
-    // slug を再利用した別アプリに届く余地が残るため、数値 ID も必須にする。
-    for (const setting of [
-      'enforce',
-      'enforce:Production',
-      'enforce:owner/app',
-      'enforce:owner/app:Production',
-      'enforce:owner/app@123456789',
-      'enforce:owner/app@:Production',
-      'enforce:@123456789:Production',
-      'enforce:owner/app@123456789:',
-      'Enforce:owner/app@123456789:Production',
-      'on',
-      // repository id は数値でなければならない。非数値を通すと「改名で空いた slug の
-      // 再利用を数値 ID で塞ぐ」という設計が成立しない。
-      'enforce:owner/app@abc:Production',
-      // 余分な ":" 区切りを通すと、意図と違う環境名を名乗る値が well-formed に見える。
-      'enforce:owner/app@123456789:Production:extra',
-      // 末尾空白付きは == 比較に一致せず静かに observe へ落ちる。typo として弾く。
-      'enforce:owner/app@123456789:Production ',
-    ]) {
-      assert.notEqual(
-        (
-          await validate({
-            ...deploymentTarget,
-            RELEASE_IDENTITY_ENFORCEMENT_SETTING: setting,
-          })
-        ).status,
-        0,
-        `must reject ${JSON.stringify(setting)}`,
-      )
-    }
-  })
-
-  it('他リポジトリ・改名前slug・他環境を名乗る設定変数は観測に畳まれたことを警告する', async () => {
-    for (const setting of [
-      'enforce:owner/app@123456789:Develop',
-      'enforce:owner/other@987654321:Production',
-      // 同じ slug でもリポジトリIDが違えば別リポジトリ（改名で空いた slug の再利用）。
-      'enforce:owner/app@987654321:Production',
-    ]) {
-      const result = await validate({
-        ...deploymentTarget,
-        RELEASE_IDENTITY_ENFORCEMENT: 'observe',
-        RELEASE_IDENTITY_ENFORCEMENT_SETTING: setting,
-      })
-
-      assert.equal(result.status, 0, `must accept ${JSON.stringify(setting)}`)
-      assert.match(result.stderr, /::warning::/)
-      assert.match(result.stderr, /enforce:owner\/app@123456789:Production/)
     }
   })
 

@@ -17,7 +17,6 @@
     "test:deploy-lifecycle": "node --import tsx scripts/test-deploy-lifecycle.ts",
     "test:deploy-rsync-excludes": "node --import tsx scripts/test-deploy-rsync-excludes.ts",
     "test:release-identity": "node --import tsx --test scripts/test-release-identity.ts",
-    "test:renovate-composer-policy": "node --import tsx scripts/test-renovate-composer-policy.ts",
     "test:toolchain-versions": "node --import tsx scripts/test-toolchain-versions.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

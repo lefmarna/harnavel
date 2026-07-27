@@ -51,21 +51,11 @@ jobs:
       # ファイルの値は新規派生アプリの初期値も兼ねてしまうので、安全側の既定（observe）を
       # 配布物ではなく環境設定側に置く。
       #
-      # vars は organization → repository → environment をマージした結果で、式からは
-      # どのスコープ由来か判別できない。「environment スコープだけを読む」ことはできないため、
-      # 値自身にリポジトリと Environment を名乗らせて照合する
-      # （enforce:<owner>/<repo>@<repository_id>:<environment>）。
-      # - 環境名だけでは、organization スコープの enforce:Production が同名環境を持つ
-      #   全派生アプリの初回本番デプロイに波及する。
-      # - slug だけでは、リポジトリ改名後に同じ slug を再利用した別アプリへ届き得る。
-      #   数値 ID は再利用されないので、両方を含めて初めて別リポジトリへの波及を機械的に塞げる。
-      # - slug も残すのは、切替操作と障害調査で人間が対象を確認できるようにするため。
-      # github.repository / github.repository_id は式で常に解決でき、API 呼び出しも追加権限も
-      # 要らないため、fail-closed なこの経路に新しい失敗要因（レート制限・権限不足・障害）を
-      # 持ち込まない。未設定・空・observe・他リポジトリや他環境を名乗る値はすべて observe。
-      DEPLOY_ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Develop' }}
-      RELEASE_IDENTITY_ENFORCEMENT_SETTING: ${{ vars.RELEASE_IDENTITY_ENFORCEMENT }}
-      RELEASE_IDENTITY_ENFORCEMENT: ${{ vars.RELEASE_IDENTITY_ENFORCEMENT == format('enforce:{0}@{1}:{2}', github.repository, github.repository_id, github.ref_name == 'main' && 'Production' || 'Develop') && 'enforce' || 'observe' }}
+      # この変数は Environment スコープにだけ定義すること。vars は organization →
+      # repository → environment をマージした結果で、式からはどのスコープ由来か判別できない。
+      # 上位スコープに同名変数があると Environment の値を遮蔽し、未計測の環境が enforce の
+      # まま動く。列挙外の値は下の Validate がリモートへ触れる前に落とす。
+      RELEASE_IDENTITY_ENFORCEMENT: ${{ vars.RELEASE_IDENTITY_ENFORCEMENT || 'observe' }}
 
     steps:
       - name: Checkout
@@ -118,41 +108,15 @@ jobs:
             exit 1
           }
 
-          # 生の設定値の形式を検証する。解決後の値は式が observe / enforce のどちらかに
-          # 畳んでしまうため、typo は「静かに observe」になり切り替え忘れと区別できない。
-          # glob の case では非数値の repository id・余分な ":" 区切り・末尾空白を取りこぼし、
-          # 「well-formed 以外はリモート変更前に失敗する」という文書上の契約と食い違うため、
-          # 他の2つの検証と同じく厳密な正規表現で判定する。
-          # 環境名セグメントは内部の空白を許す: GitHub の Environment 名に空白制約は無く
-          # （255 文字・大小無視・リポジトリ内一意のみ）、`Pre Production` のような名前を
-          # 使うアプリで解決式が enforce を返す値をこの検証だけが弾いてはならない。
-          # 検証は解決式より厳しくしない。弾くのは前後の空白と余分な ":" 区切りだけ。
-          node -e '
-            const setting = process.env.RELEASE_IDENTITY_ENFORCEMENT_SETTING ?? ""
-            const wellFormed = /^enforce:[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+@[1-9][0-9]*:[^\s:](?:[^:]*[^\s:])?$/
-            process.exit(setting === "" || setting === "observe" || wellFormed.test(setting) ? 0 : 1)
-          ' || {
-            echo "RELEASE_IDENTITY_ENFORCEMENT must be unset, 'observe', or 'enforce:<owner>/<repo>@<repository id>:<environment>' (for this deployment: 'enforce:${GITHUB_REPOSITORY:-<owner>/<repo>}@${GITHUB_REPOSITORY_ID:-<repository id>}:${DEPLOY_ENVIRONMENT:-<environment>}'). The repository id must be numeric, and no extra ':' segment or surrounding whitespace is allowed. It names the repository and environment it applies to because GitHub merges organization, repository, and environment variables into one context and the scope cannot be recovered here. The numeric repository id is included because a renamed repository frees its slug for reuse." >&2
-            exit 1
-          }
-
-          # 解決後の値の多層防御。以降のステップはこの値だけを読む。
+          # 列挙外の値はリモートへ触れる前に落とす。typo を静かに observe へ畳むと、
+          # 切り替え忘れと区別できなくなる。
           case "$RELEASE_IDENTITY_ENFORCEMENT" in
             observe | enforce) ;;
             *)
-              echo "RELEASE_IDENTITY_ENFORCEMENT must resolve to 'observe' or 'enforce'." >&2
+              echo "RELEASE_IDENTITY_ENFORCEMENT must be unset, 'observe', or 'enforce'. Define it only at environment scope: GitHub merges organization, repository, and environment variables into one context, and a same-named variable at a broader scope shadows the environment one." >&2
               exit 1
               ;;
           esac
-
-          # 形式は正しいが他リポジトリ / 他環境を名乗る値は observe に畳まれる。
-          # organization / repository スコープの値を継承した場合がこれに当たるので、
-          # 黙って観測に落ちないよう警告する。
-          if [ "$RELEASE_IDENTITY_ENFORCEMENT" = 'observe' ] &&
-            [ -n "${RELEASE_IDENTITY_ENFORCEMENT_SETTING:-}" ] &&
-            [ "${RELEASE_IDENTITY_ENFORCEMENT_SETTING:-}" != 'observe' ]; then
-            echo "::warning::RELEASE_IDENTITY_ENFORCEMENT is '${RELEASE_IDENTITY_ENFORCEMENT_SETTING}', which does not name this deployment's repository and environment; observing. To enforce, set 'enforce:${GITHUB_REPOSITORY:-<owner>/<repo>}@${GITHUB_REPOSITORY_ID:-<repository id>}:${DEPLOY_ENVIRONMENT:-<environment>}' on the ${DEPLOY_ENVIRONMENT:-target} environment. If that is already set, delete any variable of the same name at repository or organization scope: environment-level variables do not overwrite values already in the vars context, so a broader-scope variable shadows the environment one and is what this run read." >&2
-          fi
 
           # 適用段階はファイルに無いので、実行ごとにログとサマリへ残す。enforce へ切り替えた
           # つもりで効いていない状態をここで気づけるようにする。

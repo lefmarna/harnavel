@@ -62,6 +62,14 @@ Only the third observation distinguishes "some release answered" from "this rele
 Under enforcement a mismatch never succeeds: it keeps retrying and then fails the verification. An
 observing environment succeeds on the first two observations alone.
 
+Verification introduces no authentication of its own, but an environment whose document root is
+already protected — Basic authentication on a develop host, for example — must have that existing
+credential presented on **all three** probes: they share one protection, and a single
+unauthenticated probe returns 401, failing reachability and withdrawing a healthy release even
+while observing. The credential is an optional per-environment secret, never embedded in the health
+URL and never logged. It belongs to the environment, not to the template: it is not copied between
+applications, and environments without such protection leave it unset.
+
 **OPcache precondition.** Read the web runtime's OPcache revalidation directives from that same
 response and treat them as a precondition rather than an observation. A response is authoritative
 only when it carries this deploy attempt's identity **and** an OPcache payload whose structure
@@ -161,7 +169,9 @@ Operational procedure, per-environment rollout, and recovery live in
 - **Restart PHP-FPM or reset OPcache after deployment.** Rejected: shared hosting grants neither.
 - **Serve the identity endpoint behind a shared secret.** Rejected for now: it adds a
   per-environment secret to provision before any deployment can succeed, and the exposed value is a
-  deploy-attempt identifier for a private repository.
+  deploy-attempt identifier for a private repository. This rejects introducing authentication *for
+  the identity endpoint*; it does not apply to an environment already protected as a whole, where
+  verification presents that environment's existing credential (see the decision above).
 - **Leave an unhealthy release live and only fail the workflow.** Rejected: serving known-broken
   responses contradicts the fail-closed decision.
 - **Use atomic release directories and a symlink switch.** Deferred: it requires a larger document
@@ -184,7 +194,8 @@ Operational procedure, per-environment rollout, and recovery live in
 - The bounded maximum for the revalidation interval is chosen so the settle wait plus the remaining
   attempts fit inside the retry window; a larger configured interval is rejected rather than waited
   out, because the workflow cannot distinguish it from a runtime that will not converge.
-- The identity endpoint is public and unauthenticated. It exposes the deployed commit SHA, the
+- The identity endpoint carries no authentication of its own, so it is public wherever the
+  environment serving it is. It exposes the deployed commit SHA, the
   workflow run and attempt, and the runtime's whole OPcache revalidation snapshot — whether the
   extension is loaded and enabled, whether timestamps are validated, the revalidation interval, and
   whether preloading is configured (the presence of the setting only, never the configured path).

@@ -67,6 +67,13 @@ rejects an exhaustive manifest, because it turns every new file into a second pl
   never copied between repositories — an app that renamed its repository or environments must
   update its own variable values.
 
+  The optional `HEALTHCHECK_BASIC_AUTH` environment secret is app-specific in the same way. An
+  environment whose document root is protected by Basic authentication (a develop host behind
+  `.htaccess.develop`, for example) needs it so all three verification probes authenticate; an
+  unauthenticated probe returns 401 and withdraws a healthy release even while observing. Converge
+  the workflow's shared wiring for it, but never copy the credential between repositories or set it
+  on an environment without such protection.
+
   **Migration, when the app's `delivery.yml` still carries an inline stage.** Earlier templates kept
   `RELEASE_IDENTITY_ENFORCEMENT` in the file as a calibration line, so an app that already measured
   an environment may hold `enforce` there and have no configuration variable yet. Taking the

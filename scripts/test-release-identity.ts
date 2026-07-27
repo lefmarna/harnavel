@@ -156,6 +156,8 @@ function releaseBody(response: ReleaseResponse): string {
 interface StubOptions {
   /** 単一値のほか、試行順に消費する系列も渡せる（尽きたら最後の値を繰り返す）。 */
   appStatus?: number | number[]
+  /** 初回のアセット応答だけを遅延させる。settle 期限をまたぐ試行を作るために使う。 */
+  assetDelayMs?: number
   assetStatus?: number | number[]
   /** 応答は試行順に消費し、尽きたら最後の応答を繰り返す。 */
   releaseResponses: ReleaseResponse[]
@@ -219,10 +221,15 @@ async function startStub(options: StubOptions): Promise<Stub> {
 
     if (url.startsWith('/build/')) {
       assetRequestHeaders.push(request.headers)
-      response
-        .writeHead(statusAt(options.assetStatus, assetRequests))
-        .end('asset')
+
+      const delay =
+        assetRequests === 0 && options.assetDelayMs !== undefined
+          ? options.assetDelayMs
+          : 0
+      const status = statusAt(options.assetStatus, assetRequests)
+
       assetRequests += 1
+      setTimeout(() => response.writeHead(status).end('asset'), delay)
 
       return
     }
@@ -626,6 +633,28 @@ describe('OPcacheゲート（enforce）', () => {
     )
 
     assert.ok(waited, result.stderr)
+  })
+
+  // 3プローブは順に取得するため、試行の途中で settle 期限をまたぐことがある。経過判定を
+  // 3プローブ後の時刻で行うと、「期限前に旧リリースが返した 200」を到達性の証拠に流用でき、
+  // 期限後の新リリースの /up を一度も確認しないまま成功してしまう。成功に使う3プローブは
+  // すべて期限後に開始していなければならない。
+  it('settle期限をまたいだ試行は成功に使わない', async () => {
+    const result = await verifyReleaseHealth({
+      // 1回目の /up は期限前の旧リリースで 200、以降は期限後の新リリースで 500。
+      appStatus: [200, 500],
+      // アセット取得中に settle 期限（1秒）をまたがせる。
+      assetDelayMs: 1_300,
+      releaseResponses: [
+        {
+          opcache: snapshot({ revalidateFrequency: 1 }),
+          release: VALID_RELEASE_ID,
+          status: 200,
+        },
+      ],
+    })
+
+    assert.equal(result.status, 1, result.stdout)
   })
 
   it('再検証間隔の経過後にID一致が観測されれば成功する', async () => {

@@ -273,6 +273,12 @@ export async function verifyReleaseHealth({
   let lastSnapshotJson = ''
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    // 経過判定はこの試行の**開始時刻**で行う。3プローブは逐次なので、開始時点が settle
+    // 期限を過ぎていれば3つとも期限後に開始したことになる。3プローブ後の時刻で判定すると、
+    // 期限前に旧リリースが返した /up の 200 を到達性の証拠に流用でき、期限後の新リリースの
+    // /up を一度も確認しないまま成功してしまう（アセット取得が期限をまたぐ場合に発生）。
+    const attemptStartedAt = now()
+
     appStatus = await probeStatus(fetchImpl, healthcheckUrl, authHeaders)
 
     const assetStatus = await probeStatus(fetchImpl, assetUrl, authHeaders)
@@ -334,7 +340,7 @@ export async function verifyReleaseHealth({
       }
     }
 
-    const elapsed = Math.floor((now() - settleFrom) / 1000)
+    const elapsed = Math.floor((attemptStartedAt - settleFrom) / 1000)
     // observe では、同一性を保証できない構成の 503 応答も観測結果として受け入れる。
     const releaseObserved =
       release.status === '200' ||

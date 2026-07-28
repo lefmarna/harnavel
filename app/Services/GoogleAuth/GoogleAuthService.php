@@ -38,10 +38,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
             $email = Str::lower($email);
         }
 
-        // 終端条件 < を <= にしても、内側の枯渇判定（$attempt === MAX_CREATE_RETRIES - 1）が
-        // 最終試行で必ず return / throw するため余分な反復には到達しない（SmallerToSmallerOrEqual のみ等価）。
-        // カウンタの初期値・増減方向はリトライ予算（試行回数）を変える観測可能な変異なので ignore せずテストで殺す。
-        for ($attempt = 0; $attempt < self::MAX_CREATE_RETRIES; $attempt++) { // @pest-mutate-ignore: SmallerToSmallerOrEqual
+        for ($attempt = 0; $attempt < self::MAX_CREATE_RETRIES; $attempt++) {
             try {
                 return DB::transaction(fn (): User => $this->findOrCreateWithinTransaction(
                     googleId: $googleId,
@@ -255,9 +252,8 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     private function normalizeName(?string $name, string $email): string
     {
-        // preg_replace は正規表現エラー時のみ null を返すが、このパターンでは発生しないため
-        // ?? のフォールバック値は実質到達不能（フォールバック値を変える変異は等価）。
-        $trimmed = preg_replace('/^\s++|\s++$/u', '', (string) $name) ?? ''; // @pest-mutate-ignore: EmptyStringToNotEmpty
+        // preg_replace が null を返すのは正規表現エラー時のみで、このパターンでは起きない。
+        $trimmed = preg_replace('/^\s++|\s++$/u', '', (string) $name) ?? '';
 
         return $trimmed !== '' ? $trimmed : $email;
     }
@@ -284,10 +280,9 @@ class GoogleAuthService implements GoogleAuthServiceContract
             // lowercase_usernames=true では email が小文字に正規化済みのため厳密一致で照合する。
             // レガシーな大小混在メールの候補にはここでヒットしないが、続く INSERT が
             // utf8mb4_general_ci の一意制約に当たり、リカバリ（findByEmail は CI 照合）が
-            // 同じ連携確認待ちへ収束する。早期 return の除去はこの契約前提の下では観測不能で、
-            // kill するには collation 前提を破る fake が必要になる（実証済み）ため等価扱いとする。
+            // 同じ連携確認待ちへ収束する。
             /** @var User|null */
-            return $candidates->firstWhere('email', $email); // @pest-mutate-ignore: RemoveEarlyReturn
+            return $candidates->firstWhere('email', $email);
         }
 
         /** @var User|null */

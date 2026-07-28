@@ -32,12 +32,35 @@ configured PHP binary; it must not load the target's `artisan`, Composer autoloa
 bootstrap, and it writes Laravel-compatible `down` state plus a standalone `maintenance.php` using
 only PHP core functions through temporary files and same-directory renames.
 
-**Response during maintenance.** Return 503 and terminate before autoload for every request: static
-JSON when the client prefers JSON, static HTML whenever the client accepts HTML, including Inertia
-XHR visits that combine an HTML `Accept` header with `X-Requested-With`. Do not inherit Laravel's
-maintenance exclusions or bypass behavior for a planned deployment. The responder runs from
-`public/index.php`, so requests the web server resolves directly from an existing file or directory
-never reach it — see the accepted risk below.
+**Response during maintenance.** Return 503 and terminate before autoload for every request, as
+static JSON or static HTML. Do not inherit Laravel's maintenance exclusions or bypass behavior for a
+planned deployment. The responder runs from `public/index.php`, so requests the web server resolves
+directly from an existing file or directory never reach it — see the accepted risk below.
+
+Which of the two is served is decided by proactive content negotiation over the whole `Accept`
+header. "Prefers JSON" and "accepts HTML" are the same condition for a client sending both, so the
+contract is a total order:
+
+1. For JSON and for HTML independently, select the **most specific** matching media range
+   (`type/subtype` beats `type/*` beats `*/*`) and take that range's `q`; among equally specific
+   ranges take the highest `q`. A more specific `q=0` therefore overrides a broader range, which is
+   what lets a client reject one representation without rejecting everything.
+   `application/*` counts as the JSON wildcard and `text/*` as the HTML one; `application/xhtml+xml`
+   matches HTML only when listed explicitly. Any `json` or `+json` subtype is JSON.
+2. Higher `q` wins.
+3. On equal `q`, the more specific match wins — so `application/json, */*` is JSON.
+4. On equal `q` and equal specificity, **HTML wins**. A client that accepts HTML gets HTML. This is
+   what keeps Inertia XHR visits (an HTML `Accept` plus `X-Requested-With`) on the HTML response.
+5. `X-Requested-With: XMLHttpRequest` breaks the remaining tie only when HTML was never listed
+   explicitly — a bare `*/*` from an AJAX client gets JSON.
+6. If neither is acceptable, serve HTML. JSON is served in exactly two cases: HTML was explicitly
+   rejected with `q=0`, or the header stated no preference at all (absent or empty) and the client
+   sent `X-Requested-With`. A header that states preferences we cannot satisfy — `text/plain` — is
+   still a stated preference, so it falls to HTML even for an `X-Requested-With` client. Returning
+   503 outranks honoring the header, so the responder never answers 406.
+
+The enumerated contract is executable as the negotiation table in
+`tests/Feature/Deployment/PlannedMaintenanceTest.php`; change the two together.
 
 **Ordering.** After the standalone response is active and before destructive rsync, wait a bounded,
 app-calibrated drain interval exceeding the longest synchronous request; shared hosting cannot count

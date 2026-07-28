@@ -1,27 +1,11 @@
 name: mutation
 
-# 純ロジック層（app/Services・app/Actions・app/Repositories・app/Params）のミューテーションテスト。
-# 「テスト＝仕様」方針（docs/testing-as-spec.md / TADR-0001）における
-# 「緑＝レビュー不要」の honesty を MSI で担保する。
-#
-# mutation は重い（テストを多数回実行する）ため、毎 push/全 PR では回さない。
-# ロジック層またはそのテストを変更した PR のときだけ走らせる（paths フィルタ）。
-# それ以外の PR では走らない。手動実行も可能（workflow_dispatch）。
-#
-# ロジック層変更時のブロッキングゲートとして MSI を担保する。
-# MSI のゲート値（--min）はこのワークフローが単一正典。
+# 対象クラスは spec 側の mutates() 宣言が単一正典。条件は docs/testing-as-spec.md。
 
 on:
   workflow_dispatch:
   pull_request:
     branches: [develop, main]
-    paths:
-      - 'app/Services/**'
-      - 'app/Actions/**'
-      - 'app/Repositories/**'
-      - 'app/Params/**'
-      - 'tests/**'
-      - '.github/workflows/mutation.yml'
 
 concurrency:
   group: mutation-${{ github.ref }}
@@ -103,14 +87,9 @@ jobs:
 
       - name: Run mutation testing
         run: |
-          # プラグインは .temp/mutations/ へ mkdir なしで書き込む。欠けると file_put_contents が
-          # 失敗し、変異が適用されないまま偽の Score 100% が出る（警告のみで exit 0 のため
-          # ブロッキング CI でも偽グリーンになり気づけない）。v4.0.1 の dist は同梱済みだが、
-          # 将来のバージョン更新への保険として実行前に明示的に用意する。
+          # 欠けると変異が適用されないまま偽の Score 100% が出る。
           mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations
-          ./vendor/bin/pest --mutate --covered-only --no-progress \
-            --class="App\Services,App\Actions,App\Repositories,App\Params" \
-            --min=80
+          ./vendor/bin/pest --mutate --covered-only --no-progress --min=100
         env:
           DB_HOST: 127.0.0.1
           GOOGLE_CLIENT_ID: test-client-id

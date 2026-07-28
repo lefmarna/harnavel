@@ -69,15 +69,79 @@ http_response_code(503);
 header('Retry-After: %d');
 header('Cache-Control: no-store');
 
-$acceptable = array_map('trim', explode(',', $_SERVER['HTTP_ACCEPT'] ?? ''));
-$firstAcceptable = strtolower((string) strtok($acceptable[0] ?? '', ';'));
-$prefersHtml = str_contains($firstAcceptable, 'text/html')
-    || str_contains($firstAcceptable, 'application/xhtml+xml');
-$expectsJson = str_contains($firstAcceptable, '/json')
-    || str_contains($firstAcceptable, '+json')
-    || (! $prefersHtml
-        && isset($_SERVER['HTTP_X_REQUESTED_WITH'])
-        && strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'], 'XMLHttpRequest') === 0);
+// Accept のコンテンツネゴシエーション。契約は TADR-0006、表は PlannedMaintenanceTest。
+$isXhr = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+    && strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'], 'XMLHttpRequest') === 0;
+
+// [q, specificity]。specificity は 2=type/subtype、1=type/*、0=*/*、-1=一致なし。
+$best = ['json' => [0.0, -1], 'html' => [0.0, -1]];
+$hasPreference = false;
+
+foreach (explode(',', (string) ($_SERVER['HTTP_ACCEPT'] ?? '')) as $entry) {
+    $parameters = explode(';', $entry);
+    $range = strtolower(trim((string) array_shift($parameters)));
+
+    if ($range === '') {
+        continue;
+    }
+
+    $hasPreference = true;
+
+    $quality = 1.0;
+
+    foreach ($parameters as $parameter) {
+        [$name, $value] = array_pad(explode('=', $parameter, 2), 2, '');
+
+        if (strtolower(trim($name)) === 'q') {
+            $value = trim($value);
+            // 壊れた q は「指定なし」扱い。拒否と読むと HTML を捨ててしまう。
+            $quality = is_numeric($value) ? max(0.0, min(1.0, (float) $value)) : 1.0;
+
+            break;
+        }
+    }
+
+    [$type, $subtype] = array_pad(explode('/', $range, 2), 2, '');
+
+    $specificities = [
+        'json' => match (true) {
+            $subtype === 'json', str_ends_with($subtype, '+json') => 2,
+            $subtype === '*' && $type === 'application' => 1,
+            $subtype === '*' && $type === '*' => 0,
+            default => -1,
+        },
+        // HTML の wildcard は text/* だけ。application/* は JSON 側に寄せる。
+        'html' => match (true) {
+            $range === 'text/html', $range === 'application/xhtml+xml' => 2,
+            $subtype === '*' && $type === 'text' => 1,
+            $subtype === '*' && $type === '*' => 0,
+            default => -1,
+        },
+    ];
+
+    foreach ($specificities as $target => $specificity) {
+        if ($specificity < 0) {
+            continue;
+        }
+
+        if ($specificity > $best[$target][1]
+            || ($specificity === $best[$target][1] && $quality > $best[$target][0])) {
+            $best[$target] = [$quality, $specificity];
+        }
+    }
+}
+
+[$jsonQuality, $jsonSpecificity] = $best['json'];
+[$htmlQuality, $htmlSpecificity] = $best['html'];
+
+$expectsJson = match (true) {
+    // 全滅時。JSON は「HTML を q=0 で明示拒否」と「主張なし(不在・空)の XHR」のみ。
+    $jsonQuality <= 0.0 && $htmlQuality <= 0.0 => $htmlSpecificity >= 0 || (! $hasPreference && $isXhr),
+    $jsonQuality !== $htmlQuality => $jsonQuality > $htmlQuality,
+    $jsonSpecificity !== $htmlSpecificity => $jsonSpecificity > $htmlSpecificity,
+    // 同率・同具体度。HTML の明示列挙が勝ち、wildcard 由来なら XHR で決める。
+    default => $htmlSpecificity < 2 && $isXhr,
+};
 
 if ($expectsJson) {
     header('Content-Type: application/json; charset=UTF-8');

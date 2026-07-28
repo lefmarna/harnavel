@@ -106,6 +106,8 @@ jobs:
           DB_HOST: 127.0.0.1
           DB_DATABASE: app_testing
           APP_URL: http://localhost:8000
+          # ローカルの .env.e2e と同じオプトイン契約。ここでしか有効にしない。
+          E2E_HELPER_ROUTES: 'true'
           # E2E は php artisan serve が .env（.env.example 由来: MAIL_MAILER=smtp /
           # MAIL_HOST=mailpit）を読むが、この workflow に Mailpit サービスはない。
           # メール送信を伴う認証フロー（新規登録・パスワード再設定）が SMTP 接続失敗で

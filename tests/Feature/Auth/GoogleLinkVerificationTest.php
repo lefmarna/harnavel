@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
+use App\ViewModels\Auth\GoogleLinkVerifyPageViewModel;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia as Assert;
+
+// confirm / success / error の 3 分岐すべてを props で観測している。
+mutates(GoogleLinkVerifyPageViewModel::class);
 
 describe('Google 連携リンク検証', function () {
     it('署名付き Google 連携リンクの GET は確認ページを表示する', function () {

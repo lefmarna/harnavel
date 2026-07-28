@@ -60,9 +60,19 @@ rejects an exhaustive manifest, because it turns every new file into a second pl
   After merging the manifests, regenerate the lockfiles with the package managers and verify with a
   clean install rather than merging them by hand.
 - **Calibration lines (app-priority)**: `--min` and `continue-on-error` with their immediately
-  adjacent reason comments in `reusable-test.yml` / `mutation.yml`; `@pest-mutate-ignore`
-  annotation density; and the `Drain in-flight requests` duration with its immediately adjacent app
-  rationale. The steps that read these values are shared.
+  adjacent reason comments in `reusable-test.yml` / `mutation.yml`; and the `Drain in-flight
+  requests` duration with its immediately adjacent app rationale. The steps that read these values
+  are shared.
+- **Mutation selection is a migration, not a merge**: the template selects with `mutates()` in the
+  specs, an app selects with `--class`. Keep the app's `--class`, `--min`, and
+  `@pest-mutate-ignore` annotations until it has added `mutates()` to the specs of its own
+  deterministic classes and re-measured; taking `mutation.yml` first leaves the gate green on the
+  two shared ViewModels while every app-specific class silently stops being tested
+  ([`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)).
+- **`E2E_PORT` must be set in `.env` before E2E runs** (convention: `NGINX_PORT + 1000`).
+  `compose.yaml` falls back to `9080` so unrelated `docker compose` commands keep working;
+  `playwright.config.ts` has no default, so a second application cannot silently test against the
+  first one's server. `APP_URL` is derived from it, so `.env.e2e` must not pin one.
 - **Not in any file**: The optional `HEALTHCHECK_BASIC_AUTH` environment secret is app-specific in
   the same way. An environment whose document root is protected by Basic authentication (a develop
   host behind `.htaccess.develop`, for example) needs it so both verification probes authenticate;

@@ -21,6 +21,3 @@ jobs:
       - uses: actions/checkout@v6
 
       - uses: ./.github/actions/ci-lint
-
-      - name: Run Frontend Unit Tests
-        run: pnpm run test:unit

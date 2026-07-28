@@ -24,9 +24,15 @@ Files are treated in three categories:
 - **App-owned** — domain, presentation, branding, environment, and app-specific configuration.
   Do not converge through the template.
 
-Coverage and mutation gate values, mutation blocking, and the density of
-`@pest-mutate-ignore` annotations are calibrated per app. The shared workflow structure may
-converge, but the calibrated lines and adjacent rationale stay app-priority.
+Coverage and mutation gate values, and whether mutation blocks, are calibrated per app. The shared
+workflow structure may converge, but the calibrated lines and adjacent rationale stay app-priority.
+
+The mutation **allowlist criterion** — deterministic, every branch observed by its spec, declared
+with `mutates()` — is shared; the allowlist itself is app-owned, because it names app classes. That
+makes adopting it a two-step convergence rather than a file to pull: an app builds its own
+`mutates()` declarations and re-measures, and **keeps its existing `--class` selection and `--min`
+until it has**. Pulling `mutation.yml` first leaves the gate measuring only the shared ViewModels
+while every app-specific class silently stops being tested.
 The bounded in-flight request drain in `delivery.yml` follows the same rule: its lifecycle step is
 shared, while its duration and adjacent rationale are calibrated to each app's longest synchronous
 request.

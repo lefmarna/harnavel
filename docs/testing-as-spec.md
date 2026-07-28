@@ -1,7 +1,9 @@
 # Testing as specification
 
-Tests are the canonical behavioral spec. The reviewer approves the **test cases**
-and confirms they are green, without reading the implementation.
+Tests are the canonical behavioral spec. The reviewer approves the **test cases** and confirms they
+are green. For routine low-risk changes that is the whole review; for the areas TADR-0001 lists as
+review-required — auth, secrets, CI/delivery, migrations, concurrency, outbound side effects, and
+the gate machinery itself — the implementation is read as well.
 
 Decision, rationale, and risks: [TADR-0001](adr/template/0001-development-workflow.md).
 This file is the operational playbook — keep it terse.
@@ -11,12 +13,14 @@ This file is the operational playbook — keep it terse.
 1. **Intent** — one line of what should change (optionally preceded by Kiro
    `requirements`/`design` when useful).
 2. **Spec** — author `it('...')->todo()` cases: the `describe`/`it` tree + assertion sketch.
-3. **Approve** — reviewer approves the test cases **before** implementing. *Review happens here.*
+   Behavior-preserving refactors skip this; the existing suite staying green is their spec.
+3. **Approve** — reviewer approves the test cases **before** implementing. *Review starts here.*
 4. **Implement** — red → green (`tdd` skill).
 5. **Gates** — every CI check currently wired in this repo must pass. The target gate set defined
    by TADR-0001 is: green + coverage floor + `arch()` + Larastan + scoped mutation testing. Require
    only the checks already enabled.
-6. **Merge** — approved spec × green × gates → merge without reading the implementation.
+6. **Merge** — approved spec × green × gates. Reading the implementation is skipped only for
+   routine low-risk changes; see *Reviewing* below.
 7. **Organize** — update only ADRs / `CONTEXT.md`. Don't reconstruct Kiro
    `requirements`/`design` after the fact (using them upfront is fine).
 
@@ -33,18 +37,21 @@ This file is the operational playbook — keep it terse.
 - **Coverage contract:** a behavioral change MUST have a test ("untested = unspecified").
   Exempt: styling/copy/layout, config/infra, docs. A new page MUST have a smoke E2E and a
   Feature spec that asserts its Inertia component and page-specific props shape.
-- **Coverage gate:** floor ~90% on `app/` (exclude boilerplate); 100% aspirational on
-  `Services`/`Actions`/`Repositories`/`Params`. No global 100%. Honesty is backed by the
-  mutation score (`pest --mutate`), not by line coverage.
+- **Coverage gate:** floor ~90% on `app/` (exclude boilerplate). No global 100%. Coverage measures
+  how much of the code the written cases reach; it is an input to review, not a verdict
+  (TADR-0001).
 
-## Reviewing without reading the implementation
+## Reviewing
 
 1. Read the `describe`/`it` tree as the spec outline.
 2. Read the assertions — confirm they verify real behavior (`assertDatabaseHas`, real
    Inertia props), not tautologies.
 3. Confirm CI is green and the gates passed.
-4. Wrong behavior in the tree → fix the spec / file a bug. Never accept by reading the
-   implementation instead.
+4. Wrong behavior in the tree → fix the spec / file a bug, rather than accepting it because the
+   implementation looks reasonable.
+5. Read the implementation too when the change touches a TADR-0001 review-required area (auth,
+   secrets, CI/delivery, migrations, concurrency, outbound side effects, the gates themselves), or
+   when it is wide, unfamiliar, or hard to reverse.
 
 ## Migrating an existing suite (hybrid)
 
@@ -55,12 +62,24 @@ This file is the operational playbook — keep it terse.
 3. **Sequence the gate** — non-blocking during the sweep, promote to blocking when the
    area is done.
 
-## Mutation & coverage annotations
+## Mutation testing
 
-- **Prefer narrow `@pest-mutate-ignore` comments.** Put the directive on the mutated line or as a
-  docblock/leading comment for non-executable declarations. Scope it to specific mutators with a
-  comma-separated list: `// @pest-mutate-ignore: IncrementInteger,DecrementInteger`; no suffix
-  ignores the whole node and its children. Put the reason on a separate plain comment line.
+- **The allowlist lives in the specs.** A class is mutated because a spec declares
+  `mutates(Foo::class)` at the top of the file — there is no `--class=` namespace list. A class
+  earns a place only if it is **deterministic** and its spec **observes every branch**. Classes
+  carrying DB, HTTP, Mail, Log, Cache, Auth, or a Repository do not qualify; whatever value
+  mutating them has is not worth the annotations it pushes into production code.
+- **This template's floor is 100% (`--min=100`, set in `mutation.yml`)** — the criterion restated:
+  a qualifying class has no equivalent or unobservable mutant to excuse. A survivor means the spec
+  is weak or the class does not belong on the list. Fix one or the other; never annotate around it,
+  and never kill a mutant by weakening a test. The gate scores few classes by design; what it does
+  not score is still covered by Feature specs and the coverage floor.
+- **`@pest-mutate-ignore` should not appear in this repository.** Needing one is the signal that a
+  class fails the allowlist criterion. `@codeCoverageIgnore` is separate and still applies: it
+  serves the coverage floor, which covers all of `app/`.
+- The **criterion** is shared surface; the **allowlist and `--min`** stay app-owned
+  ([TADR-0003](adr/template/0003-shared-surface-convergence.md)). An application still selecting by
+  `--class` keeps its own selection and threshold until it has built its allowlist and re-measured.
 - **Re-measure suspicious survivors with `mise run mutate -- --no-cache`** — it bypasses the
   result cache and deletes nothing. Avoid `--clear-cache` and `rm -rf`ing the plugin's `.temp/`:
   depending on plugin version, either can remove `.temp/mutations/`, which the runner writes
@@ -76,34 +95,6 @@ This file is the operational playbook — keep it terse.
   and CI never passes `--clear-cache`.
 - **One DB-backed test process at a time** (see `commands.md`): never run `--mutate` while another
   `pest`/`--dirty` run shares the test schema.
-- **Classify survivors honestly.** Defensive guards real input can't reach → `@codeCoverageIgnore`
-  (line-level or start/end block + separate reason). Equivalent or non-deterministic mutants
-  (elapsed-time math, array-key reindex, no-op empty-string guards) → `@pest-mutate-ignore`
-  (+ separate reason). Never kill a mutant by weakening or deleting a test.
-- **Prefer eliminating an equivalent mutant to annotating it — when elimination is free.** If the
-  survivor sits on genuinely redundant code (a condition a preceding guard already makes
-  unreachable, a duplicated check), delete the code: no mutant, less to read. Do **not** remove a
-  construct that types or static analysis depend on — a `(string)`/`(int)`/`(bool)` cast over a
-  `mixed` source still satisfies Larastan even when it is a runtime no-op, so it stays and gets
-  annotated.
-- **Annotate the load-bearing-but-unobservable survivors** (reason on a separate line). The
-  recurring ones across projects: `lockForUpdate()` / `Log::*` (`RemoveMethodCall` /
-  `RemoveFunctionCall` — unobservable in a single-process test), bounded retry guards
-  `$i < self::MAX` (`SmallerToSmallerOrEqual` — the loop terminates identically), behaviour-neutral
-  magic numbers (`IncrementInteger` / `DecrementInteger`), idempotent `array_values(array_filter(...))`
-  (`UnwrapArrayValues` / `UnwrapArrayFilter`), defensive `... ?? ''` defaults (`EmptyStringToNotEmpty`),
-  and eager-load or default-attribute arrays `->with([...])` / `['count' => 0]` (`RemoveArrayItem`).
-  Before annotating, attempt a targeted test first — one annotation has been disproven this way:
-  `config()` returns `mixed`, so a redundant-looking `(bool)` cast is load-bearing under
-  `strict_types` once a non-bool truthy value is configured (`RemoveBooleanCast`). The attempt cuts
-  both ways: the killing test must model a **reachable** world. A kill that only works on a fake
-  violating a documented environment assumption (e.g. a no-op `save()` that ignores the
-  case-insensitive-collation unique constraint the repository contract states) does not disprove
-  equivalence — it canonizes behavior production can never exhibit. Prefer the real adapter, or a
-  fake faithful to the contract, and assert the outcome the real environment converges to.
-- **A lone, clearly-equivalent survivor may be left un-annotated** when the directive would add more
-  noise than the single survivor it silences — the calibrated `--min` floor leaves room for a small,
-  honest gap. Keep these rare and self-evident.
 
 ## Test-writing gotchas
 

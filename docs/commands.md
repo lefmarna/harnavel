@@ -8,6 +8,7 @@ Use this file when you need the repository's actual command names instead of gue
 mise run setup          # Full project setup
 mise run setup:tools    # Install tools & pnpm dependencies
 mise run setup:backend  # Setup backend (requires containers)
+mise run setup:e2e      # Create .env.e2e, the Playwright-only app environment
 ```
 
 ## Docker
@@ -33,7 +34,7 @@ pnpm format:check       # Check Prettier formatting
 pnpm lint               # Run ESLint with auto-fix
 pnpm lint:check         # Run ESLint (check only)
 pnpm types:check        # TypeScript type check
-pnpm test:unit          # Run node:test frontend unit tests (resources/js/**/*.test.{ts,tsx})
+pnpm test:unit          # Run node:test unit tests (resources/js/**, e2e/**)
 pnpm format             # Format with Prettier
 pnpm fix                # Run lint + format
 ```
@@ -47,7 +48,7 @@ mise run fresh          # Fresh migration with seed
 mise run rollback       # Rollback last migration
 mise run status         # Migration status
 mise run test           # Run Pest tests
-mise run mutate         # Mutation testing on pure-logic layers (Services/Actions/Repositories/Params)
+mise run mutate         # Mutation testing on the classes their specs declare with mutates()
 mise run pint           # Run Laravel Pint on changed PHP files
 mise run analyse        # Run Larastan/PHPStan static analysis
 mise run verify:backend # Run Pint + Larastan + Pest
@@ -69,13 +70,6 @@ mise run composer:update   # Composer update
 > (`--parallel` only isolates workers *within* one run into separate `app_testing_*` schemas; it
 > does not coordinate independent test processes.)
 
-> **Do not pass `--parallel`.** Workers share one filesystem, and the planned-maintenance suite
-> deliberately runs the deployment installer against `base_path()` to prove `artisan up` clears the
-> real `storage/framework/down` and `maintenance.php` — the one assertion a temporary directory
-> cannot make. While that test runs, the whole application is in maintenance mode, so a request from
-> another worker gets `503` instead of its expected status (roughly one run in five). CI
-> (`reusable-test.yml`) and every `mise` task run serially for this reason.
-
 ## E2E Testing
 
 ```bash
@@ -83,6 +77,24 @@ pnpm test:e2e           # Run Playwright E2E tests
 pnpm test:e2e:ui        # Run with UI mode (interactive debugging)
 pnpm test:e2e:headed    # Run with browser visible
 ```
+
+E2E runs against its own application: `.env.e2e` (`APP_ENV=e2e`, `artisan serve` on `E2E_PORT`,
+`mariadb-e2e`), which Laravel loads instead of `.env` when `APP_ENV=e2e` is in the real environment.
+Playwright's global setup runs `migrate:fresh` against it every run, because the helper routes never
+clean up the users they create. Your `.env`, `mariadb`, and nginx port are untouched.
+
+The `/_e2e` helper routes mint an authenticated session for anyone who requests them, so they
+register only when `E2E_HELPER_ROUTES` is true and `APP_ENV` is not `production` — `.env.e2e` sets
+it locally, `reusable-test.yml`'s E2E step sets it in CI. `APP_ENV=local` alone is not enough,
+because the standard Docker environment runs as `local`. See `config/e2e.php` and
+`tests/Feature/E2eHelperRoutesTest.php`.
+
+`E2E_PORT` must be in `.env` (convention: `NGINX_PORT + 1000`); Playwright has no default and stops
+without it. It is the single source for the port — `APP_URL` is derived from it, so `.env.e2e` must
+not pin one.
+
+Docker publishes every host port on `127.0.0.1`. Set `DOCKER_BIND_ADDRESS=0.0.0.0` to expose the
+development stack to the network.
 
 ## Interactive Browser Verification
 
@@ -137,4 +149,8 @@ pnpm test:deploy-lifecycle          # Verify preflight and maintenance deploymen
 pnpm test:deploy-rsync-excludes     # Verify rsync --delete protects remote-only data
 pnpm test:release-health            # Verify release health probes (reachability and asset presence)
 pnpm test:toolchain-versions        # Verify Dockerfile and delivery.yml PHP/Composer versions match
+pnpm test:ci-wiring                 # Verify the shared checks run once in ci-lint and gate delivery's deploy job
 ```
+
+Every check above lives in `.github/actions/ci-lint/action.yml`, which `check.yml`, `quality.yml`,
+and `delivery.yml` all use. Add a new repository-wide check there, not to an individual workflow.

@@ -7,8 +7,26 @@ Accepted.
 ## Decision
 
 Treat Pest Feature tests as the canonical specification of system behavior. Human review is
-front-loaded onto the test cases before implementation; once approved, passing tests and the
-automated gates currently wired in the project replace routine implementation review.
+front-loaded onto the test cases before implementation, and for routine low-risk changes the
+approved specification plus the automated gates carry the change without a second reading.
+
+They do not carry everything. A green suite proves the implementation satisfies the cases someone
+thought to write; it is silent about the case nobody wrote, and gates cannot audit their own wiring.
+**Implementation review is required** — not weighed against risk, not waived by a green run — for
+changes that touch authentication, authorization or session issuance; secrets; CI, delivery, or
+anything deciding whether a release ships; migrations and other destructive or irreversible data
+operations; transactions, locking, and concurrency; outbound side effects (mail, HTTP, filesystem,
+third-party APIs); or the test and gate machinery itself. Everything outside that list is judged on
+risk: read the implementation when the change is unfamiliar, wide, or hard to reverse, and rely on
+the spec when it is narrow and local.
+
+Coverage and mutation scores are **inputs to that judgment, never a substitute for it**. Both
+measure how thoroughly the written cases exercise the code; neither can measure the case that was
+never written.
+
+Pre-approval of `it(...)->todo()` cases applies to **behavioral** changes. A mechanical refactor that
+preserves behavior — renaming, moving a file, extracting a helper, deleting dead code — is approved
+by the existing suite staying green, not by authoring todo cases first.
 
 Behavioral changes within this specification model—server logic, validation, authorization, and
 Inertia component/props contracts—must have a Feature test. Playwright remains a smoke layer plus a
@@ -36,6 +54,14 @@ workflow, test conventions, and mutation guidance live in
 
 - **Require implementation review for every change.** Rejected because an approved executable
   specification plus automated gates makes that review redundant for routine changes.
+- **Let the approved spec and the gates replace implementation review everywhere.** This was the
+  original decision, reversed on evidence: a 2026-07 audit found four defects a fully green suite
+  had carried — an E2E route minting authenticated sessions on any reachable development machine,
+  `pnpm test:unit` missing from the only workflow that deploys, a maintenance responder reading one
+  media range of `Accept`, and a deployment test putting the working application into maintenance
+  mode. Each was a case nobody thought to specify, in exactly the areas now listed as
+  review-required. Coverage and mutation are computed from the cases that exist, so neither could
+  have surfaced any of them.
 - **Require global 100% line coverage.** Rejected because it rewards tautological tests and gives
   false confidence; mutation testing provides a stronger honesty check.
 - **Maintain generated human-readable specifications or Kiro artifacts after implementation.**
@@ -55,8 +81,11 @@ workflow, test conventions, and mutation guidance live in
 
 ## Consequences and accepted risks
 
-- A wrong specification may pass every later gate, so approval of the test cases is the critical
-  human checkpoint.
+- A wrong specification may pass every later gate, so approval of the test cases remains the primary
+  human checkpoint — but no longer the only one for the review-required areas above.
+- Requiring implementation review for those areas costs reviewer time on the changes most likely to
+  need it, and depends on the boundary being read honestly: a change that quietly touches
+  authentication or delivery while presenting as routine escapes the rule.
 - Untested paths beyond the coverage floor are accepted; architecture tests and static analysis
   cover structural risks rather than behavioral completeness.
 - Confidence in green tests depends on mutation testing and restrained mocking exposing weak or

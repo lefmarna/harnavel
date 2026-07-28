@@ -6,9 +6,19 @@ pnpm = "11.11.0"
 # セットアップ関連
 # =============================================================================
 
+# depends は並列実行されるため、順序が要る初期構築は run で逐次に呼ぶ。
 [tasks.setup]
 description = "Setup entire project from scratch"
-depends = ["setup:tools", "setup:env", "build", "up", "setup:backend", "migrate", "seed"]
+run = [
+  "mise run setup:tools",
+  "mise run setup:env",
+  "mise run build",
+  "mise run up",
+  "mise run setup:backend",
+  "mise run migrate",
+  "mise run seed",
+  "mise run setup:e2e",
+]
 
 [tasks."setup:tools"]
 description = "Install development tools and frontend dependencies"
@@ -17,6 +27,15 @@ run = ["mise install", "pnpm install --frozen-lockfile"]
 [tasks."setup:env"]
 description = "Create local environment file if missing"
 run = "[ -f .env ] || cp .env.example .env"
+
+# 要コンテナ起動。key 生成に失敗したら APP_KEY 空の .env.e2e を残さない。
+[tasks."setup:e2e"]
+description = "Create the Playwright-only app environment (.env.e2e)"
+run = """
+[ -f .env.e2e ] && exit 0
+cp .env.e2e.example .env.e2e
+docker compose exec -T -e APP_ENV=e2e app php artisan key:generate || { rm -f .env.e2e; exit 1; }
+"""
 
 [tasks."setup:backend"]
 description = "Setup backend (requires running containers)"
@@ -97,12 +116,10 @@ description = "Run tests"
 run = "docker compose exec app php artisan test $@"
 raw = true
 
-# 純ロジック層（Services/Actions/Repositories/Params）のミューテーションテスト。
-# 「緑＝レビュー不要」を支える MSI（テストが実際にバグを捕まえるか）を計測する。
-# 閾値（--min）は付けない＝ローカルはスコア確認用。ゲートの数値は CI が単一正典。
+# 対象は spec 側の mutates() 宣言。--min を付けない＝ローカルはスコア確認用（ゲートは CI）。
 [tasks.mutate]
-description = "Run mutation testing on pure-logic layers (Services/Actions/Repositories/Params)"
-run = 'docker compose exec app vendor/bin/pest --mutate --covered-only --class="App\Services,App\Actions,App\Repositories,App\Params" $@'
+description = "Run mutation testing on the classes their specs declare with mutates()"
+run = 'docker compose exec app vendor/bin/pest --mutate --covered-only $@'
 raw = true
 
 [tasks.analyse]

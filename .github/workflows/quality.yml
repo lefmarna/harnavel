@@ -22,9 +22,6 @@ jobs:
 
       - uses: ./.github/actions/ci-lint
 
-      - name: Run Frontend Unit Tests
-        run: pnpm run test:unit
-
   test:
     needs: quality
     uses: ./.github/workflows/reusable-test.yml

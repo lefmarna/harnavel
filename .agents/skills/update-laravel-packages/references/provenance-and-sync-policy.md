@@ -39,11 +39,11 @@ table.
 Judgment records for packages whose classification is non-obvious. Re-verify each against the
 fresh reference on every run; these record past evidence, not permanent facts.
 
-- `laravel/chisel` (Composer `require`): the completed 2026-07 reference kept it in `require`
-  after `install:features` ran, so it is current Laravel-owned and mirrored as-is, even though
-  this template consumed its feature-selection step at generation time and never runs it again.
-  It reaches production through `composer install --no-dev` but is inert at runtime. If a future
-  reference drops it after chiseling, reclassify it as legacy Laravel-owned and remove it.
+- `laravel/chisel` (Composer `require`): **not adopted.** The 2026-07 reference keeps it in
+  `require`, but nothing invokes it at runtime — its only consumer is the generator's one-time
+  feature-selection step, which runs in the throwaway `package-reference` container, never from an
+  application checkout. Rule 1 therefore classifies it as unadopted reference-surface. Re-adopt only
+  if a future reference gives it a runtime consumer inside the application.
 
 ## Skeleton ownership
 

@@ -15,6 +15,7 @@
 .DS_Store
 .env
 .env.backup
+.env.e2e
 .env.production
 .claude/settings.local.json
 .phpactor.json

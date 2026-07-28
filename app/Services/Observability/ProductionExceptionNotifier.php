@@ -36,8 +36,7 @@ class ProductionExceptionNotifier
             // 通知経路の失敗が元例外のログ記録やレスポンス描画を妨げてはならない
             // （report コールバック内の例外は Laravel の通常ログ出力より前に伝播する）
             try {
-                // ログの有無は例外通知の外部挙動に影響せず、単一プロセスの通知テストでは観測しない。
-                Log::warning('Discord exception notification was skipped.', [ // @pest-mutate-ignore: RemoveMethodCall
+                Log::warning('Discord exception notification was skipped.', [
                     'exception' => $notifierException,
                 ]);
             } catch (Throwable) {
@@ -54,7 +53,7 @@ class ProductionExceptionNotifier
 
         if (! $this->webhookUrl()) {
             // send() 側も webhook 未設定を再確認しており、ここは不要な payload 構築を避ける早期 return。
-            return false; // @pest-mutate-ignore: RemoveEarlyReturn
+            return false;
         }
 
         return $this->statusCode($exception) >= 500;
@@ -70,7 +69,6 @@ class ProductionExceptionNotifier
 
         try {
             // Cache::add の保存値は後続で読まず、キーの存在だけを重複制御に使う。
-            // @pest-mutate-ignore: TrueToFalse
             return Cache::add($this->deduplicationKey($exception, $request), true, $seconds);
         } catch (Throwable) {
             return true;
@@ -94,8 +92,7 @@ class ProductionExceptionNotifier
                 ->post($webhookUrl, $payload)
                 ->throw();
         } catch (Throwable $exception) {
-            // Discord 側への送信失敗ログは通知処理の成否として外部観測しない。
-            Log::warning('Discord exception notification failed.', [ // @pest-mutate-ignore: RemoveMethodCall
+            Log::warning('Discord exception notification failed.', [
                 'exception' => $exception,
             ]);
         }
@@ -121,8 +118,6 @@ class ProductionExceptionNotifier
                         'app' => $this->appName(),
                         'request_id' => $requestId,
                         'environment' => app()->environment(),
-                        // fields() が scalar を文字列化するため、この cast の有無は payload として等価。
-                        // @pest-mutate-ignore: RemoveStringCast
                         'status' => (string) $statusCode,
                         'exception' => $exception::class,
                         'message' => $this->exceptionMessage($exception),
@@ -156,8 +151,8 @@ class ProductionExceptionNotifier
 
             $fields[] = [
                 'name' => $name,
-                // Discord の field value 上限に合わせた防御的な上限で、通常 payload では到達しない。
-                'value' => Str::limit($stringValue, 1024), // @pest-mutate-ignore: DecrementInteger,IncrementInteger
+                // Discord の field value 上限に合わせた防御的な上限。
+                'value' => Str::limit($stringValue, 1024),
                 'inline' => true,
             ];
         }
@@ -219,8 +214,8 @@ class ProductionExceptionNotifier
     {
         $userAgent = $request?->userAgent();
 
-        // Discord payload の肥大化防止用の表示上限で、通常の User-Agent では境界差分を観測しない。
-        return is_string($userAgent) ? Str::limit($userAgent, 200) : null; // @pest-mutate-ignore: DecrementInteger,IncrementInteger
+        // Discord payload の肥大化防止用の表示上限。
+        return is_string($userAgent) ? Str::limit($userAgent, 200) : null;
     }
 
     private function exceptionMessage(Throwable $exception): string
@@ -229,8 +224,7 @@ class ProductionExceptionNotifier
             return 'Database exception message omitted.';
         }
 
-        // Discord payload の肥大化防止用の表示上限で、通常の例外メッセージでは境界差分を観測しない。
-        // @pest-mutate-ignore: DecrementInteger,IncrementInteger
+        // Discord payload の肥大化防止用の表示上限。
         return Str::limit($exception->getMessage(), 500);
     }
 

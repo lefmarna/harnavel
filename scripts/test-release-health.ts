@@ -60,6 +60,12 @@ function runShellStep(
 interface StubOptions {
   /** 単一値のほか、試行順に消費する系列も渡せる（尽きたら最後の値を繰り返す）。 */
   appStatus?: number | number[]
+  /**
+   * 3xx のアセット応答へ載せる `Location`。追従の有無を検出するには必須で、
+   * 省くと WHATWG fetch は redirect モードに関係なく追従しない（locationURL が
+   * null なら that response をそのまま返す）ため、非追従の検証が空洞になる。
+   */
+  assetLocation?: string
   assetStatus?: number | number[]
 }
 
@@ -96,7 +102,12 @@ async function startStub(options: StubOptions): Promise<Stub> {
     if (url.startsWith('/build/')) {
       assetRequestHeaders.push(request.headers)
       response
-        .writeHead(statusAt(options.assetStatus, assetRequests))
+        .writeHead(
+          statusAt(options.assetStatus, assetRequests),
+          options.assetLocation === undefined
+            ? {}
+            : { Location: options.assetLocation },
+        )
         .end('asset')
       assetRequests += 1
 
@@ -386,7 +397,11 @@ describe('HTTP契約', () => {
 
   it('リダイレクトを追従せず、3xxのアセットを成功と見なさない', async () => {
     // 追従すると、欠落したアセットがリダイレクト先の 200 に解決して検証が骨抜きになる。
+    // Location は必ず 200 を返す先（ここでは /up）を指すこと。付けないと fetch は
+    // redirect モードに関係なく追従せず、`redirect: 'manual'` を外しても 302 のままに
+    // なるため、非追従を外した回帰をこのテストが検出できなくなる。
     const stub = await startStub({
+      assetLocation: '/up',
       assetStatus: 302,
     })
 

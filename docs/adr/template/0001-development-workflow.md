@@ -61,8 +61,11 @@ workflow, test conventions, and mutation guidance live in
   cover structural risks rather than behavioral completeness.
 - Confidence in green tests depends on mutation testing and restrained mocking exposing weak or
   tautological assertions.
-- A pull request that introduces a vulnerable dependency is not blocked; detection lags by up to the
-  audit schedule's interval, and that scheduled workflow is the only path, so its silent disablement
-  or an undelivered failure notification removes detection entirely. Dependencies also no longer
-  move on their own, so routine updates accumulate until an advisory or a deliberate update prompts
-  them.
+- A pull request that introduces a vulnerable dependency is not blocked. Detection lags by up to the
+  audit schedule's interval on the branches the delivery workflow deploys, which the schedule must
+  therefore check explicitly: it only ever starts on the default branch, so any other deployed branch
+  is unscanned until the schedule is pointed at it. Work on branches that are not deployed is not
+  scanned at all until it reaches one that is. The scheduled workflow is also the only path, so its
+  silent disablement or an undelivered failure notification removes detection entirely. Dependencies
+  no longer move on their own either, so routine updates accumulate until an advisory or a deliberate
+  update prompts them.

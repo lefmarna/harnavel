@@ -9,6 +9,76 @@ const ROOT = path.resolve(__dirname, '..')
 const WORKFLOW_PATH =
   process.env.DEPLOY_LIFECYCLE_WORKFLOW ??
   path.join(ROOT, '.github/workflows/delivery.yml')
+const AUDIT_WORKFLOW_PATH =
+  process.env.DEPLOY_AUDIT_WORKFLOW ??
+  path.join(ROOT, '.github/workflows/audit.yml')
+
+/**
+ * デプロイされるブランチと、日次監査が見るブランチが一致していることを固定する。
+ *
+ * 依存監査はマージ・デプロイのゲートから外され、audit.yml が唯一の検知経路になっている
+ * （TADR-0001）。schedule はデフォルトブランチでしか起動しないので、audit.yml 側に
+ * ブランチを足し忘れると、そのブランチの lockfile は main へマージされるまで一度も
+ * 監査されない。TADR-0001 が受容リスクとして書いている「検知の遅れは監査周期まで」も
+ * 同時に破れるため、片側だけ増減したらここで落とす。
+ */
+function assertAuditCoversDeployedBranches(workflow: string): void {
+  const deployed =
+    /on:\s*\n\s*push:\s*\n\s*branches:\s*\n((?:\s*-\s*\S+\n)+)/.exec(
+      workflow,
+    )?.[1]
+
+  if (deployed === undefined) {
+    throw new Error('Could not find the deployed branch list in delivery.yml.')
+  }
+
+  const expected = [...deployed.matchAll(/-\s*(\S+)/g)]
+    .map((match) => match[1] ?? '')
+    .sort()
+    .join(',')
+
+  const audit = fs.readFileSync(AUDIT_WORKFLOW_PATH, 'utf8')
+  const jobsBlock = audit.slice(audit.indexOf('\njobs:'))
+  const jobs = new Map(
+    [...jobsBlock.matchAll(/\n {2}(\w[\w-]*):\n([\s\S]*?)(?=\n {2}\w|$)/g)].map(
+      (match) => [match[1] ?? '', match[2] ?? ''],
+    ),
+  )
+
+  // 存在するジョブを走査するだけでは、ジョブごと消えた場合に検出できない。監査対象の
+  // マネージャは名前で固定する。Composer と pnpm は独立ジョブにする方針（audit.yml の
+  // 冒頭コメント）なので、片方が消えればその言語の lockfile は一切監査されなくなる。
+  for (const name of ['composer', 'pnpm']) {
+    if (!jobs.has(name)) {
+      throw new Error(
+        `audit.yml must keep a "${name}" job; without it that manager's lockfile is never audited.`,
+      )
+    }
+  }
+
+  // 逆に、後から足したジョブが matrix を持たないまま既定ブランチだけ見る状態も塞ぐ。
+  for (const [name, body] of jobs) {
+    const list = /ref:\s*\[([^\]]+)\]/.exec(body)?.[1]
+
+    if (list === undefined) {
+      throw new Error(
+        `audit.yml job "${name}" has no branch matrix, so it only audits the default branch. Expected: [${expected}].`,
+      )
+    }
+
+    const audited = list
+      .split(',')
+      .map((branch) => branch.trim())
+      .sort()
+      .join(',')
+
+    if (audited !== expected) {
+      throw new Error(
+        `audit.yml job "${name}" must audit exactly the branches delivery.yml deploys. deployed: [${expected}], audited: [${audited}].`,
+      )
+    }
+  }
+}
 
 function stepIndex(workflow: string, name: string): number {
   const index = workflow.indexOf(`- name: ${name}`)
@@ -131,6 +201,8 @@ function runShellStep(
 
 function main(): void {
   const workflow = fs.readFileSync(WORKFLOW_PATH, 'utf8')
+
+  assertAuditCoversDeployedBranches(workflow)
 
   assertOrdered(workflow, 'Setup SSH key', 'Verify XServer toolchain')
   assertOrdered(

@@ -1,5 +1,4 @@
 import { execFileSync } from 'node:child_process'
-import fs from 'node:fs'
 import { setTimeout as sleep } from 'node:timers/promises'
 
 import { assertE2eTarget } from './e2e-database-target'
@@ -13,7 +12,9 @@ function artisan(args: string[], stdio: 'inherit' | 'pipe'): string {
       'exec',
       '-T',
       '-e',
-      'APP_ENV=e2e',
+      'DB_HOST=mariadb-e2e',
+      '-e',
+      'DB_DATABASE=app_e2e',
       'app',
       'php',
       'artisan',
@@ -23,16 +24,14 @@ function artisan(args: string[], stdio: 'inherit' | 'pipe'): string {
   )
 }
 
-// DB_URL は接続生成時に host / database を上書きするので、生の config ではなく
-// 接続が実際に使う値を読む。PDO は張らないため DB 停止中でも判定できる。
 function resolvedTarget(): DatabaseTarget {
   const output = artisan(
     [
       'tinker',
       '--execute',
       '$c = DB::connection();' +
-        'echo \'TARGET:\'.json_encode(["environment" => app()->environment(),' +
-        ' "host" => $c->getConfig("host"), "database" => $c->getConfig("database")]);',
+        'echo \'TARGET:\'.json_encode(["host" => $c->getConfig("host"),' +
+        ' "database" => $c->getConfig("database")]);',
     ],
     'pipe',
   )
@@ -45,7 +44,6 @@ function resolvedTarget(): DatabaseTarget {
   return JSON.parse(probe) as DatabaseTarget
 }
 
-// mariadb-e2e を新規起動した直後は初期化が終わっていない。接続先を検証したあとに待つ。
 async function waitForDatabase(timeoutMs = 60_000): Promise<void> {
   const startedAt = Date.now()
 
@@ -68,18 +66,10 @@ async function waitForDatabase(timeoutMs = 60_000): Promise<void> {
 
 export default async function globalSetup(): Promise<void> {
   if (process.env.CI) {
-    // 使い捨ての runner 上で workflow がマイグレーション済み。
     return
-  }
-
-  if (!fs.existsSync('.env.e2e')) {
-    throw new Error(
-      '.env.e2e がありません。`mise run setup:e2e` を実行してください。',
-    )
   }
 
   assertE2eTarget(resolvedTarget())
   await waitForDatabase()
-  // ヘルパールートは作ったユーザーを消さないので、実行のたびに作り直す。
-  artisan(['migrate:fresh', '--force'], 'inherit')
+  artisan(['migrate:fresh', '--force', '--seed'], 'inherit')
 }

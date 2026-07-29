@@ -1,107 +1,46 @@
 # Testing as specification
 
-Tests are the canonical behavioral spec. The reviewer approves the **test cases** and confirms they
-are green. For routine low-risk changes that is the whole review; for the areas TADR-0001 lists as
-review-required — auth, secrets, CI/delivery, migrations, concurrency, outbound side effects, and
-the gate machinery itself — the implementation is read as well.
+Tests are the canonical behavioral specification. Write them before implementation and normally
+continue through implementation and verification; stop after the tests only when the user asks.
+Clarify ambiguous behavior before encoding it.
 
-Decision, rationale, and risks: [TADR-0001](adr/template/0001-development-workflow.md).
-This file is the operational playbook — keep it terse.
+## Workflow
 
-## Loop
+1. State the intended behavior.
+2. Add the smallest test that specifies it; bug fixes begin with a reproduction.
+3. Implement until the test passes.
+4. Run the relevant static, unit, Feature, E2E, coverage, and mutation gates.
+5. Keep only durable decisions or domain terms in documentation.
 
-1. **Intent** — one line of what should change (optionally preceded by Kiro
-   `requirements`/`design` when useful).
-2. **Spec** — author `it('...')->todo()` cases: the `describe`/`it` tree + assertion sketch.
-   Behavior-preserving refactors skip this; the existing suite staying green is their spec.
-3. **Approve** — reviewer approves the test cases **before** implementing. *Review starts here.*
-4. **Implement** — red → green (`tdd` skill).
-5. **Gates** — every CI check currently wired in this repo must pass. The target gate set defined
-   by TADR-0001 is: green + coverage floor + `arch()` + Larastan + scoped mutation testing. Require
-   only the checks already enabled.
-6. **Merge** — approved spec × green × gates. Reading the implementation is skipped only for
-   routine low-risk changes; see *Reviewing* below.
-7. **Organize** — update only ADRs / `CONTEXT.md`. Don't reconstruct Kiro
-   `requirements`/`design` after the fact (using them upfront is fine).
+## Scope
 
-## Rules
+- Pest Feature tests specify server behavior, validation, authorization, and Inertia component and
+  props contracts.
+- Playwright provides page smoke coverage and a few critical user flows. Use normal application
+  routes, never E2E-only HTTP helpers.
+- Test titles are Japanese in a `describe` / `it` hierarchy, with one behavior per `it`.
+- A behavioral change needs a test. Styling, copy, configuration, infrastructure, and documentation
+  changes use their relevant checks instead.
+- A new page needs a Feature spec and a smoke E2E test.
+- Coverage has a project-calibrated floor; it measures reach, not correctness.
 
-- **Canonical layer:** Pest Feature (server logic, validation, authorization, Inertia
-  component + props). Push behavior here.
-- **E2E (Playwright):** smoke per new page + a few critical happy paths. Pure
-  client-side React interaction is **out of scope** of the spec.
-- **Readers:** engineers + AI agents. No generated spec docs.
-- **Structure:** `describe('feature') → describe('scenario') → it('case')`. Japanese
-  titles — success `〜できる`, conditional `〜の場合〜になる`. One `it` = one behavior.
-  Approved-but-unimplemented = `it('...')->todo()`.
-- **Coverage contract:** a behavioral change MUST have a test ("untested = unspecified").
-  Exempt: styling/copy/layout, config/infra, docs. A new page MUST have a smoke E2E and a
-  Feature spec that asserts its Inertia component and page-specific props shape.
-- **Coverage gate:** floor ~90% on `app/` (exclude boilerplate). No global 100%. Coverage measures
-  how much of the code the written cases reach; it is an input to review, not a verdict
-  (TADR-0001).
-
-## Reviewing
-
-1. Read the `describe`/`it` tree as the spec outline.
-2. Read the assertions — confirm they verify real behavior (`assertDatabaseHas`, real
-   Inertia props), not tautologies.
-3. Confirm CI is green and the gates passed.
-4. Wrong behavior in the tree → fix the spec / file a bug, rather than accepting it because the
-   implementation looks reasonable.
-5. Read the implementation too when the change touches a TADR-0001 review-required area (auth,
-   secrets, CI/delivery, migrations, concurrency, outbound side effects, the gates themselves), or
-   when it is wide, unfamiliar, or hard to reverse.
-
-## Migrating an existing suite (hybrid)
-
-1. **Structural reshape** — flat `test()` → `describe`/`it` + naming, **preserve the
-   assertions** (low risk).
-2. **Read the tree as a spec** — suspicious behavior becomes a **separate bug ticket**;
-   do not silently rewrite assertions, or you canonize the current bug as the spec.
-3. **Sequence the gate** — non-blocking during the sweep, promote to blocking when the
-   area is done.
+Review the test cases and assertions first. Also review implementation for authentication, secrets,
+CI and delivery, migrations, concurrency, outbound side effects, gate changes, or any change that is
+wide, unfamiliar, or hard to reverse.
 
 ## Mutation testing
 
-- **The allowlist lives in the specs.** A class is mutated because a spec declares
-  `mutates(Foo::class)` at the top of the file — there is no `--class=` namespace list. A class
-  earns a place only if it is **deterministic** and its spec **observes every branch**. Classes
-  carrying DB, HTTP, Mail, Log, Cache, Auth, or a Repository do not qualify; whatever value
-  mutating them has is not worth the annotations it pushes into production code.
-- **This template's floor is 100% (`--min=100`, set in `mutation.yml`)** — the criterion restated:
-  a qualifying class has no equivalent or unobservable mutant to excuse. A survivor means the spec
-  is weak or the class does not belong on the list. Fix one or the other; never annotate around it,
-  and never kill a mutant by weakening a test. The gate scores few classes by design; what it does
-  not score is still covered by Feature specs and the coverage floor.
-- **`@pest-mutate-ignore` should not appear in this repository.** Needing one is the signal that a
-  class fails the allowlist criterion. `@codeCoverageIgnore` is separate and still applies: it
-  serves the coverage floor, which covers all of `app/`.
-- The **criterion** is shared surface; the **allowlist and `--min`** stay app-owned
-  ([TADR-0003](adr/template/0003-shared-surface-convergence.md)). An application still selecting by
-  `--class` keeps its own selection and threshold until it has built its allowlist and re-measured.
-- **Re-measure suspicious survivors with `mise run mutate -- --no-cache`** — it bypasses the
-  result cache and deletes nothing. Avoid `--clear-cache` and `rm -rf`ing the plugin's `.temp/`:
-  depending on plugin version, either can remove `.temp/mutations/`, which the runner writes
-  mutated sources into with no `mkdir`. If you must wipe, recreate it in the same breath:
-  `rm -rf vendor/pestphp/pest-plugin-mutate/.temp && mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations`.
-- **A `file_put_contents(... .temp/mutations/...): Failed to open stream` warning invalidates the
-  score.** With that directory missing, mutants are never applied and surviving mutants are silently
-  counted as killed — a *false* `Score: 100%` next to a green exit code (verified on v4.0.1: a real
-  72.73% printed as 100%). Score and exit code both look clean, so the warning is the only tell —
-  neither line alone is the verdict. Restore the directory (`composer reinstall pestphp/pest-plugin-mutate`,
-  or the `mkdir` above) and re-measure. CI is unaffected: the v4.0.1 dist ships the empty
-  `.temp/mutations/`, the mutation workflow `mkdir -p`s it before running as a version-drift guard,
-  and CI never passes `--clear-cache`.
-- **One DB-backed test process at a time** (see `commands.md`): never run `--mutate` while another
-  `pest`/`--dirty` run shares the test schema.
+- Specs opt classes in with `mutates()`, and the selected set must score 100%.
+- Evaluate every new or changed application-logic class. Add deterministic logic whose meaningful
+  branches are observable through public behavior; thin framework wiring and external-I/O
+  orchestration usually do not qualify.
+- A survivor first indicates a missing assertion or a class that should be simplified. Do not add
+  mutation-ignore annotations or weaken tests to make the score pass.
+- Removing `mutates()` weakens the gate and requires explicit review.
+- Run mutation testing separately from other DB-backed Pest processes.
 
-## Test-writing gotchas
+## Known test boundaries
 
-- **`Mail::fake()` drops recipient names set through `Mail::to($address, $name)`.** `MailFake::to()`
-  accepts only the recipient value, so a `hasTo($address, $name)` callback will not match that
-  name. That callback works only when the `Mailable` itself carries the named recipient. For
-  facade-level recipient names, send through the `array` mailer and read
-  `Mail::mailer()->getSymfonyTransport()->messages()`.
-- **Unit tests don't boot the app.** Instantiating Eloquent models is fine, but `forceFill`-ing a
-  `datetime`-cast attribute needs the connection resolver — put such value-object tests in `Feature`.
+- `Mail::fake()` does not preserve recipient names supplied through `Mail::to($address, $name)`.
+- Unit tests do not boot Laravel; tests requiring model casts or a connection resolver belong in
+  Feature tests.

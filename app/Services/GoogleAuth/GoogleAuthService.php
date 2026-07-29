@@ -29,8 +29,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
     {
         $name = $this->normalizeName($name, $email);
 
-        // config() の戻り値は mixed で int 等の真値があり得る。bool 型引数へ渡すため
-        // strict_types 下ではこのキャストが必須（非 bool 設定値のテストが変異を殺す）。
+        // config() は mixed のため、strict_types では bool への変換が必要。
         $lowercaseUsernames = (bool) config('fortify.lowercase_usernames');
         $caseInsensitiveEmail = ! $lowercaseUsernames;
 
@@ -147,9 +146,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
         $user = $userByGoogleId ?? $userByEmail;
 
         if ($user !== null) {
-            // google_id では一致せずメールだけで既存ユーザーに当たり、その既存ユーザーがまだ google_id
-            // 未連携なら、本人確認のため確認メール待ちにする。$userByGoogleId === null のとき $user は
-            // $userByEmail と同一なので $user の google_id を見れば足りる（冗長な null ガードを置かない）。
             if ($userByGoogleId === null && $user->google_id === null) {
                 throw new GoogleLinkConfirmationPendingException($user, $googleId, $user->email);
             }
@@ -252,7 +248,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     private function normalizeName(?string $name, string $email): string
     {
-        // preg_replace が null を返すのは正規表現エラー時のみで、このパターンでは起きない。
         $trimmed = preg_replace('/^\s++|\s++$/u', '', (string) $name) ?? '';
 
         return $trimmed !== '' ? $trimmed : $email;
@@ -277,10 +272,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
     private function findCandidateByEmail(Collection $candidates, string $email, bool $caseInsensitiveEmail): ?User
     {
         if (! $caseInsensitiveEmail) {
-            // lowercase_usernames=true では email が小文字に正規化済みのため厳密一致で照合する。
-            // レガシーな大小混在メールの候補にはここでヒットしないが、続く INSERT が
-            // utf8mb4_general_ci の一意制約に当たり、リカバリ（findByEmail は CI 照合）が
-            // 同じ連携確認待ちへ収束する。
+            // 大小混在の既存値はDBのCI一意制約を経てリカバリ経路で照合される。
             /** @var User|null */
             return $candidates->firstWhere('email', $email);
         }

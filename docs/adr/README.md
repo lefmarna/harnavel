@@ -1,95 +1,21 @@
 # Architecture Decision Records
 
-This README is the single policy document for decision records: namespaces, when a
-decision deserves an ADR, lifecycle, and how derived projects adopt template updates.
+Template ADRs live under `docs/adr/template/` and use the `TADR-NNNN` namespace. Derived
+applications take them from the template and do not edit them. App-specific ADRs live directly
+under `docs/adr/` and use `ADR-NNNN`.
 
-## Namespaces
+Create an ADR only when a decision is hard to reverse, surprising without context, and the result
+of a real trade-off. Keep it as short as possible: the current decision and enough rationale to
+prevent the decision being repeated. Tests specify behavior; `AGENTS.md` holds every-session
+constraints; `CONTEXT.md` is only a domain glossary; procedures and external facts belong in other
+docs.
 
-Two independent ADR namespaces share this tree so that the template and projects derived
-from it never collide on numbering:
+Delete proposed or temporary decisions that never acquired lasting consequences. When a current
+decision replaces an older one, merge the useful rationale and remove the history unless another
+record still depends on it. Template ADR numbers are never reused.
 
-- **Template ADRs** — `docs/adr/template/NNNN-*.md`. Owned by the template; they flow into
-  derived projects via `git pull template main` + `/merge-template`. Referenced as
-  **TADR-NNNN**.
-- **App ADRs** — `docs/adr/NNNN-*.md` (this directory, flat). Owned by the individual
-  project for its own decisions. Referenced as **ADR-NNNN**.
-
-A derived project records its own decisions as App ADRs here and never edits Template ADRs
-(they always merge to the template side). Because the two namespaces are separate
-directories, an App ADR and a Template ADR may share a number without conflicting.
-
-## When to write an ADR
-
-ADRs record **durable decisions**, not in-flight specs. The canonical spec is test code
-([`TADR-0001`](template/0001-development-workflow.md)); a rapidly-changing spec lives in
-tests + [`CONTEXT.md`](../../CONTEXT.md), which keep only the current state because old
-tests are rewritten when behavior changes. Author or update an ADR only once a decision is
-**durable** — it has shipped, survived at least one iteration, or other work depends on it.
-A direction expected to flip is not yet a decision; keep it out of the ADR set.
-
-Not every durable fact is an ADR. Constraints every session needs go in `AGENTS.md`,
-domain terms in `CONTEXT.md`, how-tos and reference facts in `docs/`. An ADR earns its
-place only by recording a decision **with the rationale and rejected alternatives** a
-future reader would otherwise re-derive — if there is nothing to re-derive, a line in one
-of the files above is enough. The measure of the ADR set is not completeness but that
-every entry is worth reading.
-
-## Deferred observations
-
-An unresolved observation is operational work, not yet an ADR or durable reference. Prefer a test
-or CI check when it can be detected automatically. Otherwise, keep it in the owning repository's
-issue tracker only when it records the current evidence, the question to resolve, a concrete
-revisit trigger or exit condition, and an owner or review date. Close the issue when resolved and
-move only the durable outcome to its proper home: test, ADR, `AGENTS.md`, `CONTEXT.md`, or `docs/`.
-
-Do not create a repository watchlist for unowned possibilities. Personal notes may be temporary
-scratch space, but they must not be the sole record of an observation another maintainer needs to
-act on. If an observation has neither a next action nor a meaningful revisit trigger, do not keep
-it.
-
-## Lifecycle
-
-`Status`: `Proposed` → `Accepted` → `Superseded by ADR-NNNN` / `Deprecated`.
-
-Strict ADR doctrine is append-only: never delete, always supersede. This repo deliberately
-relaxes that, because append-only assumes every recorded decision had consequences worth
-preserving — an assumption that fails for decisions recorded before they stabilized, and
-the resulting tombstones bury the durable decisions readers came for:
-
-- **Squash provisional supersessions.** Keep a `Superseded` tombstone only if the old
-  decision had real-world consequences (it shipped, or another ADR / design / code depends
-  on it). If it was provisional — reverted before shipping, nothing depending on it —
-  overwrite or delete it instead. When in doubt, keep the tombstone.
-- A `Proposed` ADR dropped before acceptance is deleted, not tombstoned.
-- A decision that merely **moves** (absorbed into this README or another ADR) is deleted
-  at its old path once every reference is repointed; no tombstone, since the decision
-  itself still stands.
-- A Template ADR's number is retired with the file and never reused. App ADRs may close
-  gaps instead (see Renumbering below).
-
-## Adopting template ADR updates (in a derived project)
-
-After `git pull template main`, resolve conflicts with `/merge-template`, then reconcile ADRs:
-
-1. Take Template ADRs (`docs/adr/template/**`) and the template-owned sections of this
-   README from the template side.
-2. Remove any old Template ADRs the template has deleted or absorbed elsewhere (e.g. a
-   former lifecycle TADR now living in this README) if git did not remove them.
-3. Repoint stale references in your own docs/code: a dropped Template ADR is gone; the
-   development-workflow decision is `TADR-0001`, ADR policy is this README.
-4. Leave your own App ADRs (`docs/adr/NNNN-*.md`) and the App ADR index below untouched —
-   regenerate the index from existing files if template changes replaced it. Renumber only
-   if a gap appeared (see below).
-
-## Renumbering App ADRs
-
-Compact only when a gap appears (e.g. a removed Template ADR freed `0001`). Renumbering
-breaks existing references, so do it early and rarely.
-
-1. Rename files to close the gap: `0002-foo.md` → `0001-foo.md`, …
-2. Update every cross-reference (other ADRs, docs, code).
-3. Never renumber Template ADRs.
+During a template merge, preserve the application's flat ADR files and the app-owned index below.
 
 ## App ADRs
 
-This section is app-owned. Preserve or regenerate it during template merges.
+This section is app-owned.

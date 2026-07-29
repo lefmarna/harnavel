@@ -14,8 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 /**
- * Larastan 3.10.0 does not infer the implicit nullability of Blueprint::rememberToken();
- * remove this annotation once an updated Larastan infers string|null for it.
+ * Larastan does not infer Blueprint::rememberToken() nullability.
  *
  * @property string|null $remember_token
  */

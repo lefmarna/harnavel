@@ -1,14 +1,9 @@
-/**
- * migrate:fresh の実行前に、Laravel が解決した接続先が E2E 専用のものと完全一致することを要求する。
- */
 export const E2E_TARGET = {
-  environment: 'e2e',
   host: 'mariadb-e2e',
   database: 'app_e2e',
 } as const
 
 export type DatabaseTarget = {
-  environment: string
   host: string
   database: string
 }
@@ -23,11 +18,11 @@ export function assertE2eTarget(resolved: DatabaseTarget): void {
   }
 
   const describe = (target: DatabaseTarget): string =>
-    `${target.environment} / ${target.host} / ${target.database}`
+    `${target.host} / ${target.database}`
 
   throw new Error(
     `E2E の接続先が ${describe(E2E_TARGET)} ではなく ${describe(resolved)} です` +
       `（不一致: ${mismatched.join(', ')}）。migrate:fresh はデータを消すため中止しました。` +
-      ' .env.e2e の APP_ENV / DB_URL / DB_HOST / DB_DATABASE を確認してください。',
+      ' .env の DB_URL とPlaywrightのDB上書きを確認してください。',
   )
 }

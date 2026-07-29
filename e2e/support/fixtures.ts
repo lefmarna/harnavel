@@ -6,11 +6,7 @@ type PageErrorFixtures = {
 
 const formatPageError = (error: Error): string => error.stack ?? error.message
 
-/**
- * 全 spec で `page` の `pageerror`（未捕捉の JS 例外）を収集し、テスト終了時にゼロであることを検証する。
- * `../support/fixtures` から `test` を import するだけで、明示的なアサーションなしに
- * ページ上のランタイムエラーを検知できる（`{ auto: true }` により自動適用）。
- */
+/** Fail every E2E test that emits an uncaught browser error. */
 export const test = base.extend<PageErrorFixtures>({
   pageErrors: [
     async ({ page }, use) => {

@@ -24,7 +24,6 @@ describe('イニシャル生成', function () {
     assert.equal(getInitials('taro   yamada'), 'TY')
   })
 
-  // 区切りは半角スペースに限らない。タブや改行を含む表示名でも語として分割する。
   it('タブや改行区切りでも最初と最後の頭文字を返す', function () {
     assert.equal(getInitials('taro\tyamada'), 'TY')
     assert.equal(getInitials('john\nronald\treuel tolkien'), 'JT')

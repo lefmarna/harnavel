@@ -19,8 +19,6 @@ docker-compose.yml
 # テスト
 tests
 e2e
-# config/e2e.php は送るので、E2E_HELPER_ROUTES を誤って有効にすると route:cache が落ちる。
-routes/e2e.php
 phpunit.xml
 .phpunit.cache
 .phpunit.result.cache
@@ -65,7 +63,6 @@ boost.json
 components.json
 phpstan.neon.dist
 pint.json
-renovate.json
 .deployignore
 
 # Vite dev server state
@@ -80,7 +77,6 @@ docs
 .env.example
 .env.backup
 .env.e2e
-.env.e2e.example
 .env.production
 
 # 開発環境用 .htaccess テンプレート（GitHub Actions でビルド時に .htaccess へ変換）

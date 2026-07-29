@@ -13,6 +13,5 @@ parameters:
 
     level: max
 
-    # Larastan only reads the legacy $casts property by default; without this flag, casts()-based
-    # datetime types silently degrade to string|null while analysis stays green (TADR-0007).
+    # Required for casts() return-type inference; the architecture test guards it.
     parseModelCastsMethod: true

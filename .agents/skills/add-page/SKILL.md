@@ -11,7 +11,8 @@ Add a new Laravel + Inertia React page according to the template's layer and ver
 
 - Read `AGENTS.md`, `docs/testing-as-spec.md`, and TADR-0005.
 - Read existing nearby pages, routes, controllers, ViewModels, Feature specs, and E2E specs.
-- For pages with behavior, first create the `describe` / `it(...)->todo()` spec tree, then implement after approval.
+- Write behavioral specs before implementation. Continue through implementation unless the user
+  explicitly requests tests only; clarify ambiguous behavior first.
 - Run PHP / artisan / Pest inside the Docker app container. Run Node / pnpm / mise on the host.
 
 ## Implementation Steps
@@ -40,11 +41,12 @@ Add a new Laravel + Inertia React page according to the template's layer and ver
    - For props whose values are part of the spec, verify the values with `where()` or similar assertions.
 8. Add a Playwright smoke E2E test under `e2e/tests/`, or append to an existing smoke test.
    - Import `test` / `expect` from `../support/fixtures` and detect rendering without JavaScript errors through the fixture.
-   - For pages that require authentication, create the logged-in state with local / testing-only routes such as `/_e2e/auth/login-verified` or `/_e2e/auth/login-unverified` before checking the page.
+   - For authenticated pages, seed the dedicated E2E database and log in through the normal UI.
+     Never add an E2E-only HTTP route.
 9. Verify.
    - Backend: `mise run verify:backend`
    - Frontend: `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`
-   - E2E: start with the smallest scope for the added or changed spec, then run `pnpm test:e2e --project=chromium` if needed.
+   - E2E: start with the smallest scope for the added or changed spec, then run `pnpm test:e2e`.
    - Finally, run `git diff` and confirm only intended changes are present.
 
 ## Feature Spec Example

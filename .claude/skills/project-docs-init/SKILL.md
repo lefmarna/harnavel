@@ -51,8 +51,8 @@ Files in the template docs structure that need project-specific updates:
 | --- | --- |
 | `AGENTS.md` | Update the project purpose, non-obvious conventions, and operational rules for the derived project. |
 | `CONTEXT.md` | Fill initial entries with domain terms extracted from context. Preserve the opening contract text and entry format. |
-| `docs/infrastructure.md` | Update Local Runtime Topology, Default local endpoints, runtime facts, and deployment assumptions if needed. The actual identifier, DB name, and port values are canonical in `.env.example`. |
-| `docs/commands.md` | Update the local URL examples in Interactive Browser Verification. |
+| `docs/infrastructure.md` | Record only external production facts that differ from the template and cannot be read from repository configuration. |
+| `docs/commands.md` | Update the browser-check URL only when the app uses a different local port. |
 | `.env.example` | Update default values for `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port numbers. |
 | `public/manifest.webmanifest` | Update the static app name and description in the Web App Manifest. |
 | `README.md` | Update the title, opening lead, overview, and setup text for the project. |
@@ -66,7 +66,7 @@ The following files are template-shared and should generally not be changed:
 
 Notes:
 
-- `docs/commands.md` is the command source of truth, so update it only for project-specific URL examples unless the actual commands differ.
+- `mise.toml` and `package.json` are the command indexes; do not copy their task lists into docs.
 - Preserve the structure and role of `README.md` and `AGENTS.md`, but do not leave the title and introduction as template wording.
 - Avoid introductory text that reads like someone else's template after expansion, such as "template", "starter", or "scaffold".
 
@@ -110,7 +110,6 @@ If supplemental details such as screen structure or access control are needed, f
 
 Using the user-provided `APP_NAME`, `DB_DATABASE`, port numbers, and the project name extracted from context, update:
 
-- Local Runtime Topology table and Default local endpoints in `docs/infrastructure.md`.
 - Playwright CLI local URL in Interactive Browser Verification in `docs/commands.md`.
 - Default URL after setup in `README.md`.
 - Relevant `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port variables in `.env.example`.
@@ -128,14 +127,12 @@ per-environment GitHub settings the first deployment needs, for Develop and Prod
   URL ending at the Laravel health route, such as `https://example.com/up`; `delivery.yml` validates
   it before touching the server, and rejects a path that would not reach PHP).
 - `HEALTHCHECK_BASIC_AUTH`, only for an environment whose document root is protected by Basic
-  authentication. Both verification probes then send it; without it they receive 401 and a healthy
-  release is withdrawn.
+  authentication.
+- Enable the GitHub dependency graph and Dependabot Alerts. Leave dependency update PRs disabled.
 
 No OPcache measurement is required to start deploying. The deployment waits out the revalidation
-window while the planned 503 is still up, and XServer's default configuration is a measured platform
-assumption rather than a per-application prerequisite (see "OPcache Revalidation Measurement" in
-`docs/infrastructure.md`). Point the user at that section only if the environment leaves XServer,
-changes PHP version, gains a `.user.ini`, or shows old behaviour after a green deployment.
+window while maintenance is active. Recheck the external assumption only if the environment leaves
+XServer, changes PHP version, gains a `.user.ini`, or serves stale behavior after a green deploy.
 
 ## Step 7: Review and Verify
 

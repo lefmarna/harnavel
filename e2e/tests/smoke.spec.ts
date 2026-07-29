@@ -6,9 +6,11 @@ test('トップページが正常に表示される', async ({ page }) => {
 })
 
 test('認証済みユーザーでダッシュボードが正常に表示される', async ({ page }) => {
-  const response = await page.goto('/_e2e/auth/login-verified')
+  await page.goto('/login')
+  await page.getByLabel('メールアドレス').fill('test@example.com')
+  await page.getByLabel('パスワード').fill('password')
+  await page.getByRole('button', { name: 'ログイン' }).click()
 
-  expect(response?.status()).toBeLessThan(400)
   await expect(page).toHaveURL(/\/dashboard$/)
   await expect(page.getByText('ダッシュボード').first()).toBeVisible()
 })

@@ -16,12 +16,12 @@
     "lint:docs": "tsx scripts/lint-docs.ts",
     "test:deploy-lifecycle": "node --import tsx scripts/test-deploy-lifecycle.ts",
     "test:deploy-rsync-excludes": "node --import tsx scripts/test-deploy-rsync-excludes.ts",
-    "test:release-health": "node --import tsx --test scripts/test-release-health.ts",
     "test:toolchain-versions": "node --import tsx scripts/test-toolchain-versions.ts",
     "test:ci-wiring": "node --import tsx scripts/test-ci-wiring.ts",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:all": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:headed": "playwright test --project=chromium --headed",
     "playwright:install": "playwright install --with-deps"
   },
   "devDependencies": {

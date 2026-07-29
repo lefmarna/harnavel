@@ -1,11 +1,6 @@
 name: CI Lint
 description: Install dependencies and run backend/frontend static checks (Pint, PHPStan, format, lint, types, docs).
 
-# 依存監査（composer audit / pnpm audit）はここに置かない。判定材料が advisory データベース
-# というリポジトリ外の可変状態で、同じコミットが翌日に赤くなる。検知は audit.yml に集約する
-# （TADR-0001）。ここに戻すと、修正版が未公開の advisory が推移的依存に出た時点で、
-# マージも本番障害の緊急修正のデプロイも止まる。
-
 runs:
   using: composite
   steps:
@@ -99,10 +94,6 @@ runs:
     - name: Test Deploy Rsync Excludes
       shell: bash
       run: pnpm run test:deploy-rsync-excludes
-
-    - name: Test Release Health Verification
-      shell: bash
-      run: pnpm run test:release-health
 
     - name: Test Toolchain Version Consistency
       shell: bash

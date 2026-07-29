@@ -11,29 +11,20 @@ describe('E2Eデータベース接続先のガード', () => {
 
   const rejected: Record<string, DatabaseTarget> = {
     通常開発DB: {
-      environment: 'e2e',
       host: 'mariadb',
       database: 'app',
     },
     本番など第三のDB: {
-      environment: 'e2e',
       host: 'production-host',
       database: 'production-db',
     },
     ホストだけE2Eでない: {
-      environment: 'e2e',
       host: 'mariadb',
       database: 'app_e2e',
     },
     データベース名だけE2Eでない: {
-      environment: 'e2e',
       host: 'mariadb-e2e',
       database: 'app',
-    },
-    APP_ENVがe2eでない: {
-      environment: 'local',
-      host: 'mariadb-e2e',
-      database: 'app_e2e',
     },
   }
 

@@ -1,53 +1,58 @@
 # Project Context
 
 A Laravel 13 + Inertia.js v3 (React 19) + Tailwind CSS v4 starter template.
-Two environments: Docker locally (nginx + PHP-FPM + MariaDB), XServer shared hosting in production.
+Docker is used locally; production runs on XServer shared hosting.
 
 ## Architecture
 
-- Stack: PHP 8.5 / Laravel 13 / Inertia.js v3 (React 19) / Tailwind CSS v4 / Pest v4 / Larastan v3 / Pint v1 / MariaDB / mise.
-- Model property types are inference-first: migrations + a `casts()` method that directly returns an array literal + Larastan's `parseModelCastsMethod`. Retain `@property` PHPDoc only for a proven inference gap, with the reason; rationale in TADR-0007 (`docs/adr/template/0007-inference-first-model-types.md`).
-- XServer has no queue workers, SSR, or long-running processes. Run jobs synchronously (`dispatchSync()` or `QUEUE_CONNECTION=sync`), and prefer solutions that work in both Docker and XServer.
-- Run `php` / `php artisan` only inside the Docker app container (`docker compose exec app ...`, or `docker compose exec -T app ...` non-interactively) — never on the host.
-- Node.js, pnpm, and mise run on the host, not in the container.
+- Stack: PHP 8.5 / Laravel 13 / Inertia.js v3 / React 19 / Tailwind CSS v4 / Pest v4 / Larastan v3 / MariaDB / mise.
+- Infer model property types from migrations and a `casts()` method that directly returns an array literal. Add `@property` only for a proven inference gap and state the reason (TADR-0007).
+- XServer has no queue workers, SSR, or long-running processes. Run jobs synchronously and prefer solutions that work in both Docker and XServer.
+- Run PHP and Artisan only inside the Docker `app` container. Run Node.js, pnpm, and mise on the host.
 
 ## Layout
 
-- `app/Params`, `app/Repositories`, `app/Services`, `app/ViewModels` — backend layer objects; `app/Concerns`, `app/Support` — shared traits and helpers. When to introduce each backend layer is decided by TADR-0005 (`docs/adr/template/0005-layer-decision-rules.md`).
-- `e2e/` Playwright E2E tests; `.docker/` nginx/PHP config; `docs/` engineering docs.
-- `storage/logs/laravel.log` can grow large — read recent entries only (`tail -n 200`).
+- Backend layers live under `app/Params`, `app/Repositories`, `app/Services`, and `app/ViewModels`; introduce them according to TADR-0005.
+- Shared PHP traits and helpers live under `app/Concerns` and `app/Support`.
+- Playwright specs live under `e2e/`; engineering documentation lives under `docs/`.
+- Read only recent lines from `storage/logs/laravel.log`, which can grow large.
 
 ## Verification
 
-- Start with the narrowest check for the changed area, then widen before finishing.
+- Start with the narrowest relevant check, then widen before finishing.
 - Backend: `mise run verify:backend`.
-- Frontend: `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:unit`, `pnpm test:e2e --reporter=dot`.
+- Frontend: `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:unit`, and `pnpm test:e2e`.
 - Docs: `pnpm lint:docs`.
-- Browser checks: follow the Playwright CLI loop in `docs/commands.md`.
-- `delivery.yml` deploys to XServer with `rsync --delete` and `migrate --force`, so editing it can delete live server data — review the rsync excludes, `.deployignore`, develop-only `.htaccess`/robots, release-critical checks, post-deploy commands, and the release health check together.
-- Before finishing, run `git diff` to confirm only intended changes. Done when the changed area's checks pass and the requested behavior is confirmed.
+- Interactive browser checks: follow `docs/commands.md`.
+- Changes to `delivery.yml` are high risk because it uses `rsync --delete` and `migrate --force`; review its excludes, maintenance lifecycle, release files, and post-deploy commands together.
+- Finish by reviewing `git diff` and confirming only intended changes remain.
 
 ## Testing
 
-- Tests are the behavioral spec: author `it('...')->todo()` cases and get them approved before implementing (`docs/testing-as-spec.md`).
-- New features go test-first (red → green via the `tdd` skill); bug fixes start with a test that reproduces the issue.
-- Test titles are Japanese, in a `describe`/`it` hierarchy. New pages need at least a smoke E2E test.
+- Tests are the behavioral specification. Write them before implementation, but continue through implementation and verification unless the user explicitly requests tests only. Clarify ambiguous behavior first.
+- Bug fixes start with a reproducing test. Add useful boundary, failure, and authorization cases proactively.
+- Test titles are Japanese in a `describe` / `it` hierarchy. New pages need a Feature spec and a smoke E2E test.
+- For every new or changed deterministic application-logic class, evaluate mutation testing and add `mutates()` when its branches are observable. Do not use mutation-ignore annotations; removing a target weakens the gate and requires explicit review.
+- Run only one DB-backed Pest process at a time.
+- Run only one Playwright process at a time. A concurrent run intentionally fails on `E2E_PORT`; wait for the active run, then retry.
+- Do not expose E2E setup through HTTP routes; use the dedicated E2E database and normal user flows.
+- Review implementation as well as tests for authentication, secrets, CI/delivery, migrations, concurrency, outbound side effects, and test-gate changes.
 
 ## Documentation
 
-- `README.md` is Japanese; `docs/` is English. `docs/generated/` is auto-generated — never edit by hand.
-- This file is the single agent entry point; `CLAUDE.md` / `GEMINI.md` are one-line pointers to it. Put content here, never in a pointer file. A new agent tool reaches these guidelines with one more pointer, but its hook and MCP wiring is its own: each toolchain reads its own config file in its own format (`.claude/settings.json`, `.codex/config.toml`, `.agents/hooks.json`, `.mcp.json`), and one needed an 87-line adapter (`scripts/hooks/agy-stop-adapter.mjs`) to reach the shared `scripts/hooks/stop-verify.mjs`. Keep the verification logic in one place and wire each tool to it.
-- Any agent (Claude Code, Codex, Gemini, ...) works this repo: durable knowledge lives in versioned repo Markdown, never a single tool's private memory. Placement: constraint every session needs → here; behavior → test; domain term → `CONTEXT.md`; durable decision with rationale → ADR; how-to/reference → `docs/`; everything else stays in code or is not kept.
-- Before planning, specifying, designing, or refactoring an area, read its glossary and ADRs. `CONTEXT.md` is the domain glossary — domain language only, no implementation details (use `CONTEXT-MAP.md` if present); ADRs live in `docs/adr/` (ADR-NNNN) and `docs/adr/template/` (TADR-NNNN) — policy in `docs/adr/README.md`.
-- Use glossary terms and surface ADR conflicts instead of overriding them silently. After completing work, organize only ADRs and `CONTEXT.md` (TADR-0001); when and how to author, squash, or delete an ADR is defined in `docs/adr/README.md`.
-- Repo-owned skills a non-Claude agent may need for ordinary implementation work (`add-page`, `adr-compact`, `update-laravel-packages`) keep one canonical body under `.agents/skills/<name>/SKILL.md`. The `.claude/skills/<name>/SKILL.md` counterpart is a pointer to it, carrying only the Claude-specific frontmatter a symlink would destroy; never put instructions there. `pnpm lint:docs` checks the pointer resolves. Claude-specific repository operations (`absorb-from-apps`, `merge-template`, `project-docs-init`) live in `.claude/skills/` only and are followed by path.
+- `README.md` is Japanese; `docs/` is English. Never edit `docs/generated/` by hand.
+- This file is the agent instruction source; `CLAUDE.md` and `GEMINI.md` are one-line pointers. Tool-specific hooks and MCP wiring remain in each tool's config, while shared verification logic stays in repository scripts.
+- Keep only durable knowledge: every-session constraints here, behavior in tests, domain terms in `CONTEXT.md`, hard-to-reverse decisions in ADRs, and non-inferable reference material in `docs/`.
+- Before changing an area, read its glossary and relevant ADRs. `CONTEXT.md` contains domain language only; ADR policy is in `docs/adr/README.md`.
+- Keep repo-owned skill bodies under `.agents/skills/<name>/SKILL.md`; their `.claude/skills` counterparts are pointers.
+- Never edit Laravel Boost-generated skills by hand.
 
-## Reference Docs
+## References
 
-- Laravel Boost guidelines: `docs/generated/boost.md`
-- Testing as specification: `docs/testing-as-spec.md`
+- Laravel Boost: `docs/generated/boost.md`
+- Testing: `docs/testing-as-spec.md`
 - Commands: `docs/commands.md`
-- Infrastructure: `docs/infrastructure.md`
+- External infrastructure state: `docs/infrastructure.md`
 - Spec workflow: `docs/generated/specs.md`
-- Cross-app convergence: upstream (apps → template) `/absorb-from-apps`, downstream (template → app) `/merge-template`; decision model in TADR-0003 (`docs/adr/template/0003-shared-surface-convergence.md`). These procedures are plain Markdown under `.claude/skills/<name>/SKILL.md` — non-Claude agents follow them by path.
-- New Inertia pages: follow `.agents/skills/add-page/SKILL.md` so route, PageViewModel, Wayfinder, React props, Feature spec, and smoke E2E stay aligned.
+- Template convergence: TADR-0003 and `.claude/skills/merge-template/SKILL.md`
+- New Inertia pages: `.agents/skills/add-page/SKILL.md`

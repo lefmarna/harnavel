@@ -101,20 +101,24 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E Tests
-        run: pnpm test:e2e --project=chromium
+        run: pnpm test:e2e
         env:
           DB_HOST: 127.0.0.1
           DB_DATABASE: app_testing
           APP_URL: http://localhost:8000
-          # ローカルの .env.e2e と同じオプトイン契約。ここでしか有効にしない。
-          E2E_HELPER_ROUTES: 'true'
-          # E2E は php artisan serve が .env（.env.example 由来: MAIL_MAILER=smtp /
-          # MAIL_HOST=mailpit）を読むが、この workflow に Mailpit サービスはない。
-          # メール送信を伴う認証フロー（新規登録・パスワード再設定）が SMTP 接続失敗で
-          # 500 になるのを防ぐため、E2E 実行時はメーラーを array に上書きする。
           MAIL_MAILER: array
 
-      # デプロイ用にビルド成果物を保存（delivery ワークフローからの呼び出し時のみ）
+      - name: Upload E2E failure report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-failure-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload build artifacts
         if: inputs.upload-artifacts
         uses: actions/upload-artifact@v7

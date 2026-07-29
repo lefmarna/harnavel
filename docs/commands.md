@@ -1,156 +1,28 @@
-# Commands Reference
+# Operational commands
 
-Use this file when you need the repository's actual command names instead of guessing from the codebase.
+Use `mise tasks` and `pnpm run` as the command indexes. `AGENTS.md` lists the required verification
+commands.
 
-## Setup (Initial)
-
-```bash
-mise run setup          # Full project setup
-mise run setup:tools    # Install tools & pnpm dependencies
-mise run setup:backend  # Setup backend (requires containers)
-mise run setup:e2e      # Create .env.e2e, the Playwright-only app environment
-```
-
-## Docker
+## E2E
 
 ```bash
-mise run build          # Build containers (no cache)
-mise run up             # Start containers
-mise run stop           # Stop containers
-mise run down           # Stop and remove containers
-mise run restart        # Restart containers
-mise run ps             # List containers
-mise run logs           # View app logs
-mise run app            # Access app container shell
-mise run destroy        # Remove all containers and volumes
+pnpm test:e2e       # Chromium
+pnpm test:e2e:all   # Chromium, Firefox, and WebKit
+pnpm test:e2e:ui    # Interactive browser selection
 ```
 
-## Frontend Development
+Each app must use its own `E2E_PORT` in `.env`. E2E uses the dedicated `app_e2e` database.
+
+## Interactive browser verification
+
+Start the app and Vite, then use Playwright CLI for transient checks:
 
 ```bash
-pnpm dev                # Start Vite dev server
-pnpm build              # Build for production
-pnpm format:check       # Check Prettier formatting
-pnpm lint               # Run ESLint with auto-fix
-pnpm lint:check         # Run ESLint (check only)
-pnpm types:check        # TypeScript type check
-pnpm test:unit          # Run node:test unit tests (resources/js/**, e2e/**)
-pnpm format             # Format with Prettier
-pnpm fix                # Run lint + format
+npx @playwright/cli open http://localhost:8080
+npx @playwright/cli snapshot --depth=4
+npx @playwright/cli screenshot
+npx @playwright/cli close
 ```
 
-## Backend Development
-
-```bash
-mise run migrate        # Run database migrations
-mise run seed           # Run database seeders
-mise run fresh          # Fresh migration with seed
-mise run rollback       # Rollback last migration
-mise run status         # Migration status
-mise run test           # Run Pest tests
-mise run mutate         # Mutation testing on the classes their specs declare with mutates()
-mise run pint           # Run Laravel Pint on changed PHP files
-mise run analyse        # Run Larastan/PHPStan static analysis
-mise run verify:backend # Run Pint + Larastan + Pest
-mise run verify:backend:full # Run Pint + Larastan + Pest + Chromium E2E
-mise run tinker         # Laravel tinker
-mise run route          # List routes
-mise run wayfinder      # Generate Wayfinder TypeScript route/action helpers
-mise run clear          # Clear all caches
-mise run composer:install  # Composer install
-mise run composer:update   # Composer update
-```
-
-> **Run only one DB-backed test process at a time.** All DB-backed tests share a single
-> `app_testing` schema (the `mariadb-testing` service) via `RefreshDatabase`, which migrates that
-> schema fresh at process start. Running two such processes against it concurrently — e.g.
-> `mise run mutate` while `mise run test`, `mise run verify:backend`, a manual `php artisan test`,
-> or an automated `--dirty` check is active — races their migrations and fails with a deadlock
-> (`SQLSTATE 1213`) or "table already exists" (`1050`). Run mutation testing on its own.
-> (`--parallel` only isolates workers *within* one run into separate `app_testing_*` schemas; it
-> does not coordinate independent test processes.)
-
-## E2E Testing
-
-```bash
-pnpm test:e2e           # Run Playwright E2E tests
-pnpm test:e2e:ui        # Run with UI mode (interactive debugging)
-pnpm test:e2e:headed    # Run with browser visible
-```
-
-E2E runs against its own application: `.env.e2e` (`APP_ENV=e2e`, `artisan serve` on `E2E_PORT`,
-`mariadb-e2e`), which Laravel loads instead of `.env` when `APP_ENV=e2e` is in the real environment.
-Playwright's global setup runs `migrate:fresh` against it every run, because the helper routes never
-clean up the users they create. Your `.env`, `mariadb`, and nginx port are untouched.
-
-The `/_e2e` helper routes mint an authenticated session for anyone who requests them, so they
-register only when `E2E_HELPER_ROUTES` is true and `APP_ENV` is not `production` — `.env.e2e` sets
-it locally, `reusable-test.yml`'s E2E step sets it in CI. `APP_ENV=local` alone is not enough,
-because the standard Docker environment runs as `local`. See `config/e2e.php` and
-`tests/Feature/E2eHelperRoutesTest.php`.
-
-`E2E_PORT` must be in `.env` (convention: `NGINX_PORT + 1000`); Playwright has no default and stops
-without it. It is the single source for the port — `APP_URL` is derived from it, so `.env.e2e` must
-not pin one.
-
-Docker publishes every host port on `127.0.0.1`. Set `DOCKER_BIND_ADDRESS=0.0.0.0` to expose the
-development stack to the network.
-
-## Interactive Browser Verification
-
-Use Playwright CLI for ad hoc browser checks while an agent is changing UI behavior. Start the
-local app and Vite server first with the Docker and frontend commands above. The CLI requires npm
-registry access or a prior global/cached install, so it is unavailable in fully offline sessions.
-
-```bash
-npx @playwright/cli open http://localhost:8080 # Start a browser on the local app
-npx @playwright/cli snapshot --depth=4         # Inspect page structure and element refs
-npx @playwright/cli screenshot                 # Capture visuals when layout or paint matters
-npx @playwright/cli close                      # End the browser session
-```
-
-Prefer snapshots for navigation, form interaction, and semantic checks. Use screenshots after the
-snapshot when the change needs visual confirmation. Playwright CLI artifacts stay in
-`.playwright-cli/` and are ignored by Git.
-
-Playwright CLI checks are transient. Add or update an E2E spec when a bug fix or user flow should
-keep failing in future sessions, then run the narrowest relevant `pnpm test:e2e` command.
-
-## Documentation
-
-```bash
-pnpm lint:docs          # Validate internal markdown links in docs/ + root markdown entrypoints
-```
-
-`pnpm lint:docs` includes `docs/` plus the root entry-point files (`README.md`, `AGENTS.md`,
-`CLAUDE.md`, `GEMINI.md`, `CONTEXT.md`) when present.
-
-## Git Hooks
-
-```bash
-pnpm exec lefthook run pre-commit # Fix/format staged files, then run local checks (includes Docker-backed backend analysis)
-```
-
-## Deployment
-
-```bash
-mise run deploy:build   # Build frontend assets
-mise run deploy:package # Create deployment package
-mise run deploy:prepare # Full deployment preparation
-```
-
-## Deployment Verification
-
-These run on host Node, so invoke them with pnpm rather than mise. CI runs all of them
-in the `ci-lint` action.
-
-```bash
-pnpm test:deploy-lifecycle          # Verify preflight and maintenance deployment ordering
-pnpm test:deploy-rsync-excludes     # Verify rsync --delete protects remote-only data
-pnpm test:release-health            # Verify release health probes (reachability and asset presence)
-pnpm test:toolchain-versions        # Verify Dockerfile and delivery.yml PHP/Composer versions match
-pnpm test:ci-wiring                 # Verify the shared checks run once in ci-lint and gate delivery's deploy job
-```
-
-Every check above lives in `.github/actions/ci-lint/action.yml`, which `check.yml`, `quality.yml`,
-and `delivery.yml` all use. Add a new repository-wide check there, not to an individual workflow.
+Prefer snapshots for behavior and screenshots for visual output. Add an E2E spec when the behavior
+should remain guarded.

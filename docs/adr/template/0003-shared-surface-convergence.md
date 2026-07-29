@@ -1,74 +1,11 @@
-# Shared-surface convergence for derived projects
+# Shared-surface convergence
 
-## Status
+The template is canonical for template-origin behavior. Shared files converge to the template;
+hybrid files take template-origin hunks while preserving app content; domain, presentation,
+branding, environment values, and App ADRs remain app-owned. Improvements developed in an app move
+upstream when they are generic, then return through the normal template merge.
 
-Accepted.
-
-## Context
-
-Multiple projects derive from this template and adopt its updates via `git pull template main` +
-`/merge-template` (see [`TADR-0001`](0001-development-workflow.md)). Shared template-origin code
-and docs naturally drift when apps fix the same problem locally. Unmanaged drift makes future
-template pulls expensive and judgment-heavy.
-
-## Decision
-
-The template is the canonical source for template-origin behavior. Improvements that mature in
-an app are upstreamed to the template when they are not app-specific; the best version wins.
-
-Files are treated in three categories:
-
-- **Shared** — no legitimate app-specific content. Keep byte-identical across template and apps.
-- **Hybrid** — template scaffolding and app content coexist. Converge only the template-origin
-  hunks; preserve app hunks.
-- **App-owned** — domain, presentation, branding, environment, and app-specific configuration.
-  Do not converge through the template.
-
-Coverage and mutation gate values, and whether mutation blocks, are calibrated per app. The shared
-workflow structure may converge, but the calibrated lines and adjacent rationale stay app-priority.
-
-The mutation **allowlist criterion** — deterministic, every branch observed by its spec, declared
-with `mutates()` — is shared; the allowlist itself is app-owned, because it names app classes. That
-makes adopting it a two-step convergence rather than a file to pull: an app builds its own
-`mutates()` declarations and re-measures, and **keeps its existing `--class` selection and `--min`
-until it has**. Pulling `mutation.yml` first leaves the gate measuring only the shared ViewModels
-while every app-specific class silently stops being tested.
-The bounded in-flight request drain in `delivery.yml` follows the same rule: its lifecycle step is
-shared, while its duration and adjacent rationale are calibrated to each app's longest synchronous
-request.
-
-Calibration stays inline in the pulled file. A calibration whose in-file value would also seed a
-newly derived application is the one case where that fails — the template cannot simultaneously hold
-a correct runtime value for its own environments and a safe initial value for a new app — and such a
-value belongs in per-environment configuration instead, with the workflow defaulting to the safe
-setting when none is supplied. **No current calibration needs this**, and none should be introduced
-casually: configuration outside the file cannot be reviewed in the diff, and each such value becomes
-a manual step every environment must complete before it can deploy. Reach for it only when a value
-genuinely carries both roles at once.
-
-The operational path classification and conflict-resolution procedure live in
-`/merge-template` and `/absorb-from-apps`; this ADR records the decision model only.
-
-## Considered alternatives
-
-- **Extract every calibration value out of the pulled files** (GitHub Actions `vars`/inputs) so the
-  workflow YAML is byte-identical. Rejected: more CI wiring, and an inline value is easier to read
-  and review. The narrow exception above is not this alternative — it moves one value because its
-  in-file default would seed new applications wrongly, not to make the file byte-identical.
-- **Unify the thresholds across all projects.** Rejected: it contradicts TADR-0001's per-project
-  calibration — a content app and a compiler service have different defensible mutation-score
-  ceilings.
-- **Keep an exhaustive manifest of shared paths.** Rejected: it duplicates the decision model,
-  reads like tool configuration, and becomes another artifact to keep synchronized.
-- **Converge everything, including app-owned files.** Rejected: presentation, branding, domain,
-  and app-specific configuration are intentionally app-specific; forcing byte-identity there
-  creates churn without propagation benefit.
-
-## Consequences
-
-- Shared tests and the production code they specify move together: a stricter shared test is
-  upstreamed only with implementation that keeps the template green.
-- App-specific calibration remains visible in the app's workflow files instead of being hidden
-  behind external defaults. Should the exception above ever apply again, the value would sit outside
-  the file, so the workflow must echo its resolved setting to the run log to keep the effective
-  calibration observable per run rather than in the diff.
+Coverage floors remain app-calibrated. Mutation testing uses a shared blocking threshold of 100%
+and a shared eligibility rule, while each app owns the `mutates()` declarations naming its
+deterministic, observable logic. Operational merge details belong in the merge skill or the
+specific downstream request, not in this ADR.

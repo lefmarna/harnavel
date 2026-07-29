@@ -19,9 +19,12 @@ Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
   - **T1 Shared**: files with no app-specific content. Aim for byte identity.
   - **T2 Hybrid**: template scaffolding and app content coexist. Converge only template-origin hunks and leave app extensions in place. These files do not become byte-identical.
   - **T3 App-owned**: presentation, branding, domain, and deploy settings. Do not converge.
-- **Leave app-priority content app-side**: calibration values (coverage/mutation `--min`, whether mutation is blocking, and `@pest-mutate-ignore` annotation density), domain logic, design tokens, i18n, app-specific routes/domains/deploy settings, `CONTEXT.md`, and App ADRs (`docs/adr/NNNN-*.md`). Do not move these upstream.
+- **Leave app-priority content app-side**: coverage calibration, mutation allowlist class names,
+  domain logic, design tokens, i18n, app-specific routes/domains/deploy settings, `CONTEXT.md`, and
+  App ADRs (`docs/adr/NNNN-*.md`). Do not move these upstream.
 - **Choose by best practice, not majority vote**. Select the best version hunk by hunk.
-- **Eliminate equivalent mutations by simplification before annotation**. Use `@pest-mutate-ignore` with a reason only when simplification is not possible and the code is load-bearing. See `docs/testing-as-spec.md`.
+- **Mutation targets are deliberate.** Add deterministic, observable logic proactively and keep the
+  selected set at 100%. Do not upstream mutation-ignore annotations.
 - **Move tests and implementation together**. More comprehensive shared tests should move upstream only when the matching implementation is also present in the template. Do not upstream specs that cannot be green in the template.
 - **Keep PRs small, verified, and uncommitted**. Split by file kind, verify each PR, and stop before commit so the user can review and commit.
 - **Do not commit working logs**. Per-app checklists and concrete diff notes are transient working material and should stay in `/tmp` or similar locations.
@@ -89,14 +92,16 @@ Classify every changed file and hunk into the three tiers. Exclude T3 and app-sp
 
 ### 4. Choose the Best Version Hunk by Hunk
 
-- Choose the best generic improvement or annotation. Simplifying away equivalent mutations is better than annotating them.
+- Choose the best generic improvement. Simplify equivalent mutations instead of annotating them.
 - When multiple apps fixed the same area differently, choose one canonical version. The others will converge downstream.
 - Do not upstream app-specific hunks such as custom Params/ViewModels, domain columns, i18n, or design.
 
 ### 5. Move Changes Upstream to the Template
 
 - Keep PRs small by file kind. For T1 files, write the exact bytes from the best-version app when byte identity is the goal. For T2 files, converge only template-origin hunks.
-- Verify according to the changed area in each PR: `mise run verify:backend`, `pnpm format:check && pnpm lint:check && pnpm types:check`, scoped mutation if needed (`docker compose exec -T app vendor/bin/pest --mutate --covered-only --class="..."`), `pnpm lint:docs`, or YAML validation for workflows.
+- Verify according to the changed area in each PR: `mise run verify:backend`,
+  `pnpm format:check && pnpm lint:check && pnpm types:check`, `mise run mutate`,
+  `pnpm lint:docs`, or workflow checks.
 - Do not commit. Stop after implementation and verification so the user can review and commit.
 
 ### 6. Hand Off Downstream
@@ -126,4 +131,4 @@ git -C "$d" grep -nI -E '<<<<<<<|>>>>>>>' -- . ':(exclude)vendor/**' ':(exclude)
 
 - Downstream (template -> app): [`merge-template`](../merge-template/SKILL.md)
 - Decision model: [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
-- Testing policy and equivalent mutation catalog: `docs/testing-as-spec.md`
+- Testing and mutation policy: `docs/testing-as-spec.md`

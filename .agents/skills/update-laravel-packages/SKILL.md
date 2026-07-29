@@ -203,13 +203,10 @@ unadopted reference-surface package and the omitted consumer surface. The mismat
 empty except for individually documented, approved compatibility exceptions. Include this
 machine-generated comparison in the report; a prose disposition table alone is insufficient.
 
-This skill is the only thing that changes Composer constraint strings. Routine dependency work —
-taking a security patch, refreshing a lockfile — resolves within the existing constraints and
-leaves `composer.json` and `package.json` untouched (`composer update <package>`,
-`pnpm update <package>`). An update that cannot resolve inside the current constraints is a
-constraint change, and therefore belongs here, where provenance is classified against a fresh
-Laravel reference. There is no automated dependency bot; `audit.yml` reports advisories daily and a
-human acts on them.
+This skill is the only thing that changes Composer constraint strings. Routine security patches and
+lockfile refreshes resolve within existing constraints. A change outside those constraints belongs
+here, where it is classified against a fresh Laravel reference. Dependabot Alerts reports default-
+branch advisories; automated dependency PRs are not used.
 
 ### 5. Resolve and audit
 
@@ -219,14 +216,8 @@ human acts on them.
 - Generate the pnpm lockfile with host pnpm.
 - Review direct and transitive changes before continuing.
 - Run `composer audit --locked` and `pnpm audit`. Resolve findings where possible. Require approval
-  for accepted advisories, abandoned packages without a safe replacement, or fixes that exceed
-  the approved update scope. No CI gate blocks on these: `audit.yml` reports advisories daily and a
-  human acts on them (`TADR-0001`), so this run is where production advisories are actually
-  resolved — leave the lockfiles clean rather than assuming a later gate will catch them. This
-  workflow also audits development dependencies, which the daily report covers for Composer but not
-  for pnpm (`pnpm audit --prod`); treat dev-only advisories as best-effort: fix them when the fix is
-  cheap and in scope, otherwise report them without blocking the commit and flag any that warrant a
-  tracked exception.
+  for accepted advisories, abandoned packages without a safe replacement, or fixes outside the
+  approved scope. Treat development-only findings as best-effort and report anything left open.
 - Prefer resolving advisories by updating lockfile resolutions within the reference constraints.
   If a fix requires changing a Laravel-owned manifest constraint, make the smallest compatible
   change, record it as an explicit reference exception, and obtain approval. Never replace all

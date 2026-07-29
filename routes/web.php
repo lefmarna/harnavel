@@ -40,8 +40,4 @@ Route::prefix('auth/google/link')->name('auth.google.link.')->controller(GoogleA
     Route::post('/verify/{userId}', 'linkComplete')->name('complete');
 });
 
-if (config('e2e.helper_routes')) {
-    require __DIR__.'/e2e.php';
-}
-
 require __DIR__.'/settings.php';

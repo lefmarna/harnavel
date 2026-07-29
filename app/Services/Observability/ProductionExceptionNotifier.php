@@ -33,14 +33,13 @@ class ProductionExceptionNotifier
 
             app()->terminating(fn () => $this->send($payload));
         } catch (Throwable $notifierException) {
-            // 通知経路の失敗が元例外のログ記録やレスポンス描画を妨げてはならない
-            // （report コールバック内の例外は Laravel の通常ログ出力より前に伝播する）
+            // 通知失敗を元の例外処理へ伝播させない。
             try {
                 Log::warning('Discord exception notification was skipped.', [
                     'exception' => $notifierException,
                 ]);
             } catch (Throwable) {
-                // ログ基盤まで壊れている場合は握りつぶす
+                // ログ基盤も利用できない。
             }
         }
     }
@@ -52,7 +51,6 @@ class ProductionExceptionNotifier
         }
 
         if (! $this->webhookUrl()) {
-            // send() 側も webhook 未設定を再確認しており、ここは不要な payload 構築を避ける早期 return。
             return false;
         }
 
@@ -68,7 +66,6 @@ class ProductionExceptionNotifier
         }
 
         try {
-            // Cache::add の保存値は後続で読まず、キーの存在だけを重複制御に使う。
             return Cache::add($this->deduplicationKey($exception, $request), true, $seconds);
         } catch (Throwable) {
             return true;
@@ -151,7 +148,6 @@ class ProductionExceptionNotifier
 
             $fields[] = [
                 'name' => $name,
-                // Discord の field value 上限に合わせた防御的な上限。
                 'value' => Str::limit($stringValue, 1024),
                 'inline' => true,
             ];
@@ -194,7 +190,6 @@ class ProductionExceptionNotifier
         return is_string($webhookUrl) && $webhookUrl !== '' ? $webhookUrl : null;
     }
 
-    // config/observability.php が env を型付きで正規化済みのため、既定値とキャストはそこに一本化する。
     private function deduplicationSeconds(): int
     {
         return Config::integer('observability.discord.deduplication_seconds');
@@ -214,7 +209,6 @@ class ProductionExceptionNotifier
     {
         $userAgent = $request?->userAgent();
 
-        // Discord payload の肥大化防止用の表示上限。
         return is_string($userAgent) ? Str::limit($userAgent, 200) : null;
     }
 
@@ -224,7 +218,6 @@ class ProductionExceptionNotifier
             return 'Database exception message omitted.';
         }
 
-        // Discord payload の肥大化防止用の表示上限。
         return Str::limit($exception->getMessage(), 500);
     }
 

@@ -43,8 +43,7 @@ const PROTECTED_PATHS: ProtectedPath[] = [
   },
   {
     path: 'storage/framework/maintenance.php',
-    reason:
-      'standalone maintenance response loaded before Composer dependencies',
+    reason: 'Laravel prerendered maintenance response',
   },
   {
     path: 'storage/framework/sessions/session-id',
@@ -149,7 +148,21 @@ function assertProtected(output: string, protectedPath: ProtectedPath): void {
   )
 }
 
+function assertSensitiveEnvironmentExcluded(): void {
+  for (const relativePath of ['.gitignore', '.deployignore']) {
+    const patterns = fs
+      .readFileSync(path.join(ROOT, relativePath), 'utf8')
+      .split(/\r?\n/)
+
+    if (!patterns.includes('.env.e2e')) {
+      throw new Error(`${relativePath} must exclude .env.e2e.`)
+    }
+  }
+}
+
 function main(): void {
+  assertSensitiveEnvironmentExcluded()
+
   const workflow = fs.readFileSync(WORKFLOW_PATH, 'utf8')
   const excludes = extractExcludes(workflow)
   const { remote, source, tmp } = createFixture()
@@ -164,7 +177,7 @@ function main(): void {
     }
 
     console.log(
-      `OK: ${PROTECTED_PATHS.length} remote-protected rsync paths survive --delete dry-run.`,
+      `OK: ${PROTECTED_PATHS.length} remote paths protected; .env.e2e excluded from Git and deploy packages.`,
     )
   } finally {
     fs.rmSync(tmp, { force: true, recursive: true })

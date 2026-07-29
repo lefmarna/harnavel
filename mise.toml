@@ -17,7 +17,6 @@ run = [
   "mise run setup:backend",
   "mise run migrate",
   "mise run seed",
-  "mise run setup:e2e",
 ]
 
 [tasks."setup:tools"]
@@ -27,15 +26,6 @@ run = ["mise install", "pnpm install --frozen-lockfile"]
 [tasks."setup:env"]
 description = "Create local environment file if missing"
 run = "[ -f .env ] || cp .env.example .env"
-
-# 要コンテナ起動。key 生成に失敗したら APP_KEY 空の .env.e2e を残さない。
-[tasks."setup:e2e"]
-description = "Create the Playwright-only app environment (.env.e2e)"
-run = """
-[ -f .env.e2e ] && exit 0
-cp .env.e2e.example .env.e2e
-docker compose exec -T -e APP_ENV=e2e app php artisan key:generate || { rm -f .env.e2e; exit 1; }
-"""
 
 [tasks."setup:backend"]
 description = "Setup backend (requires running containers)"
@@ -116,10 +106,12 @@ description = "Run tests"
 run = "docker compose exec app php artisan test $@"
 raw = true
 
-# 対象は spec 側の mutates() 宣言。--min を付けない＝ローカルはスコア確認用（ゲートは CI）。
 [tasks.mutate]
 description = "Run mutation testing on the classes their specs declare with mutates()"
-run = 'docker compose exec app vendor/bin/pest --mutate --covered-only $@'
+run = """
+docker compose exec app mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations
+docker compose exec app vendor/bin/pest --mutate --covered-only $@
+"""
 raw = true
 
 [tasks.analyse]
@@ -144,7 +136,7 @@ run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
 docker compose exec app composer analyse && \
 docker compose exec app php artisan test --compact && \
-pnpm test:e2e --project=chromium
+pnpm test:e2e
 """
 
 [tasks."composer:install"]
@@ -207,6 +199,3 @@ echo '✅ Deployment package created in ./.deploy/'
 [tasks."deploy:prepare"]
 description = "Full deployment preparation (build + package)"
 depends = ["deploy:build", "deploy:package"]
-
-# デリバリー検証スクリプトは Node で動くため pnpm から直接実行する（AGENTS.md: Node/pnpm はホスト）。
-# 一覧は docs/commands.md の Deployment Verification を参照。

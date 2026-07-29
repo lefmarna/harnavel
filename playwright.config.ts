@@ -21,32 +21,38 @@ const parseEnvPort = (name: string, fallback?: number): number => {
 
   return port
 }
-// E2E は専用アプリ環境（.env.e2e / APP_ENV=e2e）で動かす。E2E_PORT はアプリごとに固定。
+
 const CONTAINER_E2E_PORT = 8001
 const PORT = isCI ? 8000 : parseEnvPort('E2E_PORT')
 const VITE_PORT = parseEnvPort('VITE_PORT', 5173)
 const E2E_APP_URL = `http://localhost:${PORT}`
-// webServer の待機は globalSetup より先なので、DB 非依存の /up を見る。
 const E2E_READY_URL = `${E2E_APP_URL}/up`
+const E2E_CONTAINER_NAME = `playwright-e2e-${PORT}-${process.pid}`
+
+process.env.PLAYWRIGHT_E2E_CONTAINER = E2E_CONTAINER_NAME
 
 export default defineConfig({
-  // spec だけを収集する。e2e/ 直下の node:test ファイルは pnpm test:unit 側。
   testDir: './e2e/tests',
   globalSetup: './e2e/global-setup.ts',
-  fullyParallel: true,
+  globalTeardown: './e2e/global-teardown.ts',
   forbidOnly: isCI,
-  retries: isCI ? 2 : 0,
-  workers: isCI ? 1 : undefined,
-  reporter: [
-    ['list'],
-    ['html', { open: 'never', outputFolder: 'playwright-report' }],
-    ['json', { outputFile: 'playwright-report/results.json' }],
-  ],
+  retries: 0,
+  workers: 1,
+  reporter: isCI
+    ? [
+        ['github'],
+        ['html', { open: 'never', outputFolder: 'playwright-report' }],
+        ['json', { outputFile: 'playwright-report/results.json' }],
+      ]
+    : [
+        ['list'],
+        ['html', { open: 'never', outputFolder: 'playwright-report' }],
+        ['json', { outputFile: 'playwright-report/results.json' }],
+      ],
   use: {
     baseURL: E2E_APP_URL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
   },
 
   projects: [
@@ -66,7 +72,7 @@ export default defineConfig({
 
   webServer: isCI
     ? {
-        command: `php artisan serve --port=${PORT}`,
+        command: `php artisan serve --no-reload --port=${PORT}`,
         url: E2E_READY_URL,
         reuseExistingServer: false,
       }
@@ -77,12 +83,18 @@ export default defineConfig({
           reuseExistingServer: true,
         },
         {
-          // APP_URL は E2E_PORT から導出する。.env.e2e には持たせない。
           command:
-            `docker compose exec -T -e APP_ENV=e2e -e APP_URL=${E2E_APP_URL}` +
-            ` app php artisan serve --host=0.0.0.0 --port=${CONTAINER_E2E_PORT}`,
+            `docker compose run --rm --no-deps -T --name ${E2E_CONTAINER_NAME}` +
+            ` -p 127.0.0.1:${PORT}:${CONTAINER_E2E_PORT}` +
+            ` -e APP_URL=${E2E_APP_URL}` +
+            ' -e DB_HOST=mariadb-e2e -e DB_DATABASE=app_e2e' +
+            ` app php artisan serve --no-reload --host=0.0.0.0 --port=${CONTAINER_E2E_PORT}`,
           url: E2E_READY_URL,
-          reuseExistingServer: true,
+          reuseExistingServer: false,
+          gracefulShutdown: {
+            signal: 'SIGTERM',
+            timeout: 5_000,
+          },
         },
       ],
 })

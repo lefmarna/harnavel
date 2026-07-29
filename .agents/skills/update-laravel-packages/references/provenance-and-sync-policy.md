@@ -34,17 +34,6 @@ is permanent if Laravel or a better maintained replacement now provides it.
 If history after these commits changes the capability, follow the latest evidence rather than the
 table.
 
-## Recorded package dispositions
-
-Judgment records for packages whose classification is non-obvious. Re-verify each against the
-fresh reference on every run; these record past evidence, not permanent facts.
-
-- `laravel/chisel` (Composer `require`): **not adopted.** The 2026-07 reference keeps it in
-  `require`, but nothing invokes it at runtime — its only consumer is the generator's one-time
-  feature-selection step, which runs in the throwaway `package-reference` container, never from an
-  application checkout. Rule 1 therefore classifies it as unadopted reference-surface. Re-adopt only
-  if a future reference gives it a runtime consumer inside the application.
-
 ## Skeleton ownership
 
 ### Preserve as template behavior

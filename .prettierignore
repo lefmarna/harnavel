@@ -6,3 +6,5 @@ resources/views/mail/*
 
 # Lock files
 pnpm-lock.yaml
+
+storage/

@@ -19,7 +19,10 @@
     "test:toolchain-versions": "node --import tsx scripts/test-toolchain-versions.ts",
     "test:ci-wiring": "node --import tsx scripts/test-ci-wiring.ts",
     "test:e2e": "playwright test --project=chromium",
-    "test:e2e:all": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:firefox": "playwright test --project=firefox",
+    "test:e2e:webkit": "playwright test --project=webkit",
+    "test:e2e:all": "pnpm test:e2e:chromium && pnpm test:e2e:firefox && pnpm test:e2e:webkit",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --project=chromium --headed",
     "playwright:install": "playwright install --with-deps"

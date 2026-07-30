@@ -72,7 +72,7 @@ export default defineConfig({
 
   webServer: isCI
     ? {
-        command: `php artisan serve --no-reload --port=${PORT}`,
+        command: `BOOST_BROWSER_LOGS_WATCHER=false php artisan serve --no-reload --port=${PORT}`,
         url: E2E_READY_URL,
         reuseExistingServer: false,
       }
@@ -87,6 +87,7 @@ export default defineConfig({
             `docker compose run --rm --no-deps -T --name ${E2E_CONTAINER_NAME}` +
             ` -p 127.0.0.1:${PORT}:${CONTAINER_E2E_PORT}` +
             ` -e APP_URL=${E2E_APP_URL}` +
+            ` -e BOOST_BROWSER_LOGS_WATCHER=false` +
             ' -e DB_HOST=mariadb-e2e -e DB_DATABASE=app_e2e' +
             ` app php artisan serve --no-reload --host=0.0.0.0 --port=${CONTAINER_E2E_PORT}`,
           url: E2E_READY_URL,

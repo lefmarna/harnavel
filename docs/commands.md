@@ -15,10 +15,11 @@ Each app must use its own `E2E_PORT` in `.env`. E2E uses the dedicated `app_e2e`
 
 ## Interactive browser verification
 
-Start the app and Vite, then use Playwright CLI for transient checks:
+Start the app and Vite, then use Playwright CLI for transient checks. Replace `NGINX_PORT` with its
+value from `.env`.
 
 ```bash
-npx @playwright/cli open http://localhost:8080
+npx @playwright/cli open http://localhost:NGINX_PORT
 npx @playwright/cli snapshot --depth=4
 npx @playwright/cli screenshot
 npx @playwright/cli close

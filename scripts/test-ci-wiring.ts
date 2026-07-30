@@ -16,6 +16,7 @@ type Step = {
 type Job = {
   needs?: string | string[]
   steps?: Step[]
+  'timeout-minutes'?: number
   uses?: string
 }
 
@@ -97,6 +98,23 @@ if (
   !needs(delivery?.deploy, 'test')
 ) {
   fail('delivery must run reusable-test after ci-lint and before deploy')
+}
+
+const mutation = load('.github/workflows/mutation.yml').jobs
+const mutationCommands = (mutation?.mutation?.steps ?? [])
+  .map((step) => step.run ?? '')
+  .join('\n')
+
+if (mutation?.mutation?.['timeout-minutes'] !== 30) {
+  fail('mutation job must stop after 30 minutes')
+}
+
+if (
+  !mutationCommands.includes('--mutate') ||
+  !mutationCommands.includes('--min=100') ||
+  mutationCommands.includes('--class')
+) {
+  fail('mutation must use test-level mutates() declarations with --min=100')
 }
 
 console.log('OK: required checks gate pull requests and deployments.')

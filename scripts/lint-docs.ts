@@ -19,8 +19,6 @@ const DOCS_DIR = path.join(ROOT, 'docs')
 
 const LINK_RE = /\[([^\]]*)\]\(([^)]+)\)/g
 const IGNORED_PREFIXES = ['http://', 'https://', 'mailto:', '#']
-// Review gate reports contain quoted links in JSON that may reference old paths
-const REPORT_RE = /^\d{8}-\d{4}_summary\.md$/
 
 interface LinkError {
   file: string
@@ -38,10 +36,6 @@ async function findMarkdownFiles(dir: string): Promise<string[]> {
   const files: string[] = []
 
   for await (const entry of glob('**/*.md', { cwd: dir })) {
-    if (REPORT_RE.test(path.basename(entry))) {
-      continue
-    }
-
     files.push(path.join(dir, entry))
   }
 

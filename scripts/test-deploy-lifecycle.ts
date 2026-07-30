@@ -50,14 +50,6 @@ function requireText(name: string, expected: string): void {
   }
 }
 
-function rejectText(expected: string): void {
-  const match = steps.find((step) => step.run?.includes(expected))
-
-  if (match) {
-    fail(`step "${match.name ?? '(unnamed)'}" must not contain ${expected}`)
-  }
-}
-
 const ordered = [
   'Validate deployment configuration',
   'Check release-critical files',
@@ -164,18 +156,27 @@ requireText('Verify release health', '--max-time 5')
 requireText('Verify release health', 'sleep 1')
 requireText('Verify release health', '"$status" = "200"')
 
-for (const removed of [
-  'Drain in-flight requests',
-  'Mark maintenance lift attempt',
-  'Withdraw unhealthy release',
-]) {
-  if (steps.some((step) => step.name === removed)) {
-    fail(`obsolete step remains: "${removed}"`)
-  }
+if (
+  steps.at(-2)?.name !== 'Disable maintenance mode' ||
+  steps.at(-1)?.name !== 'Verify release health'
+) {
+  fail('maintenance lift and release verification must finish deployment')
 }
 
-rejectText('enable-maintenance.php')
-rejectText('verify-release-health.mjs')
+if (
+  steps
+    .slice(
+      indexOf('Enable maintenance mode') + 1,
+      indexOf('Deploy to XServer via Rsync'),
+    )
+    .some((step) => step.run?.includes('sleep '))
+) {
+  fail('deployment must start without a fixed request-drain delay')
+}
+
+if (steps.filter((step) => step.run?.includes('artisan down')).length !== 1) {
+  fail('artisan down must only run while enabling maintenance mode')
+}
 
 console.log(
   'OK: deployment uses Laravel maintenance, a 2-second OPcache wait, and a bounded /up check.',

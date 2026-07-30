@@ -148,7 +148,7 @@ function assertProtected(output: string, protectedPath: ProtectedPath): void {
   )
 }
 
-function assertSensitiveEnvironmentExcluded(): void {
+function main(): void {
   for (const relativePath of ['.gitignore', '.deployignore']) {
     const patterns = fs
       .readFileSync(path.join(ROOT, relativePath), 'utf8')
@@ -158,10 +158,6 @@ function assertSensitiveEnvironmentExcluded(): void {
       throw new Error(`${relativePath} must exclude .env.e2e.`)
     }
   }
-}
-
-function main(): void {
-  assertSensitiveEnvironmentExcluded()
 
   const workflow = fs.readFileSync(WORKFLOW_PATH, 'utf8')
   const excludes = extractExcludes(workflow)

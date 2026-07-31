@@ -89,10 +89,8 @@ jobs:
           GOOGLE_CLIENT_SECRET: test-client-secret
           GOOGLE_REDIRECT_URI: http://localhost/auth/google/callback
 
-      - name: Run Migrations and Seeding
-        run: |
-          php artisan migrate --force
-          php artisan db:seed --force
+      - name: Create E2E Database
+        run: php artisan tinker --execute='DB::statement("CREATE DATABASE IF NOT EXISTS app_e2e");'
         env:
           DB_HOST: 127.0.0.1
           DB_DATABASE: app_testing
@@ -104,7 +102,7 @@ jobs:
         run: pnpm test:e2e
         env:
           DB_HOST: 127.0.0.1
-          DB_DATABASE: app_testing
+          DB_DATABASE: app_e2e
           APP_URL: http://localhost:8000
           MAIL_MAILER: array
 

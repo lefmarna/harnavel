@@ -9,6 +9,8 @@ const ACTION_REF = './.github/actions/ci-lint'
 const TEST_REF = './.github/workflows/reusable-test.yml'
 
 type Step = {
+  env?: Record<string, string>
+  name?: string
   run?: string
   uses?: string
 }
@@ -115,6 +117,21 @@ if (
   mutationCommands.includes('--class')
 ) {
   fail('mutation must use test-level mutates() declarations with --min=100')
+}
+
+const reusableTestSteps =
+  load('.github/workflows/reusable-test.yml').jobs?.test?.steps ?? []
+const createE2eDatabase = reusableTestSteps.find(
+  (step) => step.name === 'Create E2E Database',
+)
+const runE2e = reusableTestSteps.find((step) => step.name === 'Run E2E Tests')
+
+if (!createE2eDatabase?.run?.includes('app_e2e')) {
+  fail('reusable-test must create the dedicated E2E database')
+}
+
+if (runE2e?.env?.DB_DATABASE !== 'app_e2e') {
+  fail('reusable-test must run Playwright against the dedicated E2E database')
 }
 
 console.log('OK: required checks gate pull requests and deployments.')

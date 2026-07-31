@@ -50,6 +50,23 @@ function requireText(name: string, expected: string): void {
   }
 }
 
+function asLocalRemoteCommand(run: string, start: string): string {
+  const remoteStart = run.indexOf(start)
+  const sshStart = run.lastIndexOf('ssh ', remoteStart)
+
+  if (remoteStart === -1 || sshStart === -1) {
+    fail(
+      `could not locate remote command starting with ${JSON.stringify(start)}`,
+    )
+  }
+
+  return (
+    run.slice(0, sshStart) +
+    'sh -c ' +
+    run.slice(remoteStart)
+  ).replaceAll('sleep "$((attempt * 30))"', ':')
+}
+
 const ordered = [
   'Validate deployment configuration',
   'Check release-critical files',
@@ -96,31 +113,65 @@ if (
 }
 
 const maintenanceRun = runOf('Enable maintenance mode')
-const remoteStart = maintenanceRun.indexOf('"mkdir -p')
-const sshStart = maintenanceRun.lastIndexOf('ssh ', remoteStart)
-
-if (remoteStart === -1 || sshStart === -1) {
-  fail('could not locate the remote maintenance command')
-}
-
-const maintenanceFixtureCommand = (
-  maintenanceRun.slice(0, sshStart) +
-  'sh -c ' +
-  maintenanceRun.slice(remoteStart)
-).replaceAll('sleep "$((attempt * 30))"', ':')
+const maintenanceFixtureCommandTemplate = asLocalRemoteCommand(
+  maintenanceRun,
+  '"mkdir -p',
+)
+const postDeployFixtureCommandTemplate = asLocalRemoteCommand(
+  runOf('Run post-deploy commands'),
+  '"cd --',
+)
 const maintenanceFixture = fs.mkdtempSync(
   path.join(os.tmpdir(), 'deploy-lifecycle-'),
 )
 
 try {
   const deployDirectory = path.join(maintenanceFixture, 'deploy')
+  const phpRunner = path.join(maintenanceFixture, 'php')
 
-  const runMaintenanceFixture = () =>
+  fs.writeFileSync(
+    phpRunner,
+    `#!/bin/sh
+if [ -n "\${FAKE_LOG:-}" ]; then
+  printf '%s\\n' "$*" >> "$FAKE_LOG"
+fi
+case "$1" in
+  */composer-2.10.2)
+    exit 0
+    ;;
+esac
+if [ "$1" = "artisan" ] && [ "$2" = "down" ]; then
+  if [ "\${FAKE_ARTISAN_DOWN:-success}" = "fail" ]; then
+    exit 1
+  fi
+  mkdir -p storage/framework
+  cp vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub storage/framework/maintenance.php
+  printf '%s\\n' '{"template":"errors::503","status":503,"retry":60,"redirect":null,"secret":null}' > storage/framework/down
+  exit 0
+fi
+if [ "$1" = "-r" ]; then
+  node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(typeof data.template === "string" && data.template !== "" && data.status === 503 && data.retry === 60 && data.redirect === null && data.secret === null ? 0 : 1)' "$3"
+  exit $?
+fi
+if [ "$1" = "artisan" ]; then
+  exit 0
+fi
+exit 1
+`,
+  )
+  fs.chmodSync(phpRunner, 0o755)
+
+  const maintenanceFixtureCommand =
+    maintenanceFixtureCommandTemplate.replaceAll('/usr/bin/php8.5', phpRunner)
+  const runMaintenanceFixture = (
+    environment: NodeJS.ProcessEnv = {},
+  ): ReturnType<typeof spawnSync> =>
     spawnSync('sh', ['-c', maintenanceFixtureCommand], {
       encoding: 'utf8',
       env: {
         ...process.env,
         DEPLOY_DIRECTORY: deployDirectory,
+        ...environment,
       },
     })
 
@@ -140,14 +191,118 @@ try {
     )
   }
 
-  if (missingVendorResult.status === 0) {
-    fail('an existing tree without vendor/autoload.php must stop deployment')
+  if (missingVendorResult.status !== 0) {
+    fail(
+      'an incomplete first deployment without vendor/autoload.php must remain retryable',
+    )
+  }
+
+  const stub = path.join(
+    deployDirectory,
+    'vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub',
+  )
+  const responder = path.join(
+    deployDirectory,
+    'storage/framework/maintenance.php',
+  )
+
+  fs.mkdirSync(path.dirname(stub), { recursive: true })
+  fs.mkdirSync(path.dirname(responder), { recursive: true })
+  fs.writeFileSync(path.join(deployDirectory, 'vendor/autoload.php'), '')
+  fs.writeFileSync(stub, 'valid responder\n')
+  fs.copyFileSync(stub, responder)
+  fs.writeFileSync(
+    path.join(deployDirectory, 'storage/framework/down'),
+    '{"template":"errors::503","status":503,"retry":60,"redirect":null,"secret":null}',
+  )
+
+  const repairResult = runMaintenanceFixture({
+    FAKE_ARTISAN_DOWN: 'fail',
+  })
+
+  if (repairResult.status !== 0) {
+    fail(
+      'valid existing maintenance must allow repair when artisan cannot boot',
+    )
+  }
+
+  fs.writeFileSync(responder, 'invalid responder\n')
+
+  const invalidMaintenanceResult = runMaintenanceFixture({
+    FAKE_ARTISAN_DOWN: 'fail',
+  })
+
+  if (invalidMaintenanceResult.status === 0) {
+    fail('invalid existing maintenance must stop deployment before rsync')
+  }
+
+  const postDeployLog = path.join(maintenanceFixture, 'post-deploy.log')
+  const postDeployFixtureCommand = postDeployFixtureCommandTemplate.replaceAll(
+    '/usr/bin/php8.5',
+    phpRunner,
+  )
+  const runPostDeployFixture = (
+    environment: NodeJS.ProcessEnv = {},
+  ): ReturnType<typeof spawnSync> =>
+    spawnSync('sh', ['-c', postDeployFixtureCommand], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        DEPLOY_DIRECTORY: deployDirectory,
+        FAKE_LOG: postDeployLog,
+        ...environment,
+      },
+    })
+
+  const postDeployResult = runPostDeployFixture()
+
+  if (postDeployResult.status !== 0) {
+    fail('the repaired release must regenerate maintenance before migrations')
+  }
+
+  const postDeployCalls = fs.readFileSync(postDeployLog, 'utf8')
+
+  if (
+    postDeployCalls.indexOf('composer-2.10.2 install') >=
+      postDeployCalls.indexOf('artisan down') ||
+    postDeployCalls.indexOf('artisan down') >=
+      postDeployCalls.indexOf('artisan migrate --force')
+  ) {
+    fail('maintenance must be regenerated after Composer and before migrations')
+  }
+
+  fs.writeFileSync(postDeployLog, '')
+
+  const failedRegenerationResult = runPostDeployFixture({
+    FAKE_ARTISAN_DOWN: 'fail',
+  })
+
+  if (failedRegenerationResult.status === 0) {
+    fail('failed maintenance regeneration must stop post-deploy commands')
+  }
+
+  const failedRegenerationCalls = fs.readFileSync(postDeployLog, 'utf8')
+
+  if (
+    failedRegenerationCalls.includes('artisan config:cache') ||
+    failedRegenerationCalls.includes('artisan migrate --force')
+  ) {
+    fail('cache and migration commands must not run after regeneration fails')
   }
 } finally {
   fs.rmSync(maintenanceFixture, { recursive: true, force: true })
 }
 
 requireText('Deploy to XServer via Rsync', '--delete')
+requireText('Run post-deploy commands', 'composer-2.10.2 install')
+requireText('Run post-deploy commands', 'artisan down')
+requireText('Run post-deploy commands', "--render='errors::503'")
+requireText('Run post-deploy commands', '--retry=60')
+requireText('Run post-deploy commands', 'storage/framework/down')
+requireText('Run post-deploy commands', 'storage/framework/maintenance.php')
+requireText('Run post-deploy commands', 'maintenance-mode.stub')
+requireText('Run post-deploy commands', 'cmp -s')
+requireText('Run post-deploy commands', 'json_decode')
 requireText('Run post-deploy commands', 'artisan migrate --force')
 requireText('Wait for OPcache revalidation', 'sleep 2')
 requireText('Disable maintenance mode', 'artisan up')
@@ -174,8 +329,21 @@ if (
   fail('deployment must start without a fixed request-drain delay')
 }
 
-if (steps.filter((step) => step.run?.includes('artisan down')).length !== 1) {
-  fail('artisan down must only run while enabling maintenance mode')
+const artisanDownCount = steps.reduce(
+  (count, step) => count + (step.run?.match(/artisan down/g)?.length ?? 0),
+  0,
+)
+
+if (artisanDownCount !== 2) {
+  fail('maintenance must be validated before and after release replacement')
+}
+
+if (
+  /\b(?:artisan|php)\b|storage\/framework|maintenance/i.test(
+    runOf('Verify release health'),
+  )
+) {
+  fail('release verification must not re-enter maintenance after artisan up')
 }
 
 console.log(

@@ -33,7 +33,7 @@ Docker is used locally; production runs on XServer shared hosting.
 - Bug fixes start with a reproducing test. Add useful boundary, failure, and authorization cases proactively.
 - Test titles are Japanese in a `describe` / `it` hierarchy. New pages need a Feature spec and a smoke E2E test.
 - For every new or changed deterministic application-logic class, evaluate mutation testing and add `mutates()` when its branches are observable. Do not use mutation-ignore annotations; removing a target weakens the gate and requires explicit review.
-- Run only one DB-backed Pest process at a time.
+- Run DB-backed Pest through `mise run test -- ...` or `mise run mutate -- ...`; concurrent processes are rejected.
 - Run only one Playwright process at a time. A concurrent run intentionally fails on `E2E_PORT`; wait for the active run, then retry.
 - Do not expose E2E setup through HTTP routes; use the dedicated E2E database and normal user flows.
 - Review implementation as well as tests for authentication, secrets, CI/delivery, migrations, concurrency, outbound side effects, and test-gate changes.

@@ -103,14 +103,14 @@ run = "docker compose exec app php artisan migrate:rollback"
 
 [tasks.test]
 description = "Run tests"
-run = "docker compose exec app php artisan test $@"
+run = "docker compose exec app scripts/run-pest-locked.sh php artisan test $@"
 raw = true
 
 [tasks.mutate]
 description = "Run mutation testing on the classes their specs declare with mutates()"
 run = """
 docker compose exec app mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations
-docker compose exec app vendor/bin/pest --mutate --covered-only $@
+docker compose exec app scripts/run-pest-locked.sh vendor/bin/pest --mutate --covered-only $@
 """
 raw = true
 
@@ -127,7 +127,7 @@ description = "Run backend quality checks (Pint + Larastan + Pest)"
 run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
 docker compose exec app composer analyse && \
-docker compose exec app php artisan test --compact
+docker compose exec app scripts/run-pest-locked.sh php artisan test --compact
 """
 
 [tasks."verify:backend:full"]
@@ -135,7 +135,7 @@ description = "Run backend quality checks plus Chromium E2E"
 run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
 docker compose exec app composer analyse && \
-docker compose exec app php artisan test --compact && \
+docker compose exec app scripts/run-pest-locked.sh php artisan test --compact && \
 pnpm test:e2e
 """
 

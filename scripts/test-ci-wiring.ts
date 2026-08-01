@@ -34,6 +34,10 @@ function load(relativePath: string): Workflow {
     {}) as Workflow
 }
 
+function read(relativePath: string): string {
+  return fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
+}
+
 function fail(message: string): never {
   throw new Error(`CI wiring check failed: ${message}`)
 }
@@ -132,6 +136,31 @@ if (!createE2eDatabase?.run?.includes('app_e2e')) {
 
 if (runE2e?.env?.DB_DATABASE !== 'app_e2e') {
   fail('reusable-test must run Playwright against the dedicated E2E database')
+}
+
+const pestLockPath = 'scripts/run-pest-locked.sh'
+const mise = read('mise.toml')
+const unguardedPestCommands = mise
+  .split('\n')
+  .filter(
+    (line) =>
+      (line.includes('php artisan test') || line.includes('vendor/bin/pest')) &&
+      !line.includes(pestLockPath),
+  )
+
+if (unguardedPestCommands.length > 0) {
+  fail('local Pest tasks must reject concurrent DB-backed processes')
+}
+
+if (!read('scripts/hooks/stop-verify.mjs').includes(pestLockPath)) {
+  fail('the stop hook must reject a concurrent DB-backed Pest process')
+}
+
+if (
+  !fs.existsSync(path.join(ROOT, pestLockPath)) ||
+  !read(pestLockPath).includes('flock -n 9')
+) {
+  fail('the shared Pest runner must acquire a non-blocking lock')
 }
 
 console.log('OK: required checks gate pull requests and deployments.')

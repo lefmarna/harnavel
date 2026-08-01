@@ -149,6 +149,7 @@ if (dockerReady) {
         'exec',
         '-T',
         'app',
+        'scripts/run-pest-locked.sh',
         'php',
         'artisan',
         'test',

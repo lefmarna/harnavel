@@ -31,10 +31,8 @@ Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
 
 ## Path Exceptions
 
-Ownership is the same in both directions, so the paths that resist the tier rules are listed once,
-in [`merge-template`](../merge-template/SKILL.md). Read its Path Exceptions section before
-classifying a file for upstreaming. Keeping a second copy here is the duplicated manifest that
-[`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) rejects.
+Ownership is the same in both directions. Read the Ownership and Special cases in
+[`merge-template`](../merge-template/SKILL.md) before classifying a file for upstreaming.
 
 ## Arguments
 

@@ -11,6 +11,15 @@ const WORKFLOW =
   process.env.DEPLOY_LIFECYCLE_WORKFLOW ??
   path.join(ROOT, '.github/workflows/delivery.yml')
 
+const VALID_MAINTENANCE_PAYLOAD = {
+  except: ['/up'],
+  template: 'errors::503',
+  status: 503,
+  retry: 60,
+  redirect: null,
+  secret: null,
+}
+
 type Step = {
   name?: string
   run?: string
@@ -146,11 +155,11 @@ if [ "$1" = "artisan" ] && [ "$2" = "down" ]; then
   fi
   mkdir -p storage/framework
   cp vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub storage/framework/maintenance.php
-  printf '%s\\n' '{"template":"errors::503","status":503,"retry":60,"redirect":null,"secret":null}' > storage/framework/down
+  printf '%s\\n' '{"except":["/up"],"template":"errors::503","status":503,"retry":60,"redirect":null,"secret":null}' > storage/framework/down
   exit 0
 fi
 if [ "$1" = "-r" ]; then
-  node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(typeof data.template === "string" && data.template !== "" && data.status === 503 && data.retry === 60 && data.redirect === null && data.secret === null ? 0 : 1)' "$3"
+  node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(Array.isArray(data.except) && data.except.length === 1 && data.except[0] === "/up" && typeof data.template === "string" && data.template !== "" && data.status === 503 && data.retry === 60 && data.redirect === null && data.secret === null ? 0 : 1)' "$3"
   exit $?
 fi
 if [ "$1" = "artisan" ]; then
@@ -213,7 +222,7 @@ exit 1
   fs.copyFileSync(stub, responder)
   fs.writeFileSync(
     path.join(deployDirectory, 'storage/framework/down'),
-    '{"template":"errors::503","status":503,"retry":60,"redirect":null,"secret":null}',
+    JSON.stringify(VALID_MAINTENANCE_PAYLOAD),
   )
 
   const repairResult = runMaintenanceFixture({
@@ -225,6 +234,28 @@ exit 1
       'valid existing maintenance must allow repair when artisan cannot boot',
     )
   }
+
+  const invalidExceptValues = [['*'], undefined, ['/up', '/admin']] as const
+
+  for (const except of invalidExceptValues) {
+    fs.writeFileSync(
+      path.join(deployDirectory, 'storage/framework/down'),
+      JSON.stringify({ ...VALID_MAINTENANCE_PAYLOAD, except }),
+    )
+
+    const invalidExceptResult = runMaintenanceFixture({
+      FAKE_ARTISAN_DOWN: 'fail',
+    })
+
+    if (invalidExceptResult.status === 0) {
+      fail('maintenance exceptions must contain only /up')
+    }
+  }
+
+  fs.writeFileSync(
+    path.join(deployDirectory, 'storage/framework/down'),
+    JSON.stringify(VALID_MAINTENANCE_PAYLOAD),
+  )
 
   fs.writeFileSync(responder, 'invalid responder\n')
 
@@ -304,6 +335,14 @@ requireText('Run post-deploy commands', 'maintenance-mode.stub')
 requireText('Run post-deploy commands', 'cmp -s')
 requireText('Run post-deploy commands', 'json_decode')
 requireText('Run post-deploy commands', 'artisan migrate --force')
+requireText(
+  'Enable maintenance mode',
+  '(\\$data[\\"except\\"] ?? null) === [\\"/up\\"]',
+)
+requireText(
+  'Run post-deploy commands',
+  '(\\$data[\\"except\\"] ?? null) === [\\"/up\\"]',
+)
 requireText('Wait for OPcache revalidation', 'sleep 2')
 requireText('Disable maintenance mode', 'artisan up')
 requireText('Verify release health', 'for attempt in 1 2 3')

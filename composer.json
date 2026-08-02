@@ -64,7 +64,7 @@
       "@php artisan config:clear --ansi",
       "@lint:check",
       "@types:check",
-      "@php artisan test"
+      "scripts/run-pest-locked.sh php artisan test"
     ],
     "post-autoload-dump": [
       "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

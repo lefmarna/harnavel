@@ -44,7 +44,9 @@ Special cases:
 5. Classify each hunk as shared, hybrid, or app-owned and remove dead code introduced by the
    resolution.
 6. Regenerate lockfiles and Wayfinder output when their inputs changed.
-7. Confirm no conflict markers remain:
+7. Review app-only paths in shared locations against template history. Remove leftovers from
+   template deletions and preserve genuinely app-owned paths.
+8. Confirm no conflict markers remain:
 
    ```bash
    git grep -nI -E '^(<<<<<<<|=======|>>>>>>>)' -- . \
@@ -55,8 +57,8 @@ Special cases:
      ':(exclude)docs/generated/**'
    ```
 
-8. Run the checks required by `AGENTS.md`, starting narrowly.
-9. Stage resolved files, review the staged diff, and stop before committing.
+9. Run the checks required by `AGENTS.md`, starting narrowly.
+10. Stage resolved files, review the staged diff, and stop before committing.
 
 Report template choices, preserved app choices, deleted or consolidated tests, verification
 results, and any improvement that should move upstream. Prefer the safer side for security and

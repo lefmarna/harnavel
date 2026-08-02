@@ -203,12 +203,16 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
 
       const dirName = entry.name
       const skillFile = path.join(skillsRoot, dirName, 'SKILL.md')
+      const relPath = path.relative(ROOT, skillFile)
 
       if (!fs.existsSync(skillFile)) {
+        errors.push({
+          file: relPath,
+          reason: 'Skill directory is missing SKILL.md',
+        })
         continue
       }
 
-      const relPath = path.relative(ROOT, skillFile)
       const content = fs.readFileSync(skillFile, 'utf-8')
       const fm = parseFrontmatter(content)
 

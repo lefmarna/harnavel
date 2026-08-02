@@ -29,6 +29,10 @@ type Workflow = {
   }
 }
 
+type ComposerManifest = {
+  scripts?: Record<string, string | string[]>
+}
+
 function load(relativePath: string): Workflow {
   return (parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8')) ??
     {}) as Workflow
@@ -140,13 +144,21 @@ if (runE2e?.env?.DB_DATABASE !== 'app_e2e') {
 
 const pestLockPath = 'scripts/run-pest-locked.sh'
 const mise = read('mise.toml')
-const unguardedPestCommands = mise
-  .split('\n')
-  .filter(
-    (line) =>
-      (line.includes('php artisan test') || line.includes('vendor/bin/pest')) &&
-      !line.includes(pestLockPath),
-  )
+const miseCommands = mise.split('\n').filter((line) => {
+  const trimmed = line.trimStart()
+
+  return !trimmed.startsWith('#') && !trimmed.startsWith('description =')
+})
+
+const composer = JSON.parse(read('composer.json')) as ComposerManifest
+const composerCommands = Object.values(composer.scripts ?? {}).flatMap(
+  (commands) => (Array.isArray(commands) ? commands : [commands]),
+)
+const unguardedPestCommands = [...miseCommands, ...composerCommands].filter(
+  (line) =>
+    (line.includes('php artisan test') || line.includes('vendor/bin/pest')) &&
+    !line.includes(pestLockPath),
+)
 
 if (unguardedPestCommands.length > 0) {
   fail('local Pest tasks must reject concurrent DB-backed processes')

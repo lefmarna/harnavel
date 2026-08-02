@@ -20,6 +20,10 @@ const PROTECTED_PATHS: ProtectedPath[] = [
   { path: '.env', reason: 'production-only Laravel environment file' },
   { path: '.user.ini', reason: 'XServer PHP runtime overrides' },
   {
+    path: 'public/storage',
+    reason: 'server-side symlink to storage/app/public',
+  },
+  {
     path: 'vendor/autoload.php',
     reason:
       'composer-managed dependencies; post-deploy composer install reconciles them against composer.lock',

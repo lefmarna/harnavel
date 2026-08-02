@@ -13,7 +13,7 @@ The decision model is [`TADR-0003`](../../../docs/adr/template/0003-shared-surfa
 
 ## Principles
 
-Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) for the classification model, the tier rules below to classify a concrete path, and the Path Exceptions section when a path resists those rules.
+Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) for the classification model, the tier rules below to classify a concrete path, and [`merge-template`](../merge-template/SKILL.md) for ownership details.
 
 - **Convergence uses three tiers** (TADR-0003):
   - **T1 Shared**: files with no app-specific content. Aim for byte identity.
@@ -28,11 +28,6 @@ Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
 - **Move tests and implementation together**. More comprehensive shared tests should move upstream only when the matching implementation is also present in the template. Do not upstream specs that cannot be green in the template.
 - **Keep PRs small, verified, and uncommitted**. Split by file kind, verify each PR, and stop before commit so the user can review and commit.
 - **Do not commit working logs**. Per-app checklists and concrete diff notes are transient working material and should stay in `/tmp` or similar locations.
-
-## Path Exceptions
-
-Ownership is the same in both directions. Read the Ownership and Special cases in
-[`merge-template`](../merge-template/SKILL.md) before classifying a file for upstreaming.
 
 ## Arguments
 

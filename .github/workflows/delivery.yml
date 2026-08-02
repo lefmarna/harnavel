@@ -139,7 +139,7 @@ jobs:
                 [ -r storage/framework/maintenance.php ] && \
                 [ -r vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub ] && \
                 cmp -s storage/framework/maintenance.php vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub && \
-                /usr/bin/php8.5 -r '\$data = json_decode(file_get_contents(\$argv[1]), true); exit(is_array(\$data) && (\$data[\"except\"] ?? null) === [\"/up\"] && is_string(\$data[\"template\"] ?? null) && \$data[\"template\"] !== \"\" && (\$data[\"status\"] ?? null) === 503 && (\$data[\"retry\"] ?? null) === 60 && (\$data[\"redirect\"] ?? null) === null && (\$data[\"secret\"] ?? null) === null ? 0 : 1);' storage/framework/down; \
+                /usr/bin/php8.5 -r '\$data = json_decode(file_get_contents(\$argv[1]), true); exit(is_array(\$data) && (\$data[\"except\"] ?? null) === [\"/up\"] && is_string(\$data[\"template\"] ?? null) && \$data[\"template\"] !== \"\" && (\$data[\"status\"] ?? null) === 503 && (\$data[\"retry\"] ?? null) === 60 && (\$data[\"redirect\"] ?? null) === null && (\$data[\"refresh\"] ?? null) === null && (\$data[\"secret\"] ?? null) === null ? 0 : 1);' storage/framework/down; \
               fi"; then
               exit 0
             fi
@@ -159,6 +159,7 @@ jobs:
               -e "$ssh_opts" \
               --exclude='.env' \
               --exclude='.user.ini' \
+              --exclude='/public/storage' \
               --exclude='/vendor' \
               --exclude='storage/app/private/**' \
               --exclude='storage/app/public/**' \
@@ -192,7 +193,7 @@ jobs:
               [ -r storage/framework/maintenance.php ] && \
               [ -r vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub ] && \
               cmp -s storage/framework/maintenance.php vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub && \
-              /usr/bin/php8.5 -r '\$data = json_decode(file_get_contents(\$argv[1]), true); exit(is_array(\$data) && (\$data[\"except\"] ?? null) === [\"/up\"] && is_string(\$data[\"template\"] ?? null) && \$data[\"template\"] !== \"\" && (\$data[\"status\"] ?? null) === 503 && (\$data[\"retry\"] ?? null) === 60 && (\$data[\"redirect\"] ?? null) === null && (\$data[\"secret\"] ?? null) === null ? 0 : 1);' storage/framework/down && \
+              /usr/bin/php8.5 -r '\$data = json_decode(file_get_contents(\$argv[1]), true); exit(is_array(\$data) && (\$data[\"except\"] ?? null) === [\"/up\"] && is_string(\$data[\"template\"] ?? null) && \$data[\"template\"] !== \"\" && (\$data[\"status\"] ?? null) === 503 && (\$data[\"retry\"] ?? null) === 60 && (\$data[\"redirect\"] ?? null) === null && (\$data[\"refresh\"] ?? null) === null && (\$data[\"secret\"] ?? null) === null ? 0 : 1);' storage/framework/down && \
               /usr/bin/php8.5 artisan config:cache && \
               /usr/bin/php8.5 artisan route:cache && \
               /usr/bin/php8.5 artisan view:cache && \

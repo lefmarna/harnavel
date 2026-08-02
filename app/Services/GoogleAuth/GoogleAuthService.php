@@ -29,7 +29,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
     {
         $name = $this->normalizeName($name, $email);
 
-        // config() は mixed のため、strict_types では bool への変換が必要。
         $lowercaseUsernames = (bool) config('fortify.lowercase_usernames');
         $caseInsensitiveEmail = ! $lowercaseUsernames;
 

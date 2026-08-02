@@ -27,7 +27,7 @@ trait ProfileValidationRules
     /**
      * Get the validation rules used to validate user names.
      *
-     * @return array<int, ValidationRule|Unique|array<mixed>|string>
+     * @return array<int, string>
      */
     protected function nameRules(): array
     {

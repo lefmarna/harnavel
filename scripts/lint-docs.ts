@@ -1,12 +1,3 @@
-// Validates internal markdown links in repository markdown files.
-// Checks that relative links resolve to actual files.
-//
-// Additional checks:
-// - CLAUDE.md / GEMINI.md are one-line @AGENTS.md pointers.
-// - .claude/skills/<name>/SKILL.md and .agents/skills/<name>/SKILL.md frontmatter
-//   has `name` matching directory name and non-empty `description`.
-// - Repo-owned skills listed in REPO_OWNED_SKILLS keep one canonical body under
-//   .agents/skills, and their .claude counterpart points at it instead of copying it.
 import fs from 'node:fs'
 import { glob } from 'node:fs/promises'
 import path from 'node:path'
@@ -39,7 +30,6 @@ async function findMarkdownFiles(dir: string): Promise<string[]> {
     files.push(path.join(dir, entry))
   }
 
-  // Also check key root markdown files that act as agent entry points.
   for (const name of [
     'AGENTS.md',
     'CLAUDE.md',
@@ -69,12 +59,11 @@ function checkLinks(filePath: string, content: string): LinkError[] {
     while ((match = LINK_RE.exec(lines[i])) !== null) {
       const rawLink = match[2]
 
-      // Strip anchor
       const linkWithoutAnchor = rawLink.split('#')[0]
 
       if (!linkWithoutAnchor) {
         continue
-      } // pure anchor link
+      }
 
       if (IGNORED_PREFIXES.some((p) => rawLink.startsWith(p))) {
         continue
@@ -96,11 +85,6 @@ function checkLinks(filePath: string, content: string): LinkError[] {
   return errors
 }
 
-// ---------------------------------------------------------------------------
-// Pointer file validation
-// CLAUDE.md and GEMINI.md must be exactly one-line @AGENTS.md pointers.
-// ---------------------------------------------------------------------------
-
 function checkPointerFiles(): LintError[] {
   const errors: LintError[] = []
   const pointerFiles = ['CLAUDE.md', 'GEMINI.md']
@@ -113,7 +97,6 @@ function checkPointerFiles(): LintError[] {
     }
 
     const content = fs.readFileSync(filePath, 'utf-8')
-    // Allow an optional trailing newline; the substantive content must be "@AGENTS.md" only.
     const trimmed = content.trim()
 
     if (trimmed !== '@AGENTS.md') {
@@ -126,13 +109,6 @@ function checkPointerFiles(): LintError[] {
 
   return errors
 }
-
-// ---------------------------------------------------------------------------
-// Skill frontmatter validation
-// Each SKILL.md must have:
-//   - `name` matching the parent directory name
-//   - non-empty `description`
-// ---------------------------------------------------------------------------
 
 interface FrontmatterParseResult {
   name?: string
@@ -154,7 +130,6 @@ function parseFrontmatter(content: string): FrontmatterParseResult | null {
   const result: FrontmatterParseResult = {}
 
   for (const line of block.split('\n')) {
-    // Match `key: value` or `key: 'value'` or `key: "value"`
     const m = line.match(/^(\w[\w-]*):\s*(.+)$/)
 
     if (!m) {
@@ -164,7 +139,6 @@ function parseFrontmatter(content: string): FrontmatterParseResult | null {
     const key = m[1]
     let value = m[2].trim()
 
-    // Strip surrounding quotes
     if (
       (value.startsWith("'") && value.endsWith("'")) ||
       (value.startsWith('"') && value.endsWith('"'))
@@ -249,30 +223,12 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
   return errors
 }
 
-// ---------------------------------------------------------------------------
-// Repo-owned skill pointer check
-//
-// Repo-owned skills keep one canonical body under .agents/skills/<name>/SKILL.md,
-// shared with every agent toolchain that works this repository. The .claude copy is
-// a pointer that exists only to carry Claude-specific frontmatter a symlink would
-// destroy (disable-model-invocation, argument-hint). Duplicating the body instead
-// would need a synchronization checker to keep the copies equivalent; a pointer
-// removes the divergence rather than policing it.
-//
-// External skills (kiro-*, etc.) are vendored per toolchain in their own formats and
-// are not pointers. Only repo-owned skills are listed here.
-// ---------------------------------------------------------------------------
-
 const REPO_OWNED_SKILLS: readonly string[] = [
   'adr-compact',
   'add-page',
   'update-laravel-packages',
 ]
 
-// The pointer body is fixed text, not a style to approximate: comparing against it exactly is both
-// stricter and simpler than trying to describe what an acceptable pointer may not contain. Prose,
-// bullets, and fenced blocks are all ways to smuggle instructions back into the second copy, and a
-// heuristic has to enumerate them; an equality does not.
 function expectedPointerBody(title: string, canonical: string): string {
   return [
     `# ${title}`,
@@ -310,9 +266,7 @@ function checkSkillPointers(): LintError[] {
   const errors: LintError[] = []
 
   for (const name of REPO_OWNED_SKILLS) {
-    // Markdown always spells paths with forward slashes, so the text the pointer must contain
-    // is a POSIX path. Filesystem access uses path.join separately: on Windows the two differ,
-    // and matching a `.agents\skills\...` path against the document would fail every time.
+    // Markdown paths remain POSIX-style even when filesystem paths do not.
     const canonical = `.agents/skills/${name}/SKILL.md`
     const pointer = `.claude/skills/${name}/SKILL.md`
     const canonicalPath = path.join(ROOT, '.agents', 'skills', name, 'SKILL.md')

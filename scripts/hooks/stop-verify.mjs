@@ -3,9 +3,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { delimiter, extname, join } from 'node:path'
 
-// tests/ は phpstan.neon.dist の paths に含まれていないため Larastan の対象外にする。
-// $this->get() などの binding が tests/Pest.php に集約されており、ファイル単体で
-// 解析すると method.notFound が発生するため。pint や Pest は引き続き対象。
+// Pest bindings make isolated Larastan analysis of tests unreliable; Pint and Pest still run.
 const PHPSTAN_EXCLUDED_DIRS = ['tests/']
 const isExcludedFromPhpStan = (file) =>
   PHPSTAN_EXCLUDED_DIRS.some((dir) => file.startsWith(dir))

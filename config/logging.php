@@ -71,15 +71,7 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'max_files' => (config('app.env') === 'production') ? 45 : env('LOG_DAILY_DAYS', 14),
-            'replace_placeholders' => true,
-        ],
-
-        'monthly' => [
-            'driver' => 'monthly',
-            'path' => storage_path('logs/laravel.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'max_files' => 3,
+            'days' => (config('app.env') === 'production') ? 45 : env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
         ],
 

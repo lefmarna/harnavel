@@ -5,7 +5,7 @@ Docker is used locally; production runs on XServer shared hosting.
 
 ## Architecture
 
-- Stack: PHP 8.5 / Laravel 13 / Inertia.js v3 / React 19 / Tailwind CSS v4 / Pest v5 / Larastan v3 / MariaDB / mise.
+- Stack: PHP 8.5 / Laravel 13 / Inertia.js v3 / React 19 / Tailwind CSS v4 / Pest v4 / Larastan v3 / MariaDB / mise.
 - Infer model property types from migrations and a `casts()` method that directly returns an array literal. Add `@property` only for a proven inference gap and state the reason (TADR-0007).
 - XServer has no queue workers, SSR, or long-running processes. Run jobs synchronously and prefer solutions that work in both Docker and XServer.
 - Run PHP and Artisan only inside the Docker `app` container. Run Node.js, pnpm, and mise on the host.

@@ -10,7 +10,7 @@ Laravel 13 + Inertia React + MariaDB を Docker で開発するためのテン�
 | Backend        | Laravel 13, PHP 8.5, Fortify     |
 | Frontend       | React 19, Inertia v3, TypeScript |
 | Styling        | Tailwind CSS v4, Radix UI        |
-| Testing        | Pest v5, Playwright              |
+| Testing        | Pest v4, Playwright              |
 | Infrastructure | Docker (Nginx, MariaDB, Mailpit) |
 
 > [!NOTE]

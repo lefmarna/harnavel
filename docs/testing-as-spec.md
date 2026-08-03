@@ -34,10 +34,13 @@ wide, unfamiliar, or hard to reverse.
 - Evaluate every new or changed application-logic class. Add deterministic logic whose meaningful
   branches are observable through public behavior; thin framework wiring and external-I/O
   orchestration usually do not qualify.
-- A survivor first indicates a missing assertion or a class that should be simplified. Do not add
+- A survivor first indicates a missing assertion or a class that should be simplified. Before
+  deleting its branch, identify a supported input or caller that reaches it: add the missing test
+  when one exists, and simplify only when no supported behavior can observe it. Do not add
   mutation-ignore annotations or weaken tests to make the score pass.
 - Removing `mutates()` weakens the gate and requires explicit review.
-- Run mutation testing separately from other DB-backed Pest processes.
+- Run mutation testing separately from other DB-backed Pest processes. If a mutant blocks on row
+  locks, shorten that spec's session lock wait so it fails within the mutation budget.
 
 ## Known test boundaries
 

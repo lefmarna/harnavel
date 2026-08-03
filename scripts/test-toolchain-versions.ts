@@ -79,6 +79,7 @@ function main(): void {
     /composer-(\d+\.\d+\.\d+)/g,
     'composer-<version> references in delivery.yml',
   )
+  // The preflight's grep literal is independent from its versioned PHAR path.
   const workflowComposerGrepVersions = [
     ...workflow.matchAll(/Composer version (\d+)\\\.(\d+)\\\.(\d+)/g),
   ].map((match) => `${match[1]}.${match[2]}.${match[3]}`)

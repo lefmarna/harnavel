@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Adapt stop-verify's "block" result to Antigravity's "continue" contract.
+ * Claude Code and Codex allow stopping with empty output and block with `decision: "block"`;
+ * Antigravity allows it with `{}` and blocks with `decision: "continue"`.
  */
 import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'

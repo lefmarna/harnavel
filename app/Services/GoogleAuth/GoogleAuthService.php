@@ -61,20 +61,14 @@ class GoogleAuthService implements GoogleAuthServiceContract
                 if ($user !== null) {
                     return $user;
                 }
-
-                if ($attempt === self::MAX_CREATE_RETRIES - 1) {
-                    Log::warning('Google OAuth: UniqueConstraintViolationException but user not found.', [
-                        'google_id' => $googleId,
-                    ]);
-
-                    throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。');
-                }
             }
         }
 
-        // @codeCoverageIgnoreStart
+        Log::warning('Google OAuth: UniqueConstraintViolationException but user not found.', [
+            'google_id' => $googleId,
+        ]);
+
         throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。');
-        // @codeCoverageIgnoreEnd
     }
 
     public function confirmLink(string $userId, string $googleId, string $email): bool

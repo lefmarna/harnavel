@@ -40,7 +40,9 @@ table.
 
 - Docker development through nginx, PHP-FPM, and MariaDB.
 - XServer deployment constraints: no SSR, queue workers, or other long-running production
-  processes; synchronous jobs; protected remote data during `rsync --delete`.
+  processes; synchronous jobs; protected remote data during `rsync --delete`; bounded logs, because
+  the host has limited disk and no external rotation. `.env.example` therefore deviates from
+  upstream's unrotated logging default; track upstream's rotation mechanism, do not drop it.
 - Queue tables (`jobs`, `job_batches`, `failed_jobs`) are dropped by a template migration because
   queues run synchronously. Do not adopt upstream schema changes to tables the template drops, and
   do not restore them.

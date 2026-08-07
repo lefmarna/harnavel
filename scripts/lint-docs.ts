@@ -225,7 +225,6 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
 
 const REPO_OWNED_SKILLS: readonly string[] = [
   'adr-compact',
-  'add-page',
   'update-laravel-packages',
 ]
 

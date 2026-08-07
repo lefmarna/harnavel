@@ -52,7 +52,6 @@ Files in the template docs structure that need project-specific updates:
 | `AGENTS.md` | Update the project purpose, non-obvious conventions, and operational rules for the derived project. |
 | `CONTEXT.md` | Fill initial entries with domain terms extracted from context. Preserve the opening contract text and entry format. |
 | `docs/infrastructure.md` | Record only external production facts that differ from the template and cannot be read from repository configuration. |
-| `docs/commands.md` | Update the browser-check URL only when the app uses a different local port. |
 | `.env.example` | Update default values for `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port numbers. |
 | `public/manifest.webmanifest` | Update the static app name and description in the Web App Manifest. |
 | `README.md` | Update the title, opening lead, overview, and setup text for the project. |
@@ -110,7 +109,6 @@ If supplemental details such as screen structure or access control are needed, f
 
 Using the user-provided `APP_NAME`, `DB_DATABASE`, port numbers, and the project name extracted from context, update:
 
-- Playwright CLI local URL in Interactive Browser Verification in `docs/commands.md`.
 - Default URL after setup in `README.md`.
 - Relevant `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port variables in `.env.example`.
 - `name`, `short_name`, and `description` in `public/manifest.webmanifest`.

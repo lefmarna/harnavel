@@ -31,8 +31,8 @@ Special cases:
 - Mutation uses the shared blocking score of 100%, but each app owns the classes named by
   `mutates()`. Do not remove an app's old selection until its own allowlist has been built and
   measured.
-- Preserve the app's `E2E_PORT` and dedicated E2E database. Do not restore E2E-only environment
-  files or HTTP helper routes.
+- Preserve the app's dedicated E2E database. Do not restore E2E-only environment files or HTTP
+  helper routes.
 - Keep `e2e/global-setup.ts` shared. Apps needing process setup should point Playwright at an
   app-owned wrapper that calls its default export.
 - Preserve flat App ADRs and the app-owned index in `docs/adr/README.md`; take Template ADRs from the

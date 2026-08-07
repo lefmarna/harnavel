@@ -12,7 +12,7 @@ const parseEnvPort = (name: string, fallback?: number): number => {
   if (Number.isNaN(port)) {
     if (fallback === undefined) {
       throw new Error(
-        `.env に ${name} を追加してください（規約: NGINX_PORT + 1000、.env.example 参照）。`,
+        `.env に ${name} を追加してください（.env.example 参照）。`,
       )
     }
 
@@ -23,7 +23,7 @@ const parseEnvPort = (name: string, fallback?: number): number => {
 }
 
 const CONTAINER_E2E_PORT = 8001
-const PORT = isCI ? 8000 : parseEnvPort('E2E_PORT')
+const PORT = isCI ? 8000 : parseEnvPort('NGINX_PORT') + 1000
 const VITE_PORT = parseEnvPort('VITE_PORT', 5173)
 const E2E_APP_URL = `http://localhost:${PORT}`
 const E2E_READY_URL = `${E2E_APP_URL}/up`

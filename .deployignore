@@ -88,7 +88,7 @@ docs
 # 開発用スクリプト
 scripts
 
-# フロントエンドのソースコード（deploy:build 済みであることが前提。本番では public/build を使用）
+# フロントエンドのソースコード（CI の pnpm run build 済みであることが前提。本番では public/build を使用）
 resources/css
 resources/js
 

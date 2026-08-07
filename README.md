@@ -66,7 +66,7 @@ pnpm test:e2e --project=chromium
 - [README](README.md): 人間向けの概要とセットアップ
 - [AGENTS.md](AGENTS.md): AI エージェント向けの起点（`CLAUDE.md` / `GEMINI.md` はここへのポインタ）
 - [CONTEXT.md](CONTEXT.md): ドメイン用語集（展開先プロジェクトで育てる）
-- [docs/commands.md](docs/commands.md): コマンドのソースオブトゥルース
+- [docs/testing-as-spec.md](docs/testing-as-spec.md): テスト方針とブラウザ確認手順
 - [docs/infrastructure.md](docs/infrastructure.md): ローカルポート、Mailpit、デプロイ前提
 - [docs/adr/README.md](docs/adr/README.md): 設計判断の記録（ADR / Template ADR）
 

@@ -2,11 +2,7 @@
 node = "24.18.1"
 pnpm = "11.18.0"
 
-# =============================================================================
-# セットアップ関連
-# =============================================================================
-
-# depends は並列実行されるため、順序が要る初期構築は run で逐次に呼ぶ。
+# depends は並列実行されるため、順序が要る処理は run で逐次に呼ぶ。
 [tasks.setup]
 description = "Setup entire project from scratch"
 run = [
@@ -36,10 +32,6 @@ docker compose exec app bash -c "
   php artisan key:generate"
 """
 
-# =============================================================================
-# Docker 関連
-# =============================================================================
-
 [tasks.build]
 description = "Build docker containers"
 run = "docker compose build --no-cache --force-rm"
@@ -57,10 +49,6 @@ run = "docker compose stop"
 description = "Remove docker containers"
 run = "docker compose down"
 
-[tasks.restart]
-description = "Restart docker containers"
-depends = ["down", "up"]
-
 [tasks.destroy]
 description = "Destroy docker containers and volumes"
 run = "docker compose down --rmi all --volumes"
@@ -76,10 +64,6 @@ run = "docker compose logs -f app"
 [tasks.app]
 description = "Access app container"
 run = "docker compose exec app bash"
-
-# =============================================================================
-# PHP/Laravel 関連
-# =============================================================================
 
 [tasks.migrate]
 description = "Run database migrations"
@@ -123,19 +107,21 @@ description = "Run Laravel Pint formatter on changed PHP files"
 run = "docker compose exec app vendor/bin/pint --dirty --format=agent"
 
 [tasks."verify:backend"]
-description = "Run backend quality checks (Pint + Larastan + Pest)"
+description = "Run backend quality checks (Pint + Larastan + Pest with coverage)"
 run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
 docker compose exec app composer analyse && \
-docker compose exec app scripts/run-pest-locked.sh php artisan test --compact
+docker compose exec app scripts/run-pest-locked.sh php artisan test --compact --coverage --min=90
 """
 
 [tasks."verify:backend:full"]
-description = "Run backend quality checks plus Chromium E2E"
+description = "Run backend quality checks plus mutation testing and Chromium E2E"
 run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
 docker compose exec app composer analyse && \
-docker compose exec app scripts/run-pest-locked.sh php artisan test --compact && \
+docker compose exec app scripts/run-pest-locked.sh php artisan test --compact --coverage --min=90 && \
+docker compose exec app mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations && \
+docker compose exec app scripts/run-pest-locked.sh vendor/bin/pest --mutate --covered-only --min=100 && \
 pnpm test:e2e
 """
 
@@ -158,10 +144,6 @@ docker compose exec app bash -c "
   php artisan view:clear"
 """
 
-[tasks.tinker]
-description = "Run tinker"
-run = "docker compose exec app php artisan tinker"
-
 [tasks.route]
 description = "List routes"
 run = "docker compose exec app php artisan route:list"
@@ -169,33 +151,3 @@ run = "docker compose exec app php artisan route:list"
 [tasks.wayfinder]
 description = "Generate Wayfinder TypeScript route/action helpers"
 run = "docker compose exec -T app php artisan wayfinder:generate --with-form"
-
-# =============================================================================
-# フロントエンド関連
-# =============================================================================
-
-[tasks.fix]
-description = "Fix code (ESLint + Prettier)"
-run = "pnpm fix"
-quiet = true
-
-# =============================================================================
-# デプロイ関連
-# =============================================================================
-
-[tasks."deploy:build"]
-description = "Build for production (frontend assets)"
-run = "pnpm run build"
-
-[tasks."deploy:package"]
-description = "Create deployment package (excludes dev files)"
-run = """
-test -f public/build/manifest.json || { echo 'public/build/manifest.json is missing. Run `mise run deploy:build` first.' >&2; exit 1; } && \
-rm -rf .deploy && mkdir -p .deploy && \
-rsync -av --progress --exclude-from='.deployignore' ./ .deploy/ && \
-echo '✅ Deployment package created in ./.deploy/'
-"""
-
-[tasks."deploy:prepare"]
-description = "Full deployment preparation (build + package)"
-depends = ["deploy:build", "deploy:package"]

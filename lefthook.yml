@@ -22,7 +22,7 @@ pre-commit:
       stage_fixed: true
     - name: format staged frontend files
       glob: '*.{css,html,js,json,jsx,ts,tsx,yaml,yml}'
-      run: pnpm exec prettier --write --log-level warn {staged_files}
+      run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: run checks
       group:

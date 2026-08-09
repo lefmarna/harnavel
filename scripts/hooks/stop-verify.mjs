@@ -8,7 +8,7 @@ const PHPSTAN_EXCLUDED_DIRS = ['tests/']
 const isExcludedFromPhpStan = (file) =>
   PHPSTAN_EXCLUDED_DIRS.some((dir) => file.startsWith(dir))
 
-const PRETTIER_EXTS = new Set([
+const OXFMT_EXTS = new Set([
   '.cjs',
   '.css',
   '.html',
@@ -41,7 +41,7 @@ if (all.length === 0) {
 
 const isBlade = (file) => file.endsWith('.blade.php')
 
-const prettier = byExt(existing, PRETTIER_EXTS)
+const oxfmtFiles = byExt(existing, OXFMT_EXTS)
 const eslintAll = byExt(all, ESLINT_EXTS)
 const eslintFiles = byExt(existing, ESLINT_EXTS)
 const phpAll = byExt(all, PHP_EXTS).filter((file) => !isBlade(file))
@@ -84,9 +84,9 @@ if (eslintFiles.length && hasCommand('pnpm')) {
   run(['pnpm', 'exec', 'eslint', '--fix', ...eslintFiles], repo)
 }
 
-if (prettier.length && hasCommand('pnpm')) {
+if (oxfmtFiles.length && hasCommand('pnpm')) {
   run(
-    ['pnpm', 'exec', 'prettier', '--write', '--log-level', 'warn', ...prettier],
+    ['pnpm', 'exec', 'oxfmt', '--no-error-on-unmatched-pattern', ...oxfmtFiles],
     repo,
   )
 }

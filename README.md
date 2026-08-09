@@ -52,14 +52,14 @@ mise run stop           # コンテナ停止
 mise run down           # コンテナ停止 + 削除
 mise run app            # app コンテナへ入る
 mise run verify:backend # Pint -> Larastan -> Pest
-pnpm format:check       # Prettier チェックのみ
-pnpm fix                # ESLint + Prettier 自動修正
+pnpm format:check       # Oxfmt チェックのみ
+pnpm fix                # ESLint + Oxfmt 自動修正
 pnpm types:check        # TypeScript 型チェック
 pnpm lint:docs          # docs/ + README/AGENTS/CLAUDE のリンク検証
 pnpm test:e2e --project=chromium
 ```
 
-`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。ローカル hook は pre-commit で staged files に `ESLint --fix`、Prettier、Pint を順に適用してから、lint/typecheck/docs と Docker 前提の Larastan を実行します。テスト実行は CI に寄せています。
+`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。ローカル hook は pre-commit で staged files に `ESLint --fix`、Oxfmt、Pint を順に適用してから、lint/typecheck/docs と Docker 前提の Larastan を実行します。テスト実行は CI に寄せています。
 
 ## ドキュメントの見方
 

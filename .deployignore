@@ -55,8 +55,7 @@ tsconfig.json
 package.json
 pnpm-lock.yaml
 eslint.config.js
-.prettierrc
-.prettierignore
+.oxfmtrc.json
 .editorconfig
 .mcp.json
 boost.json

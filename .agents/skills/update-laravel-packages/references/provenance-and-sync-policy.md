@@ -30,6 +30,7 @@ is permanent if Laravel or a better maintained replacement now provides it.
 | Browser E2E tests | `@playwright/test`, `playwright.config.ts`, `e2e/`, CI, commit `5b75c37` | Keep smoke and auth browser coverage runnable |
 | Docs and script checks | `tsx`, `scripts/`, package scripts, commits `196f853`, `b7ebda4`, `da48cc8` | Keep docs, deploy-safety, and unit script checks runnable |
 | Git hooks | `lefthook`, `lefthook.yml`, package `prepare`, commit `3f4643a` | Keep local hook installation without affecting production deploys |
+| Frontend formatting | `oxfmt`, `.oxfmtrc.json`, package `format`/`format:check`, `lefthook.yml` | Keep Oxfmt as the repository's only formatter |
 
 If history after these commits changes the capability, follow the latest evidence rather than the
 table.

@@ -28,8 +28,8 @@ If steering/spec context is already available from conversation, skip redundant 
 Otherwise, load all necessary context:
 - Read `.kiro/specs/{feature}/spec.json` for language and metadata
 - Read `.kiro/specs/{feature}/requirements.md` for requirements
-- Core steering context: `product.md`, `tech.md`, `structure.md`
-- Additional steering files only when directly relevant to the feature's domain rules, integrations, runtime prerequisites, compliance/security constraints, or existing product boundaries
+- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Additional `docs/adr/` records only when directly relevant to the feature's domain rules, integrations, runtime prerequisites, compliance/security constraints, or existing product boundaries
 - Relevant local agent skills or playbooks only when they clearly match the feature's host environment or use case and provide analysis-relevant context
 
 ### Step 2: Read Analysis Guidelines
@@ -42,7 +42,7 @@ Otherwise, load all necessary context:
 The following research areas are independent and can be executed in parallel:
 1. **Codebase analysis**: Existing implementations, architecture patterns, integration points, extension possibilities (using Grep/Glob/Read)
 2. **External dependency research**: Dependency compatibility, version constraints, known integration challenges (using WebSearch/WebFetch when needed)
-3. **Context loading**: Requirements, core steering, task-relevant extra steering, relevant local agent skills/playbooks, and gap-analysis rules
+3. **Context loading**: Requirements, `CONTEXT.md`, `docs/generated/boost.md`, task-relevant `docs/adr/` records, relevant local agent skills/playbooks, and gap-analysis rules
 
 After all parallel research completes, synthesize findings for gap analysis.
 
@@ -68,10 +68,10 @@ After all parallel research completes, synthesize findings for gap analysis.
 - **Multiple Options**: Present viable alternatives when applicable
 - **Thorough Investigation**: Use tools to deeply understand existing codebase
 - **Explicit Gaps**: Clearly flag areas needing research or investigation
-- **Context Discipline**: Start with core steering and expand only with analysis-relevant steering or use-case-aligned local agent skills/playbooks
+- **Context Discipline**: Start with `CONTEXT.md` and `docs/generated/boost.md`, and expand only with analysis-relevant `docs/adr/` records or use-case-aligned local agent skills/playbooks
 
 ## Tool Guidance
-- **Read first**: Load spec, core steering, relevant local playbooks/agent skills, and rules before analysis
+- **Read first**: Load spec, `CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records and local playbooks/agent skills, and rules before analysis
 - **Grep extensively**: Search codebase for patterns, conventions, and integration points
 - **WebSearch/WebFetch**: Research external dependencies and best practices when needed
 - **Write last**: Generate analysis only after complete investigation
@@ -93,7 +93,6 @@ Provide output in the language specified in spec.json with:
 ### Error Scenarios
 - **Missing Requirements**: If requirements.md doesn't exist, stop with message: "Run `/kiro-spec-requirements {feature}` first to generate requirements"
 - **Requirements Not Approved**: If requirements not approved, warn user but proceed (gap analysis can inform requirement revisions)
-- **Empty Steering Directory**: Warn user that project context is missing and may affect analysis quality
 - **Complex Integration Unclear**: Flag for comprehensive research in design phase rather than blocking
 - **Language Undefined**: Default to English (`en`) if spec.json doesn't specify language
 

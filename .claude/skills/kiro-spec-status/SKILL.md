@@ -21,7 +21,7 @@ argument-hint: <feature-name>
 - Read `.kiro/specs/$ARGUMENTS/brief.md` if it exists
 - Read existing files: `requirements.md`, `design.md`, `tasks.md` (if they exist)
 - Check `.kiro/specs/$ARGUMENTS/` directory for available files
-- Read `.kiro/steering/roadmap.md` if it exists and this spec appears in it
+- Read `.kiro/roadmap.md` if it exists and this spec appears in it
 
 ### Step 2: Analyze Status
 

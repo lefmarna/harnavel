@@ -16,7 +16,7 @@ For each major component in the emerging design, ask: is this problem already so
 
 - Search for established standards (RFCs, protocols), battle-tested libraries, or platform-native capabilities that address the requirement
 - Prefer adopting existing solutions over building custom ones when they fit the requirements without significant adaptation
-- If adopting: verify the solution is actively maintained, compatible with the project's stack (check steering), and meets non-functional requirements
+- If adopting: verify the solution is actively maintained, compatible with the project's stack (check `docs/generated/boost.md`), and meets non-functional requirements
 - If building: document why existing solutions were rejected (capture in `research.md`)
 
 ## 3. Simplification

@@ -47,7 +47,7 @@ Conduct comprehensive research and analysis to ensure the technical design is ba
 ### 5. Architecture Pattern & Boundary Analysis
 **Evaluate Architectural Options**:
 - Compare relevant patterns (MVC, Clean, Hexagonal, Event-driven)
-- Assess fit with existing architecture and steering principles
+- Assess fit with existing architecture and `docs/adr/` decisions
 - Identify domain boundaries and ownership seams required to avoid team conflicts
 - Consider scalability implications and operational concerns
 - Evaluate maintainability and team expertise

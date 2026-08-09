@@ -25,8 +25,8 @@ If steering/spec context is already available from conversation, skip redundant 
 Otherwise, load all necessary context:
 - `.kiro/specs/{feature}/spec.json`, `requirements.md`, `design.md` (if exists)
 - `.kiro/specs/{feature}/research.md` (if exists, contains gap analysis from `/kiro-validate-gap`)
-- Core steering context: `product.md`, `tech.md`, `structure.md`
-- Additional steering files only when directly relevant to requirement coverage, architecture boundaries, integrations, runtime prerequisites, security/performance constraints, or team conventions that affect implementation readiness
+- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Additional `docs/adr/` records only when directly relevant to requirement coverage, architecture boundaries, integrations, runtime prerequisites, security/performance constraints, or team conventions that affect implementation readiness
 - `.kiro/settings/templates/specs/design.md` for document structure
 - Read `rules/design-principles.md` from this skill's directory for design principles
 - `.kiro/settings/templates/specs/research.md` for discovery log structure
@@ -70,7 +70,7 @@ The following research areas are independent and can be dispatched as **subagent
 **Typical research areas** (adjust as appropriate):
 - **Codebase analysis**: Existing architecture patterns, integration points, code conventions (using Grep/Glob)
 - **External research**: Dependencies, APIs, latest best practices (using WebSearch/WebFetch)
-- **Context loading** (usually main context): Steering files, design principles, discovery rules, templates
+- **Context loading** (usually main context): `CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records, design principles, discovery rules, templates
 
 For simple additions, skip subagent dispatch entirely and do a quick pattern check in main context.
 
@@ -177,10 +177,6 @@ Provide brief summary in the language specified in spec.json:
 - **User Message**: "Template file missing at `.kiro/settings/templates/specs/design.md`"
 - **Suggested Action**: "Check repository setup or restore template file"
 - **Fallback**: Use inline basic structure with warning
-
-**Steering Context Missing**:
-- **Warning**: "Steering directory empty or missing - design may not align with project standards"
-- **Proceed**: Continue with generation but note limitation in output
 
 **Invalid Requirement IDs**:
   - **Stop Execution**: If requirements.md is missing numeric IDs or uses non-numeric headings (for example, "Requirement A"), stop and instruct the user to fix requirements.md before continuing.

@@ -25,8 +25,8 @@ If steering/spec context is already available from conversation, skip redundant 
 Otherwise, load all necessary context:
 - `.kiro/specs/{feature}/spec.json`, `requirements.md`, `design.md`
 - `.kiro/specs/{feature}/tasks.md` (if exists, for merge mode)
-- Core steering context: `product.md`, `tech.md`, `structure.md`
-- Additional steering files only when directly relevant to requirements coverage, design boundaries, runtime prerequisites, or team conventions that affect task executability
+- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Additional `docs/adr/` records only when directly relevant to requirements coverage, design boundaries, runtime prerequisites, or team conventions that affect task executability
 
 - Determine execution mode:
   - `sequential = (sequential flag is true)`
@@ -44,7 +44,7 @@ Otherwise, load all necessary context:
 #### Parallel Research
 
 The following research areas are independent and can be executed in parallel:
-1. **Context loading**: Spec documents (requirements.md, design.md), steering files
+1. **Context loading**: Spec documents (requirements.md, design.md), `CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records
 2. **Rules loading**: tasks-generation.md, tasks-parallel-analysis.md, tasks template
 
 After all parallel research completes, synthesize findings before generating tasks.

@@ -57,8 +57,8 @@ Otherwise, for each detected feature:
 - Read `.kiro/specs/<feature>/requirements.md` for requirements
 - Read `.kiro/specs/<feature>/design.md` for design structure
 - Read `.kiro/specs/<feature>/tasks.md` for task list and Implementation Notes
-- Core steering context: `product.md`, `tech.md`, `structure.md`
-- Additional steering files only when directly relevant to the validated boundaries, runtime prerequisites, integrations, domain rules, security/performance constraints, or team conventions that affect the GO/NO-GO call
+- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Additional `docs/adr/` records only when directly relevant to the validated boundaries, runtime prerequisites, integrations, domain rules, security/performance constraints, or team conventions that affect the GO/NO-GO call
 
 **Discover canonical validation commands**:
 - Inspect repository-local sources of truth in this order: project scripts/manifests (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, app manifests), task runners (`Makefile`, `justfile`), CI/workflow files, existing e2e/integration configs, then `README*`

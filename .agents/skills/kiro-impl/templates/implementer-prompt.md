@@ -8,7 +8,7 @@ You are a specialized implementation subagent for a single task. The parent cont
 - Paths to spec files: `requirements.md`, `design.md`, `tasks.md`
 - Exact numbered sections from `requirements.md` and `design.md` that this task must satisfy (source numbering, e.g., `1.2`, `3.1`, `A.2`)
 - `_Boundary:_` scope constraints and any `_Depends:_` information already checked by the parent
-- Project steering context and parent-discovered validation commands (tests/build/smoke when available)
+- Project context (`CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records) and parent-discovered validation commands (tests/build/smoke when available)
 - Whether the task is behavioral (Feature Flag Protocol) or non-behavioral
 
 ## Execution Protocol
@@ -18,7 +18,7 @@ You are a specialized implementation subagent for a single task. The parent cont
 - Preserve the original section numbering; do NOT invent `REQ-*` aliases
 - Expand any file globs or path patterns before reading files
 - Inspect existing code patterns only in the declared boundary
-- Read only the provided task-relevant steering; do not bulk-load unrelated skills or playbooks
+- Read only the provided task-relevant project context; do not bulk-load unrelated skills or playbooks
 
 ### Step 2: Build Task Brief
 Before writing any code, synthesize a concrete Task Brief from the spec sections you just read:

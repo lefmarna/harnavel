@@ -5,12 +5,12 @@ Kiro-style Spec-Driven Development on an agentic SDLC
 ## Project Context
 
 ### Paths
-- Steering: `.kiro/steering/`
+- Roadmap: `.kiro/roadmap.md`
 - Specs: `.kiro/specs/`
 
-### Steering vs Specification
+### Project Context vs Specification
 
-**Steering** (`.kiro/steering/`) - Guide AI with project-wide rules and context
+**Project context** (`AGENTS.md`, `CONTEXT.md`, `docs/generated/boost.md`, `docs/adr/`) - Guide AI with project-wide rules and context
 **Specs** (`.kiro/specs/`) - Formalize development process for individual features
 
 ### Active Specifications
@@ -21,7 +21,6 @@ Kiro-style Spec-Driven Development on an agentic SDLC
 - Think in English, generate responses in Japanese. All Markdown content written to project files (e.g., requirements.md, design.md, tasks.md, research.md, validation reports) MUST be written in the target language configured for this specification (see spec.json.language).
 
 ## Minimal Workflow
-- Phase 0 (optional): `/kiro-steering`, `/kiro-steering-custom`
 - Discovery: `/kiro-discovery "idea"` — determines action path, writes brief.md + roadmap.md for multi-spec projects
 - Phase 1 (Specification):
   - Single spec: `/kiro-spec-quick {feature} [--auto]` or step by step:
@@ -52,10 +51,5 @@ Skills are located in `.claude/skills/kiro-*/SKILL.md`
 ## Development Rules
 - 3-phase approval workflow: Requirements → Design → Tasks → Implementation
 - Human review required each phase; use `-y` only for intentional fast-track
-- Keep steering current and verify alignment with `/kiro-spec-status`
+- Keep project context current and verify alignment with `/kiro-spec-status`
 - Follow the user's instructions precisely, and within that scope act autonomously: gather the necessary context and complete the requested work end-to-end in this run, asking questions only when essential information is missing or the instructions are critically ambiguous.
-
-## Steering Configuration
-- Load entire `.kiro/steering/` as project memory
-- Default files: `product.md`, `tech.md`, `structure.md`
-- Custom files are supported (managed via `/kiro-steering-custom`)

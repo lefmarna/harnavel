@@ -24,8 +24,8 @@ metadata:
    - Read `.kiro/specs/$1/spec.json` for language and metadata
    - Read `.kiro/specs/$1/brief.md` if it exists (discovery context: problem, approach, scope decisions, boundary candidates)
    - Read `.kiro/specs/$1/requirements.md` for project description
-   - Core steering context: `product.md`, `tech.md`, `structure.md`
-   - Additional steering files only when directly relevant to feature scope, user personas, business/domain rules, compliance/security constraints, operational constraints, or existing product boundaries
+   - Core project context: `CONTEXT.md`
+   - Additional `docs/adr/` records only when directly relevant to feature scope, user personas, business/domain rules, compliance/security constraints, operational constraints, or existing product boundaries
    - Relevant local agent skills or playbooks only when they clearly match the feature's host environment or use case and contain domain terminology or workflow rules that shape user-observable requirements
 
 2. **Read Guidelines**:
@@ -40,12 +40,12 @@ The following research areas are independent. Decide the optimal decomposition b
 **In main context** (essential for requirements generation):
 - Spec files: spec.json, brief.md, requirements.md (project description)
 - EARS format rules, requirements review gate, requirements template
-- Core steering: product.md, tech.md (directly inform scope and constraints)
+- Core project context: CONTEXT.md (directly informs scope and constraints)
 
 **Delegate to sub-agent** (keeps exploration out of main context):
 - **Codebase hints** (brownfield projects): Spawn a sub-agent to explore existing implementations that inform requirement scope. Ask it to summarize: (1) what already exists, (2) relevant interfaces/APIs, (3) patterns that new requirements should align with. Return a summary under 150 lines.
 - **Domain research** (when external knowledge is needed): Spawn a sub-agent for web research on domain-specific requirements, standards, or best practices. Return a concise findings summary.
-- **Additional steering and playbooks**: If many steering files or local agent playbooks exist, spawn a sub-agent to scan them and return only the sections relevant to this feature.
+- **Additional ADRs and playbooks**: If many `docs/adr/` records or local agent playbooks exist, spawn a sub-agent to scan them and return only the sections relevant to this feature.
 
 For greenfield projects with minimal codebase, skip sub-agent dispatch and load context directly. If multi-agent is not available, execute sequentially in main context.
 
@@ -124,7 +124,6 @@ Provide output in the language specified in spec.json with:
 - **Template Missing**: If template files don't exist, use inline fallback structure with warning
 - **Language Undefined**: Default to English (`en`) if spec.json doesn't specify language
 - **Incomplete Requirements**: After generation, explicitly ask user if requirements cover all expected functionality
-- **Steering Directory Empty**: Warn user that project context is missing and may affect requirement quality
 - **Non-numeric Requirement Headings**: If existing headings do not include a leading numeric ID (for example, they use "Requirement A"), normalize them to numeric IDs and keep that mapping consistent (never mix numeric and alphabetic labels).
 - **Scope Ambiguity Found During Requirements Review**: Stop execution, do not write a guessed `requirements.md`, and ask the user to clarify the missing or conflicting scope before re-running `$kiro-spec-requirements $1`
 

@@ -68,7 +68,7 @@ Acknowledge 1-2 strong aspects to maintain balanced feedback.
 
 - Link each critical issue to the relevant requirement(s) from `requirements.md` (ID or section).
 - Cite evidence locations in the design document (section/heading, diagram, or artifact) to support the assessment.
-- When applicable, reference constraints from steering context to justify the issue.
+- When applicable, reference constraints from `AGENTS.md` or `docs/adr/` to justify the issue.
 
 ## Output Format
 

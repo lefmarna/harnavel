@@ -20,7 +20,7 @@ description: Create complete specs (requirements, design, tasks) for all feature
 
 ## Step 1: Read Roadmap and Validate
 
-1. Read `.kiro/steering/roadmap.md`
+1. Read `.kiro/roadmap.md`
 2. Parse the `## Specs (dependency order)` section to extract:
    - Feature names
    - One-line descriptions
@@ -63,7 +63,7 @@ For each wave, dispatch all features in the wave as **parallel sub-agents**.
 Create a complete specification for feature "{feature-name}".
 
 1. Read the brief at .kiro/specs/{feature-name}/brief.md for feature context
-2. Read the roadmap at .kiro/steering/roadmap.md for project context
+2. Read the roadmap at .kiro/roadmap.md for project context
 3. Execute the full spec pipeline. For each phase, read the corresponding skill's SKILL.md for complete instructions (templates, rules, review gates):
    a. Initialize: Read .agents/skills/kiro-spec-init/SKILL.md, then create spec.json and requirements.md
    b. Generate requirements: Read .agents/skills/kiro-spec-requirements/SKILL.md, then follow its steps
@@ -91,7 +91,7 @@ Read ALL generated specs and check for consistency across the entire project:
 - `.kiro/specs/*/design.md` (primary: contains interfaces, data models, architecture)
 - `.kiro/specs/*/requirements.md` (for scope and acceptance criteria)
 - `.kiro/specs/*/tasks.md` (for boundary annotations only -- read _Boundary:_ lines, skip task descriptions)
-- `.kiro/steering/roadmap.md`
+- `.kiro/roadmap.md`
 
 Reading priority: Focus on design.md files (they contain interfaces, data models, architecture). For requirements.md, focus on section headings and acceptance criteria. For tasks.md, focus on _Boundary:_ annotations.
 

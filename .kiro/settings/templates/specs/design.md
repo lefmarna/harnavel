@@ -79,7 +79,7 @@ When modifying existing systems:
 - Domain/feature boundaries: [how responsibilities are separated to avoid conflicts]
 - Existing patterns preserved: [list key patterns]
 - New components rationale: [why each is needed]
-- Steering compliance: [principles maintained]
+- Project context compliance: [principles maintained]
 
 ### Technology Stack
 
@@ -310,13 +310,13 @@ Error tracking, logging, and health monitoring implementation.
 ## Optional Sections (include when relevant)
 
 ### Security Considerations
-_Use this section for features handling auth, sensitive data, external integrations, or user permissions. Capture only decisions unique to this feature; defer baseline controls to steering docs._
+_Use this section for features handling auth, sensitive data, external integrations, or user permissions. Capture only decisions unique to this feature; defer baseline controls to `AGENTS.md` and `docs/adr/`._
 - Threat modeling, security controls, compliance requirements
 - Authentication and authorization patterns
 - Data protection and privacy considerations
 
 ### Performance & Scalability
-_Use this section when performance targets, high load, or scaling concerns exist. Record only feature-specific targets or trade-offs and rely on steering documents for general practices._
+_Use this section when performance targets, high load, or scaling concerns exist. Record only feature-specific targets or trade-offs and rely on `AGENTS.md` and `docs/adr/` for general practices._
 - Target metrics and measurement strategies
 - Scaling approaches (horizontal/vertical)
 - Caching strategies and optimization techniques

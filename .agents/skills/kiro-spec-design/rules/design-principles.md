@@ -138,7 +138,7 @@
 - Supporting References usage is optional; only create it when keeping the content in the main body would reduce readability. All decisions must still appear in the main sections so design.md stands alone.
 
 ### Error/Testing/Security/Performance Sections
-- Record only feature-specific decisions or deviations. Link or reference organization-wide standards (steering) for baseline practices instead of restating them.
+- Record only feature-specific decisions or deviations. Link or reference organization-wide standards (`AGENTS.md`, `docs/adr/`) for baseline practices instead of restating them.
 
 ### Diagram & Text Deduplication
 - Do not restate diagram content verbatim in prose. Use the text to highlight key decisions, trade-offs, or impacts that are not obvious from the visual.

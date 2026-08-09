@@ -36,7 +36,7 @@ Provide:
 - The implementer's status report
 - The task `_Boundary:_` scope constraints
 - Validation commands discovered by the controller
-- Relevant steering excerpts when applicable
+- Relevant `CONTEXT.md` / `docs/generated/boost.md` / `docs/adr/` excerpts when applicable
 - Relevant `## Implementation Notes` entries when applicable
 
 ## Outputs

@@ -28,15 +28,15 @@ You operate in two modes:
 If steering/spec context is already available from conversation, skip redundant file reads.
 Otherwise, load all necessary context:
 - `.kiro/specs/{feature}/spec.json`, `requirements.md`, `design.md`, `tasks.md`
-- Core steering context: `product.md`, `tech.md`, `structure.md`
-- Additional steering files only when directly relevant to the selected task's boundary, runtime prerequisites, integrations, domain rules, security/performance constraints, or team conventions that affect implementation or validation
+- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Additional `docs/adr/` records only when directly relevant to the selected task's boundary, runtime prerequisites, integrations, domain rules, security/performance constraints, or team conventions that affect implementation or validation
 - Relevant local agent skills or playbooks only when they clearly match the task's host environment or use case; read the specific artifact(s) you need, not entire directories
 
 #### Parallel Research
 
 The following research areas are independent and can be executed in parallel:
 1. **Spec context loading**: spec.json, requirements.md, design.md, tasks.md
-2. **Steering, playbooks, & patterns**: Core steering, task-relevant extra steering, matching local agent skills/playbooks, and existing code patterns
+2. **Project context, playbooks, & patterns**: Core project context, task-relevant ADRs, matching local agent skills/playbooks, and existing code patterns
 
 After all parallel research completes, synthesize implementation brief before starting.
 
@@ -86,7 +86,7 @@ For each task (one at a time):
   - Task description and boundary scope
   - Paths to spec files: requirements.md, design.md, tasks.md
   - Exact requirement and design section numbers this task must satisfy (using source numbering, NOT invented `REQ-*` aliases)
-  - Task-relevant steering context and parent-discovered validation commands (tests/build/smoke as relevant)
+  - Task-relevant project context and parent-discovered validation commands (tests/build/smoke as relevant)
   - Whether the task is behavioral (Feature Flag Protocol) or non-behavioral
   - **Previous learnings**: Include any `## Implementation Notes` entries from tasks.md that are relevant to this task's boundary or dependencies (e.g., "better-sqlite3 requires separate rebuild for Electron"). This prevents the same mistakes from recurring.
 - The implementer subagent will read the spec files and build its own Task Brief (acceptance criteria, completion definition, design constraints, verification method) before implementation

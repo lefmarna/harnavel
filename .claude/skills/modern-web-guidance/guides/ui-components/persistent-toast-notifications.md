@@ -4,12 +4,11 @@ Toast notifications are transient status messages. Unlike menus, they should not
 
 ### Implementation Guidelines
 
-* **MANDATORY:** Use popover="manual" so the notification stays visible until explicitly closed or timed out by a script.
-* **DO** use a container to manage the stacking of multiple toasts. Since popovers in the Top Layer ignore parent z-index, you must position them individually or within a common layout group.
-* **DO** use sibling-index() to add margin between toast notifications so that items lower in the stack are visible.
-* **DO** provide an explicit "Close" button within the toast using popovertargetaction="hide".
-* **DO** use JavaScript for auto-dismissal timers (e.g., calling hidePopover() after 3000ms).
-* **DO** utilize transition-behavior: allow-discrete to animate the entry and exit from the Top Layer.
+* **MANDATORY:** Use one popover="manual" container so the notification stack stays visible until explicitly closed or timed out by a script.
+* **DO** stack `.toast` elements in normal flow inside that container.
+* **DO** provide an explicit "Close" button that removes its toast.
+* **DO** use the same removal behavior for auto-dismissal timers, and hide the container after either path when it becomes empty.
+* **DO** utilize transition-behavior: allow-discrete to animate the container's entry and exit from the Top Layer.
 
 ### Fallback Strategies
 
@@ -53,7 +52,7 @@ Alternatively, for a legacy fallback without a polyfill, use `position: fixed` a
 
 #### sibling-index()
 
-* **Guidance:** If sibling-index() is not supported, use the `+` operator to add margin manually. I.e. `popover + popover { margin-top: 1rem }`
+* **Guidance:** If sibling-index() is not supported, space the normal-flow items with `.toast + .toast { margin-block-start: 1rem }`. The selector `popover` would target a nonexistent `<popover>` element rather than an element with the `popover` attribute.
 
 #### anchor-positioning
 
@@ -61,4 +60,4 @@ Alternatively, for a legacy fallback without a polyfill, use `position: fixed` a
 
 #### transition-behavior
 
-* **Guidance:** If transition-behavior is not supported, use JavaScript to add animation via classes as the toast element transitions in and out.
+* **Guidance:** If transition-behavior is not supported, use JavaScript classes as the container transitions in and out.

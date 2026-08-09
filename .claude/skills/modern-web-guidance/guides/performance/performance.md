@@ -53,7 +53,7 @@ LCP measures the time required to render the largest visible text or image block
 *   **DO declare the LCP image in standard HTML**: Ensure LCP images are present in the raw HTML response so the preload scanner discovers it immediately. This can be be via an `<img>` element (preferred) or a `<link rel="preload" as="image">` (where the image resource is loaded due to JavaScript or CSS). Avoid relying on JavaScript or CSS to be the only source of the image resource.
 *   **DO use `fetchpriority="high"` on the LCP images**: Images are not downloaded initially while the browser prioritizes render-blocking resources like CSS and JavaScript and can perform layout to discover if the images are in the viewport or not. Use `fetchpriority="high"` to signal to the browser's heuristic engine to start downloading the LCP image earlier. This should be on the `<img>` element (`<img fetchpriority="high">`) and any preload (`<link rel="preload" as="image" fetchpriority="high">`).
 *   **DO use `fetchpriority="low"` to demote competing elements that are not in the initial viewport**: Lower the priority of large images or carousels that are *not* the primary LCP element and do *not* appear in the initial viewport, but may still be downloaded if near the viewport or hidden with CSS (for example `overflow:scroll` for carousels). Images with `fetchpriority="low"` will still be downloaded but start after higher-priority resources the browser has queued.
-*   **DO use `loading="lazy"` to avoid loading competing elements that are far out of the initial viewport**: Images, iframes, and video and audio media which are well outside of the viewport should be lazy-loaded to avoid fetching these at all. Images with `loading="lazy"` will not be downloaded at all when well outside the viewport but will download when in, or near, the viewport (depending on browser heuristics and connection settings),.
+*   **DO use `loading="lazy"` to avoid loading competing elements that are far out of the initial viewport**: Use it for offscreen images and iframes. On video and audio it is a progressive enhancement: supporting browsers defer media loading and, for video, poster loading; unsupported browsers ignore the attribute.
 
 ### DON'Ts
 *   **DON'T lazy-load the LCP image**: Never apply `loading="lazy"` to above-the-fold images. This purposefully delays the fetch until layout calculation is complete, severely degrading LCP.
@@ -318,9 +318,9 @@ Video payloads are among the heaviest assets. Optimization focuses on reducing b
 *   **DO specify explicit `width` and `height` attributes**: Setting native dimensions reserves layout space and prevents CLS.
 *   **DO provide a `poster` image fallback**: Display a lightweight image placeholder while the video buffers to improve perceived performance.
 *   **DO use `<link rel="preload" as="image" fetchpriority="high">` for poster images where the video is the LCP element**: This ensures the image is downloaded as quickly as possible.
-*   **DO use `preload="none"` for non-critical videos**: Delay bandwidth consumption for below-the-fold or non-autoplaying videos.
+*   **DO use `preload="none"` for non-critical videos**: It hints that the browser should not preload video data, but does not defer the poster image.
 *   **DO serve modern formats via source negotiation**: Offer WebM (better compression ratio) alongside standard MP4 formats.
-*   **DO use `loading="lazy"` for offscreen videos**: Lazy-loading videos allow `poster` and `preload` downloads to be deferred until the video is in or near the viewport.
+*   **DO use `loading="lazy"` for offscreen videos as a progressive enhancement**: Supporting browsers defer video and poster loading until the element approaches the viewport; unsupported browsers ignore the attribute.
 
 ### DON'Ts
 *   **DON'T auto-play video files blindly**: Rely on user intent or use progressive enhancement streams.
@@ -344,6 +344,8 @@ Video payloads are among the heaviest assets. Optimization focuses on reducing b
   <track src="/video-caps.vtt" kind="captions" srclang="en" label="English">
 </video>
 ```
+
+If poster deferral must work across browsers, keep the URL in `data-poster` and set `poster` from an `IntersectionObserver` as the video approaches the viewport. Only when media URLs must also be strictly deferred, keep source URLs in `data-src`, restore them in the same observer, and call `video.load()`.
 
 ## JavaScript Code-Splitting
 

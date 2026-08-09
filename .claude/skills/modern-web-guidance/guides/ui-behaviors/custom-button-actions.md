@@ -133,18 +133,19 @@ const commandRegistry = {
   '--reset': (target) => target.classList.remove('is-spun', 'is-grown'),
 };
 
-// 2. If CommandEvent doesn't exist, we assume no native support and provide the fallback
-if (!globalThis.CommandEvent) {
-  globalThis.CommandEvent = class CommandEvent extends Event {
-    constructor(type, { source, command, ...options } = {}) {
-      super(type, options);
-      this.source = source;
-      this.command = command;
+// 2. Provide the manual fallback only when Invoker Commands are unsupported
+if (!('commandForElement' in HTMLButtonElement.prototype)) {
+  if (!globalThis.CommandEvent) {
+    globalThis.CommandEvent = class CommandEvent extends Event {
+      constructor(type, { source, command, ...options } = {}) {
+        super(type, options);
+        this.source = source;
+        this.command = command;
+      }
     }
   }
-}
 
-// 3. The fallback: Dispatch events manually if native support is missing
+  // 3. The fallback: Dispatch events manually if native support is missing
   document.addEventListener('click', (event) => {
     const button = event.composedPath().find((el) => el.matches?.("button[commandfor]"));
     if (!button) return;
@@ -159,6 +160,7 @@ if (!globalThis.CommandEvent) {
       }));
     }
   });
+}
 
 // 4. **Mandatory:** Register the unified listener directly on the target element
 document.getElementById('action-target').addEventListener('command', (event) => {

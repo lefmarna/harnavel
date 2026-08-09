@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Absorb from Apps'
+  short_description: 'Move app-grown shared changes upstream into the template'
+
+policy:
+  allow_implicit_invocation: false

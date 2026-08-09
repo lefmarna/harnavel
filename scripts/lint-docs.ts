@@ -224,7 +224,10 @@ async function checkSkillFrontmatter(): Promise<LintError[]> {
 }
 
 const REPO_OWNED_SKILLS: readonly string[] = [
+  'absorb-from-apps',
   'adr-compact',
+  'merge-template',
+  'project-docs-init',
   'update-laravel-packages',
 ]
 

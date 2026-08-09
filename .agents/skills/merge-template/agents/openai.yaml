@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Merge Template'
+  short_description: 'Resolve template pull conflicts by ownership'
+
+policy:
+  allow_implicit_invocation: false

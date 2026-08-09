@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Project Docs Initialization'
+  short_description: 'Initialize docs for a new template-derived project'
+
+policy:
+  allow_implicit_invocation: false

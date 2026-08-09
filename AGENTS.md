@@ -2,7 +2,6 @@
 
 A Laravel + Inertia (React) starter template. Docker is used locally; production runs on XServer shared hosting.
 
-- Do not preserve backward compatibility. Delete obsolete paths instead of adding compatibility layers, fallbacks, or deprecated aliases.
 - Run PHP, Composer, and Artisan inside the Docker `app` container; run Node.js, pnpm, and mise on the host.
 - XServer has no queue workers, SSR, or long-running processes. Run jobs synchronously and keep solutions viable on both Docker and XServer.
 - Write the test first for any behavioral change, and give every new page a Pest Feature spec plus a Playwright smoke E2E test. Add `mutates()` to new or changed deterministic application-logic classes with meaningful observable branches, not to thin wiring or external-I/O orchestration — the mutation gate only checks classes that opt in.

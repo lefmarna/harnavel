@@ -17,8 +17,11 @@
     "resources/js/components/ui/*",
     "resources/views/mail/*",
     "/boost.json",
-    // Agent/workflow files (XML tags must start at line beginning)
-    "*.md",
+    // Vendored: Laravel Boost and cc-sdd regenerate these wholesale.
+    ".agents/skills/**/*.md",
+    ".claude/skills/**/*.md",
+    ".kiro/settings/**/*.md",
+    "docs/generated/**/*.md",
     // Lock files
     "pnpm-lock.yaml",
     "storage/app/private/",

@@ -12,7 +12,8 @@ docs.
 
 Delete proposed or temporary decisions that never acquired lasting consequences. When a current
 decision replaces an older one, merge the useful rationale and remove the history unless another
-record still depends on it. Template ADR numbers are never reused.
+record still depends on it. Renumber the remaining records after removal so the sequence stays
+contiguous, updating every reference in the same change.
 
 During a template merge, preserve the application's flat ADR files and the app-owned index below.
 

@@ -2,8 +2,7 @@
 
 The ubiquitous language of this project: what each domain term means, in the domain's
 own words. Read it before planning, specifying, designing, or refactoring an area; update
-it in the organize step when work changes domain language
-([`TADR-0001`](docs/adr/template/0001-development-workflow.md)).
+it when work changes domain language.
 
 Rules:
 

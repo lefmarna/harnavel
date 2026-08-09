@@ -1,27 +1,24 @@
 # Testing as specification
 
-`AGENTS.md` states the obligations and TADR-0001 records the decision. This file holds only what
-neither of them carries and no gate can catch.
+Tests are the canonical behavioral specification; [TADR-0001](adr/template/0001-tests-as-specification.md)
+records why the project does not maintain a separate behavioral design document.
 
 ## Conventions
 
+- Pest Feature specs own server and Inertia contracts; Playwright covers page smoke and critical
+  user flows.
 - Test titles are Japanese in a `describe` / `it` hierarchy, with one behavior per `it`. No gate
   rejects an English title.
 
 ## Mutation testing
 
-- A survivor first indicates a missing assertion or a class that should be simplified. Before
-  deleting its branch, identify a supported input or caller that reaches it: add the missing test
-  when one exists, and simplify only when no supported behavior can observe it.
-- When a static-analysis-only cast leaves an equivalent survivor or a scanner mutant becomes
-  non-terminating, simplify the implementation first. If that is not possible, explicitly review
-  the class's `mutates()` eligibility instead of adding an ignore, weakening a test, or accepting
-  an unbounded mutation run.
-- Do not add mutation-ignore annotations or weaken tests to make the score pass, and treat removing
-  `mutates()` as a change that needs explicit review. All three shrink the gate instead of failing
-  it, so the score stays green while the coverage it reports becomes meaningless.
-- If a mutant blocks on row locks, shorten that spec's session lock wait so it fails within the
-  mutation budget.
+- Treat a survivor first as a missing assertion or simplification signal. Add a test when a
+  supported input reaches it; simplify when no supported behavior can.
+- Simplify static-analysis-only casts that leave equivalent survivors and scanner mutants that do
+  not terminate. If that is not possible, explicitly review the class's `mutates()` eligibility.
+- Do not add mutation ignores, weaken tests, or accept unbounded runs to pass the gate. Removing
+  `mutates()` also needs explicit review because it silently shrinks the gate.
+- Bound row-locking mutants by shortening that spec's session lock wait.
 
 ## Interactive browser verification
 

@@ -1,6 +1,6 @@
 ---
 name: adr-compact
-description: Compact ADRs down to the decisions that are currently in force. Remove or merge superseded decisions, temporary rollout notes, implementation tasks, and duplicate explanations, and renumber App ADRs when needed. In derived repositories, compact only App ADRs; copied Template ADRs are read-only context and never compaction targets.
+description: Compact ADRs down to the decisions that are currently in force. Remove or merge superseded decisions, temporary rollout notes, implementation tasks, and duplicate explanations, and renumber in-scope ADRs when needed. In derived repositories, compact only App ADRs; copied Template ADRs are read-only context and never compaction targets.
 disable-model-invocation: true
 argument-hint: "[ADR paths or area]"
 ---

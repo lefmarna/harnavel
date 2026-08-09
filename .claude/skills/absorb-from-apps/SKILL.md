@@ -9,11 +9,11 @@ argument-hint: "[REMOTE=template] [APPS=<app1> <app2> ...]"
 
 This is the upstream counterpart to `/merge-template` (template -> app downstream). It pulls app-grown changes that are not app-specific back into the template, chooses the best shared version, aligns the shared surface, and keeps future `git pull template main` runs judgment-free except for calibration-line conflicts.
 
-The decision model is [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) (shared-surface convergence). This command is the operational procedure and must be run in the template repository.
+The decision model is [`TADR-0003`](../../../docs/adr/template/0003-template-ownership.md) (template and application ownership). This command is the operational procedure and must be run in the template repository.
 
 ## Principles
 
-Use [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md) for the classification model, the tier rules below to classify a concrete path, and [`merge-template`](../merge-template/SKILL.md) for ownership details.
+Use [`TADR-0003`](../../../docs/adr/template/0003-template-ownership.md) for the classification model, the tier rules below to classify a concrete path, and [`merge-template`](../merge-template/SKILL.md) for ownership details.
 
 - **Convergence uses three tiers** (TADR-0003):
   - **T1 Shared**: files with no app-specific content. Aim for byte identity.
@@ -123,5 +123,5 @@ git -C "$d" grep -nI -E '<<<<<<<|>>>>>>>' -- . ':(exclude)vendor/**' ':(exclude)
 ## Related
 
 - Downstream (template -> app): [`merge-template`](../merge-template/SKILL.md)
-- Decision model: [`TADR-0003`](../../../docs/adr/template/0003-shared-surface-convergence.md)
+- Decision model: [`TADR-0003`](../../../docs/adr/template/0003-template-ownership.md)
 - Testing and mutation policy: `docs/testing-as-spec.md`

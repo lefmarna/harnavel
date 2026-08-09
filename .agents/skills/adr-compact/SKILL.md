@@ -1,6 +1,6 @@
 ---
 name: adr-compact
-description: Compact ADRs down to the decisions that are currently in force. Remove or merge superseded decisions, temporary rollout notes, implementation tasks, and duplicate explanations, and renumber App ADRs when needed. In derived repositories, compact only App ADRs; copied Template ADRs are read-only context and never compaction targets.
+description: Compact ADRs down to the decisions that are currently in force. Remove or merge superseded decisions, temporary rollout notes, implementation tasks, and duplicate explanations, and renumber in-scope ADRs when needed. In derived repositories, compact only App ADRs; copied Template ADRs are read-only context and never compaction targets.
 ---
 
 # ADR Compact
@@ -18,14 +18,15 @@ Return ADRs to only the durable decisions that prevent future readers from havin
     direct that work to the template source repository.
   - Treat Template ADRs (`docs/adr/template/NNNN-*.md`) as eligible only when the current repository
     is explicitly the template source (its `origin` identifies the template repository, or the user
-    explicitly confirms it). Template numbers are never reused.
+    explicitly confirms it). Renumber them after removal so the sequence stays contiguous, updating
+    every reference in the same change.
   - In any other repository, default to App ADRs only.
 - Read the in-scope target ADRs and the docs, tests, code, and ADRs they reference. In a derived
   app, copied Template ADRs may be read only to understand an App ADR's dependency, detect
   duplication, or validate links. Do not copy their content into an App ADR or propose changes to
   them from the derived repository.
-- If deleting or merging App ADRs creates gaps, numbers may be compacted as long as references are
-  updated at the same time.
+- If deleting or merging in-scope ADRs creates gaps, numbers may be compacted as long as references
+  are updated at the same time.
 
 ## Compaction Criteria
 
@@ -71,8 +72,7 @@ Remove:
      `rg -n "ADR[- ]?NNNN|TADR[- ]?NNNN|deleted-file-slug|old heading" .`.
    - In a derived app, exclude copied Template ADRs from every search:
      `rg -n "ADR[- ]?NNNN|deleted-file-slug|old heading" --glob '!docs/adr/template/**' .`.
-   - If compacting App ADR numbers, update filenames and all references together.
-   - Do not compact Template ADR numbers.
+   - If compacting ADR numbers, update filenames and all references together.
 5. Verify.
    - Run `pnpm lint:docs` in every repository so App ADR renumbering cannot leave broken references.
      In a derived app, do not fix a failure originating in `docs/adr/template/**`; record it as an

@@ -13,6 +13,10 @@ neither of them carries and no gate can catch.
 - A survivor first indicates a missing assertion or a class that should be simplified. Before
   deleting its branch, identify a supported input or caller that reaches it: add the missing test
   when one exists, and simplify only when no supported behavior can observe it.
+- When a static-analysis-only cast leaves an equivalent survivor or a scanner mutant becomes
+  non-terminating, simplify the implementation first. If that is not possible, explicitly review
+  the class's `mutates()` eligibility instead of adding an ignore, weakening a test, or accepting
+  an unbounded mutation run.
 - Do not add mutation-ignore annotations or weaken tests to make the score pass, and treat removing
   `mutates()` as a change that needs explicit review. All three shrink the gate instead of failing
   it, so the score stays green while the coverage it reports becomes meaningless.

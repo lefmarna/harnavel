@@ -1,11 +1,22 @@
-# Project Context
+# Project context
 
-A Laravel + Inertia (React) starter template. Docker is used locally; production runs on XServer shared hosting.
+A Laravel + Inertia React starter template.
 
-- Run PHP, Composer, and Artisan inside the Docker `app` container; run Node.js, pnpm, and mise on the host.
-- XServer has no queue workers, SSR, or long-running processes. Run jobs synchronously and keep solutions viable on both Docker and XServer.
-- Write the test first for any behavioral change, and give every new page a Pest Feature spec plus a Playwright smoke E2E test. Add `mutates()` to new or changed deterministic application-logic classes with meaningful observable branches, not to thin wiring or external-I/O orchestration — the mutation gate only checks classes that opt in.
-- Run DB-backed Pest through `mise run test` or `mise run mutate`, and only one Playwright process at a time; concurrent runs are rejected by design.
-- Gates: `mise run verify:backend`, then `mise run verify:backend:full` before pushing (adds mutation and E2E); `pnpm format:check`, `lint:check`, `types:check`, `test:unit`; `pnpm lint:docs`.
-- `README.md` is Japanese and `docs/` is English; hand-edit `docs/generated/` only per ADR, never Boost-generated skills.
-- Tests are the behavioral specification (`docs/testing-as-spec.md`) and Laravel ecosystem guidelines live in `docs/generated/boost.md`. Read `CONTEXT.md` and `docs/adr/` before changing an area.
+## Environment constraints
+
+- Local development uses Docker; production runs on XServer shared hosting.
+- Run PHP, Composer, and Artisan in the Docker `app` container; run Node.js, pnpm, and mise on the host.
+- Production cannot depend on queue workers, SSR, or other long-running processes.
+
+## Project rules
+
+- Write a failing test before implementing a behavioral change. Tests are the canonical behavioral specification; see `docs/testing-as-spec.md`.
+- Comments explain only non-obvious rationale, constraints, or safety; they do not restate the code. Type annotations and tool-required directives are exempt.
+- `README.md` is Japanese and `docs/` is English. Do not hand-edit `docs/generated/` or Boost-managed skills outside their owning refresh workflows.
+- Validation entry points: targeted backend `mise run test`; mutation `mise run mutate`; full backend, mutation, and Chromium E2E `mise run verify:backend:full`; frontend and docs `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:unit`, and `pnpm lint:docs`.
+- Run only one local Playwright process at a time because local runs share `app_e2e`.
+
+## References
+
+- `CONTEXT.md` defines domain terms and `docs/adr/` records architectural decisions. Consult only entries relevant to the task.
+- Laravel-specific guidance is in `docs/generated/boost.md`.

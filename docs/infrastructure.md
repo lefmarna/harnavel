@@ -1,22 +1,21 @@
 # External infrastructure state
 
-This file records production facts that are not represented by repository configuration.
+This file records production facts that are not represented by repository configuration and the
+constraints they impose.
 
 ## XServer toolchain
 
-- PHP CLI is `/usr/bin/php8.5`.
-- Composer is manually uploaded to every deployment environment as
-  `~/opt/bin/composer-<exact-version>`.
-
-Upload a new Composer PHAR to Develop and Production before merging matching Dockerfile and
-delivery-workflow version changes. The repository can verify version agreement but cannot provision
-or inspect the remote file.
+Composer PHARs are provisioned manually, outside the repository. A matching PHAR must exist in
+Develop and Production before repository configuration selects that version. The delivery workflow
+verifies the remote PHAR and its version but does not provision it.
 
 ## OPcache
 
-All XServer applications currently report web SAPI `cgi-fcgi`, PHP 8.5.5,
-`opcache.validate_timestamps=1`, `opcache.revalidate_freq=2`, and no preload. Deployment therefore
-waits two seconds before leaving maintenance mode.
+Last measured: July 2026.
+
+Two production domains and one development subdomain across two applications reported web SAPI
+`cgi-fcgi`, PHP 8.5.5, `opcache.validate_timestamps=1`, `opcache.revalidate_freq=2`, and no preload.
+This is why delivery keeps maintenance active through an OPcache revalidation window.
 
 Recheck this assumption after changing the hosting provider, PHP version, or server-side `.user.ini`,
 or when a deployment serves stale behavior.

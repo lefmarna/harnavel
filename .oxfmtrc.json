@@ -20,7 +20,8 @@
     // Vendored: Laravel Boost and cc-sdd regenerate these wholesale.
     ".agents/skills/**/*.md",
     ".claude/skills/**/*.md",
-    ".kiro/settings/**/*.md",
+    // Agent-facing: table padding consumes context without aiding review.
+    ".kiro/**/*.md",
     "docs/generated/**/*.md",
     // Lock files
     "pnpm-lock.yaml",
@@ -31,6 +32,13 @@
     "storage/logs/"
   ],
   "overrides": [
+    {
+      // A fragment that happens to parse as JS is silently rewritten to mean something else.
+      "files": ["*.md"],
+      "options": {
+        "embeddedLanguageFormatting": "off"
+      }
+    },
     {
       "files": ["compose.yaml"],
       "options": {

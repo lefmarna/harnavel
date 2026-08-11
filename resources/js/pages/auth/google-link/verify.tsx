@@ -1,19 +1,20 @@
-import { Link, router } from '@inertiajs/react'
-import { Check, Link as LinkIcon, XCircle } from 'lucide-react'
-import TextLink from '@/components/text-link'
-import { Button } from '@/components/ui/button'
-import AuthLayout from '@/layouts/auth-layout'
-import { login } from '@/routes'
-import { google } from '@/routes/auth'
+import { Link, router } from "@inertiajs/react";
+import { Check, Link as LinkIcon, XCircle } from "lucide-react";
+
+import TextLink from "@/components/text-link";
+import { Button } from "@/components/ui/button";
+import AuthLayout from "@/layouts/auth-layout";
+import { login } from "@/routes";
+import { google } from "@/routes/auth";
 
 type Props = {
-  status: 'confirm' | 'success' | 'error'
-  actionUrl?: string
-  email?: string
-}
+  status: "confirm" | "success" | "error";
+  actionUrl?: string;
+  email?: string;
+};
 
 export default function GoogleLinkVerify({ status, actionUrl, email }: Props) {
-  if (status === 'confirm') {
+  if (status === "confirm") {
     return (
       <AuthLayout>
         <div className="space-y-6 text-center">
@@ -22,7 +23,7 @@ export default function GoogleLinkVerify({ status, actionUrl, email }: Props) {
           </div>
 
           <p className="text-sm leading-6 text-muted-foreground">
-            {email ?? 'このアカウント'}{' '}
+            {email ?? "このアカウント"}{" "}
             にGoogleログインを連携します。問題なければ、下のボタンを押して完了してください。
           </p>
 
@@ -31,7 +32,7 @@ export default function GoogleLinkVerify({ status, actionUrl, email }: Props) {
             className="w-full"
             onClick={() => {
               if (actionUrl) {
-                router.post(actionUrl)
+                router.post(actionUrl);
               }
             }}
           >
@@ -39,10 +40,10 @@ export default function GoogleLinkVerify({ status, actionUrl, email }: Props) {
           </Button>
         </div>
       </AuthLayout>
-    )
+    );
   }
 
-  if (status === 'success') {
+  if (status === "success") {
     return (
       <AuthLayout>
         <div className="space-y-6 text-center">
@@ -58,14 +59,14 @@ export default function GoogleLinkVerify({ status, actionUrl, email }: Props) {
             type="button"
             className="w-full"
             onClick={() => {
-              window.location.href = google.url()
+              window.location.href = google.url();
             }}
           >
             Googleでログインする
           </Button>
         </div>
       </AuthLayout>
-    )
+    );
   }
 
   return (
@@ -86,5 +87,5 @@ export default function GoogleLinkVerify({ status, actionUrl, email }: Props) {
         <TextLink href={google.url()}>Googleログインをやり直す</TextLink>
       </div>
     </AuthLayout>
-  )
+  );
 }

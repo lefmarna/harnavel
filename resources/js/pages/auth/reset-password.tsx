@@ -1,16 +1,17 @@
-import { Form } from '@inertiajs/react'
-import InputError from '@/components/input-error'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Spinner } from '@/components/ui/spinner'
-import AuthLayout from '@/layouts/auth-layout'
-import { update } from '@/routes/password'
+import { Form } from "@inertiajs/react";
+
+import InputError from "@/components/input-error";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import AuthLayout from "@/layouts/auth-layout";
+import { update } from "@/routes/password";
 
 type Props = {
-  token: string
-  email: string
-}
+  token: string;
+  email: string;
+};
 
 export default function ResetPassword({ token, email }: Props) {
   return (
@@ -18,7 +19,7 @@ export default function ResetPassword({ token, email }: Props) {
       <Form
         {...update.form()}
         transform={(data) => ({ ...data, token, email })}
-        resetOnSuccess={['password', 'password_confirmation']}
+        resetOnSuccess={["password", "password_confirmation"]}
       >
         {({ processing, errors }) => (
           <div className="grid gap-6">
@@ -60,10 +61,7 @@ export default function ResetPassword({ token, email }: Props) {
                 className="mt-1 block w-full"
                 placeholder="もう一度入力してください"
               />
-              <InputError
-                message={errors.password_confirmation}
-                className="mt-2"
-              />
+              <InputError message={errors.password_confirmation} className="mt-2" />
             </div>
 
             <Button
@@ -79,5 +77,5 @@ export default function ResetPassword({ token, email }: Props) {
         )}
       </Form>
     </AuthLayout>
-  )
+  );
 }

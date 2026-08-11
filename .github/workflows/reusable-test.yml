@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       upload-artifacts:
-        description: 'Upload build artifacts after tests (required for deployment)'
+        description: "Upload build artifacts after tests (required for deployment)"
         type: boolean
         default: false
 

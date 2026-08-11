@@ -176,6 +176,10 @@ For scripts and lifecycle hooks, classify every key and every command as adopted
 equivalent, or rejected with a constraint. Do not leave a partially merged scripts object with
 unexplained omissions. When the template already has an equivalent canonical command used by mise,
 CI, or docs, preserve that command and add a compatible upstream alias when it improves convergence.
+Treat the frontend quality harness as template-owned: Oxfmt owns formatting, type-aware Oxlint is
+the only linter, TypeScript owns compilation checks, and tests own behavior. Do not reintroduce
+Prettier or ESLint from a generated reference. Change this ownership only with current tool-behavior
+evidence and corresponding harness tests.
 Adopt new quality checks into aggregate test scripts when they match repository gates. Reject
 setup, development, SSR, queue, or package-manager commands that violate the host/container or
 XServer boundaries, and record the exact conflict.

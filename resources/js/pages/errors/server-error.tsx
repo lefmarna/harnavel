@@ -1,14 +1,11 @@
-import { Head, Link } from '@inertiajs/react'
-import { ServerCrash } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { home } from '@/routes'
+import { Head, Link } from "@inertiajs/react";
+import { ServerCrash } from "lucide-react";
 
-export default function ServerError({
-  requestId,
-}: {
-  requestId: string | null
-}) {
-  const displayRequestId = requestId ?? 'unavailable'
+import { Button } from "@/components/ui/button";
+import { home } from "@/routes";
+
+export default function ServerError({ requestId }: { requestId: string | null }) {
+  const displayRequestId = requestId ?? "unavailable";
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 text-foreground md:p-10">
@@ -38,5 +35,5 @@ export default function ServerError({
         </Button>
       </div>
     </div>
-  )
+  );
 }

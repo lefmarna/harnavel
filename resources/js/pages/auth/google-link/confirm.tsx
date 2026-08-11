@@ -1,5 +1,6 @@
-import { Mail } from 'lucide-react'
-import AuthLayout from '@/layouts/auth-layout'
+import { Mail } from "lucide-react";
+
+import AuthLayout from "@/layouts/auth-layout";
 
 export default function GoogleLinkConfirm() {
   return (
@@ -17,5 +18,5 @@ export default function GoogleLinkConfirm() {
         </div>
       </div>
     </AuthLayout>
-  )
+  );
 }

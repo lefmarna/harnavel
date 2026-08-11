@@ -53,14 +53,14 @@ mise run down           # コンテナ停止 + 削除
 mise run app            # app コンテナへ入る
 mise run verify:backend # Pint -> Larastan -> Pest
 pnpm format:check       # Oxfmt チェックのみ
-pnpm lint:check         # Oxlint + 残存 ESLint ルールのチェック
-pnpm fix                # Oxlint + 残存 ESLint + Oxfmt 自動修正
+pnpm lint:check         # type-aware Oxlint（変更なし）
+pnpm fix                # Oxlint の safe fix + Oxfmt
 pnpm types:check        # TypeScript 型チェック
 pnpm lint:docs          # docs/ + README/AGENTS/CLAUDE のリンク検証
 pnpm test:e2e --project=chromium
 ```
 
-`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。ローカル hook は pre-commit で staged files に `Oxlint --fix`、残存 ESLint ルールの fix、Oxfmt、Pint を順に適用してから、lint/typecheck/docs と Docker 前提の Larastan を実行します。テスト実行は CI に寄せています。
+`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。ローカル hook は pre-commit で staged files に Oxlint の safe fix、Oxfmt、Pint を順に適用してから、lint/typecheck/unit test/docs と Docker 前提の Larastan を実行します。CI は同じ品質ゲートをリポジトリ全体へ適用します。
 
 ## ドキュメントの見方
 
@@ -68,6 +68,7 @@ pnpm test:e2e --project=chromium
 - [AGENTS.md](AGENTS.md): AI エージェント向けの起点（`CLAUDE.md` / `GEMINI.md` はここへのポインタ）
 - [CONTEXT.md](CONTEXT.md): ドメイン用語集（展開先プロジェクトで育てる）
 - [docs/testing-as-spec.md](docs/testing-as-spec.md): テストの責務分担とミューテーション方針
+- [TADR-0009](docs/adr/template/0009-frontend-quality-harness.md): フロントエンド品質ゲートの責務分担
 - [docs/infrastructure.md](docs/infrastructure.md): XServerの運用前提（Composer、OPcache）
 - [docs/adr/README.md](docs/adr/README.md): 設計判断の記録（ADR / Template ADR）
 

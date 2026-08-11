@@ -1,27 +1,25 @@
-import { Form } from '@inertiajs/react'
-import { REGEXP_ONLY_DIGITS } from 'input-otp'
-import { Check, Copy, ScanLine } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import InputError from '@/components/input-error'
-import { Button } from '@/components/ui/button'
+import { Form } from "@inertiajs/react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { Check, Copy, ScanLine } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import InputError from "@/components/input-error";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from '@/components/ui/input-otp'
-import { useAppearance } from '@/hooks/use-appearance'
-import { useClipboard } from '@/hooks/use-clipboard'
-import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth'
-import { confirm } from '@/routes/two-factor'
-import AlertError from './alert-error'
-import { Spinner } from './ui/spinner'
+} from "@/components/ui/dialog";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { useAppearance } from "@/hooks/use-appearance";
+import { useClipboard } from "@/hooks/use-clipboard";
+import { OTP_MAX_LENGTH } from "@/hooks/use-two-factor-auth";
+import { confirm } from "@/routes/two-factor";
+
+import AlertError from "./alert-error";
+import { Spinner } from "./ui/spinner";
 
 function GridScanIcon() {
   return (
@@ -29,24 +27,18 @@ function GridScanIcon() {
       <div className="relative overflow-hidden rounded-full border border-border bg-muted p-2.5">
         <div className="absolute inset-0 grid grid-cols-5 opacity-50">
           {Array.from({ length: 5 }, (_, i) => (
-            <div
-              key={`col-${i + 1}`}
-              className="border-r border-border last:border-r-0"
-            />
+            <div key={`col-${i + 1}`} className="border-r border-border last:border-r-0" />
           ))}
         </div>
         <div className="absolute inset-0 grid grid-rows-5 opacity-50">
           {Array.from({ length: 5 }, (_, i) => (
-            <div
-              key={`row-${i + 1}`}
-              className="border-b border-border last:border-b-0"
-            />
+            <div key={`row-${i + 1}`} className="border-b border-border last:border-b-0" />
           ))}
         </div>
         <ScanLine className="relative z-20 size-6 text-foreground" />
       </div>
     </div>
-  )
+  );
 }
 
 function TwoFactorSetupStep({
@@ -56,15 +48,15 @@ function TwoFactorSetupStep({
   onNextStep,
   errors,
 }: {
-  qrCodeSvg: string | null
-  manualSetupKey: string | null
-  buttonText: string
-  onNextStep: () => void
-  errors: string[]
+  qrCodeSvg: string | null;
+  manualSetupKey: string | null;
+  buttonText: string;
+  onNextStep: () => void;
+  errors: string[];
 }) {
-  const { resolvedAppearance } = useAppearance()
-  const [copiedText, copy] = useClipboard()
-  const IconComponent = copiedText === manualSetupKey ? Check : Copy
+  const { resolvedAppearance } = useAppearance();
+  const [copiedText, copy] = useClipboard();
+  const IconComponent = copiedText === manualSetupKey ? Check : Copy;
 
   return (
     <>
@@ -83,9 +75,7 @@ function TwoFactorSetupStep({
                     }}
                     style={{
                       filter:
-                        resolvedAppearance === 'dark'
-                          ? 'invert(1) brightness(1.5)'
-                          : undefined,
+                        resolvedAppearance === "dark" ? "invert(1) brightness(1.5)" : undefined,
                     }}
                   />
                 ) : (
@@ -103,9 +93,7 @@ function TwoFactorSetupStep({
 
           <div className="relative flex w-full items-center justify-center">
             <div className="absolute inset-0 top-1/2 h-px w-full bg-border" />
-            <span className="relative bg-card px-2 py-1">
-              または、手動でセットアップキーを入力
-            </span>
+            <span className="relative bg-card px-2 py-1">または、手動でセットアップキーを入力</span>
           </div>
 
           <div className="flex w-full space-x-2">
@@ -135,38 +123,33 @@ function TwoFactorSetupStep({
         </>
       )}
     </>
-  )
+  );
 }
 
 function TwoFactorVerificationStep({
   onClose,
   onBack,
 }: {
-  onClose: () => void
-  onBack: () => void
+  onClose: () => void;
+  onBack: () => void;
 }) {
-  const [code, setCode] = useState<string>('')
-  const pinInputContainerRef = useRef<HTMLDivElement>(null)
+  const [code, setCode] = useState<string>("");
+  const pinInputContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setTimeout(() => {
-      pinInputContainerRef.current?.querySelector('input')?.focus()
-    }, 0)
-  }, [])
+      pinInputContainerRef.current?.querySelector("input")?.focus();
+    }, 0);
+  }, []);
 
   return (
-    <Form
-      {...confirm.form()}
-      onSuccess={() => onClose()}
-      resetOnError
-      resetOnSuccess
-    >
+    <Form {...confirm.form()} onSuccess={() => onClose()} resetOnError resetOnSuccess>
       {({
         processing,
         errors,
       }: {
-        processing: boolean
-        errors?: { confirmTwoFactorAuthentication?: { code?: string } }
+        processing: boolean;
+        errors?: { confirmTwoFactorAuthentication?: { code?: string } };
       }) => (
         <>
           <div ref={pinInputContainerRef} className="relative w-full space-y-3">
@@ -185,9 +168,7 @@ function TwoFactorVerificationStep({
                   ))}
                 </InputOTPGroup>
               </InputOTP>
-              <InputError
-                message={errors?.confirmTwoFactorAuthentication?.code}
-              />
+              <InputError message={errors?.confirmTwoFactorAuthentication?.code} />
             </div>
 
             <div className="flex w-full space-x-5">
@@ -212,20 +193,20 @@ function TwoFactorVerificationStep({
         </>
       )}
     </Form>
-  )
+  );
 }
 
 type Props = {
-  isOpen: boolean
-  onClose: () => void
-  requiresConfirmation: boolean
-  twoFactorEnabled: boolean
-  qrCodeSvg: string | null
-  manualSetupKey: string | null
-  clearSetupData: () => void
-  fetchSetupData: () => Promise<void>
-  errors: string[]
-}
+  isOpen: boolean;
+  onClose: () => void;
+  requiresConfirmation: boolean;
+  twoFactorEnabled: boolean;
+  qrCodeSvg: string | null;
+  manualSetupKey: string | null;
+  clearSetupData: () => void;
+  fetchSetupData: () => Promise<void>;
+  errors: string[];
+};
 
 export default function TwoFactorSetupModal({
   isOpen,
@@ -238,69 +219,68 @@ export default function TwoFactorSetupModal({
   fetchSetupData,
   errors,
 }: Props) {
-  const [showVerificationStep, setShowVerificationStep] =
-    useState<boolean>(false)
+  const [showVerificationStep, setShowVerificationStep] = useState<boolean>(false);
 
   const modalConfig = useMemo<{
-    title: string
-    description: string
-    buttonText: string
+    title: string;
+    description: string;
+    buttonText: string;
   }>(() => {
     if (twoFactorEnabled) {
       return {
-        title: '二段階認証を有効化しました',
+        title: "二段階認証を有効化しました",
         description:
-          '二段階認証が有効になりました。QRコードを読み取るか、セットアップキーを認証アプリへ入力してください。',
-        buttonText: '閉じる',
-      }
+          "二段階認証が有効になりました。QRコードを読み取るか、セットアップキーを認証アプリへ入力してください。",
+        buttonText: "閉じる",
+      };
     }
 
     if (showVerificationStep) {
       return {
-        title: '認証コードを確認',
+        title: "認証コードを確認",
         description:
-          '設定を完了するには、認証アプリに表示されている6桁のコードを入力してください。',
-        buttonText: '確認する',
-      }
+          "設定を完了するには、認証アプリに表示されている6桁のコードを入力してください。",
+        buttonText: "確認する",
+      };
     }
 
     return {
-      title: '二段階認証を設定',
+      title: "二段階認証を設定",
       description:
-        '認証アプリでこのQRコードを読み取り、必要に応じて認証コードを入力して設定を完了してください。',
-      buttonText: requiresConfirmation ? '次へ' : '設定を完了する',
-    }
-  }, [requiresConfirmation, showVerificationStep, twoFactorEnabled])
+        "認証アプリでこのQRコードを読み取り、必要に応じて認証コードを入力して設定を完了してください。",
+      buttonText: requiresConfirmation ? "次へ" : "設定を完了する",
+    };
+  }, [requiresConfirmation, showVerificationStep, twoFactorEnabled]);
 
   const handleModalNextStep = useCallback(() => {
     if (requiresConfirmation) {
-      setShowVerificationStep(true)
+      setShowVerificationStep(true);
 
-      return
+      return;
     }
 
-    clearSetupData()
-    onClose()
-  }, [requiresConfirmation, clearSetupData, onClose])
+    clearSetupData();
+    onClose();
+  }, [requiresConfirmation, clearSetupData, onClose]);
 
   const resetModalState = useCallback(() => {
-    setShowVerificationStep(false)
+    setShowVerificationStep(false);
 
     if (twoFactorEnabled) {
-      clearSetupData()
+      clearSetupData();
     }
-  }, [twoFactorEnabled, clearSetupData])
+  }, [twoFactorEnabled, clearSetupData]);
 
   useEffect(() => {
     if (isOpen && !qrCodeSvg) {
-      fetchSetupData()
+      void fetchSetupData();
     }
-  }, [isOpen, qrCodeSvg, fetchSetupData])
+  }, [isOpen, qrCodeSvg, fetchSetupData]);
 
   const handleClose = useCallback(() => {
-    resetModalState()
-    onClose()
-  }, [onClose, resetModalState])
+    resetModalState();
+    onClose();
+  }, [onClose, resetModalState]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -308,9 +288,7 @@ export default function TwoFactorSetupModal({
         <DialogHeader className="flex items-center justify-center">
           <GridScanIcon />
           <DialogTitle>{modalConfig.title}</DialogTitle>
-          <DialogDescription className="text-center">
-            {modalConfig.description}
-          </DialogDescription>
+          <DialogDescription className="text-center">{modalConfig.description}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col items-center space-y-5">
@@ -331,5 +309,5 @@ export default function TwoFactorSetupModal({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

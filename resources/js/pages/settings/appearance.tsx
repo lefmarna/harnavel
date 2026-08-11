@@ -1,16 +1,16 @@
-import AppearanceTabs from '@/components/appearance-tabs'
-import Heading from '@/components/heading'
-import AppLayout from '@/layouts/app-layout'
-import SettingsLayout from '@/layouts/settings/layout'
-import { edit as editAppearance } from '@/routes/appearance'
-import type { BreadcrumbItem } from '@/types'
+import AppearanceTabs from "@/components/appearance-tabs";
+import Heading from "@/components/heading";
+import AppLayout from "@/layouts/app-layout";
+import SettingsLayout from "@/layouts/settings/layout";
+import { edit as editAppearance } from "@/routes/appearance";
+import type { BreadcrumbItem } from "@/types";
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: '表示設定',
+    title: "表示設定",
     href: editAppearance().url,
   },
-]
+];
 
 export default function Appearance() {
   return (
@@ -28,5 +28,5 @@ export default function Appearance() {
         </div>
       </SettingsLayout>
     </AppLayout>
-  )
+  );
 }

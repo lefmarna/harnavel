@@ -1,13 +1,10 @@
-import { Link, usePage } from '@inertiajs/react'
-import { dashboard, login, register } from '@/routes'
-import type { SharedData } from '@/types'
+import { Link, usePage } from "@inertiajs/react";
 
-export default function Welcome({
-  canRegister = true,
-}: {
-  canRegister?: boolean
-}) {
-  const { auth } = usePage<SharedData>().props
+import { dashboard, login, register } from "@/routes";
+import type { SharedData } from "@/types";
+
+export default function Welcome({ canRegister = true }: { canRegister?: boolean }) {
+  const { auth } = usePage<SharedData>().props;
 
   return (
     <>
@@ -133,10 +130,7 @@ export default function Welcome({
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
-                  d="M17.2036 -3H0V102.197H49.5189V86.7187H17.2036V-3Z"
-                  fill="currentColor"
-                />
+                <path d="M17.2036 -3H0V102.197H49.5189V86.7187H17.2036V-3Z" fill="currentColor" />
                 <path
                   d="M110.256 41.6337C108.061 38.1275 104.945 35.3731 100.905 33.3681C96.8667 31.3647 92.8016 30.3618 88.7131 30.3618C83.4247 30.3618 78.5885 31.3389 74.201 33.2923C69.8111 35.2456 66.0474 37.928 62.9059 41.3333C59.7643 44.7401 57.3198 48.6726 55.5754 53.1293C53.8287 57.589 52.9572 62.274 52.9572 67.1813C52.9572 72.1925 53.8287 76.8995 55.5754 81.3069C57.3191 85.7173 59.7636 89.6241 62.9059 93.0293C66.0474 96.4361 69.8119 99.1155 74.201 101.069C78.5885 103.022 83.4247 103.999 88.7131 103.999C92.8016 103.999 96.8667 102.997 100.905 100.994C104.945 98.9911 108.061 96.2359 110.256 92.7282V102.195H126.563V32.1642H110.256V41.6337ZM108.76 75.7472C107.762 78.4531 106.366 80.8078 104.572 82.8112C102.776 84.8161 100.606 86.4183 98.0637 87.6206C95.5202 88.823 92.7004 89.4238 89.6103 89.4238C86.5178 89.4238 83.7252 88.823 81.2324 87.6206C78.7388 86.4183 76.5949 84.8161 74.7998 82.8112C73.004 80.8078 71.6319 78.4531 70.6856 75.7472C69.7356 73.0421 69.2644 70.1868 69.2644 67.1821C69.2644 64.1758 69.7356 61.3205 70.6856 58.6154C71.6319 55.9102 73.004 53.5571 74.7998 51.5522C76.5949 49.5495 78.738 47.9451 81.2324 46.7427C83.7252 45.5404 86.5178 44.9396 89.6103 44.9396C92.7012 44.9396 95.5202 45.5404 98.0637 46.7427C100.606 47.9451 102.776 49.5487 104.572 51.5522C106.367 53.5571 107.762 55.9102 108.76 58.6154C109.756 61.3205 110.256 64.1758 110.256 67.1821C110.256 70.1868 109.756 73.0421 108.76 75.7472Z"
                   fill="currentColor"
@@ -204,7 +198,7 @@ export default function Welcome({
                   />
                 </g>
                 <g
-                  style={{ mixBlendMode: 'hard-light' }}
+                  style={{ mixBlendMode: "hard-light" }}
                   className="translate-y-0 opacity-100 transition-all delay-300 duration-750 starting:translate-y-4 starting:opacity-0"
                 >
                   <path
@@ -447,7 +441,7 @@ export default function Welcome({
                   />
                 </g>
                 <g
-                  style={{ mixBlendMode: 'hard-light' }}
+                  style={{ mixBlendMode: "hard-light" }}
                   className="translate-y-0 opacity-100 transition-all delay-300 duration-750 starting:translate-y-4 starting:opacity-0"
                 >
                   <path
@@ -462,7 +456,7 @@ export default function Welcome({
                   />
                 </g>
                 <g
-                  style={{ mixBlendMode: 'hard-light' }}
+                  style={{ mixBlendMode: "hard-light" }}
                   className="translate-y-0 opacity-100 transition-all delay-300 duration-750 starting:translate-y-4 starting:opacity-0"
                 >
                   <path
@@ -522,7 +516,7 @@ export default function Welcome({
                 </g>
                 <g
                   className="translate-y-0 opacity-100 transition-all delay-300 duration-750 starting:translate-y-4 starting:opacity-0"
-                  style={{ mixBlendMode: 'hard-light' }}
+                  style={{ mixBlendMode: "hard-light" }}
                 >
                   <path
                     d="M217.342 305.363L217.673 305.363C224.519 298.478 234.844 289.393 248.647 278.11C262.008 266.826 272.056 257.837 278.792 251.144C285.418 244.259 289.945 236.991 292.374 229.341C294.803 221.691 293.643 213.753 288.895 205.529C283.594 196.349 276.14 188.985 266.532 183.438C257.035 177.7 246.986 174.831 236.385 174.83C226.005 174.83 219.214 177.603 216.012 183.149C212.699 188.504 213.804 195.963 219.325 205.527L154.725 205.524C145.449 189.458 141.473 175.114 142.798 162.491C144.343 149.868 150.637 140.114 161.68 133.229C172.833 126.153 187.685 122.615 206.237 122.616C225.672 122.617 244.942 126.156 264.046 133.233C283.039 140.119 300.377 149.874 316.058 162.497C331.739 175.121 344.218 189.466 353.495 205.532C362.108 220.45 365.919 233.551 364.925 244.835C364.153 256.12 360.454 265.969 353.828 274.384C347.424 282.799 337.486 293.127 324.014 305.367L406.172 305.37L434.996 355.289L246.165 355.282L217.342 305.363Z"
@@ -757,7 +751,7 @@ export default function Welcome({
                 </g>
                 <g
                   className="translate-y-0 opacity-100 transition-all delay-300 duration-750 starting:translate-y-4 starting:opacity-0"
-                  style={{ mixBlendMode: 'hard-light' }}
+                  style={{ mixBlendMode: "hard-light" }}
                 >
                   <path
                     d="M246.544 254.79L246.875 254.79C253.722 247.905 264.046 238.82 277.849 227.537C291.21 216.253 301.259 207.264 307.995 200.57C314.62 193.685 319.147 186.418 321.577 178.768C324.006 171.117 322.846 163.18 318.097 154.956C312.796 145.775 305.342 138.412 295.735 132.865C286.238 127.127 276.189 124.258 265.588 124.257C255.208 124.257 248.416 127.03 245.214 132.576C241.902 137.931 243.006 145.39 248.528 154.953L183.928 154.951C174.652 138.885 170.676 124.541 172 111.918C173.546 99.2946 179.84 89.5408 190.882 82.6559C202.035 75.5798 216.887 72.0421 235.439 72.0428C254.874 72.0435 274.144 75.5825 293.248 82.6598C312.242 89.5457 329.579 99.3005 345.261 111.924C360.942 124.548 373.421 138.892 382.697 154.958C391.311 169.877 395.121 182.978 394.128 194.262C393.355 205.546 389.656 215.396 383.031 223.811C376.627 232.226 366.688 242.554 353.217 254.794L435.375 254.797L464.198 304.716L275.367 304.709L246.544 254.79Z"
@@ -772,7 +766,7 @@ export default function Welcome({
                 </g>
                 <g
                   className="translate-y-0 opacity-100 transition-all delay-300 duration-750 starting:translate-y-4 starting:opacity-0"
-                  style={{ mixBlendMode: 'hard-light' }}
+                  style={{ mixBlendMode: "hard-light" }}
                 >
                   <path
                     d="M67.41 125.402L44.5515 125.401L15.5625 75.1953L101.364 75.1985L233.886 304.712L170.942 304.71L67.41 125.402Z"
@@ -792,5 +786,5 @@ export default function Welcome({
         <div className="hidden h-14.5 lg:block"></div>
       </div>
     </>
-  )
+  );
 }

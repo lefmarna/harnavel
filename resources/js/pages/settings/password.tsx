@@ -1,29 +1,30 @@
-import { Transition } from '@headlessui/react'
-import { Form, usePage } from '@inertiajs/react'
-import { useRef } from 'react'
-import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController'
-import Heading from '@/components/heading'
-import InputError from '@/components/input-error'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import AppLayout from '@/layouts/app-layout'
-import SettingsLayout from '@/layouts/settings/layout'
-import { edit } from '@/routes/user-password'
-import type { BreadcrumbItem, SharedData } from '@/types'
+import { Transition } from "@headlessui/react";
+import { Form, usePage } from "@inertiajs/react";
+import { useRef } from "react";
+
+import PasswordController from "@/actions/App/Http/Controllers/Settings/PasswordController";
+import Heading from "@/components/heading";
+import InputError from "@/components/input-error";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import AppLayout from "@/layouts/app-layout";
+import SettingsLayout from "@/layouts/settings/layout";
+import { edit } from "@/routes/user-password";
+import type { BreadcrumbItem, SharedData } from "@/types";
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'パスワード設定',
+    title: "パスワード設定",
     href: edit().url,
   },
-]
+];
 
 export default function Password() {
-  const { auth } = usePage<SharedData>().props
-  const hasPassword = auth.hasPassword
-  const passwordInput = useRef<HTMLInputElement>(null)
-  const currentPasswordInput = useRef<HTMLInputElement>(null)
+  const { auth } = usePage<SharedData>().props;
+  const hasPassword = auth.hasPassword;
+  const passwordInput = useRef<HTMLInputElement>(null);
+  const currentPasswordInput = useRef<HTMLInputElement>(null);
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -42,19 +43,15 @@ export default function Password() {
             options={{
               preserveScroll: true,
             }}
-            resetOnError={[
-              'password',
-              'password_confirmation',
-              'current_password',
-            ]}
+            resetOnError={["password", "password_confirmation", "current_password"]}
             resetOnSuccess
             onError={(errors) => {
               if (errors.password) {
-                passwordInput.current?.focus()
+                passwordInput.current?.focus();
               }
 
               if (errors.current_password) {
-                currentPasswordInput.current?.focus()
+                currentPasswordInput.current?.focus();
               }
             }}
             className="space-y-6"
@@ -111,10 +108,7 @@ export default function Password() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <Button
-                    disabled={processing}
-                    data-test="update-password-button"
-                  >
+                  <Button disabled={processing} data-test="update-password-button">
                     パスワードを保存
                   </Button>
 
@@ -134,5 +128,5 @@ export default function Password() {
         </div>
       </SettingsLayout>
     </AppLayout>
-  )
+  );
 }

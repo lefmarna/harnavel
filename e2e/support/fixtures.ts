@@ -1,31 +1,31 @@
-import { expect, test as base } from '@playwright/test'
+import { expect, test as base } from "@playwright/test";
 
 type PageErrorFixtures = {
-  pageErrors: void
-}
+  pageErrors: void;
+};
 
 export const formatPageError = (error: Error): string =>
-  error.stack?.trim() || `${error.name}: ${error.message}`
+  error.stack?.trim() || `${error.name}: ${error.message}`;
 
 /** Fail every E2E test that emits an uncaught browser error. */
 export const test = base.extend<PageErrorFixtures>({
   pageErrors: [
     async ({ page }, use) => {
-      const pageErrors: Error[] = []
+      const pageErrors: Error[] = [];
       const collectPageError = (error: Error): void => {
-        pageErrors.push(error)
-      }
+        pageErrors.push(error);
+      };
 
-      page.on('pageerror', collectPageError)
+      page.on("pageerror", collectPageError);
 
-      await use()
+      await use();
 
-      page.off('pageerror', collectPageError)
+      page.off("pageerror", collectPageError);
 
-      expect(pageErrors.map(formatPageError)).toEqual([])
+      expect(pageErrors.map(formatPageError)).toEqual([]);
     },
     { auto: true },
   ],
-})
+});
 
-export { expect }
+export { expect };

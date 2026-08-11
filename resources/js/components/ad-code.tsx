@@ -1,63 +1,64 @@
-import { usePage } from '@inertiajs/react'
-import { useLayoutEffect } from 'react'
-import type { CSSProperties } from 'react'
-import type { SharedData } from '@/types'
+import { usePage } from "@inertiajs/react";
+import { useLayoutEffect } from "react";
+import type { CSSProperties } from "react";
+
+import type { SharedData } from "@/types";
 
 interface AdCodeProps {
-  slot: string
-  style?: CSSProperties
-  format?: string
-  responsive?: string
-  layoutKey?: string
+  slot: string;
+  style?: CSSProperties;
+  format?: string;
+  responsive?: string;
+  layoutKey?: string;
 }
 
 declare global {
   interface Window {
-    adsbygoogle: unknown[]
+    adsbygoogle: unknown[];
   }
 }
 
 export const AdCode = (props: AdCodeProps) => {
-  const { tracking } = usePage<SharedData>().props
+  const { tracking } = usePage<SharedData>().props;
   const {
     slot,
-    style = { display: 'block' },
+    style = { display: "block" },
     format = undefined,
     responsive = undefined,
     layoutKey = undefined,
-  } = props
+  } = props;
 
   useLayoutEffect(() => {
     // 開発環境では何もしない
     if (import.meta.env.DEV) {
-      return
+      return;
     }
 
-    if (typeof window === 'undefined') {
-      return
+    if (typeof window === "undefined") {
+      return;
     }
 
     if (!tracking.adsEnabled || !tracking.adsensePublisherId) {
-      return
+      return;
     }
 
     try {
-      ;(window.adsbygoogle = window.adsbygoogle || []).push({})
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (e) {
-      console.error(e)
+      console.error(e);
     }
-  }, [tracking.adsEnabled, tracking.adsensePublisherId])
+  }, [tracking.adsEnabled, tracking.adsensePublisherId]);
 
   // 開発環境では何も表示しない
   if (import.meta.env.DEV) {
-    return null
+    return null;
   }
 
   if (!tracking.adsEnabled || !tracking.adsensePublisherId) {
-    return null
+    return null;
   }
 
-  const adTestMode = tracking.adsTestMode ? 'on' : 'off'
+  const adTestMode = tracking.adsTestMode ? "on" : "off";
 
   return (
     <ins
@@ -70,5 +71,5 @@ export const AdCode = (props: AdCodeProps) => {
       data-adtest={adTestMode}
       data-full-width-responsive={responsive}
     />
-  )
-}
+  );
+};

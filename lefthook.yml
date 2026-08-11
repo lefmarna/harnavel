@@ -5,7 +5,7 @@ pre-commit:
         parallel: true
         jobs:
           - name: generate wayfinder routes when vite is stopped
-            glob: '*.php'
+            glob: "*.php"
             run: |
               VITE_PORT="${VITE_PORT:-$(awk -F= '/^VITE_PORT=/{gsub(/"/, "", $2); print $2; exit}' .env 2>/dev/null)}"
               VITE_PORT="${VITE_PORT:-5173}"
@@ -13,19 +13,15 @@ pre-commit:
                 mise run wayfinder
               fi
           - name: format staged php files
-            glob: '*.php'
+            glob: "*.php"
             run: docker compose exec -T app vendor/bin/pint --format=agent {staged_files}
             stage_fixed: true
     - name: fix staged frontend files with oxlint
-      glob: '*.{js,jsx,ts,tsx}'
+      glob: "*.{js,jsx,ts,tsx}"
       run: pnpm exec oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
-    - name: run residual eslint fixes
-      glob: '*.{js,jsx,ts,tsx}'
-      run: pnpm exec eslint --fix --no-warn-ignored {staged_files}
-      stage_fixed: true
     - name: format staged frontend files
-      glob: '*.{css,html,js,json,jsx,md,ts,tsx,yaml,yml}'
+      glob: "*.{css,html,js,json,jsx,md,ts,tsx,yaml,yml}"
       run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: run checks
@@ -36,6 +32,8 @@ pre-commit:
             run: pnpm lint:check
           - name: type check frontend
             run: pnpm types:check
+          - name: run frontend unit tests
+            run: pnpm test:unit
           - name: lint markdown links
             run: pnpm lint:docs
           - name: run backend analysis

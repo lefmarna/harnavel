@@ -1,28 +1,29 @@
-import { Form } from '@inertiajs/react'
-import { ShieldBan, ShieldCheck } from 'lucide-react'
-import { useState } from 'react'
-import Heading from '@/components/heading'
-import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes'
-import TwoFactorSetupModal from '@/components/two-factor-setup-modal'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth'
-import AppLayout from '@/layouts/app-layout'
-import SettingsLayout from '@/layouts/settings/layout'
-import { disable, enable, show } from '@/routes/two-factor'
-import type { BreadcrumbItem } from '@/types'
+import { Form } from "@inertiajs/react";
+import { ShieldBan, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+
+import Heading from "@/components/heading";
+import TwoFactorRecoveryCodes from "@/components/two-factor-recovery-codes";
+import TwoFactorSetupModal from "@/components/two-factor-setup-modal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useTwoFactorAuth } from "@/hooks/use-two-factor-auth";
+import AppLayout from "@/layouts/app-layout";
+import SettingsLayout from "@/layouts/settings/layout";
+import { disable, enable, show } from "@/routes/two-factor";
+import type { BreadcrumbItem } from "@/types";
 
 type Props = {
-  requiresConfirmation?: boolean
-  twoFactorEnabled?: boolean
-}
+  requiresConfirmation?: boolean;
+  twoFactorEnabled?: boolean;
+};
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: '二段階認証設定',
+    title: "二段階認証設定",
     href: show.url(),
   },
-]
+];
 
 export default function TwoFactor({
   requiresConfirmation = false,
@@ -37,8 +38,8 @@ export default function TwoFactor({
     recoveryCodesList,
     fetchRecoveryCodes,
     errors,
-  } = useTwoFactorAuth()
-  const [showSetupModal, setShowSetupModal] = useState<boolean>(false)
+  } = useTwoFactorAuth();
+  const [showSetupModal, setShowSetupModal] = useState<boolean>(false);
 
   return (
     <AppLayout breadcrumbs={breadcrumbs}>
@@ -46,11 +47,7 @@ export default function TwoFactor({
 
       <SettingsLayout>
         <div className="space-y-6">
-          <Heading
-            variant="small"
-            title="二段階認証"
-            description="二段階認証の設定を管理します"
-          />
+          <Heading variant="small" title="二段階認証" description="二段階認証の設定を管理します" />
           {twoFactorEnabled ? (
             <div className="flex flex-col items-start justify-start space-y-4">
               <Badge variant="default">有効</Badge>
@@ -69,11 +66,7 @@ export default function TwoFactor({
               <div className="relative inline">
                 <Form {...disable.form()}>
                   {({ processing }) => (
-                    <Button
-                      variant="destructive"
-                      type="submit"
-                      disabled={processing}
-                    >
+                    <Button variant="destructive" type="submit" disabled={processing}>
                       <ShieldBan /> Disable 2FA
                     </Button>
                   )}
@@ -96,10 +89,7 @@ export default function TwoFactor({
                     設定を続ける
                   </Button>
                 ) : (
-                  <Form
-                    {...enable.form()}
-                    onSuccess={() => setShowSetupModal(true)}
-                  >
+                  <Form {...enable.form()} onSuccess={() => setShowSetupModal(true)}>
                     {({ processing }) => (
                       <Button type="submit" disabled={processing}>
                         <ShieldCheck />
@@ -126,5 +116,5 @@ export default function TwoFactor({
         </div>
       </SettingsLayout>
     </AppLayout>
-  )
+  );
 }

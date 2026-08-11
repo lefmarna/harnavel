@@ -1,9 +1,10 @@
-import { Form, usePage } from '@inertiajs/react'
-import { useRef } from 'react'
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController'
-import Heading from '@/components/heading'
-import InputError from '@/components/input-error'
-import { Button } from '@/components/ui/button'
+import { Form, usePage } from "@inertiajs/react";
+import { useRef } from "react";
+
+import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileController";
+import Heading from "@/components/heading";
+import InputError from "@/components/input-error";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -12,15 +13,15 @@ import {
   DialogFooter,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import type { SharedData } from '@/types'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { SharedData } from "@/types";
 
 export default function DeleteUser() {
-  const { auth } = usePage<SharedData>().props
-  const hasPassword = auth.hasPassword
-  const passwordInput = useRef<HTMLInputElement>(null)
+  const { auth } = usePage<SharedData>().props;
+  const hasPassword = auth.hasPassword;
+  const passwordInput = useRef<HTMLInputElement>(null);
 
   return (
     <div className="space-y-6">
@@ -32,9 +33,7 @@ export default function DeleteUser() {
       <div className="space-y-4 rounded-lg border border-red-100 bg-red-50 p-4 dark:border-red-200/10 dark:bg-red-700/10">
         <div className="relative space-y-0.5 text-red-600 dark:text-red-100">
           <p className="font-medium">警告</p>
-          <p className="text-sm">
-            この操作は取り消せません。内容を確認のうえ実行してください。
-          </p>
+          <p className="text-sm">この操作は取り消せません。内容を確認のうえ実行してください。</p>
         </div>
 
         <Dialog>
@@ -46,9 +45,8 @@ export default function DeleteUser() {
           <DialogContent>
             <DialogTitle>本当にアカウントを削除しますか？</DialogTitle>
             <DialogDescription>
-              アカウントを削除すると、関連するすべてのデータも完全に削除されます。{' '}
-              {hasPassword &&
-                '削除を確定するには現在のパスワードを入力してください。'}
+              アカウントを削除すると、関連するすべてのデータも完全に削除されます。{" "}
+              {hasPassword && "削除を確定するには現在のパスワードを入力してください。"}
             </DialogDescription>
 
             <Form
@@ -83,19 +81,13 @@ export default function DeleteUser() {
 
                   <DialogFooter className="gap-2">
                     <DialogClose asChild>
-                      <Button
-                        variant="secondary"
-                        onClick={() => resetAndClearErrors()}
-                      >
+                      <Button variant="secondary" onClick={() => resetAndClearErrors()}>
                         キャンセル
                       </Button>
                     </DialogClose>
 
                     <Button variant="destructive" disabled={processing} asChild>
-                      <button
-                        type="submit"
-                        data-test="confirm-delete-user-button"
-                      >
+                      <button type="submit" data-test="confirm-delete-user-button">
                         アカウントを削除
                       </button>
                     </Button>
@@ -107,5 +99,5 @@ export default function DeleteUser() {
         </Dialog>
       </div>
     </div>
-  )
+  );
 }

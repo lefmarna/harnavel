@@ -1,56 +1,52 @@
-import { Form } from '@inertiajs/react'
-import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { regenerateRecoveryCodes } from '@/routes/two-factor'
-import AlertError from './alert-error'
+import { Form } from "@inertiajs/react";
+import { Eye, EyeOff, LockKeyhole, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { regenerateRecoveryCodes } from "@/routes/two-factor";
+
+import AlertError from "./alert-error";
 
 type Props = {
-  recoveryCodesList: string[]
-  fetchRecoveryCodes: () => Promise<void>
-  errors: string[]
-}
+  recoveryCodesList: string[];
+  fetchRecoveryCodes: () => Promise<void>;
+  errors: string[];
+};
 
 export default function TwoFactorRecoveryCodes({
   recoveryCodesList,
   fetchRecoveryCodes,
   errors,
 }: Props) {
-  const [codesAreVisible, setCodesAreVisible] = useState<boolean>(false)
-  const codesSectionRef = useRef<HTMLDivElement | null>(null)
-  const canRegenerateCodes = recoveryCodesList.length > 0 && codesAreVisible
+  const [codesAreVisible, setCodesAreVisible] = useState<boolean>(false);
+  const codesSectionRef = useRef<HTMLDivElement | null>(null);
+  const canRegenerateCodes = recoveryCodesList.length > 0 && codesAreVisible;
 
   const toggleCodesVisibility = useCallback(async () => {
     if (!codesAreVisible && !recoveryCodesList.length) {
-      await fetchRecoveryCodes()
+      await fetchRecoveryCodes();
     }
 
-    setCodesAreVisible(!codesAreVisible)
+    setCodesAreVisible(!codesAreVisible);
 
     if (!codesAreVisible) {
       setTimeout(() => {
         codesSectionRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-        })
-      })
+          behavior: "smooth",
+          block: "nearest",
+        });
+      });
     }
-  }, [codesAreVisible, recoveryCodesList.length, fetchRecoveryCodes])
+  }, [codesAreVisible, recoveryCodesList.length, fetchRecoveryCodes]);
 
   useEffect(() => {
     if (!recoveryCodesList.length) {
-      fetchRecoveryCodes()
+      void fetchRecoveryCodes();
     }
-  }, [recoveryCodesList.length, fetchRecoveryCodes])
+  }, [recoveryCodesList.length, fetchRecoveryCodes]);
 
-  const RecoveryCodeIconComponent = codesAreVisible ? EyeOff : Eye
+  const RecoveryCodeIconComponent = codesAreVisible ? EyeOff : Eye;
 
   return (
     <Card>
@@ -72,9 +68,7 @@ export default function TwoFactorRecoveryCodes({
             aria-controls="recovery-codes-section"
           >
             <RecoveryCodeIconComponent className="size-4" aria-hidden="true" />
-            {codesAreVisible
-              ? 'リカバリーコードを隠す'
-              : 'リカバリーコードを表示'}
+            {codesAreVisible ? "リカバリーコードを隠す" : "リカバリーコードを表示"}
           </Button>
 
           {canRegenerateCodes && (
@@ -98,7 +92,7 @@ export default function TwoFactorRecoveryCodes({
         </div>
         <div
           id="recovery-codes-section"
-          className={`relative overflow-hidden transition-all duration-300 ${codesAreVisible ? 'h-auto opacity-100' : 'h-0 opacity-0'}`}
+          className={`relative overflow-hidden transition-all duration-300 ${codesAreVisible ? "h-auto opacity-100" : "h-0 opacity-0"}`}
           aria-hidden={!codesAreVisible}
         >
           <div className="mt-3 space-y-3">
@@ -119,10 +113,7 @@ export default function TwoFactorRecoveryCodes({
                       </div>
                     ))
                   ) : (
-                    <div
-                      className="space-y-2"
-                      aria-label="リカバリーコードを読み込み中"
-                    >
+                    <div className="space-y-2" aria-label="リカバリーコードを読み込み中">
                       {Array.from({ length: 8 }, (_, index) => (
                         <div
                           key={index}
@@ -136,9 +127,8 @@ export default function TwoFactorRecoveryCodes({
 
                 <div className="text-xs text-muted-foreground select-none">
                   <p id="regenerate-warning">
-                    各リカバリーコードは1回だけ使用できます。使用後は無効になるため、必要に応じて上の{' '}
-                    <span className="font-bold">リカバリーコードを再生成</span>{' '}
-                    を実行してください。
+                    各リカバリーコードは1回だけ使用できます。使用後は無効になるため、必要に応じて上の{" "}
+                    <span className="font-bold">リカバリーコードを再生成</span> を実行してください。
                   </p>
                 </div>
               </>
@@ -147,5 +137,5 @@ export default function TwoFactorRecoveryCodes({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

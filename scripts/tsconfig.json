@@ -7,10 +7,10 @@
     "esModuleInterop": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["../resources/js/*"]
     },
+    "types": ["node"],
     "resolveJsonModule": true,
     "isolatedModules": true
   },

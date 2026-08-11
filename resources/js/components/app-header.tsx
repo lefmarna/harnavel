@@ -1,77 +1,67 @@
-import { Link, usePage } from '@inertiajs/react'
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react'
-import { Breadcrumbs } from '@/components/breadcrumbs'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { Link, usePage } from "@inertiajs/react";
+import { BookOpen, Folder, LayoutGrid, Menu, Search } from "lucide-react";
+
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuList,
   navigationMenuTriggerStyle,
-} from '@/components/ui/navigation-menu'
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { UserMenuContent } from '@/components/user-menu-content'
-import { useCurrentUrl } from '@/hooks/use-current-url'
-import { getInitials } from '@/lib/initials'
-import { cn, toUrl } from '@/lib/utils'
-import { dashboard } from '@/routes'
-import type { BreadcrumbItem, NavItem, SharedData } from '@/types'
-import AppLogo from './app-logo'
-import AppLogoIcon from './app-logo-icon'
+} from "@/components/ui/navigation-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { UserMenuContent } from "@/components/user-menu-content";
+import { useCurrentUrl } from "@/hooks/use-current-url";
+import { getInitials } from "@/lib/initials";
+import { cn, toUrl } from "@/lib/utils";
+import { dashboard } from "@/routes";
+import type { BreadcrumbItem, NavItem, SharedData } from "@/types";
+
+import AppLogo from "./app-logo";
+import AppLogoIcon from "./app-logo-icon";
 
 type Props = {
-  breadcrumbs?: BreadcrumbItem[]
-}
+  breadcrumbs?: BreadcrumbItem[];
+};
 
 const mainNavItems: NavItem[] = [
   {
-    title: 'ダッシュボード',
+    title: "ダッシュボード",
     href: dashboard(),
     icon: LayoutGrid,
   },
-]
+];
 
 const rightNavItems: NavItem[] = [
   {
-    title: 'リポジトリ',
-    href: 'https://github.com/laravel/react-starter-kit',
+    title: "リポジトリ",
+    href: "https://github.com/laravel/react-starter-kit",
     icon: Folder,
   },
   {
-    title: 'ドキュメント',
-    href: 'https://laravel.com/docs/starter-kits#react',
+    title: "ドキュメント",
+    href: "https://laravel.com/docs/starter-kits#react",
     icon: BookOpen,
   },
-]
+];
 
-const activeItemStyles =
-  'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100'
+const activeItemStyles = "text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100";
 
 export function AppHeader({ breadcrumbs = [] }: Props) {
-  const page = usePage<SharedData>()
-  const { auth } = page.props
-  const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl()
-  const user = auth.user
+  const page = usePage<SharedData>();
+  const { auth } = page.props;
+  const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+  const user = auth.user;
 
   if (!user) {
-    return null
+    return null;
   }
 
   return (
@@ -82,11 +72,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
           <div className="lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="mr-2 h-[34px] w-[34px]"
-                >
+                <Button variant="ghost" size="icon" className="mr-2 h-[34px] w-[34px]">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -94,9 +80,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 side="left"
                 className="flex h-full w-64 flex-col items-stretch justify-between bg-sidebar"
               >
-                <SheetTitle className="sr-only">
-                  ナビゲーションメニュー
-                </SheetTitle>
+                <SheetTitle className="sr-only">ナビゲーションメニュー</SheetTitle>
                 <SheetHeader className="flex justify-start text-left">
                   <AppLogoIcon className="h-6 w-6 fill-current text-black dark:text-white" />
                 </SheetHeader>
@@ -135,11 +119,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             </Sheet>
           </div>
 
-          <Link
-            href={dashboard()}
-            prefetch
-            className="flex items-center space-x-2"
-          >
+          <Link href={dashboard()} prefetch className="flex items-center space-x-2">
             <AppLogo />
           </Link>
 
@@ -148,16 +128,13 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             <NavigationMenu className="flex h-full items-stretch">
               <NavigationMenuList className="flex h-full items-stretch space-x-2">
                 {mainNavItems.map((item, index) => (
-                  <NavigationMenuItem
-                    key={index}
-                    className="relative flex h-full items-center"
-                  >
+                  <NavigationMenuItem key={index} className="relative flex h-full items-center">
                     <Link
                       href={item.href}
                       className={cn(
                         navigationMenuTriggerStyle(),
                         whenCurrentUrl(item.href, activeItemStyles),
-                        'h-9 cursor-pointer px-3',
+                        "h-9 cursor-pointer px-3",
                       )}
                     >
                       {item.icon && <item.icon className="mr-2 h-4 w-4" />}
@@ -174,11 +151,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
           <div className="ml-auto flex items-center space-x-2">
             <div className="relative flex items-center space-x-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="group h-9 w-9 cursor-pointer"
-              >
+              <Button variant="ghost" size="icon" className="group h-9 w-9 cursor-pointer">
                 <Search className="!size-5 opacity-80 group-hover:opacity-100" />
               </Button>
               <div className="ml-1 hidden gap-1 lg:flex">
@@ -210,10 +183,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="size-10 rounded-full p-1">
                   <Avatar className="size-8 overflow-hidden rounded-full">
-                    <AvatarImage
-                      src={user.avatar ?? undefined}
-                      alt={user.name}
-                    />
+                    <AvatarImage src={user.avatar ?? undefined} alt={user.name} />
                     <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
                       {getInitials(user.name)}
                     </AvatarFallback>
@@ -235,5 +205,5 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
         </div>
       )}
     </>
-  )
+  );
 }

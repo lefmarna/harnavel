@@ -1,22 +1,21 @@
 // Components
-import { Form } from '@inertiajs/react'
-import { LoaderCircle } from 'lucide-react'
-import InputError from '@/components/input-error'
-import TextLink from '@/components/text-link'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import AuthLayout from '@/layouts/auth-layout'
-import { login } from '@/routes'
-import { email } from '@/routes/password'
+import { Form } from "@inertiajs/react";
+import { LoaderCircle } from "lucide-react";
+
+import InputError from "@/components/input-error";
+import TextLink from "@/components/text-link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import AuthLayout from "@/layouts/auth-layout";
+import { login } from "@/routes";
+import { email } from "@/routes/password";
 
 export default function ForgotPassword({ status }: { status?: string }) {
   return (
     <AuthLayout>
       {status && (
-        <div className="mb-4 text-center text-sm font-medium text-green-600">
-          {status}
-        </div>
+        <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>
       )}
 
       <div className="space-y-6">
@@ -43,9 +42,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                   disabled={processing}
                   data-test="email-password-reset-link-button"
                 >
-                  {processing && (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  )}
+                  {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                   パスワード再設定リンクを送信
                 </Button>
               </div>
@@ -59,5 +56,5 @@ export default function ForgotPassword({ status }: { status?: string }) {
         </div>
       </div>
     </AuthLayout>
-  )
+  );
 }

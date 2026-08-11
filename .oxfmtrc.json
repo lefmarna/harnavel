@@ -1,25 +1,19 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "semi": false,
-  "singleQuote": true,
-  "singleAttributePerLine": false,
-  "htmlWhitespaceSensitivity": "css",
-  // Oxfmt defaults to 100. This repository formats to 80.
-  "printWidth": 80,
-  // Oxfmt defaults to true. Key order in package.json is not the formatter's call here.
-  "sortPackageJson": false,
-  // sortImports stays disabled (its default): eslint-plugin-import owns import order.
+  "sortImports": true,
   "sortTailwindcss": {
     "stylesheet": "resources/css/app.css",
     "functions": ["clsx", "cn", "cva"]
   },
   "ignorePatterns": [
-    "resources/js/components/ui/*",
-    "resources/views/mail/*",
+    "resources/views/mail/**",
     "/boost.json",
+    "resources/js/actions/**",
+    "resources/js/routes/**",
+    "resources/js/wayfinder/**",
     // Vendored: Laravel Boost and cc-sdd regenerate these wholesale.
-    ".agents/skills/**/*.md",
-    ".claude/skills/**/*.md",
+    ".agents/skills/**",
+    ".claude/skills/**",
     // Agent-facing: table padding consumes context without aiding review.
     ".kiro/**/*.md",
     "docs/generated/**/*.md",
@@ -37,12 +31,6 @@
       "files": ["*.md"],
       "options": {
         "embeddedLanguageFormatting": "off"
-      }
-    },
-    {
-      "files": ["compose.yaml"],
-      "options": {
-        "singleQuote": false
       }
     }
   ]

@@ -1,54 +1,48 @@
-import { Form } from '@inertiajs/react'
-import { REGEXP_ONLY_DIGITS } from 'input-otp'
-import { useMemo, useState } from 'react'
-import InputError from '@/components/input-error'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from '@/components/ui/input-otp'
-import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth'
-import AuthLayout from '@/layouts/auth-layout'
-import { store } from '@/routes/two-factor/login'
+import { Form } from "@inertiajs/react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { useMemo, useState } from "react";
+
+import InputError from "@/components/input-error";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { OTP_MAX_LENGTH } from "@/hooks/use-two-factor-auth";
+import AuthLayout from "@/layouts/auth-layout";
+import { store } from "@/routes/two-factor/login";
 
 export default function TwoFactorChallenge() {
-  const [showRecoveryInput, setShowRecoveryInput] = useState<boolean>(false)
-  const [code, setCode] = useState<string>('')
+  const [showRecoveryInput, setShowRecoveryInput] = useState<boolean>(false);
+  const [code, setCode] = useState<string>("");
 
   const authConfigContent = useMemo<{
-    title: string
-    description: string
-    toggleText: string
+    title: string;
+    description: string;
+    toggleText: string;
   }>(() => {
     if (showRecoveryInput) {
       return {
-        title: 'リカバリーコード',
+        title: "リカバリーコード",
         description:
-          '緊急用のリカバリーコードを入力して、アカウントへのアクセスを確認してください。',
-        toggleText: '認証コードでログインする',
-      }
+          "緊急用のリカバリーコードを入力して、アカウントへのアクセスを確認してください。",
+        toggleText: "認証コードでログインする",
+      };
     }
 
     return {
-      title: '認証コード',
-      description: '認証アプリに表示されている認証コードを入力してください。',
-      toggleText: 'リカバリーコードでログインする',
-    }
-  }, [showRecoveryInput])
+      title: "認証コード",
+      description: "認証アプリに表示されている認証コードを入力してください。",
+      toggleText: "リカバリーコードでログインする",
+    };
+  }, [showRecoveryInput]);
 
   const toggleRecoveryMode = (clearErrors: () => void): void => {
-    setShowRecoveryInput(!showRecoveryInput)
-    clearErrors()
-    setCode('')
-  }
+    setShowRecoveryInput(!showRecoveryInput);
+    clearErrors();
+    setCode("");
+  };
 
   return (
-    <AuthLayout
-      title={authConfigContent.title}
-      description={authConfigContent.description}
-    >
+    <AuthLayout title={authConfigContent.title} description={authConfigContent.description}>
       <div className="space-y-6">
         <Form
           {...store.form()}
@@ -110,5 +104,5 @@ export default function TwoFactorChallenge() {
         </Form>
       </div>
     </AuthLayout>
-  )
+  );
 }

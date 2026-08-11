@@ -1,37 +1,38 @@
-import { Transition } from '@headlessui/react'
-import { Form, Link, usePage } from '@inertiajs/react'
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController'
-import DeleteUser from '@/components/delete-user'
-import Heading from '@/components/heading'
-import InputError from '@/components/input-error'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import AppLayout from '@/layouts/app-layout'
-import SettingsLayout from '@/layouts/settings/layout'
-import { edit } from '@/routes/profile'
-import { send } from '@/routes/verification'
-import type { BreadcrumbItem, SharedData } from '@/types'
+import { Transition } from "@headlessui/react";
+import { Form, Link, usePage } from "@inertiajs/react";
+
+import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileController";
+import DeleteUser from "@/components/delete-user";
+import Heading from "@/components/heading";
+import InputError from "@/components/input-error";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import AppLayout from "@/layouts/app-layout";
+import SettingsLayout from "@/layouts/settings/layout";
+import { edit } from "@/routes/profile";
+import { send } from "@/routes/verification";
+import type { BreadcrumbItem, SharedData } from "@/types";
 
 const breadcrumbs: BreadcrumbItem[] = [
   {
-    title: 'プロフィール設定',
+    title: "プロフィール設定",
     href: edit().url,
   },
-]
+];
 
 export default function Profile({
   mustVerifyEmail,
   status,
 }: {
-  mustVerifyEmail: boolean
-  status?: string
+  mustVerifyEmail: boolean;
+  status?: string;
 }) {
-  const { auth } = usePage<SharedData>().props
-  const user = auth.user
+  const { auth } = usePage<SharedData>().props;
+  const user = auth.user;
 
   if (!user) {
-    return null
+    return null;
   }
 
   return (
@@ -91,7 +92,7 @@ export default function Profile({
                 {mustVerifyEmail && user.email_verified_at === null && (
                   <div>
                     <p className="-mt-4 text-sm text-muted-foreground">
-                      メールアドレスが未認証です。{' '}
+                      メールアドレスが未認証です。{" "}
                       <Link
                         href={send()}
                         as="button"
@@ -101,7 +102,7 @@ export default function Profile({
                       </Link>
                     </p>
 
-                    {status === 'verification-link-sent' && (
+                    {status === "verification-link-sent" && (
                       <div className="mt-2 text-sm font-medium text-green-600">
                         メールアドレス宛に新しい認証リンクを送信しました。
                       </div>
@@ -110,10 +111,7 @@ export default function Profile({
                 )}
 
                 <div className="flex items-center gap-4">
-                  <Button
-                    disabled={processing}
-                    data-test="update-profile-button"
-                  >
+                  <Button disabled={processing} data-test="update-profile-button">
                     保存
                   </Button>
 
@@ -135,5 +133,5 @@ export default function Profile({
         <DeleteUser />
       </SettingsLayout>
     </AppLayout>
-  )
+  );
 }

@@ -54,7 +54,6 @@ mise.toml
 tsconfig.json
 package.json
 pnpm-lock.yaml
-eslint.config.js
 .oxfmtrc.json
 .editorconfig
 .mcp.json

@@ -1,7 +1,7 @@
-import type { SharedData } from '@/types/auth'
+import type { SharedData } from "@/types/auth";
 
-declare module '@inertiajs/core' {
+declare module "@inertiajs/core" {
   export interface InertiaConfig {
-    sharedPageProps: SharedData
+    sharedPageProps: SharedData;
   }
 }

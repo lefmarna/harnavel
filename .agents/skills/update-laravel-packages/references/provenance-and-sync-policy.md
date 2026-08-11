@@ -31,7 +31,7 @@ is permanent if Laravel or a better maintained replacement now provides it.
 | Docs and script checks | `tsx`, `scripts/`, package scripts, commits `196f853`, `b7ebda4`, `da48cc8` | Keep docs, deploy-safety, and unit script checks runnable |
 | Git hooks | `lefthook`, `lefthook.yml`, package `prepare`, commit `3f4643a` | Keep local hook installation without affecting production deploys |
 | Frontend formatting | `oxfmt`, `.oxfmtrc.json`, package `format`/`format:check`, `lefthook.yml` | Keep Oxfmt as the repository's only formatter |
-| Frontend linting | `oxlint`, `.oxlintrc.json`, `eslint-plugin-oxlint`, package `lint`/`lint:check`, `eslint.config.js`, `lefthook.yml` | Keep Oxlint primary and preserve residual ESLint rules until native equivalents are stable |
+| Frontend linting | `oxlint`, `oxlint-tsgolint`, `.oxlintrc.json`, TypeScript configs, package `lint`/`lint:check`, `lefthook.yml` | Keep type-aware Oxlint as the only linter and preserve the semantic guardrails verified by harness tests |
 
 If history after these commits changes the capability, follow the latest evidence rather than the
 table.

@@ -1,1 +1,1 @@
-export { GoogleAnalyticsTracker } from './google-analytics-tracker'
+export { GoogleAnalyticsTracker } from "./google-analytics-tracker";

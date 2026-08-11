@@ -1,11 +1,11 @@
 export function getInitials(fullName: string): string {
-  const [first, ...rest] = fullName.trim().split(/\s+/)
+  const [first, ...rest] = fullName.trim().split(/\s+/);
 
   if (!first) {
-    return ''
+    return "";
   }
 
-  const last = rest[rest.length - 1] ?? ''
+  const last = rest[rest.length - 1] ?? "";
 
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
+  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
 }

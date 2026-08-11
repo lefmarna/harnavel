@@ -1,53 +1,51 @@
-import { Link } from '@inertiajs/react'
-import type { PropsWithChildren } from 'react'
-import Heading from '@/components/heading'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { useCurrentUrl } from '@/hooks/use-current-url'
-import { cn, toUrl } from '@/lib/utils'
-import { edit as editAppearance } from '@/routes/appearance'
-import { edit } from '@/routes/profile'
-import { show } from '@/routes/two-factor'
-import { edit as editPassword } from '@/routes/user-password'
-import type { NavItem } from '@/types'
+import { Link } from "@inertiajs/react";
+import type { PropsWithChildren } from "react";
+
+import Heading from "@/components/heading";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { useCurrentUrl } from "@/hooks/use-current-url";
+import { cn, toUrl } from "@/lib/utils";
+import { edit as editAppearance } from "@/routes/appearance";
+import { edit } from "@/routes/profile";
+import { show } from "@/routes/two-factor";
+import { edit as editPassword } from "@/routes/user-password";
+import type { NavItem } from "@/types";
 
 const sidebarNavItems: NavItem[] = [
   {
-    title: 'プロフィール',
+    title: "プロフィール",
     href: edit(),
     icon: null,
   },
   {
-    title: 'パスワード',
+    title: "パスワード",
     href: editPassword(),
     icon: null,
   },
   {
-    title: '二段階認証',
+    title: "二段階認証",
     href: show(),
     icon: null,
   },
   {
-    title: '表示設定',
+    title: "表示設定",
     href: editAppearance(),
     icon: null,
   },
-]
+];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
-  const { isCurrentUrl } = useCurrentUrl()
+  const { isCurrentUrl } = useCurrentUrl();
 
   // When server-side rendering, we only render the layout on the client...
-  if (typeof window === 'undefined') {
-    return null
+  if (typeof window === "undefined") {
+    return null;
   }
 
   return (
     <div className="px-4 py-6">
-      <Heading
-        title="設定"
-        description="プロフィールとアカウント設定を管理します"
-      />
+      <Heading title="設定" description="プロフィールとアカウント設定を管理します" />
 
       <div className="flex flex-col lg:flex-row lg:space-x-12">
         <aside className="w-full max-w-xl lg:w-48">
@@ -58,8 +56,8 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 size="sm"
                 variant="ghost"
                 asChild
-                className={cn('w-full justify-start', {
-                  'bg-muted': isCurrentUrl(item.href),
+                className={cn("w-full justify-start", {
+                  "bg-muted": isCurrentUrl(item.href),
                 })}
               >
                 <Link href={item.href}>
@@ -78,5 +76,5 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
         </div>
       </div>
     </div>
-  )
+  );
 }

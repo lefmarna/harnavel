@@ -61,6 +61,35 @@ test('Oxlint が無視する生成ファイルだけでも pre-commit を通過�
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
 })
 
+test('ESLint が無視する生成ファイルだけでも pre-commit で警告を出さない', () => {
+  const result = spawnSync(
+    'pnpm',
+    [
+      'exec',
+      'lefthook',
+      'run',
+      'pre-commit',
+      '--job',
+      'run residual eslint fixes',
+      '--file',
+      'resources/js/routes/index.ts',
+      '--force',
+      '--no-stage-fixed',
+      '--no-tty',
+    ],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+    },
+  )
+
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
+  assert.doesNotMatch(
+    `${result.stdout}\n${result.stderr}`,
+    /File ignored because of a matching ignore pattern/,
+  )
+})
+
 test('.oxlintrc.json の変更時は stop hook がリポジトリ全体を lint する', () => {
   const fixture = createStopHookFixture(
     '.oxlintrc.json',
@@ -89,9 +118,18 @@ test('Oxlint が無視する生成ファイルだけでも stop hook を通過�
 
   try {
     const result = runStopHook(fixture)
+    const pnpmLog = readFileSync(fixture.pnpmLog, 'utf8')
 
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`)
     assert.equal(result.stdout.trim(), '')
+    assert.match(
+      pnpmLog,
+      /^exec eslint --fix --no-warn-ignored resources\/js\/routes\/index\.ts$/m,
+    )
+    assert.match(
+      pnpmLog,
+      /^exec eslint --no-warn-ignored resources\/js\/routes\/index\.ts$/m,
+    )
   } finally {
     rmSync(fixture.fixture, { force: true, recursive: true })
   }

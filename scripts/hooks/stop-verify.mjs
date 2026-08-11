@@ -94,7 +94,10 @@ if (lintFiles.length && hasCommand('pnpm')) {
     ],
     repo,
   )
-  run(['pnpm', 'exec', 'eslint', '--fix', ...lintFiles], repo)
+  run(
+    ['pnpm', 'exec', 'eslint', '--fix', '--no-warn-ignored', ...lintFiles],
+    repo,
+  )
 }
 
 if (oxfmtFiles.length && hasCommand('pnpm')) {
@@ -125,7 +128,7 @@ if ((lintAll.length || hasLintConfigChange) && hasCommand('pnpm')) {
         'Oxlint',
       ),
       runAsync(
-        ['pnpm', 'exec', 'eslint', ...lintFiles],
+        ['pnpm', 'exec', 'eslint', '--no-warn-ignored', ...lintFiles],
         repo,
         'ESLint residual',
       ),

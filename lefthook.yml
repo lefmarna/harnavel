@@ -22,7 +22,7 @@ pre-commit:
       stage_fixed: true
     - name: run residual eslint fixes
       glob: '*.{js,jsx,ts,tsx}'
-      run: pnpm exec eslint --fix {staged_files}
+      run: pnpm exec eslint --fix --no-warn-ignored {staged_files}
       stage_fixed: true
     - name: format staged frontend files
       glob: '*.{css,html,js,json,jsx,md,ts,tsx,yaml,yml}'

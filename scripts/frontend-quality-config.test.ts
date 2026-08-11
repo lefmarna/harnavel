@@ -29,6 +29,47 @@ test("union の未処理分岐を type-aware lint が拒否する", () => {
   );
 });
 
+test("default 分岐があっても union の未処理分岐を type-aware lint が拒否する", () => {
+  assertOxlintRejects(
+    'type State = "ready" | "failed"\nfunction label(state: State) {\n  switch (state) {\n    case "ready": return "Ready"\n    default: return "Unknown"\n  }\n}\nconsole.log(label("ready"))\n',
+    "switch-exhaustiveness-check",
+  );
+});
+
+test("TypeScript の型エラーを無視する directive を Oxlint が拒否する", () => {
+  assertOxlintRejects(
+    "// @ts-ignore: bypass the type error\nconst value: string = 1\nconsole.log(value)\n",
+    "ban-ts-comment",
+  );
+});
+
+test("TypeScript のファイル全体の型検査を無効にする directive を Oxlint が拒否する", () => {
+  assertOxlintRejects(
+    "// @ts-nocheck: bypass all type errors\nconst value: string = 1\nconsole.log(value)\n",
+    "ban-ts-comment",
+  );
+});
+
+test("空オブジェクトと誤解されやすい TypeScript の {} 型を Oxlint が拒否する", () => {
+  assertOxlintRejects(
+    "function accept(value: {}): void { console.log(value) }\naccept(42)\n",
+    "no-empty-object-type",
+  );
+});
+
+test("呼び出し契約を失う TypeScript の Function 型を Oxlint が拒否する", () => {
+  assertOxlintRejects(
+    "function register(callback: Function): void { console.log(callback) }\nregister(() => undefined)\n",
+    "no-unsafe-function-type",
+  );
+});
+
+test("理由を記した局所的な TypeScript error expectation は許可する", () => {
+  assertOxlintAccepts(
+    "// @ts-expect-error: verify the intentionally invalid fixture\nconst value: string = 1\nconsole.log(value)\n",
+  );
+});
+
 test("JavaScript の correctness 違反を Oxlint が拒否する", () => {
   assertOxlintRejectsJavaScript("const value = 1;\nvalue = 2;\ndebugger;\n", "no-const-assign");
 });
@@ -119,6 +160,18 @@ function assertOxlintRejects(source: string, rule: string): void {
 
     assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assert.match(`${result.stdout}\n${result.stderr}`, new RegExp(rule));
+  } finally {
+    rmSync(fixture, { force: true, recursive: true });
+  }
+}
+
+function assertOxlintAccepts(source: string): void {
+  const fixture = createTypeAwareFixture(source);
+
+  try {
+    const result = runOxlint(fixture);
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   } finally {
     rmSync(fixture, { force: true, recursive: true });
   }

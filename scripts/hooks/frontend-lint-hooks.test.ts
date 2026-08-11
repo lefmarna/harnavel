@@ -7,6 +7,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const LEFTHOOK = path.join(ROOT, "node_modules/.bin/lefthook");
 const STOP_HOOK = path.join(ROOT, "scripts/hooks/stop-verify.mjs");
 const LOGGING_PNPM = '#!/bin/sh\nprintf "%s\\n" "$*" >> "$PNPM_LOG"\n';
 const FAILING_FIX_PNPM = [
@@ -62,6 +63,35 @@ test("Oxlint が無視する生成ファイルだけでも pre-commit を通過�
   );
 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+});
+
+test("pre-commit は mjs・cjs を lint と format の対象にする", () => {
+  const fixture = mkdtempSync(path.join(os.tmpdir(), "lefthook-frontend-"));
+  const bin = path.join(fixture, "bin");
+  const pnpmLog = path.join(fixture, "pnpm.log");
+  const files = ["scripts/hooks/stop-verify.mjs", "scripts/hooks/__extension-fixture.cjs"];
+
+  mkdirSync(bin);
+  writeFileSync(path.join(bin, "pnpm"), LOGGING_PNPM, { mode: 0o755 });
+
+  try {
+    for (const job of ["fix staged frontend files with oxlint", "format staged frontend files"]) {
+      for (const file of files) {
+        const result = runLefthookJob(job, file, fixture, pnpmLog);
+
+        assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      }
+    }
+
+    const commands = readFileSync(pnpmLog, "utf8");
+
+    for (const file of files) {
+      assert.match(commands, new RegExp(`^exec oxlint .*${escapeRegExp(file)}$`, "m"));
+      assert.match(commands, new RegExp(`^exec oxfmt .*${escapeRegExp(file)}$`, "m"));
+    }
+  } finally {
+    rmSync(fixture, { force: true, recursive: true });
+  }
 });
 
 test(".oxlintrc.json の変更時は stop hook がリポジトリ全体を lint する", () => {
@@ -154,6 +184,47 @@ test("stop hook は safe autofix の失敗を block する", () => {
   }
 });
 
+test("stop hook は Markdown を format してから検証する", () => {
+  const fixture = createStopHookFixture("README.md", "# Before\n", "# After\n", LOGGING_PNPM);
+
+  try {
+    const result = runStopHook(fixture);
+    const commands = readFileSync(fixture.pnpmLog, "utf8");
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(commands, /^exec oxfmt --no-error-on-unmatched-pattern README\.md$/m);
+    assert.match(commands, /^exec oxfmt --check --no-error-on-unmatched-pattern README\.md$/m);
+    assert.match(commands, /^lint:docs$/m);
+  } finally {
+    rmSync(fixture.fixture, { force: true, recursive: true });
+  }
+});
+
+test("Markdown lint は IPC socket を禁止した環境でも実行できる", () => {
+  const fixture = mkdtempSync(path.join(os.tmpdir(), "lint-docs-runner-"));
+  const blockIpc = path.join(fixture, "block-ipc.mjs");
+
+  writeFileSync(
+    blockIpc,
+    'import net from "node:net";\nnet.Server.prototype.listen = function () { throw new Error("IPC disabled for test"); };\n',
+  );
+
+  try {
+    const result = spawnSync("pnpm", ["lint:docs"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${blockIpc}`.trim(),
+      },
+    });
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  } finally {
+    rmSync(fixture, { force: true, recursive: true });
+  }
+});
+
 test("formatter・TypeScript 設定変更時は対応する全体検証を行う", () => {
   const formatter = createStopHookFixture(
     ".oxfmtrc.json",
@@ -161,22 +232,27 @@ test("formatter・TypeScript 設定変更時は対応する全体検証を行う
     '{"sortImports": true}\n',
     LOGGING_PNPM,
   );
-  const typescript = createStopHookFixture(
-    "tsconfig.json",
-    "{}\n",
-    '{"compilerOptions": {}}\n',
-    LOGGING_PNPM,
+  const typescriptConfigs = ["tsconfig.json", "scripts/tsconfig.json", "e2e/tsconfig.json"].map(
+    (file) => createStopHookFixture(file, "{}\n", '{"compilerOptions": {}}\n', LOGGING_PNPM),
   );
 
   try {
     assert.equal(runStopHook(formatter).status, 0);
     assert.match(readFileSync(formatter.pnpmLog, "utf8"), /^format:check$/m);
 
-    assert.equal(runStopHook(typescript).status, 0);
-    assert.match(readFileSync(typescript.pnpmLog, "utf8"), /^types:check$/m);
+    for (const typescript of typescriptConfigs) {
+      assert.equal(runStopHook(typescript).status, 0);
+      const typescriptCommands = readFileSync(typescript.pnpmLog, "utf8");
+
+      assert.match(typescriptCommands, /^types:check$/m);
+      assert.match(typescriptCommands, /^lint:check$/m);
+    }
   } finally {
     rmSync(formatter.fixture, { force: true, recursive: true });
-    rmSync(typescript.fixture, { force: true, recursive: true });
+
+    for (const typescript of typescriptConfigs) {
+      rmSync(typescript.fixture, { force: true, recursive: true });
+    }
   }
 });
 
@@ -226,6 +302,26 @@ function runStopHook(fixture: StopHookFixture) {
     },
     input: '{"stop_hook_active":false}',
   });
+}
+
+function runLefthookJob(job: string, file: string, fixture: string, pnpmLog: string) {
+  return spawnSync(
+    LEFTHOOK,
+    ["run", "pre-commit", "--job", job, "--file", file, "--force", "--no-stage-fixed", "--no-tty"],
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${path.join(fixture, "bin")}${path.delimiter}${process.env.PATH ?? ""}`,
+        PNPM_LOG: pnpmLog,
+      },
+    },
+  );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function runGit(cwd: string, args: string[]): void {

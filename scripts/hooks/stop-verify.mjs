@@ -14,6 +14,7 @@ const OXFMT_EXTS = new Set([
   ".js",
   ".jsx",
   ".json",
+  ".md",
   ".mjs",
   ".ts",
   ".tsx",
@@ -119,8 +120,17 @@ if (oxfmtFiles.length && hasPnpm) {
 
 const tasks = [];
 
-if (hasPnpm && (lintAll.length || hasLintConfigChange || hasFrontendToolchainChange)) {
-  if (hasTs || hasJsTsDeletions || hasLintConfigChange || hasFrontendToolchainChange) {
+if (
+  hasPnpm &&
+  (lintAll.length || hasLintConfigChange || hasTypeConfigChange || hasFrontendToolchainChange)
+) {
+  if (
+    hasTs ||
+    hasJsTsDeletions ||
+    hasLintConfigChange ||
+    hasTypeConfigChange ||
+    hasFrontendToolchainChange
+  ) {
     tasks.push(runAsync(["pnpm", "lint:check"], repo, "Frontend lint"));
   } else {
     tasks.push(

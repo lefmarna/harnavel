@@ -14,7 +14,7 @@
     "lint:fix": "oxlint . --fix",
     "types:check": "tsc --pretty --noEmit && tsc -p scripts/tsconfig.json --pretty false && tsc -p e2e/tsconfig.json --pretty false",
     "test:unit": "node --import tsx --test 'resources/js/**/*.test.{ts,tsx}' 'e2e/**/*.test.ts' 'scripts/**/*.test.ts'",
-    "lint:docs": "tsx scripts/lint-docs.ts",
+    "lint:docs": "node --import tsx scripts/lint-docs.ts",
     "test:deploy-lifecycle": "node --import tsx scripts/test-deploy-lifecycle.ts",
     "test:deploy-rsync-excludes": "node --import tsx scripts/test-deploy-rsync-excludes.ts",
     "test:toolchain-versions": "node --import tsx scripts/test-toolchain-versions.ts",

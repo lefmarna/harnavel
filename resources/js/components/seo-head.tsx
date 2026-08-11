@@ -16,6 +16,10 @@ interface SeoProps {
 function imageMimeType(imageUrl: string): string | undefined {
   const extension = new URL(imageUrl).pathname.split(".").pop()?.toLowerCase();
 
+  if (extension === undefined) {
+    return undefined;
+  }
+
   switch (extension) {
     case "jpg":
     case "jpeg":

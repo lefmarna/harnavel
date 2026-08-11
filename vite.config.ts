@@ -23,6 +23,10 @@ export default defineConfig(({ mode }) => {
   const vitePort = parsePort(env.VITE_PORT, 5173);
 
   return {
+    build: {
+      // Keep TypeScript's ES2023 runtime API surface honest without adding polyfills.
+      target: ["chrome111", "edge111", "firefox115", "safari16.4", "ios16.4"],
+    },
     server: {
       port: vitePort,
       strictPort: true,

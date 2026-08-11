@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -79,6 +79,40 @@ test("理由を記した局所的な TypeScript error expectation は許可す�
 
 test("JavaScript の correctness 違反を Oxlint が拒否する", () => {
   assertOxlintRejectsJavaScript("const value = 1;\nvalue = 2;\ndebugger;\n", "no-const-assign");
+});
+
+test("browser code は Node builtin import を拒否し、Node program は許可する", () => {
+  const fixture = createRepositoryLintFixture({
+    "resources/js/browser-node-protocol.ts": 'import fs from "node:fs";\nconsole.log(fs);\n',
+    "resources/js/browser-bare-builtin.ts": 'import path from "path";\nconsole.log(path);\n',
+    "resources/js/browser.test.ts": 'import test from "node:test";\ntest("fixture", () => {});\n',
+    "scripts/node-builtin.ts": 'import fs from "node:fs";\nconsole.log(fs);\n',
+    "e2e/node-builtin.ts": 'import fs from "node:fs";\nconsole.log(fs);\n',
+  });
+
+  try {
+    for (const file of [
+      "resources/js/browser-node-protocol.ts",
+      "resources/js/browser-bare-builtin.ts",
+    ]) {
+      const result = runRepositoryOxlint(fixture, file);
+
+      assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.match(`${result.stdout}\n${result.stderr}`, /no-nodejs-modules/);
+    }
+
+    for (const file of [
+      "resources/js/browser.test.ts",
+      "scripts/node-builtin.ts",
+      "e2e/node-builtin.ts",
+    ]) {
+      const result = runRepositoryOxlint(fixture, file);
+
+      assert.equal(result.status, 0, `${file}\n${result.stdout}\n${result.stderr}`);
+    }
+  } finally {
+    rmSync(fixture, { force: true, recursive: true });
+  }
 });
 
 test("生成されたフロントエンドファイルを Oxfmt が変更しない", () => {
@@ -221,6 +255,25 @@ function createTypeAwareFixture(source: string): string {
   return fixture;
 }
 
+function createRepositoryLintFixture(files: Record<string, string>): string {
+  const fixture = mkdtempSync(path.join(os.tmpdir(), "frontend-quality-repository-"));
+
+  symlinkSync(path.join(ROOT, "node_modules"), path.join(fixture, "node_modules"), "junction");
+  writeFileSync(
+    path.join(fixture, ".oxlintrc.json"),
+    readFileSync(path.join(ROOT, ".oxlintrc.json")),
+  );
+
+  for (const [relativeFile, source] of Object.entries(files)) {
+    const target = path.join(fixture, relativeFile);
+
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, source);
+  }
+
+  return fixture;
+}
+
 function assertOxlintRejects(source: string, rule: string): void {
   const fixture = createTypeAwareFixture(source);
 
@@ -269,5 +322,13 @@ function runOxlint(fixture: string) {
     OXLINT,
     ["-c", path.join(ROOT, ".oxlintrc.json"), "--type-aware", path.join(fixture, "src/example.ts")],
     { encoding: "utf8" },
+  );
+}
+
+function runRepositoryOxlint(fixture: string, relativeFile: string) {
+  return spawnSync(
+    OXLINT,
+    ["-c", path.join(fixture, ".oxlintrc.json"), path.join(fixture, relativeFile)],
+    { cwd: fixture, encoding: "utf8" },
   );
 }

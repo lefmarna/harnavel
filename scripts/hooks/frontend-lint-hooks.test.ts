@@ -335,6 +335,26 @@ test("formatter・TypeScript 設定変更時は対応する全体検証を行う
   }
 });
 
+test("stop hook は未知のnested tsconfig変更もTypeScript全体検証として扱う", () => {
+  const fixture = createStopHookFixture(
+    "tools/example/tsconfig.generated.json",
+    '{"compilerOptions": {}}\n',
+    '{"compilerOptions": {"strict": true}}\n',
+    LOGGING_PNPM,
+  );
+
+  try {
+    const result = runStopHook(fixture);
+    const commands = readFileSync(fixture.pnpmLog, "utf8");
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(commands, /^types:check$/m);
+    assert.match(commands, /^lint:check$/m);
+  } finally {
+    rmSync(fixture.fixture, { force: true, recursive: true });
+  }
+});
+
 function createStopHookFixture(
   relativeFile: string,
   baseline: string,

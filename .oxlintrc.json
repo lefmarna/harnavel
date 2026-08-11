@@ -3,12 +3,14 @@
   "categories": {
     "correctness": "error"
   },
-  "plugins": ["eslint", "typescript", "unicorn", "oxc", "react"],
+  "plugins": ["eslint", "import", "typescript", "unicorn", "oxc", "react"],
   "options": {
     "reportUnusedDisableDirectives": "error"
   },
   "rules": {
     "eslint/no-fallthrough": "error",
+    "import/default": "off",
+    "import/namespace": "off",
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
     "react/react-compiler": "warn",
@@ -49,6 +51,18 @@
       "files": ["resources/js/**/*.{cjs,cts,js,jsx,mjs,mts,ts,tsx}"],
       "env": {
         "browser": true
+      },
+      "rules": {
+        "import/no-nodejs-modules": "error"
+      }
+    },
+    {
+      "files": ["resources/js/**/*.test.{cts,mts,ts,tsx}"],
+      "env": {
+        "node": true
+      },
+      "rules": {
+        "import/no-nodejs-modules": "off"
       }
     },
     {

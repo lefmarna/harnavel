@@ -17,6 +17,11 @@ types because both discard useful type contracts. Discriminated-union switches m
 member even when they contain a runtime fallback; a `default` branch therefore cannot hide a newly
 added union member from the exhaustiveness gate.
 
+Production code under `resources/js` cannot import Node.js builtin modules, whether they use the
+`node:` protocol or a bare specifier. Vite does not provide those runtime modules in browsers.
+Frontend unit tests are exempt because they execute in Node; scripts and Playwright remain separate
+Node-capable programs.
+
 ESLint and Prettier are not retained as residual tools. Their overlapping configs, fix order, and
 dependency surface cost more than the remaining stylistic checks are worth for an AI-oriented
 harness. Local hooks use only safe Oxlint fixes before Oxfmt, then verify without mutation; CI runs
@@ -32,11 +37,16 @@ first-party implementation file to be a root file of exactly one program; ambien
 be shared but must belong to at least one program. A newly added file therefore cannot silently miss
 the compiler gate.
 
-All programs use a stable ES2023 declaration floor and `module: Preserve`; the latter implies
-bundler resolution and matches the actual Vite, tsx, and Playwright transformation hosts better
-than NodeNext's native-Node extension rules. Vite, not `tsc`, owns the final browser transform
-target. The compiler gate explicitly enforces isolated, verbatim, erasable-only TypeScript,
-unchecked-index safety, complete returns, explicit overrides, and resolvable side-effect imports.
+All programs use a stable ES2023 language target and `module: Preserve`; the latter implies bundler
+resolution and matches the actual Vite, tsx, and Playwright transformation hosts better than
+NodeNext's native-Node extension rules. Vite, not `tsc`, owns the final browser syntax transform.
+The browser contract also includes ES2023 runtime builtins without adding polyfills. Its explicit
+Vite target is Vite 8's Baseline Widely Available set with Firefox raised from 114 to 115, the last
+gap for ES2023 array copy methods. A behavior test resolves the actual Vite config and compiles a
+representative builtin, so changes to either side of this contract must remain deliberate.
+
+The compiler gate explicitly enforces isolated, verbatim, erasable-only TypeScript, unchecked-index
+safety, complete returns, explicit overrides, and resolvable side-effect imports.
 `exactOptionalPropertyTypes` is not enabled because React/Inertia props routinely pass
 `T | undefined` without depending on property-presence semantics. Index-signature property syntax
 is likewise not a safety boundary. Switch fallthrough remains solely in Oxlint, where an explicit

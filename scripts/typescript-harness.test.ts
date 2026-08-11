@@ -6,6 +6,8 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { resolveConfig } from "vite";
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TSC = path.join(ROOT, "node_modules/.bin/tsc");
 const PROJECTS = [
@@ -30,6 +32,26 @@ test("browser program は Node global を拒否し、unit test program は Node 
     "resources/js/tsconfig.json",
     "resources/js/__typescript-test-fixture.test.ts",
     'import test from "node:test";\ntest("fixture", () => undefined);\n',
+  );
+});
+
+test("browser program の runtime API と Vite browser target はES2023で一致する", async () => {
+  const viteConfig = await resolveConfig(
+    { configFile: path.join(ROOT, "vite.config.ts") },
+    "build",
+  );
+
+  assert.deepEqual(viteConfig.build.target, [
+    "chrome111",
+    "edge111",
+    "firefox115",
+    "safari16.4",
+    "ios16.4",
+  ]);
+  assertNoDiagnostics(
+    "tsconfig.json",
+    "resources/js/__typescript-runtime-api-fixture.ts",
+    "const values = [3, 1, 2];\nconsole.log(values.toSorted());\n",
   );
 });
 
@@ -71,46 +93,39 @@ test("Playwright program は browser callback 内の DOM API を許可する", (
   );
 });
 
-test("compiler guardrail は不完全なreturnと変換依存のTypeScript構文を拒否する", () => {
-  assertDiagnosticsInclude(
-    "tsconfig.json",
-    "resources/js/__typescript-return-fixture.ts",
-    "export function label(ready: boolean) { if (ready) return 'ready'; }\n",
-    7030,
-  );
-  assertDiagnosticsInclude(
-    "tsconfig.json",
-    "resources/js/__typescript-enum-fixture.ts",
-    "export enum State { Ready }\n",
-    1294,
-  );
-  assertDiagnosticsInclude(
-    "tsconfig.json",
-    "resources/js/__typescript-index-fixture.ts",
-    "const values: string[] = [];\nvalues[0].toUpperCase();\n",
-    2532,
-  );
-  assertDiagnosticsInclude(
-    "tsconfig.json",
-    "resources/js/__typescript-override-fixture.ts",
-    "class Parent { save(): void {} }\nclass Child extends Parent { save(): void {} }\nconsole.log(Child);\n",
-    4114,
-  );
-});
+test("全TypeScript program は共通compiler guardrailを維持する", () => {
+  const source = [
+    'import { ComponentProps } from "react";',
+    'import "./missing-side-effect.js";',
+    'export type ButtonProps = ComponentProps<"button">;',
+    "export enum State { Ready }",
+    "const values: string[] = [];",
+    "values[0].toUpperCase();",
+    "class Parent { save(): void {} }",
+    "class Child extends Parent { save(): void {} }",
+    "export function label(ready: boolean) { if (ready) return 'ready'; }",
+    "console.log(Child);",
+    "",
+  ].join("\n");
+  const expectedDiagnostics = [
+    { code: 1484, guardrail: "verbatimModuleSyntax" },
+    { code: 2882, guardrail: "noUncheckedSideEffectImports" },
+    { code: 1294, guardrail: "erasableSyntaxOnly" },
+    { code: 2532, guardrail: "noUncheckedIndexedAccess" },
+    { code: 4114, guardrail: "noImplicitOverride" },
+    { code: 7030, guardrail: "noImplicitReturns" },
+  ];
 
-test("compiler guardrail はtype-only import境界と未解決side-effect importを拒否する", () => {
-  assertDiagnosticsInclude(
-    "tsconfig.json",
-    "resources/js/__typescript-import-fixture.ts",
-    'import { ComponentProps } from "react";\nexport type Props = ComponentProps<"button">;\n',
-    1484,
-  );
-  assertDiagnosticsInclude(
-    "tsconfig.json",
-    "resources/js/__typescript-side-effect-fixture.ts",
-    'import "./missing-side-effect.js";\n',
-    2882,
-  );
+  for (const config of PROJECTS) {
+    const result = compileFixture(config, "__typescript-common-guardrails-fixture.ts", source);
+
+    for (const { code, guardrail } of expectedDiagnostics) {
+      assert.ok(
+        result.diagnosticCodes.includes(code),
+        `${config} does not enforce ${guardrail} (TS${code}).\n${result.output}`,
+      );
+    }
+  }
 });
 
 test("first-party実装は一意のprogramに所属し、共有宣言も検査対象になる", () => {

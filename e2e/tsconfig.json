@@ -1,16 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "skipLibCheck": true,
-    "strict": true,
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "Preserve",
+    "moduleDetection": "force",
     "noEmit": true,
-    "esModuleInterop": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "types": ["node"],
-    "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "noUncheckedSideEffectImports": true,
+    "skipLibCheck": true,
+    "types": ["node"]
   },
-  "include": ["**/*.cts", "**/*.mts", "**/*.ts", "../playwright.config.ts"],
-  "exclude": ["../node_modules"]
+  "include": [".", "../playwright.config.ts"]
 }

@@ -27,7 +27,6 @@ const OXFMT_EXTS = new Set([
 const LINT_EXTS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
 const LINT_CONFIG_FILES = new Set([".oxlintrc.json"]);
 const FORMAT_CONFIG_FILES = new Set([".oxfmtrc.json"]);
-const TYPE_CONFIG_FILES = new Set(["tsconfig.json", "scripts/tsconfig.json", "e2e/tsconfig.json"]);
 const FRONTEND_TOOLCHAIN_FILES = new Set([
   "mise.toml",
   "package.json",
@@ -52,6 +51,7 @@ if (all.length === 0) {
 }
 
 const isBlade = (file) => file.endsWith(".blade.php");
+const isTypeConfig = (file) => /(^|\/)tsconfig(?:\.[^/]+)?\.json$/.test(file);
 
 const oxfmtAll = byExt(all, OXFMT_EXTS);
 const oxfmtFiles = byExt(existing, OXFMT_EXTS);
@@ -67,7 +67,7 @@ const hasJsTsDeletions = lintAll.length > lintFiles.length;
 const hasOxfmtDeletions = oxfmtAll.length > oxfmtFiles.length;
 const hasLintConfigChange = all.some((file) => LINT_CONFIG_FILES.has(file));
 const hasFormatConfigChange = all.some((file) => FORMAT_CONFIG_FILES.has(file));
-const hasTypeConfigChange = all.some((file) => TYPE_CONFIG_FILES.has(file));
+const hasTypeConfigChange = all.some(isTypeConfig);
 const hasFrontendToolchainChange = all.some((file) => FRONTEND_TOOLCHAIN_FILES.has(file));
 const hasPhpStanDeletions = phpStanAll.length > phpStanExisting.length;
 const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0;

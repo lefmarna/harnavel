@@ -36,6 +36,13 @@ test("default 分岐があっても union の未処理分岐を type-aware lint 
   );
 });
 
+test("意図を明示していない switch fallthrough を Oxlint が拒否する", () => {
+  assertOxlintRejects(
+    "function label(value: number): string {\n  switch (value) {\n    case 1: console.log('one')\n    case 2: return 'two'\n    default: return 'other'\n  }\n}\nconsole.log(label(1))\n",
+    "no-fallthrough",
+  );
+});
+
 test("TypeScript の型エラーを無視する directive を Oxlint が拒否する", () => {
   assertOxlintRejects(
     "// @ts-ignore: bypass the type error\nconst value: string = 1\nconsole.log(value)\n",
@@ -123,14 +130,32 @@ test("Oxfmt が import と Tailwind class の順序を正規化する", () => {
 
 test("TypeScript projects は mts・cts を型検査対象に含める", () => {
   const projects = [
-    { config: path.join(ROOT, "tsconfig.json"), directory: path.join(ROOT, "resources/js") },
-    { config: path.join(ROOT, "scripts/tsconfig.json"), directory: path.join(ROOT, "scripts") },
-    { config: path.join(ROOT, "e2e/tsconfig.json"), directory: path.join(ROOT, "e2e") },
+    {
+      config: path.join(ROOT, "tsconfig.json"),
+      directory: path.join(ROOT, "resources/js"),
+      testFile: false,
+    },
+    {
+      config: path.join(ROOT, "resources/js/tsconfig.json"),
+      directory: path.join(ROOT, "resources/js"),
+      testFile: true,
+    },
+    {
+      config: path.join(ROOT, "scripts/tsconfig.json"),
+      directory: path.join(ROOT, "scripts"),
+      testFile: false,
+    },
+    {
+      config: path.join(ROOT, "e2e/tsconfig.json"),
+      directory: path.join(ROOT, "e2e"),
+      testFile: false,
+    },
   ].map((project) => ({
     ...project,
     fixtures: ["mts", "cts"].map((extension) => {
       const { directory } = project;
-      const target = path.join(directory, `__quality-extension-${process.pid}.${extension}`);
+      const suffix = project.testFile ? `.test.${extension}` : `.${extension}`;
+      const target = path.join(directory, `__quality-extension-${process.pid}${suffix}`);
 
       writeFileSync(target, "export const qualityExtensionFixture = 1;\n");
 

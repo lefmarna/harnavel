@@ -8,6 +8,7 @@
     "reportUnusedDisableDirectives": "error"
   },
   "rules": {
+    "eslint/no-fallthrough": "error",
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
     "react/react-compiler": "warn",

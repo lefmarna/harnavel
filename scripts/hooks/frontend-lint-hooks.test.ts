@@ -308,9 +308,12 @@ test("formatter・TypeScript 設定変更時は対応する全体検証を行う
     '{"sortImports": true}\n',
     LOGGING_PNPM,
   );
-  const typescriptConfigs = ["tsconfig.json", "scripts/tsconfig.json", "e2e/tsconfig.json"].map(
-    (file) => createStopHookFixture(file, "{}\n", '{"compilerOptions": {}}\n', LOGGING_PNPM),
-  );
+  const typescriptConfigs = [
+    "tsconfig.json",
+    "resources/js/tsconfig.json",
+    "scripts/tsconfig.json",
+    "e2e/tsconfig.json",
+  ].map((file) => createStopHookFixture(file, "{}\n", '{"compilerOptions": {}}\n', LOGGING_PNPM));
 
   try {
     assert.equal(runStopHook(formatter).status, 0);

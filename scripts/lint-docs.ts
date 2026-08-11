@@ -46,12 +46,16 @@ function checkLinks(filePath: string, content: string): LinkError[] {
   const lines = content.split("\n");
   const fileDir = path.dirname(filePath);
 
-  for (let i = 0; i < lines.length; i++) {
+  for (const [index, line] of lines.entries()) {
     let match: RegExpExecArray | null;
     LINK_RE.lastIndex = 0;
 
-    while ((match = LINK_RE.exec(lines[i])) !== null) {
+    while ((match = LINK_RE.exec(line)) !== null) {
       const rawLink = match[2];
+
+      if (rawLink === undefined) {
+        continue;
+      }
 
       const linkWithoutAnchor = rawLink.split("#")[0];
 
@@ -68,7 +72,7 @@ function checkLinks(filePath: string, content: string): LinkError[] {
       if (!fs.existsSync(resolved)) {
         errors.push({
           file: path.relative(ROOT, filePath),
-          line: i + 1,
+          line: index + 1,
           link: rawLink,
           reason: `Target not found: ${path.relative(ROOT, resolved)}`,
         });
@@ -131,7 +135,13 @@ function parseFrontmatter(content: string): FrontmatterParseResult | null {
     }
 
     const key = m[1];
-    let value = m[2].trim();
+    const rawValue = m[2];
+
+    if (key === undefined || rawValue === undefined) {
+      continue;
+    }
+
+    let value = rawValue.trim();
 
     if (
       (value.startsWith("'") && value.endsWith("'")) ||

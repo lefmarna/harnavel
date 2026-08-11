@@ -22,6 +22,26 @@ dependency surface cost more than the remaining stylistic checks are worth for a
 harness. Local hooks use only safe Oxlint fixes before Oxfmt, then verify without mutation; CI runs
 the same format, lint, type, and test responsibilities across the whole repository.
 
+TypeScript uses four programs because the repository has four runtime contexts: production browser
+code, Node-based frontend unit tests that import browser modules, Node/tsx tooling (including
+`vite.config.ts`), and Playwright tooling (including `playwright.config.ts`). Production browser code
+sees Vite and DOM declarations but not Node globals. The unit program also loads the browser
+program's shared declarations. The scripts program remains Node-only, while Playwright includes DOM
+declarations because its callbacks can execute in the browser. A coverage test requires every
+first-party implementation file to be a root file of exactly one program; ambient declarations may
+be shared but must belong to at least one program. A newly added file therefore cannot silently miss
+the compiler gate.
+
+All programs use a stable ES2023 declaration floor and `module: Preserve`; the latter implies
+bundler resolution and matches the actual Vite, tsx, and Playwright transformation hosts better
+than NodeNext's native-Node extension rules. Vite, not `tsc`, owns the final browser transform
+target. The compiler gate explicitly enforces isolated, verbatim, erasable-only TypeScript,
+unchecked-index safety, complete returns, explicit overrides, and resolvable side-effect imports.
+`exactOptionalPropertyTypes` is not enabled because React/Inertia props routinely pass
+`T | undefined` without depending on property-presence semantics. Index-signature property syntax
+is likewise not a safety boundary. Switch fallthrough remains solely in Oxlint, where an explicit
+fallthrough comment can distinguish deliberate control flow from a missing `break`.
+
 Oxlint, Oxfmt, `oxlint-tsgolint`, and TypeScript form an exact-pinned, verified quality-gate
 baseline. The TypeScript pin stabilizes compiler diagnostics and its native package surface; it is
 not a direct Oxlint compatibility requirement. Updating any member is a deliberate harness

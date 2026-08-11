@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     // Unit tests execute in Node while importing modules written for the browser.
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node", "vite/client"]
   },
   // A child include replaces its parent's include, so tests must name shared declarations again.

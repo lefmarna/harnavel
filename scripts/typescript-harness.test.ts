@@ -6,8 +6,6 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { resolveConfig } from "vite";
-
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TSC = path.join(ROOT, "node_modules/.bin/tsc");
 const PROJECTS = [
@@ -19,6 +17,13 @@ const PROJECTS = [
 
 type CompileFixtureOptions = {
   includeProjectFiles?: boolean;
+};
+
+type ResolvedConfig = {
+  compilerOptions?: {
+    target?: string;
+  };
+  files?: string[];
 };
 
 test("browser program は Node global を拒否し、unit test program は Node API を許可する", () => {
@@ -35,52 +40,24 @@ test("browser program は Node global を拒否し、unit test program は Node 
   );
 });
 
-test("browser program はbrowser floorで利用できるES2023 Array APIを許可する", async () => {
-  const viteConfig = await resolveConfig(
-    { configFile: path.join(ROOT, "vite.config.ts") },
-    "build",
-  );
+test("各TypeScript program は意図したstable ECMAScript baselineを維持する", () => {
+  const fixture = "const values = [3, 1, 2];\nconsole.log(values.toSorted());\n";
+  const programs = [
+    { config: "tsconfig.json", target: "es2022", allowsEs2023: false },
+    { config: "resources/js/tsconfig.json", target: "es2022", allowsEs2023: false },
+    { config: "scripts/tsconfig.json", target: "es2023", allowsEs2023: true },
+    { config: "e2e/tsconfig.json", target: "es2023", allowsEs2023: true },
+  ] as const;
 
-  assert.deepEqual(viteConfig.build.target, [
-    "chrome111",
-    "edge111",
-    "firefox115",
-    "safari16.4",
-    "ios16.4",
-  ]);
-  assertNoDiagnostics(
-    "tsconfig.json",
-    "resources/js/__typescript-runtime-api-fixture.ts",
-    "const values = [3, 1, 2];\nconsole.log(values.toSorted());\n",
-  );
-});
+  for (const { config, target, allowsEs2023 } of programs) {
+    assert.equal(showConfig(config).compilerOptions?.target, target);
 
-test("browser program はbrowser floorで利用できないES2023 APIを拒否する", () => {
-  assertDiagnosticsInclude(
-    "tsconfig.json",
-    "resources/js/__typescript-collection-api-fixture.ts",
-    'const key = Symbol("key");\nnew WeakMap<symbol, string>().set(key, "value");\n',
-    2344,
-  );
-  assertDiagnosticsInclude(
-    "tsconfig.json",
-    "resources/js/__typescript-intl-api-fixture.ts",
-    'new Intl.NumberFormat("en", { roundingMode: "ceil" });\n',
-    2769,
-  );
-});
-
-test("frontend unit program はNode runtimeのES2023 APIを許可する", () => {
-  assertNoDiagnostics(
-    "resources/js/tsconfig.json",
-    "resources/js/__typescript-node-runtime-api-fixture.test.ts",
-    [
-      'const key = Symbol("key");',
-      'new WeakMap<symbol, string>().set(key, "value");',
-      'new Intl.NumberFormat("en", { roundingMode: "ceil" });',
-      "",
-    ].join("\n"),
-  );
+    if (allowsEs2023) {
+      assertNoDiagnostics(config, "__typescript-es2023-baseline-fixture.ts", fixture);
+    } else {
+      assertDiagnosticsInclude(config, "__typescript-es2023-baseline-fixture.ts", fixture, 2550);
+    }
+  }
 });
 
 test("unit test program はbrowser sourceと同じ共有型宣言を読み込む", () => {
@@ -189,7 +166,7 @@ test("first-party実装は一意のprogramに所属し、共有宣言も検査�
   assert.deepEqual(invalidOwnership, []);
 });
 
-function showConfig(relativeConfig: string): { files?: string[] } {
+function showConfig(relativeConfig: string): ResolvedConfig {
   const result = spawnSync(TSC, ["-p", path.join(ROOT, relativeConfig), "--showConfig"], {
     cwd: ROOT,
     encoding: "utf8",
@@ -197,7 +174,7 @@ function showConfig(relativeConfig: string): { files?: string[] } {
 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 
-  return JSON.parse(result.stdout) as { files?: string[] };
+  return JSON.parse(result.stdout) as ResolvedConfig;
 }
 
 function compileFixture(

@@ -31,23 +31,27 @@ TypeScript uses four programs because the repository has four runtime contexts: 
 code, Node-based frontend unit tests that import browser modules, Node/tsx tooling (including
 `vite.config.ts`), and Playwright tooling (including `playwright.config.ts`). Production browser code
 sees Vite and DOM declarations but not Node globals. The unit program also loads the browser
-program's shared declarations, but retains the full ES2023 library of its Node runtime. The scripts
+program's shared declarations and adds Node ambient types for its Node-based runner. The scripts
 program remains Node-only, while Playwright includes DOM declarations because its callbacks can
-execute in the browser. A coverage test requires every
-first-party implementation file to be a root file of exactly one program; ambient declarations may
-be shared but must belong to at least one program. A newly added file therefore cannot silently miss
-the compiler gate.
+execute in the browser. A coverage test requires every first-party implementation file to be a root
+file of exactly one program; ambient declarations may be shared but must belong to at least one
+program. A newly added file therefore cannot silently miss the compiler gate.
 
-All programs use a stable ES2023 language target and `module: Preserve`; the latter implies bundler
-resolution and matches the actual Vite, tsx, and Playwright transformation hosts better than
-NodeNext's native-Node extension rules. Vite, not `tsc`, owns the final browser syntax transform.
-The browser runtime library contract is ES2022 plus ES2023 Array APIs, not the aggregate ES2023
-library. The explicit Vite target is Vite 8's Baseline Widely Available set with Firefox raised from
-114 to 115 for the array copy methods. ES2023 Collection and Intl declarations remain excluded
-because their Symbol weak-key and NumberFormat v3 surfaces exceed that floor. Vite transforms
-syntax but does not polyfill runtime builtins. Behavior tests therefore resolve the actual Vite
-config, allow `Array.prototype.toSorted()`, and reject representative excluded APIs so changes to
-either side of the contract remain deliberate.
+The production browser and unit programs use ES2022, while the Node tooling and Playwright programs
+use ES2023. Both are stable editions rather than `ESNext`, so a TypeScript upgrade cannot silently
+change the compiler's language and declaration baseline. All programs use `module: Preserve`; it
+implies bundler resolution and matches the actual Vite, tsx, and Playwright transformation hosts
+better than NodeNext's native-Node extension rules. A compiler behavior test keeps these declaration
+baselines deliberate by rejecting a representative ES2023-only API in the ES2022 programs while
+allowing it in the ES2023 programs.
+
+TypeScript's `target` and `lib` are compiler-side baselines, not a browser compatibility database.
+Vite owns production syntax transformation and uses its versioned default browser target. It does
+not polyfill runtime builtins. Compatibility of individual ECMAScript and Intl APIs, DOM and other
+Web APIs, CSS features, and engine-specific behavior is therefore not guaranteed by this compiler
+gate alone. Runtime behavior belongs to tests or to an explicit application support decision when a
+feature requires one; the harness does not mirror browser compatibility data in TypeScript lib
+allowlists.
 
 The compiler gate explicitly enforces isolated, verbatim, erasable-only TypeScript, unchecked-index
 safety, complete returns, explicit overrides, and resolvable side-effect imports.

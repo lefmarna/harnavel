@@ -23,10 +23,6 @@ export default defineConfig(({ mode }) => {
   const vitePort = parsePort(env.VITE_PORT, 5173);
 
   return {
-    build: {
-      // Match the ES2023 Array APIs exposed by the browser TypeScript program without polyfills.
-      target: ["chrome111", "edge111", "firefox115", "safari16.4", "ios16.4"],
-    },
     server: {
       port: vitePort,
       strictPort: true,

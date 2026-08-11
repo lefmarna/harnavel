@@ -35,7 +35,7 @@ test("browser program は Node global を拒否し、unit test program は Node 
   );
 });
 
-test("browser program の runtime API と Vite browser target はES2023で一致する", async () => {
+test("browser program はbrowser floorで利用できるES2023 Array APIを許可する", async () => {
   const viteConfig = await resolveConfig(
     { configFile: path.join(ROOT, "vite.config.ts") },
     "build",
@@ -52,6 +52,34 @@ test("browser program の runtime API と Vite browser target はES2023で一致
     "tsconfig.json",
     "resources/js/__typescript-runtime-api-fixture.ts",
     "const values = [3, 1, 2];\nconsole.log(values.toSorted());\n",
+  );
+});
+
+test("browser program はbrowser floorで利用できないES2023 APIを拒否する", () => {
+  assertDiagnosticsInclude(
+    "tsconfig.json",
+    "resources/js/__typescript-collection-api-fixture.ts",
+    'const key = Symbol("key");\nnew WeakMap<symbol, string>().set(key, "value");\n',
+    2344,
+  );
+  assertDiagnosticsInclude(
+    "tsconfig.json",
+    "resources/js/__typescript-intl-api-fixture.ts",
+    'new Intl.NumberFormat("en", { roundingMode: "ceil" });\n',
+    2769,
+  );
+});
+
+test("frontend unit program はNode runtimeのES2023 APIを許可する", () => {
+  assertNoDiagnostics(
+    "resources/js/tsconfig.json",
+    "resources/js/__typescript-node-runtime-api-fixture.test.ts",
+    [
+      'const key = Symbol("key");',
+      'new WeakMap<symbol, string>().set(key, "value");',
+      'new Intl.NumberFormat("en", { roundingMode: "ceil" });',
+      "",
+    ].join("\n"),
   );
 });
 

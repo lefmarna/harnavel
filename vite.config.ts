@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     build: {
-      // Keep TypeScript's ES2023 runtime API surface honest without adding polyfills.
+      // Match the ES2023 Array APIs exposed by the browser TypeScript program without polyfills.
       target: ["chrome111", "edge111", "firefox115", "safari16.4", "ios16.4"],
     },
     server: {

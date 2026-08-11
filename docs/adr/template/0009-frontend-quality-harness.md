@@ -31,8 +31,9 @@ TypeScript uses four programs because the repository has four runtime contexts: 
 code, Node-based frontend unit tests that import browser modules, Node/tsx tooling (including
 `vite.config.ts`), and Playwright tooling (including `playwright.config.ts`). Production browser code
 sees Vite and DOM declarations but not Node globals. The unit program also loads the browser
-program's shared declarations. The scripts program remains Node-only, while Playwright includes DOM
-declarations because its callbacks can execute in the browser. A coverage test requires every
+program's shared declarations, but retains the full ES2023 library of its Node runtime. The scripts
+program remains Node-only, while Playwright includes DOM declarations because its callbacks can
+execute in the browser. A coverage test requires every
 first-party implementation file to be a root file of exactly one program; ambient declarations may
 be shared but must belong to at least one program. A newly added file therefore cannot silently miss
 the compiler gate.
@@ -40,10 +41,13 @@ the compiler gate.
 All programs use a stable ES2023 language target and `module: Preserve`; the latter implies bundler
 resolution and matches the actual Vite, tsx, and Playwright transformation hosts better than
 NodeNext's native-Node extension rules. Vite, not `tsc`, owns the final browser syntax transform.
-The browser contract also includes ES2023 runtime builtins without adding polyfills. Its explicit
-Vite target is Vite 8's Baseline Widely Available set with Firefox raised from 114 to 115, the last
-gap for ES2023 array copy methods. A behavior test resolves the actual Vite config and compiles a
-representative builtin, so changes to either side of this contract must remain deliberate.
+The browser runtime library contract is ES2022 plus ES2023 Array APIs, not the aggregate ES2023
+library. The explicit Vite target is Vite 8's Baseline Widely Available set with Firefox raised from
+114 to 115 for the array copy methods. ES2023 Collection and Intl declarations remain excluded
+because their Symbol weak-key and NumberFormat v3 surfaces exceed that floor. Vite transforms
+syntax but does not polyfill runtime builtins. Behavior tests therefore resolve the actual Vite
+config, allow `Array.prototype.toSorted()`, and reject representative excluded APIs so changes to
+either side of the contract remain deliberate.
 
 The compiler gate explicitly enforces isolated, verbatim, erasable-only TypeScript, unchecked-index
 safety, complete returns, explicit overrides, and resolvable side-effect imports.

@@ -45,16 +45,16 @@
   },
   "overrides": [
     {
-      "files": ["resources/js/**/*.{js,jsx,ts,tsx}"],
+      "files": ["resources/js/**/*.{cjs,cts,js,jsx,mjs,mts,ts,tsx}"],
       "env": {
         "browser": true
       }
     },
     {
       "files": [
-        "scripts/**/*.{js,mjs,cjs,ts}",
-        "e2e/**/*.{js,mjs,cjs,ts,tsx}",
-        "*.config.{js,mjs,cjs,ts}"
+        "scripts/**/*.{cjs,cts,js,mjs,mts,ts,tsx}",
+        "e2e/**/*.{cjs,cts,js,jsx,mjs,mts,ts,tsx}",
+        "*.config.{cjs,cts,js,mjs,mts,ts}"
       ],
       "env": {
         "node": true

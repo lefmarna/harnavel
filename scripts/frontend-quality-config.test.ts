@@ -121,6 +121,50 @@ test("Oxfmt が import と Tailwind class の順序を正規化する", () => {
   );
 });
 
+test("TypeScript projects は mts・cts を型検査対象に含める", () => {
+  const projects = [
+    { config: path.join(ROOT, "tsconfig.json"), directory: path.join(ROOT, "resources/js") },
+    { config: path.join(ROOT, "scripts/tsconfig.json"), directory: path.join(ROOT, "scripts") },
+    { config: path.join(ROOT, "e2e/tsconfig.json"), directory: path.join(ROOT, "e2e") },
+  ].map((project) => ({
+    ...project,
+    fixtures: ["mts", "cts"].map((extension) => {
+      const { directory } = project;
+      const target = path.join(directory, `__quality-extension-${process.pid}.${extension}`);
+
+      writeFileSync(target, "export const qualityExtensionFixture = 1;\n");
+
+      return target;
+    }),
+  }));
+  const fixtures = projects.flatMap((project) => project.fixtures);
+
+  try {
+    for (const { config, fixtures: projectFixtures } of projects) {
+      const result = spawnSync(TSC, ["-p", config, "--showConfig"], {
+        cwd: ROOT,
+        encoding: "utf8",
+      });
+
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+
+      const configuredFiles = (JSON.parse(result.stdout) as { files?: string[] }).files ?? [];
+      const projectRoot = path.dirname(config);
+
+      for (const fixture of projectFixtures) {
+        assert.ok(
+          configuredFiles.some((file) => path.resolve(projectRoot, file) === fixture),
+          `${path.relative(ROOT, fixture)} is missing from ${path.relative(ROOT, config)}`,
+        );
+      }
+    }
+  } finally {
+    for (const fixture of fixtures) {
+      rmSync(fixture, { force: true });
+    }
+  }
+});
+
 function resourcesGeneratedDirectory(): string {
   const directory = path.join(ROOT, "resources/js/routes");
 

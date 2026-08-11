@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -65,28 +65,46 @@ test("Oxlint が無視する生成ファイルだけでも pre-commit を通過�
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 });
 
-test("pre-commit は mjs・cjs を lint と format の対象にする", () => {
+test("pre-commit は明示的な JS・TS module 拡張子を lint と format の対象にする", () => {
   const fixture = mkdtempSync(path.join(os.tmpdir(), "lefthook-frontend-"));
   const bin = path.join(fixture, "bin");
   const pnpmLog = path.join(fixture, "pnpm.log");
-  const files = ["scripts/hooks/stop-verify.mjs", "scripts/hooks/__extension-fixture.cjs"];
+  const lintFiles = [
+    "scripts/hooks/stop-verify.mjs",
+    "scripts/hooks/__extension-fixture.cjs",
+    "scripts/hooks/__extension-fixture.mts",
+    "scripts/hooks/__extension-fixture.cts",
+  ];
+  const formatFiles = [...lintFiles, "mise.toml"];
 
   mkdirSync(bin);
   writeFileSync(path.join(bin, "pnpm"), LOGGING_PNPM, { mode: 0o755 });
 
   try {
-    for (const job of ["fix staged frontend files with oxlint", "format staged frontend files"]) {
-      for (const file of files) {
-        const result = runLefthookJob(job, file, fixture, pnpmLog);
+    for (const file of lintFiles) {
+      const result = runLefthookJob(
+        "fix staged frontend files with oxlint",
+        file,
+        fixture,
+        pnpmLog,
+      );
 
-        assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-      }
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    }
+
+    for (const file of formatFiles) {
+      const result = runLefthookJob("format staged frontend files", file, fixture, pnpmLog);
+
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     }
 
     const commands = readFileSync(pnpmLog, "utf8");
 
-    for (const file of files) {
+    for (const file of lintFiles) {
       assert.match(commands, new RegExp(`^exec oxlint .*${escapeRegExp(file)}$`, "m"));
+    }
+
+    for (const file of formatFiles) {
       assert.match(commands, new RegExp(`^exec oxfmt .*${escapeRegExp(file)}$`, "m"));
     }
   } finally {
@@ -197,6 +215,64 @@ test("stop hook は Markdown を format してから検証する", () => {
     assert.match(commands, /^lint:docs$/m);
   } finally {
     rmSync(fixture.fixture, { force: true, recursive: true });
+  }
+});
+
+test("stop hook は mise.toml を format し frontend toolchain 全体を検証する", () => {
+  const fixture = createStopHookFixture(
+    "mise.toml",
+    '[tools]\nnode = "24.18.0"\npnpm = "11.18.0"\n',
+    '[tools]\nnode="24.18.1"\npnpm="11.18.0"\n',
+    LOGGING_PNPM,
+  );
+
+  try {
+    const result = runStopHook(fixture);
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.ok(existsSync(fixture.pnpmLog), "mise.toml change did not run frontend tools");
+
+    const commands = readFileSync(fixture.pnpmLog, "utf8");
+
+    assert.match(commands, /^exec oxfmt --no-error-on-unmatched-pattern mise\.toml$/m);
+    assert.match(commands, /^format:check$/m);
+    assert.match(commands, /^lint:check$/m);
+    assert.match(commands, /^types:check$/m);
+    assert.match(commands, /^test:unit$/m);
+  } finally {
+    rmSync(fixture.fixture, { force: true, recursive: true });
+  }
+});
+
+test("stop hook は mts・cts を safe fix してから検証する", () => {
+  const fixtures = ["mts", "cts"].map((extension) =>
+    createStopHookFixture(
+      `scripts/__extension-fixture.${extension}`,
+      "export const value = 1\n",
+      "export const value = 2\n",
+      LOGGING_PNPM,
+    ),
+  );
+
+  try {
+    for (const fixture of fixtures) {
+      const result = runStopHook(fixture);
+
+      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+      assert.ok(existsSync(fixture.pnpmLog), "module extension change did not run frontend tools");
+
+      const commands = readFileSync(fixture.pnpmLog, "utf8");
+
+      assert.match(commands, /^exec oxlint --fix --no-error-on-unmatched-pattern /m);
+      assert.match(commands, /^exec oxfmt --no-error-on-unmatched-pattern /m);
+      assert.match(commands, /^lint:check$/m);
+      assert.match(commands, /^types:check$/m);
+      assert.match(commands, /^test:unit$/m);
+    }
+  } finally {
+    for (const fixture of fixtures) {
+      rmSync(fixture.fixture, { force: true, recursive: true });
+    }
   }
 });
 

@@ -113,5 +113,11 @@
     "types": ["node"],
     "jsx": "react-jsx"
   },
-  "include": ["resources/js/**/*.ts", "resources/js/**/*.d.ts", "resources/js/**/*.tsx"]
+  "include": [
+    "resources/js/**/*.cts",
+    "resources/js/**/*.d.ts",
+    "resources/js/**/*.mts",
+    "resources/js/**/*.ts",
+    "resources/js/**/*.tsx"
+  ]
 }

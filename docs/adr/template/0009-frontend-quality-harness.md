@@ -28,11 +28,14 @@ not a direct Oxlint compatibility requirement. Updating any member is a delibera
 migration with supply-chain policy, config-behavior, and full-gate verification rather than an
 incidental dependency refresh.
 
-The dependency-age gate comes from pnpm 11's built-in 24-hour default, not from user or global
-configuration. The repository reproduces that behavior by exact-pinning pnpm through mise and CI.
-It does not repeat `minimumReleaseAge` in `pnpm-workspace.yaml`, because explicitly setting that
-value also changes pnpm's default strictness. A pnpm upgrade must re-evaluate these built-in supply
-chain defaults as part of the deliberate toolchain migration.
+The dependency-age policy comes from pnpm 11's built-in 24-hour default, not from user or global
+configuration. Its built-in mode is non-strict: pnpm prefers an old-enough version in the requested
+range but may fall back to a younger version when no candidate satisfies the age threshold. It is
+therefore a risk-reduction policy, not an unconditional rejection gate. The repository reproduces
+these defaults by exact-pinning pnpm through mise and CI. It does not repeat `minimumReleaseAge` in
+`pnpm-workspace.yaml`, because explicitly setting that value also enables strict mode by default. A
+pnpm upgrade must re-evaluate both the age and strictness defaults as part of the deliberate
+toolchain migration.
 
 Platform-specific Rollup, Tailwind Oxide, and Lightning CSS packages remain transitive. Vite and
 Tailwind own the binaries they use, while pnpm's frozen lockfile records the platform variants.

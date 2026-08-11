@@ -17,11 +17,11 @@ pre-commit:
             run: docker compose exec -T app vendor/bin/pint --format=agent {staged_files}
             stage_fixed: true
     - name: fix staged frontend files with oxlint
-      glob: "*.{cjs,js,jsx,mjs,ts,tsx}"
+      glob: "*.{cjs,cts,js,jsx,mjs,mts,ts,tsx}"
       run: pnpm exec oxlint --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: format staged frontend files
-      glob: "*.{cjs,css,html,js,json,jsx,md,mjs,ts,tsx,yaml,yml}"
+      glob: "*.{cjs,css,cts,html,js,json,jsx,md,mjs,mts,toml,ts,tsx,yaml,yml}"
       run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
     - name: run checks

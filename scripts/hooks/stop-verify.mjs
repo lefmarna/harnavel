@@ -10,24 +10,32 @@ const isExcludedFromPhpStan = (file) => PHPSTAN_EXCLUDED_DIRS.some((dir) => file
 const OXFMT_EXTS = new Set([
   ".cjs",
   ".css",
+  ".cts",
   ".html",
   ".js",
   ".jsx",
   ".json",
   ".md",
   ".mjs",
+  ".mts",
+  ".toml",
   ".ts",
   ".tsx",
   ".yaml",
   ".yml",
 ]);
-const LINT_EXTS = new Set([".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"]);
+const LINT_EXTS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
 const LINT_CONFIG_FILES = new Set([".oxlintrc.json"]);
 const FORMAT_CONFIG_FILES = new Set([".oxfmtrc.json"]);
 const TYPE_CONFIG_FILES = new Set(["tsconfig.json", "scripts/tsconfig.json", "e2e/tsconfig.json"]);
-const FRONTEND_TOOLCHAIN_FILES = new Set(["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"]);
+const FRONTEND_TOOLCHAIN_FILES = new Set([
+  "mise.toml",
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+]);
 const PHP_EXTS = new Set([".php"]);
-const TS_EXTS = new Set([".ts", ".tsx"]);
+const TS_EXTS = new Set([".cts", ".mts", ".ts", ".tsx"]);
 const MD_EXTS = new Set([".md"]);
 
 const payload = JSON.parse(readFileSync(0, "utf8"));

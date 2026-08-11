@@ -33,6 +33,10 @@ type ComposerManifest = {
   scripts?: Record<string, string | string[]>
 }
 
+type PackageManifest = {
+  scripts?: Record<string, string>
+}
+
 function load(relativePath: string): Workflow {
   return (parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8')) ??
     {}) as Workflow
@@ -62,6 +66,31 @@ const action = load('.github/actions/ci-lint/action.yml')
 const actionCommands = (action.runs?.steps ?? [])
   .map((step) => step.run ?? '')
   .join('\n')
+
+const packageManifest = JSON.parse(read('package.json')) as PackageManifest
+const lintCommand = packageManifest.scripts?.lint ?? ''
+const lintCheckCommand = packageManifest.scripts?.['lint:check'] ?? ''
+
+for (const [name, command, oxlint, eslint] of [
+  ['lint', lintCommand, 'oxlint . --fix', 'eslint . --fix'],
+  ['lint:check', lintCheckCommand, 'oxlint .', 'eslint .'],
+] as const) {
+  if (
+    !command.includes(oxlint) ||
+    !command.includes(eslint) ||
+    command.indexOf(oxlint) > command.indexOf(eslint)
+  ) {
+    fail(`${name} must run Oxlint before residual ESLint`)
+  }
+}
+
+if (
+  !read('eslint.config.js').includes(
+    "oxlint.buildFromOxlintConfigFile('./.oxlintrc.json')",
+  )
+) {
+  fail('ESLint must disable rules that the Oxlint config already owns')
+}
 
 for (const command of [
   'vendor/bin/pint --test',
@@ -164,8 +193,21 @@ if (unguardedPestCommands.length > 0) {
   fail('local Pest tasks must reject concurrent DB-backed processes')
 }
 
-if (!read('scripts/hooks/stop-verify.mjs').includes(pestLockPath)) {
+const stopHook = read('scripts/hooks/stop-verify.mjs')
+
+if (!stopHook.includes(pestLockPath)) {
   fail('the stop hook must reject a concurrent DB-backed Pest process')
+}
+
+const lefthook = read('lefthook.yml')
+
+for (const command of [
+  'pnpm exec oxlint --fix --no-error-on-unmatched-pattern {staged_files}',
+  'pnpm exec eslint --fix {staged_files}',
+]) {
+  if (!lefthook.includes(command)) {
+    fail(`the pre-commit hook must run ${command}`)
+  }
 }
 
 if (

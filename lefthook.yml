@@ -16,7 +16,11 @@ pre-commit:
             glob: '*.php'
             run: docker compose exec -T app vendor/bin/pint --format=agent {staged_files}
             stage_fixed: true
-    - name: fix staged frontend files with eslint
+    - name: fix staged frontend files with oxlint
+      glob: '*.{js,jsx,ts,tsx}'
+      run: pnpm exec oxlint --fix --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    - name: run residual eslint fixes
       glob: '*.{js,jsx,ts,tsx}'
       run: pnpm exec eslint --fix {staged_files}
       stage_fixed: true

@@ -21,7 +21,8 @@ const OXFMT_EXTS = new Set([
   '.yaml',
   '.yml',
 ])
-const ESLINT_EXTS = new Set(['.cjs', '.js', '.jsx', '.mjs', '.ts', '.tsx'])
+const LINT_EXTS = new Set(['.cjs', '.js', '.jsx', '.mjs', '.ts', '.tsx'])
+const LINT_CONFIG_FILES = new Set(['.oxlintrc.json', 'eslint.config.js'])
 const PHP_EXTS = new Set(['.php'])
 const TS_EXTS = new Set(['.ts', '.tsx'])
 const MD_EXTS = new Set(['.md'])
@@ -42,8 +43,8 @@ if (all.length === 0) {
 const isBlade = (file) => file.endsWith('.blade.php')
 
 const oxfmtFiles = byExt(existing, OXFMT_EXTS)
-const eslintAll = byExt(all, ESLINT_EXTS)
-const eslintFiles = byExt(existing, ESLINT_EXTS)
+const lintAll = byExt(all, LINT_EXTS)
+const lintFiles = byExt(existing, LINT_EXTS)
 const phpAll = byExt(all, PHP_EXTS).filter((file) => !isBlade(file))
 const phpExisting = byExt(existing, PHP_EXTS).filter((file) => !isBlade(file))
 const phpStanAll = phpAll.filter((file) => !isExcludedFromPhpStan(file))
@@ -52,7 +53,8 @@ const phpStanExisting = phpExisting.filter(
 )
 const hasTs = byExt(all, TS_EXTS).length > 0
 const hasMd = byExt(all, MD_EXTS).length > 0
-const hasJsTsDeletions = eslintAll.length > eslintFiles.length
+const hasJsTsDeletions = lintAll.length > lintFiles.length
+const hasLintConfigChange = all.some((file) => LINT_CONFIG_FILES.has(file))
 const hasPhpStanDeletions = phpStanAll.length > phpStanExisting.length
 const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0
 const dockerReady =
@@ -80,8 +82,19 @@ if (dockerReady && phpExisting.length) {
   )
 }
 
-if (eslintFiles.length && hasCommand('pnpm')) {
-  run(['pnpm', 'exec', 'eslint', '--fix', ...eslintFiles], repo)
+if (lintFiles.length && hasCommand('pnpm')) {
+  run(
+    [
+      'pnpm',
+      'exec',
+      'oxlint',
+      '--fix',
+      '--no-error-on-unmatched-pattern',
+      ...lintFiles,
+    ],
+    repo,
+  )
+  run(['pnpm', 'exec', 'eslint', '--fix', ...lintFiles], repo)
 }
 
 if (oxfmtFiles.length && hasCommand('pnpm')) {
@@ -95,12 +108,29 @@ if (oxfmtFiles.length && hasCommand('pnpm')) {
 
 const tasks = []
 
-if (eslintAll.length && hasCommand('pnpm')) {
-  tasks.push(
-    hasJsTsDeletions
-      ? runAsync(['pnpm', 'lint:check'], repo, 'ESLint')
-      : runAsync(['pnpm', 'exec', 'eslint', ...eslintFiles], repo, 'ESLint'),
-  )
+if ((lintAll.length || hasLintConfigChange) && hasCommand('pnpm')) {
+  if (hasJsTsDeletions || hasLintConfigChange) {
+    tasks.push(runAsync(['pnpm', 'lint:check'], repo, 'Frontend lint'))
+  } else {
+    tasks.push(
+      runAsync(
+        [
+          'pnpm',
+          'exec',
+          'oxlint',
+          '--no-error-on-unmatched-pattern',
+          ...lintFiles,
+        ],
+        repo,
+        'Oxlint',
+      ),
+      runAsync(
+        ['pnpm', 'exec', 'eslint', ...lintFiles],
+        repo,
+        'ESLint residual',
+      ),
+    )
+  }
 }
 
 if (hasTs && hasCommand('pnpm')) {
@@ -162,7 +192,7 @@ if (dockerReady) {
 
 if (
   process.env.STOP_HOOK_E2E === '1' &&
-  eslintFiles.length > 0 &&
+  lintFiles.length > 0 &&
   hasCommand('pnpm')
 ) {
   tasks.push(

@@ -1,6 +1,7 @@
 import js from '@eslint/js'
 import stylistic from '@stylistic/eslint-plugin'
 import importPlugin from 'eslint-plugin-import'
+import oxlint from 'eslint-plugin-oxlint'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
@@ -136,4 +137,6 @@ export default [
       '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
     },
   },
+  // ESLint remains responsible only for rules that Oxlint cannot enforce natively yet.
+  ...oxlint.buildFromOxlintConfigFile('./.oxlintrc.json'),
 ]

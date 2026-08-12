@@ -10,9 +10,11 @@ const TEST_REF = "./.github/workflows/reusable-test.yml";
 
 type Step = {
   env?: Record<string, string>;
+  id?: string;
   name?: string;
   run?: string;
   uses?: string;
+  with?: Record<string, string>;
 };
 
 type Job = {
@@ -201,6 +203,57 @@ if (!createE2eDatabase?.run?.includes("app_e2e")) {
 
 if (runE2e?.env?.DB_DATABASE !== "app_e2e") {
   fail("reusable-test must run Playwright against the dedicated E2E database");
+}
+
+// Composer resolves its cache directory from COMPOSER_HOME and the XDG settings,
+// so any hardcoded path risks pointing at nothing: actions/cache then warns and
+// saves nothing, and every job refetches every package from api.github.com. Ask
+// Composer where it actually caches, before the step that reads the answer.
+const composerCacheOwners: [string, Step[]][] = [
+  [".github/actions/ci-lint/action.yml", action.runs?.steps ?? []],
+  [".github/workflows/reusable-test.yml", reusableTestSteps],
+  [".github/workflows/mutation.yml", mutation?.mutation?.steps ?? []],
+];
+
+for (const [file, steps] of composerCacheOwners) {
+  const cacheIndex = steps.findIndex((step) => step.name === "Cache Composer packages");
+  const cacheStep = steps[cacheIndex];
+
+  if (!cacheStep) {
+    fail(`${file} must cache Composer packages`);
+  }
+
+  const reference = /^\$\{\{ steps\.([\w-]+)\.outputs\.([\w-]+) \}\}$/.exec(
+    cacheStep.with?.path ?? "",
+  );
+  const resolverId = reference?.[1];
+  const output = reference?.[2];
+
+  if (resolverId === undefined || output === undefined) {
+    fail(`${file} must cache the Composer directory resolved at runtime, not a hardcoded path`);
+  }
+
+  const resolverIndex = steps.findIndex((step) => step.id === resolverId);
+
+  if (!steps[resolverIndex]?.run?.includes(`${output}=$(composer config cache-files-dir)`)) {
+    fail(`${file} must publish composer config cache-files-dir as ${JSON.stringify(output)}`);
+  }
+
+  if (resolverIndex > cacheIndex) {
+    fail(`${file} must resolve the Composer cache directory before the cache step`);
+  }
+}
+
+// The list above cannot see a workflow added later, so pin the regression itself.
+const legacyComposerCache = fs
+  .readdirSync(path.join(ROOT, ".github"), { encoding: "utf8", recursive: true })
+  .filter(
+    (entry) =>
+      /\.ya?ml$/.test(entry) && read(path.join(".github", entry)).includes(".composer/cache"),
+  );
+
+if (legacyComposerCache.length > 0) {
+  fail(`the Composer 1 cache path must not come back: ${legacyComposerCache.join(", ")}`);
 }
 
 const pestLockPath = "scripts/run-pest-locked.sh";

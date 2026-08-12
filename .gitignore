@@ -30,7 +30,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
-/.antigravitycli
 
 # Playwright
 /test-results/

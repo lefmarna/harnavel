@@ -10,7 +10,7 @@ A Laravel + Inertia React starter template.
 
 ## Project rules
 
-- Write a failing test before implementing a behavioral change. Tests are the canonical behavioral specification; see `docs/testing-as-spec.md`.
+- Write a failing test before implementing a behavioral change. Behavior is what the application does for a user or caller; configuration and tooling are not behavior. Tests are the canonical behavioral specification; see `docs/testing-as-spec.md`.
 - Comments explain only non-obvious rationale, constraints, or safety; they do not restate the code. Type annotations and tool-required directives are exempt.
 - `README.md` is Japanese and `docs/` is English. Do not hand-edit `docs/generated/` or Boost-managed skills outside their owning refresh workflows.
 - Validation entry points: targeted backend `mise run test`; mutation `mise run mutate`; full backend, mutation, and Chromium E2E `mise run verify:backend:full`; frontend and docs `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:unit`, and `pnpm lint:docs`.

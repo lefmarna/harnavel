@@ -8,8 +8,7 @@ the independent compilation gate, and tests specify behavior.
 
 The correctness category is explicitly an error-level gate. Oxlint enables that category as
 warnings by default, which reports defects without failing CI; a global deny-warnings flag is not
-used because React Compiler diagnostics intentionally remain advisory. Formatter behavior tests use
-stdin fixtures so parallel lint and type checks never observe invalid transient source files.
+used because React Compiler diagnostics intentionally remain advisory.
 
 The linter rejects file-wide TypeScript checking bypasses and `@ts-ignore`, while documented,
 localized `@ts-expect-error` remains available. It also rejects the misleading `{}` and `Function`
@@ -33,17 +32,15 @@ code, Node-based frontend unit tests that import browser modules, Node/tsx tooli
 sees Vite and DOM declarations but not Node globals. The unit program also loads the browser
 program's shared declarations and adds Node ambient types for its Node-based runner. The scripts
 program remains Node-only, while Playwright includes DOM declarations because its callbacks can
-execute in the browser. A coverage test requires every first-party implementation file to be a root
-file of exactly one program; ambient declarations may be shared but must belong to at least one
-program. A newly added file therefore cannot silently miss the compiler gate.
+execute in the browser. The browser program's `exclude` and the unit program's `include` must stay
+exact complements; a file matched by neither belongs to no program, where `tsc` never opens it and
+the type gate passes green.
 
 The production browser and unit programs use ES2022, while the Node tooling and Playwright programs
 use ES2023. Both are stable editions rather than `ESNext`, so a TypeScript upgrade cannot silently
 change the compiler's language and declaration baseline. All programs use `module: Preserve`; it
 implies bundler resolution and matches the actual Vite, tsx, and Playwright transformation hosts
-better than NodeNext's native-Node extension rules. A compiler behavior test keeps these declaration
-baselines deliberate by rejecting a representative ES2023-only API in the ES2022 programs while
-allowing it in the ES2023 programs.
+better than NodeNext's native-Node extension rules.
 
 TypeScript's `target` and `lib` are compiler-side baselines, not a browser compatibility database.
 Vite owns production syntax transformation and uses its versioned default browser target. It does
@@ -63,8 +60,8 @@ fallthrough comment can distinguish deliberate control flow from a missing `brea
 Oxlint, Oxfmt, `oxlint-tsgolint`, and TypeScript form an exact-pinned, verified quality-gate
 baseline. The TypeScript pin stabilizes compiler diagnostics and its native package surface; it is
 not a direct Oxlint compatibility requirement. Updating any member is a deliberate harness
-migration with supply-chain policy, config-behavior, and full-gate verification rather than an
-incidental dependency refresh.
+migration with supply-chain policy and full-gate verification rather than an incidental dependency
+refresh.
 
 The dependency-age policy comes from pnpm 11's built-in 24-hour default, not from user or global
 configuration. Its built-in mode is non-strict: pnpm prefers an old-enough version in the requested

@@ -179,7 +179,7 @@ CI, or docs, preserve that command and add a compatible upstream alias when it i
 Treat the frontend quality harness as template-owned: Oxfmt owns formatting, type-aware Oxlint is
 the only linter, TypeScript owns compilation checks, and tests own behavior. Do not reintroduce
 Prettier or ESLint from a generated reference. Change this ownership only with current tool-behavior
-evidence and corresponding harness tests.
+evidence.
 Adopt new quality checks into aggregate test scripts when they match repository gates. Reject
 setup, development, SSR, queue, or package-manager commands that violate the host/container or
 XServer boundaries, and record the exact conflict.

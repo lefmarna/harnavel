@@ -5,6 +5,6 @@
     "types": ["node", "vite/client"]
   },
   // A child include replaces its parent's include, so tests must name shared declarations again.
-  "include": ["**/*.d.ts", "**/*.test.cts", "**/*.test.mts", "**/*.test.ts", "**/*.test.tsx"],
+  "include": ["**/*.d.ts", "**/*.test.*"],
   "exclude": ["../../node_modules"]
 }

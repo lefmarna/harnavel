@@ -8,6 +8,8 @@ use App\Listeners\ShareAuthenticatedUserLogContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -37,6 +39,13 @@ class AppServiceProvider extends ServiceProvider
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );
+
+        // Docker assigns Nginx a dynamic address. Trust it only while Nginx is loopback-bound
+        // and the FPM service remains unpublished.
+        if (config('app.trust_local_reverse_proxy')) {
+            TrustProxies::at('REMOTE_ADDR');
+            TrustProxies::withHeaders(Request::HEADER_X_FORWARDED_PROTO);
+        }
 
         Password::defaults(
             fn (): Password => Password::min(8)

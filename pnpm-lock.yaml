@@ -19,9 +19,6 @@ importers:
       '@inertiajs/react':
         specifier: ^3.0.0
         version: 3.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@inertiajs/vite':
-        specifier: ^3.0.0
-        version: 3.6.1(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       '@radix-ui/react-avatar':
         specifier: ^1.1.3
         version: 1.2.6(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -61,33 +58,15 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.1.8
         version: 1.2.16(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@tailwindcss/vite':
-        specifier: ^4.1.11
-        version: 4.3.3(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
-      '@types/react':
-        specifier: ^19.2.0
-        version: 19.2.18
-      '@types/react-dom':
-        specifier: ^19.2.0
-        version: 19.2.4(@types/react@19.2.18)
-      '@vitejs/plugin-react':
-        specifier: ^5.2.0
-        version: 5.2.0(supports-color@8.1.1)(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      concurrently:
-        specifier: ^9.0.1
-        version: 9.2.4
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      laravel-vite-plugin:
-        specifier: ^3.0.0
-        version: 3.1.3(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       lucide-react:
         specifier: ^0.475.0
         version: 0.475.0(react@19.2.8)
@@ -106,25 +85,40 @@ importers:
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
-      typescript:
-        specifier: 7.0.2
-        version: 7.0.2
-      vite:
-        specifier: ^8.0.0
-        version: 8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0)
     devDependencies:
+      '@inertiajs/vite':
+        specifier: ^3.0.0
+        version: 3.6.1(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       '@laravel/vite-plugin-wayfinder':
         specifier: ^0.1.3
         version: 0.1.7
       '@playwright/test':
         specifier: ^1.62.1
         version: 1.62.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.11
+        version: 4.3.3(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       '@types/node':
         specifier: ^22.13.5
         version: 22.20.1
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.0
+        version: 19.2.4(@types/react@19.2.18)
+      '@vitejs/plugin-react':
+        specifier: ^5.2.0
+        version: 5.2.0(supports-color@8.1.1)(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
+      concurrently:
+        specifier: ^9.0.1
+        version: 9.2.4
+      laravel-vite-plugin:
+        specifier: ^3.0.0
+        version: 3.1.3(vite@8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       lefthook:
         specifier: ^2.1.10
         version: 2.1.10
@@ -140,6 +134,12 @@ importers:
       tsx:
         specifier: ^4.23.1
         version: 4.23.12
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.0.0
+        version: 8.2.1(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0)
       yaml:
         specifier: ^2.9.0
         version: 2.9.0

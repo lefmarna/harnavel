@@ -1,0 +1,6 @@
+interface:
+  display_name: 'Runtime Investigate'
+  short_description: 'Investigate a deployed environment read-only'
+
+policy:
+  allow_implicit_invocation: false

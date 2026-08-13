@@ -228,6 +228,7 @@ const REPO_OWNED_SKILLS: readonly string[] = [
   "adr-compact",
   "merge-template",
   "project-docs-init",
+  "runtime-investigate",
   "update-laravel-packages",
 ];
 

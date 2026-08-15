@@ -44,6 +44,8 @@ pnpm dev
 - アプリ: `http://localhost:8080`
 - Mailpit: `http://localhost:8025`
 
+`pnpm dev` の二重起動は避けてください。ポート衝突で終了した側が `public/hot` を削除するため、先に起動した dev server が生きたままアプリだけビルド済みアセットの配信に切り替わります（E2E はこの状態を検出して中止します）。
+
 ## 日常的によく使うコマンド
 
 ```bash

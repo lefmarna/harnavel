@@ -17,7 +17,8 @@ class DatabaseSeeder extends Seeder
     {
         // 開発者用の Test User はローカル/テストでだけ作る。本番は composer --no-dev で
         // faker（require-dev）が無く fake() が未定義になり、そもそも本番へ固定ユーザーを
-        // 置く必要も無いため。これで `db:seed` を production-safe に保つ。
+        // 置く必要も無いため。`db:seed --class` はここを通らないので、開発用データを独立した
+        // シーダーへ切り出すときは、そのクラス自身で同じ環境判定をする。
         if (app()->environment('local', 'testing')) {
             User::factory()->create([
                 'name' => 'Test User',

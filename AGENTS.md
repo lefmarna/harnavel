@@ -10,6 +10,7 @@ A Laravel + Inertia React starter template.
 
 ## Project rules
 
+- Delegate independent, read-heavy exploration to the `explorer` subagent when doing so keeps the main context focused.
 - Write a failing test before implementing a behavioral change. Behavior is what the application does for a user or caller; configuration and tooling are not behavior. Tests are the canonical behavioral specification; see `docs/testing-as-spec.md`.
 - Comments explain only non-obvious rationale, constraints, or safety; they do not restate the code. Type annotations and tool-required directives are exempt.
 - `README.md` is Japanese and `docs/` is English. Do not hand-edit `docs/generated/` or Boost-managed skills outside their owning refresh workflows.

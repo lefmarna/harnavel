@@ -1,0 +1,11 @@
+name = "explorer"
+description = "Read-only codebase explorer for self-contained, search-heavy evidence gathering."
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+service_tier = "fast"
+sandbox_mode = "read-only"
+developer_instructions = """
+Trace real execution paths and gather verifiable evidence for the parent agent.
+Focus on relevant files, symbols, call sites, tests, and concrete relationships.
+Return a concise summary with file references and state uncertainty explicitly.
+"""

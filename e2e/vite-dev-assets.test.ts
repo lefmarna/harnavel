@@ -3,7 +3,7 @@ import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { describe, it } from "node:test";
+import { after, describe, it } from "node:test";
 
 import { assertViteDevAssets, createViteDevAssetsProbe } from "./vite-dev-assets";
 import type { ViteDevAssetsProbe } from "./vite-dev-assets";
@@ -18,13 +18,22 @@ function probe(overrides: Partial<ViteDevAssetsProbe> = {}): ViteDevAssetsProbe 
   };
 }
 
+const temporaryRoots: string[] = [];
+
 function temporaryRoot(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "vite-dev-assets-"));
 
+  temporaryRoots.push(root);
   fs.mkdirSync(path.join(root, "public"));
 
   return root;
 }
+
+after(() => {
+  for (const root of temporaryRoots) {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 describe("E2Eが検証するアセットのガード", () => {
   it("dev serverが生きていてhotファイルもあれば通す", async () => {

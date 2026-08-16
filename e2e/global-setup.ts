@@ -1,24 +1,13 @@
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
+import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { assertE2eTarget, CI_E2E_TARGET, E2E_TARGET } from "./e2e-database-target";
 import type { DatabaseTarget } from "./e2e-database-target";
-import { assertViteDevAssets } from "./vite-dev-assets";
-import type { ViteDevAssetsProbe } from "./vite-dev-assets";
+import { assertViteDevAssets, createViteDevAssetsProbe } from "./vite-dev-assets";
 
-const HOT_FILE = "public/hot";
-
-const viteDevAssetsProbe: ViteDevAssetsProbe = {
-  readHotFile: () => (fs.existsSync(HOT_FILE) ? fs.readFileSync(HOT_FILE, "utf8").trim() : null),
-  requestStatus: async (url) => {
-    try {
-      return (await fetch(url)).status;
-    } catch {
-      return null;
-    }
-  },
-};
+// Playwright は globalSetup を config 基準で解決するだけで chdir しないため、起動ディレクトリに依存させない。
+const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
 export type ArtisanRunner = (args: string[], stdio: "inherit" | "pipe") => string;
 
@@ -91,12 +80,16 @@ export async function prepareE2eDatabase(
   artisan(["migrate:fresh", "--force", "--seed"], "inherit");
 }
 
+// CI は dev server を持たず、ビルド済みアセットが常にそのコミットの内容になる。
+export function usesViteDevServer(env: { CI?: string }): boolean {
+  return !env.CI;
+}
+
 export default async function globalSetup(): Promise<void> {
   const isCI = Boolean(process.env.CI);
 
-  // CI は dev server を持たず、ビルド済みアセットが常にそのコミットの内容になる。
-  if (!isCI) {
-    await assertViteDevAssets(viteDevAssetsProbe);
+  if (usesViteDevServer(process.env)) {
+    await assertViteDevAssets(createViteDevAssetsProbe(REPO_ROOT));
   }
 
   await prepareE2eDatabase(isCI ? ciArtisan : dockerArtisan, isCI ? CI_E2E_TARGET : E2E_TARGET);

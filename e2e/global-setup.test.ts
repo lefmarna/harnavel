@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { CI_E2E_TARGET } from "./e2e-database-target";
-import { prepareE2eDatabase } from "./global-setup";
+import { prepareE2eDatabase, usesViteDevServer } from "./global-setup";
 import type { ArtisanRunner } from "./global-setup";
 
 describe("E2Eデータベースの初期化", () => {
@@ -20,5 +20,12 @@ describe("E2Eデータベースの初期化", () => {
     await prepareE2eDatabase(artisan, CI_E2E_TARGET);
 
     assert.equal(calls.filter(([command]) => command === "migrate:fresh").length, 2);
+  });
+});
+
+describe("Vite開発アセットのガードを適用する範囲", () => {
+  it("ローカルだけで適用しCIでは適用しない", () => {
+    assert.equal(usesViteDevServer({}), true);
+    assert.equal(usesViteDevServer({ CI: "true" }), false);
   });
 });

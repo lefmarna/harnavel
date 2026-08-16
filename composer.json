@@ -57,13 +57,10 @@
     "analyse": [
       "vendor/bin/phpstan analyse --memory-limit=2G"
     ],
-    "types:check": [
-      "@analyse"
-    ],
     "test": [
       "@php artisan config:clear --ansi",
       "@lint:check",
-      "@types:check",
+      "@analyse",
       "scripts/run-pest-locked.sh php artisan test"
     ],
     "post-autoload-dump": [

@@ -10,14 +10,13 @@ A Laravel + Inertia React starter template.
 
 ## Project rules
 
-- Delegate independent, read-heavy exploration to the `explorer` subagent when doing so keeps the main context focused.
-- Write a failing test before implementing a behavioral change. Behavior is what the application does for a user or caller; configuration and tooling are not behavior. Tests are the canonical behavioral specification; see `docs/testing-as-spec.md`.
-- Comments explain only non-obvious rationale, constraints, or safety; they do not restate the code. Type annotations and tool-required directives are exempt.
-- `README.md` is Japanese and `docs/` is English. Do not hand-edit `docs/generated/` or Boost-managed skills outside their owning refresh workflows.
-- Validation entry points: targeted backend `mise run test`; mutation `mise run mutate`; full backend, mutation, and Chromium E2E `mise run verify:backend:full`; frontend and docs `pnpm format:check`, `pnpm lint:check`, `pnpm types:check`, `pnpm test:unit`, and `pnpm lint:docs`.
+- Tests are the canonical specification of behavior: write a failing test before a behavioral change (`docs/testing-as-spec.md`).
+- Configuration, tooling, and CI wiring are not behavior and get no tests or checks of their own (TADR-0001 bounds the exception).
+- Generic improvements go to the template, not one app.
+- `README.md` is Japanese and `docs/` is English; `docs/generated/` and Boost-managed skills are generated, never hand-edited.
+- Validation: `mise run test` and `mise run mutate` (targeted backend), `mise run verify:backend:full` (full backend, mutation, and E2E), `pnpm format:check`, `lint:check`, `types:check`, `test:unit`, and `lint:docs`.
 - Run only one local Playwright process at a time because local runs share `app_e2e`.
 
 ## References
 
-- `CONTEXT.md` defines domain terms and `docs/adr/` records architectural decisions. Consult only entries relevant to the task.
-- Laravel-specific guidance is in `docs/generated/boost.md`.
+- `CONTEXT.md` (domain terms), `docs/adr/` (decisions), and `docs/generated/boost.md` (Laravel guidance).

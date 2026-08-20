@@ -1,83 +1,26 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parse } from "yaml";
 
+// XServer releases replace the live directory, so a deploy that loses maintenance, boots an
+// incomplete target, serves stale OPcache, or runs before its gates still reports green. Only
+// those contracts are checked here; retry counts, timeouts, and payload literals are the
+// workflow's own business (TADR-0001, TADR-0006).
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WORKFLOW =
   process.env.DEPLOY_LIFECYCLE_WORKFLOW ?? path.join(ROOT, ".github/workflows/delivery.yml");
 
-const VALID_MAINTENANCE_PAYLOAD = {
-  except: ["/up"],
-  template: "errors::503",
-  status: 503,
-  retry: 60,
-  redirect: null,
-  refresh: null,
-  secret: null,
-};
-
-type Step = {
-  name?: string;
-  run?: string;
-};
-
+type Step = { name?: string; run?: string; uses?: string };
+type Job = { needs?: string | string[]; uses?: string; steps?: Step[] };
 type Workflow = {
-  concurrency?: {
-    "cancel-in-progress"?: boolean;
-  };
-  jobs?: {
-    deploy?: {
-      steps?: Step[];
-    };
-  };
+  concurrency?: { "cancel-in-progress"?: boolean };
+  jobs?: Record<string, Job>;
 };
 
-function fail(message: string): never {
-  throw new Error(`Deployment lifecycle check failed: ${message}`);
-}
-
-const workflow = parse(fs.readFileSync(WORKFLOW, "utf8")) as Workflow;
-const steps = workflow.jobs?.deploy?.steps ?? [];
-
-function indexOf(name: string): number {
-  const index = steps.findIndex((step) => step.name === name);
-
-  return index === -1 ? fail(`missing step "${name}"`) : index;
-}
-
-function runOf(name: string): string {
-  return steps[indexOf(name)]?.run ?? fail(`step "${name}" has no run script`);
-}
-
-function requireText(name: string, expected: string): void {
-  if (!runOf(name).includes(expected)) {
-    fail(`step "${name}" must contain ${JSON.stringify(expected)}`);
-  }
-}
-
-function asLocalRemoteCommand(run: string, start: string): string {
-  const remoteStart = run.indexOf(start);
-  const sshStart = run.lastIndexOf("ssh ", remoteStart);
-
-  if (remoteStart === -1 || sshStart === -1) {
-    fail(`could not locate remote command starting with ${JSON.stringify(start)}`);
-  }
-
-  return (run.slice(0, sshStart) + "sh -c " + run.slice(remoteStart)).replaceAll(
-    'sleep "$((attempt * 30))"',
-    ":",
-  );
-}
-
-const ordered = [
-  "Validate deployment configuration",
-  "Check release-critical files",
-  "Setup SSH key",
-  "Verify XServer toolchain",
+const ORDERED = [
   "Enable maintenance mode",
   "Deploy to XServer via Rsync",
   "Run post-deploy commands",
@@ -86,282 +29,166 @@ const ordered = [
   "Verify release health",
 ];
 
-for (let index = 1; index < ordered.length; index++) {
-  const before = ordered[index - 1] ?? "";
-  const after = ordered[index] ?? "";
+function fail(message: string): never {
+  throw new Error(`Deployment lifecycle check failed: ${message}`);
+}
+
+const workflow = parse(fs.readFileSync(WORKFLOW, "utf8")) as Workflow;
+const jobs = workflow.jobs ?? {};
+const steps = jobs.deploy?.steps ?? [];
+
+function indexOf(name: string): number {
+  const index = steps.findIndex((step) => step.name === name);
+
+  return index === -1 ? fail(`missing step "${name}"`) : index;
+}
+
+// YAML parses an unquoted `run: true` as a boolean, so a neutered step arrives as a non-string.
+function runOf(name: string): string {
+  const run: unknown = steps[indexOf(name)]?.run;
+
+  return typeof run === "string" ? run : fail(`step "${name}" has no run script`);
+}
+
+function requireText(name: string, expected: string, why: string): void {
+  if (!runOf(name).includes(expected)) {
+    fail(`step "${name}" must ${why} (${expected})`);
+  }
+}
+
+for (let index = 1; index < ORDERED.length; index++) {
+  const before = ORDERED[index - 1] ?? "";
+  const after = ORDERED[index] ?? "";
 
   if (indexOf(before) >= indexOf(after)) {
     fail(`"${before}" must run before "${after}"`);
   }
 }
 
+// Reachability rather than single edges: production must never be replaced by a release whose
+// gates have not finished, however the job graph is later restructured.
+function upstreamOf(job: string, seen = new Set<string>()): Set<string> {
+  for (const dependency of [jobs[job]?.needs ?? []].flat()) {
+    if (!seen.has(dependency)) {
+      seen.add(dependency);
+      upstreamOf(dependency, seen);
+    }
+  }
+
+  return seen;
+}
+
+const upstream = upstreamOf("deploy");
+
+for (const gate of ["lint", "test"]) {
+  if (!upstream.has(gate)) {
+    fail(`the deploy job must wait for "${gate}"`);
+  }
+}
+
+// Waiting for a gate binds nothing if delivery stops running it. Pull requests run the same
+// action through quality.yml, so a delivery job that drops it is caught before it can ship.
+const GATE_ACTION = "./.github/actions/ci-lint";
+const TEST_WORKFLOW = "./.github/workflows/reusable-test.yml";
+
+if (!(jobs.lint?.steps ?? []).some((step) => step.uses === GATE_ACTION)) {
+  fail(`the delivery lint job must run ${GATE_ACTION}`);
+}
+
+if (jobs.test?.uses !== TEST_WORKFLOW) {
+  fail(`the delivery test job must run ${TEST_WORKFLOW}, not merely carry the name`);
+}
+
 if (workflow.concurrency?.["cancel-in-progress"] !== false) {
   fail("active deployments must not be cancelled by a newer push");
 }
 
-requireText("Enable maintenance mode", "vendor/autoload.php");
-requireText("Enable maintenance mode", "storage/framework/down");
-requireText("Enable maintenance mode", "storage/framework/maintenance.php");
-requireText("Enable maintenance mode", "maintenance-mode.stub");
-requireText("Enable maintenance mode", "cmp -s");
-requireText("Enable maintenance mode", "json_decode");
-requireText("Enable maintenance mode", "template");
-requireText("Enable maintenance mode", "artisan down");
-requireText("Enable maintenance mode", "--render='errors::503'");
-requireText("Enable maintenance mode", "--retry=60");
+requireText("Enable maintenance mode", "artisan down", "take the release into maintenance");
 
-if (/\[\s+!\s+-[efrs]\s+[^\]]*storage\/framework\/down/.test(runOf("Enable maintenance mode"))) {
-  fail("existing maintenance mode must be refreshed and validated");
+// Laravel's maintenance stub returns and lets the framework boot when the payload carries no
+// prerendered template, so an unrendered `artisan down` boots an incomplete target mid-release.
+// An empty `--render=` is falsy in PHP and leaves the same null template, so the view matters.
+for (const step of ["Enable maintenance mode", "Run post-deploy commands"]) {
+  if (!/artisan down[^\n]*--render=(?:'[^'\s]+'|"[^"\s]+"|[^\s'"]+)/.test(runOf(step))) {
+    fail(`step "${step}" must prerender a named maintenance view (artisan down --render=<view>)`);
+  }
 }
-
-const maintenanceRun = runOf("Enable maintenance mode");
-const maintenanceFixtureCommandTemplate = asLocalRemoteCommand(maintenanceRun, '"mkdir -p');
-const postDeployFixtureCommandTemplate = asLocalRemoteCommand(
-  runOf("Run post-deploy commands"),
-  '"cd --',
+requireText(
+  "Enable maintenance mode",
+  "vendor/autoload.php",
+  "refuse to boot an incomplete target, leaving an existing maintenance state repairable",
 );
-const maintenanceFixture = fs.mkdtempSync(path.join(os.tmpdir(), "deploy-lifecycle-"));
+requireText("Deploy to XServer via Rsync", "--delete", "replace the release");
+requireText("Disable maintenance mode", "artisan up", "lift maintenance");
 
-try {
-  const deployDirectory = path.join(maintenanceFixture, "deploy");
-  const phpRunner = path.join(maintenanceFixture, "php");
+// The entry may absorb its own failure so that a release already down from a failed deploy stays
+// repairable (TADR-0006). That tolerance is only safe while the state is verified afterwards, so
+// this binds the absorbing form alone; letting `artisan down` fail hard needs no proof.
+const enable = runOf("Enable maintenance mode");
 
-  fs.writeFileSync(
-    phpRunner,
-    `#!/bin/sh
-if [ -n "\${FAKE_LOG:-}" ]; then
-  printf '%s\\n' "$*" >> "$FAKE_LOG"
-fi
-case "$1" in
-  */composer-2.10.2)
-    exit 0
-    ;;
-esac
-if [ "$1" = "artisan" ] && [ "$2" = "down" ]; then
-  if [ "\${FAKE_ARTISAN_DOWN:-success}" = "fail" ]; then
-    exit 1
-  fi
-  mkdir -p storage/framework
-  cp vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub storage/framework/maintenance.php
-  printf '%s\\n' '{"except":["/up"],"template":"errors::503","status":503,"retry":60,"redirect":null,"refresh":null,"secret":null}' > storage/framework/down
-  exit 0
-fi
-if [ "$1" = "-r" ]; then
-  node -e 'const fs = require("node:fs"); const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.exit(Array.isArray(data.except) && data.except.length === 1 && data.except[0] === "/up" && typeof data.template === "string" && data.template !== "" && data.status === 503 && data.retry === 60 && data.redirect === null && (data.refresh ?? null) === null && data.secret === null ? 0 : 1)' "$3"
-  exit $?
-fi
-if [ "$1" = "artisan" ]; then
-  exit 0
-fi
-exit 1
-`,
-  );
-  fs.chmodSync(phpRunner, 0o755);
+// Maintenance protects a release only when the responder is in place and the payload names a
+// template and a narrow exclusion list; `file_exists` on the down file proves none of that, and
+// `/up` is exempted before the payload is read, so a broken state still answers health with 200.
+const PROOF_OF_MAINTENANCE: [RegExp, string][] = [
+  [/storage\/framework\/down/, "read the payload back"],
+  [/maintenance\.php/, "confirm the prerendered responder is in place"],
+  [/json_decode|json\.load|jq\b/, "parse the payload rather than trust its presence"],
+  [/template/, "reject an empty prerendered template"],
+  [/except/, "reject an exclusion list that would let requests through"],
+];
 
-  const maintenanceFixtureCommand = maintenanceFixtureCommandTemplate.replaceAll(
-    "/usr/bin/php8.5",
-    phpRunner,
-  );
-  const runMaintenanceFixture = (
-    environment: NodeJS.ProcessEnv = {},
-  ): ReturnType<typeof spawnSync> =>
-    spawnSync("sh", ["-c", maintenanceFixtureCommand], {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        DEPLOY_DIRECTORY: deployDirectory,
-        ...environment,
-      },
-    });
-
-  const emptyResult = runMaintenanceFixture();
-
-  if (emptyResult.status !== 0) {
-    fail("an empty first deployment must skip maintenance mode");
-  }
-
-  fs.writeFileSync(path.join(deployDirectory, "artisan"), "");
-
-  const missingVendorResult = runMaintenanceFixture();
-
-  if (missingVendorResult.error) {
-    fail(`could not exercise missing-vendor deployment: ${missingVendorResult.error.message}`);
-  }
-
-  if (missingVendorResult.status !== 0) {
-    fail("an incomplete first deployment without vendor/autoload.php must remain retryable");
-  }
-
-  const stub = path.join(
-    deployDirectory,
-    "vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub",
-  );
-  const responder = path.join(deployDirectory, "storage/framework/maintenance.php");
-
-  fs.mkdirSync(path.dirname(stub), { recursive: true });
-  fs.mkdirSync(path.dirname(responder), { recursive: true });
-  fs.writeFileSync(path.join(deployDirectory, "vendor/autoload.php"), "");
-  fs.writeFileSync(stub, "valid responder\n");
-  fs.copyFileSync(stub, responder);
-  fs.writeFileSync(
-    path.join(deployDirectory, "storage/framework/down"),
-    JSON.stringify(VALID_MAINTENANCE_PAYLOAD),
-  );
-
-  const repairResult = runMaintenanceFixture({
-    FAKE_ARTISAN_DOWN: "fail",
-  });
-
-  if (repairResult.status !== 0) {
-    fail("valid existing maintenance must allow repair when artisan cannot boot");
-  }
-
-  const invalidPayloads = [
-    { ...VALID_MAINTENANCE_PAYLOAD, except: ["*"] },
-    { ...VALID_MAINTENANCE_PAYLOAD, except: undefined },
-    { ...VALID_MAINTENANCE_PAYLOAD, except: ["/up", "/admin"] },
-    { ...VALID_MAINTENANCE_PAYLOAD, refresh: 0 },
-    { ...VALID_MAINTENANCE_PAYLOAD, refresh: "5" },
-    {
-      ...VALID_MAINTENANCE_PAYLOAD,
-      refresh: "0; url=https://example.test",
-    },
-  ];
-
-  for (const payload of invalidPayloads) {
-    fs.writeFileSync(path.join(deployDirectory, "storage/framework/down"), JSON.stringify(payload));
-
-    const invalidPayloadResult = runMaintenanceFixture({
-      FAKE_ARTISAN_DOWN: "fail",
-    });
-
-    if (invalidPayloadResult.status === 0) {
-      fail("unsafe maintenance payload must stop deployment before rsync");
+if (/artisan down[^\n]*\|\|/.test(enable.replaceAll(/'[^']*'/g, ""))) {
+  for (const [pattern, why] of PROOF_OF_MAINTENANCE) {
+    if (!pattern.test(enable)) {
+      fail(`an absorbed maintenance failure must ${why} before the release is replaced`);
     }
   }
+}
 
-  fs.writeFileSync(
-    path.join(deployDirectory, "storage/framework/down"),
-    JSON.stringify(VALID_MAINTENANCE_PAYLOAD),
+// Timestamp revalidation keeps serving the previous code for a moment after the files change, so
+// maintenance is held across that window (docs/infrastructure.md). The length is not fixed here.
+if (!/\bsleep\s+[1-9]/.test(runOf("Wait for OPcache revalidation"))) {
+  fail("the OPcache window must be waited out while maintenance is still active");
+}
+
+// A release that fails after `artisan up` has to be reported as a failed deploy. Widening the
+// verdict is the tempting fix once the endpoint starts redirecting — a status range, or just one
+// more code waved through — and it passes 204 or 301 as healthy. So the script may compare the
+// status against 200 and against nothing else; retries and timeouts stay the workflow's business.
+const health = runOf("Verify release health");
+const accepted = [...health.matchAll(/=\s*"?(\d{2,3})"?/g)].map((match) => match[1]);
+
+if (accepted.length !== 1 || accepted[0] !== "200") {
+  fail("release health must be decided by an exact match on HTTP 200 and no other status");
+}
+
+// Composer install rewrites vendor/, so maintenance is re-established before migrations run, and
+// a failed re-entry has to stop the chain rather than migrate an unprotected release.
+const postDeploy = runOf("Run post-deploy commands");
+const composerAt = postDeploy.indexOf("composer");
+const downAt = postDeploy.indexOf("artisan down");
+const migrateAt = postDeploy.indexOf("artisan migrate");
+
+if (composerAt === -1 || downAt === -1 || migrateAt === -1) {
+  fail("post-deploy must install dependencies, re-enter maintenance, and migrate");
+}
+
+if (!(composerAt < downAt && downAt < migrateAt)) {
+  fail(
+    "post-deploy must re-enter maintenance after Composer rewrites vendor/ and before migrating",
   );
-
-  fs.writeFileSync(responder, "invalid responder\n");
-
-  const invalidMaintenanceResult = runMaintenanceFixture({
-    FAKE_ARTISAN_DOWN: "fail",
-  });
-
-  if (invalidMaintenanceResult.status === 0) {
-    fail("invalid existing maintenance must stop deployment before rsync");
-  }
-
-  const postDeployLog = path.join(maintenanceFixture, "post-deploy.log");
-  const postDeployFixtureCommand = postDeployFixtureCommandTemplate.replaceAll(
-    "/usr/bin/php8.5",
-    phpRunner,
-  );
-  const runPostDeployFixture = (
-    environment: NodeJS.ProcessEnv = {},
-  ): ReturnType<typeof spawnSync> =>
-    spawnSync("sh", ["-c", postDeployFixtureCommand], {
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        DEPLOY_DIRECTORY: deployDirectory,
-        FAKE_LOG: postDeployLog,
-        ...environment,
-      },
-    });
-
-  const postDeployResult = runPostDeployFixture();
-
-  if (postDeployResult.status !== 0) {
-    fail("the repaired release must regenerate maintenance before migrations");
-  }
-
-  const postDeployCalls = fs.readFileSync(postDeployLog, "utf8");
-
-  if (
-    postDeployCalls.indexOf("composer-2.10.2 install") >= postDeployCalls.indexOf("artisan down") ||
-    postDeployCalls.indexOf("artisan down") >= postDeployCalls.indexOf("artisan migrate --force")
-  ) {
-    fail("maintenance must be regenerated after Composer and before migrations");
-  }
-
-  fs.writeFileSync(postDeployLog, "");
-
-  const failedRegenerationResult = runPostDeployFixture({
-    FAKE_ARTISAN_DOWN: "fail",
-  });
-
-  if (failedRegenerationResult.status === 0) {
-    fail("failed maintenance regeneration must stop post-deploy commands");
-  }
-
-  const failedRegenerationCalls = fs.readFileSync(postDeployLog, "utf8");
-
-  if (
-    failedRegenerationCalls.includes("artisan config:cache") ||
-    failedRegenerationCalls.includes("artisan migrate --force")
-  ) {
-    fail("cache and migration commands must not run after regeneration fails");
-  }
-} finally {
-  fs.rmSync(maintenanceFixture, { recursive: true, force: true });
 }
 
-requireText("Deploy to XServer via Rsync", "--delete");
-requireText("Run post-deploy commands", "composer-2.10.2 install");
-requireText("Run post-deploy commands", "artisan down");
-requireText("Run post-deploy commands", "--render='errors::503'");
-requireText("Run post-deploy commands", "--retry=60");
-requireText("Run post-deploy commands", "storage/framework/down");
-requireText("Run post-deploy commands", "storage/framework/maintenance.php");
-requireText("Run post-deploy commands", "maintenance-mode.stub");
-requireText("Run post-deploy commands", "cmp -s");
-requireText("Run post-deploy commands", "json_decode");
-requireText("Run post-deploy commands", "artisan migrate --force");
+// Single-quoted PHP payloads carry their own separators, so compare what is left once they and the
+// legitimate `&&` links are removed. A line break without a continuation separates commands too.
+const chain = postDeploy
+  .slice(downAt, migrateAt)
+  .replaceAll(/'[^']*'/g, "")
+  .replaceAll("&&", "")
+  .replaceAll("\\\n", "");
 
-for (const step of ["Enable maintenance mode", "Run post-deploy commands"]) {
-  requireText(step, '(\\$data[\\"except\\"] ?? null) === [\\"/up\\"]');
-  requireText(step, '(\\$data[\\"refresh\\"] ?? null) === null');
+if (/[;|&]/.test(chain) || chain.includes("\n")) {
+  fail("a failed maintenance command must short-circuit the migration; keep the chain &&-linked");
 }
 
-requireText("Wait for OPcache revalidation", "sleep 2");
-requireText("Disable maintenance mode", "artisan up");
-requireText("Verify release health", "for attempt in 1 2 3");
-requireText("Verify release health", "--max-time 5");
-requireText("Verify release health", "sleep 1");
-requireText("Verify release health", '"$status" = "200"');
-
-if (
-  steps.at(-2)?.name !== "Disable maintenance mode" ||
-  steps.at(-1)?.name !== "Verify release health"
-) {
-  fail("maintenance lift and release verification must finish deployment");
-}
-
-if (
-  steps
-    .slice(indexOf("Enable maintenance mode") + 1, indexOf("Deploy to XServer via Rsync"))
-    .some((step) => step.run?.includes("sleep "))
-) {
-  fail("deployment must start without a fixed request-drain delay");
-}
-
-const artisanDownCount = steps.reduce(
-  (count, step) => count + (step.run?.match(/artisan down/g)?.length ?? 0),
-  0,
-);
-
-if (artisanDownCount !== 2) {
-  fail("maintenance must be validated before and after release replacement");
-}
-
-if (/\b(?:artisan|php)\b|storage\/framework|maintenance/i.test(runOf("Verify release health"))) {
-  fail("release verification must not re-enter maintenance after artisan up");
-}
-
-console.log(
-  "OK: deployment uses Laravel maintenance, a 2-second OPcache wait, and a bounded /up check.",
-);
+console.log("OK: deploy order, gate dependencies, and the maintenance contract are intact.");

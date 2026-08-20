@@ -104,10 +104,6 @@ runs:
       shell: bash
       run: pnpm run test:toolchain-versions
 
-    - name: Test CI Wiring
-      shell: bash
-      run: pnpm run test:ci-wiring
-
     - name: Run Frontend Unit Tests
       shell: bash
       run: pnpm run test:unit

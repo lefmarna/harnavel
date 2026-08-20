@@ -14,6 +14,8 @@ changes.
   callbacks, APIs, and other non-page endpoints need only the tests appropriate to their behavior.
 - Pest uses a `describe` / `it` hierarchy with one behavior per `it`; Pest and Playwright test titles
   are Japanese.
+- Configuration, tooling, and CI wiring are not behavior; do not add tests or checks for them.
+  TADR-0001 bounds the one exception, where a deploy failure would be both irreversible and silent.
 
 ## Mutation testing
 

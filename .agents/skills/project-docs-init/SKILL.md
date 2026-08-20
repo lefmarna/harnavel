@@ -101,6 +101,7 @@ Update `Project Context` and related sections in `AGENTS.md` using this policy:
 - Docs responsibility separation.
 - Generated-file edit ban.
 - Language rules for docs and README.
+- Template ownership direction: generic improvements go to the template, not a derived app's copy.
 
 If supplemental details such as screen structure or access control are needed, first summarize them briefly in `AGENTS.md` instead of adding a dedicated doc.
 

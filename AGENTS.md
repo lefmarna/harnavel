@@ -16,6 +16,7 @@ A Laravel + Inertia React starter template.
 - `README.md` is Japanese and `docs/` is English; `docs/generated/` and Boost-managed skills are generated, never hand-edited.
 - Validation: `mise run test` and `mise run mutate` (targeted backend), `mise run verify:backend:full` (full backend, mutation, and E2E), `pnpm format:check`, `lint:check`, `types:check`, `test:unit`, and `lint:docs`.
 - Run only one local Playwright process at a time because local runs share `app_e2e`.
+- Delegate read-heavy exploration to the `explorer` subagent.
 
 ## References
 

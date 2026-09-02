@@ -94,8 +94,12 @@ it.
   Record the resulting derived-app steps in the report.
 - Keep the Docker PHP image tag byte-for-byte unchanged. Composer, Laravel Installer, Node, and
   pnpm being latest never authorizes a PHP patch, minor, or major update. Treat Composer's
-  `require.php` constraint separately as a manifest constraint: adopt the reference only when the
-  fixed XServer-compatible runtime satisfies it, and stop for approval before raising its minimum.
+  `require.php` constraint separately as a manifest constraint, and check the reference's own
+  constraint against the reference's own lockfile before copying it. A starter can declare a floor
+  its locked dependencies cannot install on, and copying that constraint documents a runtime nothing
+  can run. Adopt the reference only when it is self-consistent and the fixed XServer-compatible
+  runtime satisfies it; otherwise declare the floor this repository pins and tests, recording the
+  divergence. Stop for approval before raising the minimum.
 - Rebuild without cache, start the containers, and verify the effective versions. Stop if the
   expected versions are not active.
 
@@ -175,7 +179,9 @@ disposition.
 For scripts and lifecycle hooks, classify every key and every command as adopted, template
 equivalent, or rejected with a constraint. Do not leave a partially merged scripts object with
 unexplained omissions. When the template already has an equivalent canonical command used by mise,
-CI, or docs, preserve that command and add a compatible upstream alias when it improves convergence.
+CI, or docs, preserve that command; add a compatible upstream alias for it only after the manifest's
+git history shows this repository never removed that key. The reference carrying the alias is not
+evidence, and convergence is not a reason to reinstate a script a later commit deleted.
 Treat the frontend quality harness as template-owned: Oxfmt owns formatting, type-aware Oxlint is
 the only linter, TypeScript owns compilation checks, and tests own behavior. Do not reintroduce
 Prettier or ESLint from a generated reference. Change this ownership only with current tool-behavior

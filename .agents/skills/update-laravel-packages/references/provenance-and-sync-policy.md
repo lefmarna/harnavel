@@ -30,8 +30,7 @@ is permanent if Laravel or a better maintained replacement now provides it.
 | Browser E2E tests | `@playwright/test`, `playwright.config.ts`, `e2e/`, CI, commit `5b75c37` | Keep smoke and auth browser coverage runnable |
 | Docs and script checks | `tsx`, `scripts/`, package scripts, commits `196f853`, `b7ebda4`, `da48cc8` | Keep docs, deploy-safety, and unit script checks runnable |
 | Git hooks | `lefthook`, `lefthook.yml`, package `prepare`, commit `3f4643a` | Keep local hook installation without affecting production deploys |
-| Frontend formatting | `oxfmt`, `.oxfmtrc.json`, package `format`/`format:check`, `lefthook.yml` | Keep Oxfmt as the repository's only formatter |
-| Frontend linting | `oxlint`, `oxlint-tsgolint`, `.oxlintrc.json`, TypeScript configs, package `lint`/`lint:check`, `lefthook.yml` | Keep type-aware Oxlint as the only linter and preserve the semantic guardrails configured in `.oxlintrc.json` |
+| Frontend toolchain | `vite-plus`, the `lint`/`fmt` blocks of `vite.config.ts`, the `vite@*` override in `pnpm-workspace.yaml`, TypeScript configs, package `format`/`lint`/`types:check` scripts, `lefthook.yml`, TADR-0009 | Keep Vite+ as the single source of Vite, Oxfmt, Oxlint, and `oxlint-tsgolint`; keep Oxfmt the only formatter and type-aware Oxlint the only linter, and preserve the semantic guardrails configured in the `lint` block |
 
 If history after these commits changes the capability, follow the latest evidence rather than the
 table.
@@ -76,6 +75,15 @@ table.
 
 Do not exclude `.env.example`, dotfiles, lockfiles, agent instructions, generated configuration,
 or files merely because the template currently lacks them.
+
+## Recorded constraint exceptions
+
+`require.php` does not follow the reference. A fresh Laravel declares `^8.3` while its own locked
+Symfony requires `>=8.4.1`, so the reference's constraint describes a runtime on which
+`composer install` cannot succeed. This template declares the runtime it actually pins and tests:
+the Docker tag matches XServer's PHP, and every CI job runs that same series. Keep this constraint
+in step with the Docker PHP series rather than with the reference, and treat a lower floor as a
+support claim nothing here exercises.
 
 ## Required evidence for removals
 

@@ -25,8 +25,8 @@ const OXFMT_EXTS = new Set([
   ".yml",
 ]);
 const LINT_EXTS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
-const LINT_CONFIG_FILES = new Set([".oxlintrc.json"]);
-const FORMAT_CONFIG_FILES = new Set([".oxfmtrc.json"]);
+const LINT_CONFIG_FILES = new Set(["vite.config.ts"]);
+const FORMAT_CONFIG_FILES = new Set(["vite.config.ts"]);
 const FRONTEND_TOOLCHAIN_FILES = new Set([
   "mise.toml",
   "package.json",
@@ -108,7 +108,7 @@ if (dockerReady && phpExisting.length) {
 
 if (lintFiles.length && hasPnpm) {
   captureFailure(
-    ["pnpm", "exec", "oxlint", "--fix", "--no-error-on-unmatched-pattern", ...lintFiles],
+    ["pnpm", "exec", "vp", "lint", "--fix", "--no-error-on-unmatched-pattern", ...lintFiles],
     repo,
     "Oxlint safe fix",
     fixFailures,
@@ -117,7 +117,7 @@ if (lintFiles.length && hasPnpm) {
 
 if (oxfmtFiles.length && hasPnpm) {
   captureFailure(
-    ["pnpm", "exec", "oxfmt", "--no-error-on-unmatched-pattern", ...oxfmtFiles],
+    ["pnpm", "exec", "vp", "fmt", "--no-error-on-unmatched-pattern", ...oxfmtFiles],
     repo,
     "Oxfmt format",
     fixFailures,
@@ -143,7 +143,15 @@ if (
   } else {
     tasks.push(
       runAsync(
-        ["pnpm", "exec", "oxlint", "--type-aware", "--no-error-on-unmatched-pattern", ...lintFiles],
+        [
+          "pnpm",
+          "exec",
+          "vp",
+          "lint",
+          "--type-aware",
+          "--no-error-on-unmatched-pattern",
+          ...lintFiles,
+        ],
         repo,
         "Oxlint",
       ),
@@ -157,7 +165,7 @@ if (hasPnpm && (oxfmtAll.length || hasFormatConfigChange || hasFrontendToolchain
   } else {
     tasks.push(
       runAsync(
-        ["pnpm", "exec", "oxfmt", "--check", "--no-error-on-unmatched-pattern", ...oxfmtFiles],
+        ["pnpm", "exec", "vp", "fmt", "--check", "--no-error-on-unmatched-pattern", ...oxfmtFiles],
         repo,
         "Oxfmt",
       ),

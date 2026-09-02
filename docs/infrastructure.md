@@ -11,10 +11,10 @@ verifies the remote PHAR and its version but does not provision it.
 
 ## OPcache
 
-Last measured: July 2026.
+Last measured: September 2026.
 
 Two production domains and one development subdomain across two applications reported web SAPI
-`cgi-fcgi`, PHP 8.5.5, `opcache.validate_timestamps=1`, `opcache.revalidate_freq=2`, and no preload.
+`cgi-fcgi`, PHP 8.5.9, `opcache.validate_timestamps=1`, `opcache.revalidate_freq=2`, and no preload.
 This is why delivery keeps maintenance active through an OPcache revalidation window.
 
 Recheck this assumption after changing the hosting provider, PHP version, or server-side `.user.ini`,

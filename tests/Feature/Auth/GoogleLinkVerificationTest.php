@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use App\ViewModels\Auth\GoogleLinkVerifyPageViewModel;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -107,6 +108,8 @@ describe('Google 連携リンク検証', function () {
     });
 
     it('Google 連携確定が失敗したときはエラーページを表示する', function () {
+        Log::spy();
+
         $service = Mockery::mock(GoogleAuthServiceContract::class);
         $service->shouldReceive('confirmLink')
             ->once()
@@ -124,6 +127,13 @@ describe('Google 連携リンク検証', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('auth/google-link/verify')
                 ->where('status', 'error'));
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Google link verification could not be confirmed.'
+                    && $context === ['user_id' => '1'];
+            })
+            ->once();
     });
 });
 

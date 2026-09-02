@@ -168,7 +168,6 @@ class GoogleAuthController extends Controller
             if (! $this->googleAuthService->confirmLink($userId, $linkPayload['google_id'], $linkPayload['email'])) {
                 Log::warning('Google link verification could not be confirmed.', [
                     'user_id' => $userId,
-                    'email' => $linkPayload['email'],
                 ]);
 
                 return $this->googleLinkVerifyPage('error');

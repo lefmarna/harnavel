@@ -20,4 +20,4 @@ A Laravel + Inertia React starter template.
 
 ## References
 
-- `CONTEXT.md` (domain terms), `docs/adr/` (decisions), and `docs/generated/boost.md` (Laravel guidance).
+- `CONTEXT.md` (domain terms), `docs/adr/` (decisions), `docs/logging-guidelines.md` (log operations), and `docs/generated/boost.md` (Laravel guidance).

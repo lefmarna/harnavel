@@ -36,7 +36,7 @@ class ProductionExceptionNotifier
             // 通知失敗を元の例外処理へ伝播させない。
             try {
                 Log::warning('Discord exception notification was skipped.', [
-                    'exception' => $notifierException,
+                    'exception_class' => $notifierException::class,
                 ]);
             } catch (Throwable) {
                 // ログ基盤も利用できない。
@@ -90,7 +90,7 @@ class ProductionExceptionNotifier
                 ->throw();
         } catch (Throwable $exception) {
             Log::warning('Discord exception notification failed.', [
-                'exception' => $exception,
+                'exception_class' => $exception::class,
             ]);
         }
     }

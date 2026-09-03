@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use App\ViewModels\Auth\GoogleLinkVerifyPageViewModel;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -132,6 +134,61 @@ describe('Google 連携リンク検証', function () {
             ->withArgs(function (string $message, array $context): bool {
                 return $message === 'Google link verification could not be confirmed.'
                     && $context === ['user_id' => '1'];
+            })
+            ->once();
+    });
+
+    it('Google 連携確定が例外で失敗してもログにバインディング値が残らない', function () {
+        Log::spy();
+
+        $service = Mockery::mock(GoogleAuthServiceContract::class);
+        $service->shouldReceive('confirmLink')
+            ->once()
+            ->andThrow(new QueryException(
+                'mysql',
+                'update `users` set `google_id` = ? where `email` = ?',
+                ['google-123', 'existing@example.com'],
+                new Exception('SQLSTATE[23000]: Integrity constraint violation'),
+            ));
+        app()->instance(GoogleAuthServiceContract::class, $service);
+
+        $url = googleLinkVerifyUrl('1', [
+            'google_id' => 'google-123',
+            'email' => 'existing@example.com',
+        ]);
+
+        $this->post($url)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/google-link/verify')
+                ->where('status', 'error'));
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Google link verification failed.'
+                    && $context === ['exception_class' => QueryException::class];
+            })
+            ->once();
+    });
+
+    it('Google 連携リンクの payload が復号できないときはログには例外クラス名だけを残す', function () {
+        Log::spy();
+
+        $service = Mockery::mock(GoogleAuthServiceContract::class);
+        $service->shouldNotReceive('confirmLink');
+        app()->instance(GoogleAuthServiceContract::class, $service);
+
+        $url = URL::temporarySignedRoute('auth.google.link.verify', now()->addHour(), [
+            'userId' => '1',
+            'payload' => 'not-encrypted',
+        ]);
+
+        $this->get($url)->assertOk();
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Google link verification payload is invalid.'
+                    && $context === ['exception_class' => DecryptException::class];
             })
             ->once();
     });

@@ -57,7 +57,7 @@ class GoogleAuthController extends Controller
             /** @var User $googleUser */
             $googleUser = $driver->user();
         } catch (Throwable $e) {
-            Log::warning('Google OAuth callback failed.', ['exception' => $e]);
+            Log::warning('Google OAuth callback failed.', ['exception_class' => $e::class]);
 
             return redirect()->route('login')
                 ->with('error', 'Google認証に失敗しました。もう一度お試しください。');
@@ -90,7 +90,7 @@ class GoogleAuthController extends Controller
         try {
             $user = $this->googleAuthService->findOrCreate($googleId, $email, $name);
         } catch (QueryException $e) {
-            Log::warning('Google OAuth database error.', ['exception' => $e]);
+            Log::warning('Google OAuth database error.', ['exception_class' => $e::class]);
 
             return redirect()->route('login')
                 ->with('error', 'Google認証に失敗しました。もう一度お試しください。');
@@ -102,7 +102,7 @@ class GoogleAuthController extends Controller
             return redirect()->route('login')
                 ->with('error', $e->getMessage());
         } catch (Throwable $e) {
-            Log::warning('Google OAuth unexpected error.', ['exception' => $e]);
+            Log::warning('Google OAuth unexpected error.', ['exception_class' => $e::class]);
 
             return redirect()->route('login')
                 ->with('error', 'Google認証に失敗しました。もう一度お試しください。');
@@ -173,7 +173,7 @@ class GoogleAuthController extends Controller
                 return $this->googleLinkVerifyPage('error');
             }
         } catch (Throwable $e) {
-            Log::warning('Google link verification failed.', ['exception' => $e]);
+            Log::warning('Google link verification failed.', ['exception_class' => $e::class]);
 
             return $this->googleLinkVerifyPage('error');
         }
@@ -222,7 +222,7 @@ class GoogleAuthController extends Controller
             /** @var array<string, mixed> $decoded */
             $decoded = json_decode($decryptedPayload, true, flags: JSON_THROW_ON_ERROR);
         } catch (Throwable $e) {
-            Log::warning('Google link verification payload is invalid.', ['exception' => $e]);
+            Log::warning('Google link verification payload is invalid.', ['exception_class' => $e::class]);
 
             return null;
         }

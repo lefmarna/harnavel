@@ -9,6 +9,7 @@ use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
 use Laravel\Fortify\Features;
@@ -384,6 +385,82 @@ describe('Google OAuth コントローラ', function () {
         $this->get(route('auth.google.callback'))
             ->assertRedirect(route('login'))
             ->assertSessionHas('error', 'Google認証に失敗しました。もう一度お試しください。');
+    });
+
+    it('callback() で Socialite が例外を投げてもログには例外クラス名だけを残す', function () {
+        Log::spy();
+
+        $driver = Mockery::mock(GoogleProvider::class);
+        $driver->allows('user')->andThrow(new Exception('OAuth error'));
+        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+        $this->get(route('auth.google.callback'));
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Google OAuth callback failed.'
+                    && $context === ['exception_class' => Exception::class];
+            })
+            ->once();
+    });
+
+    it('callback() で QueryException が発生してもログにバインディング値が残らない', function () {
+        Log::spy();
+
+        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
+        $googleUser->allows('getId')->andReturn('google-123');
+        $googleUser->allows('getEmail')->andReturn('leaked@example.com');
+        $googleUser->allows('getName')->andReturn('Test User');
+        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+        $driver = Mockery::mock(GoogleProvider::class);
+        $driver->allows('user')->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+        mock(GoogleAuthServiceContract::class)
+            ->shouldReceive('findOrCreate')
+            ->andThrow(new QueryException(
+                'mysql',
+                'insert into `users` (`email`, `google_id`) values (?, ?)',
+                ['leaked@example.com', 'google-123'],
+                new Exception('SQLSTATE[23000]: Integrity constraint violation'),
+            ));
+
+        $this->get(route('auth.google.callback'));
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Google OAuth database error.'
+                    && $context === ['exception_class' => QueryException::class];
+            })
+            ->once();
+    });
+
+    it('callback() で想定外例外が発生してもログには例外クラス名だけを残す', function () {
+        Log::spy();
+
+        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
+        $googleUser->allows('getId')->andReturn('google-123');
+        $googleUser->allows('getEmail')->andReturn('test@example.com');
+        $googleUser->allows('getName')->andReturn('Test User');
+        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+        $driver = Mockery::mock(GoogleProvider::class);
+        $driver->allows('user')->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+        mock(GoogleAuthServiceContract::class)
+            ->shouldReceive('findOrCreate')
+            ->andThrow(new LogicException('unexpected failure'));
+
+        $this->get(route('auth.google.callback'));
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Google OAuth unexpected error.'
+                    && $context === ['exception_class' => LogicException::class];
+            })
+            ->once();
     });
 
     it('shared auth data は google_id と認証機密情報をフロントへ公開しない', function () {

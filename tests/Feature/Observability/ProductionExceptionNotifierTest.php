@@ -5,11 +5,13 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Services\Observability\ProductionExceptionNotifier;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request as HttpClientRequest;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -395,6 +397,8 @@ describe('本番例外通知', function () {
     });
 
     it('payload 構築に失敗しても例外を漏らさない', function () {
+        Log::spy();
+
         $request = observabilityRequest();
         $request->setRouteResolver(fn () => throw new RuntimeException('route resolver failed'));
 
@@ -402,13 +406,29 @@ describe('本番例外通知', function () {
         app()->terminate();
 
         Http::assertNothingSent();
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Discord exception notification was skipped.'
+                    && $context === ['exception_class' => RuntimeException::class];
+            })
+            ->once();
     });
 
     it('Discord 送信に失敗しても例外処理を失敗させない', function () {
+        Log::spy();
+
         Http::fake(['discord.test/*' => Http::failedConnection()]);
 
         app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
 
         app()->terminate();
-    })->throwsNoExceptions();
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Discord exception notification failed.'
+                    && $context === ['exception_class' => ConnectionException::class];
+            })
+            ->once();
+    });
 });

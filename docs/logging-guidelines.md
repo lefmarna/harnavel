@@ -42,12 +42,30 @@ Log::warning('Google OAuth database error.', ['exception' => $e]);
 Log::warning("Google OAuth failed for user {$user->id}.");
 ```
 
+That collapses every failure behind one catch-all into the same line. When the message carries what
+an operator needs in order to act, the answer is a narrower `catch`, not a wider context array: give
+the failure an application-owned type, catch it ahead of the catch-all, and record its readonly
+properties as fields that pass the sensitive-data rules below. The catch-all stays `exception_class`.
+
+```php
+// Good, an application-owned type carries the values the message would have carried
+Log::warning('Profile image optimization failed.', [
+    'exception_class' => $e::class,
+    'optimized_bytes' => $e->bytes,
+    'limit_bytes' => $e->limitBytes,
+]);
+```
+
 ## Sensitive data
 
 Every web log line already carries `request_id`, `user_id`, `http_method`, `url`, `route`, `ip`, and
 `user_agent` from `AssignRequestId` and `ShareAuthenticatedUserLogContext`. Never add passwords,
 tokens, secrets, email addresses, phone numbers, names, `$request->all()` dumps, or query bindings.
 Model IDs, status codes, and result classifications are safe.
+
+Exception messages are the usual back door into that list: a mail transport failure carries the SMTP
+server response, which quotes the recipient (`550 5.1.1 <user@example.com> User unknown`), so a
+`catch` around `Mail::to(...)->send(...)` needs the same scrutiny as one around a query.
 
 ## Discord notifications
 

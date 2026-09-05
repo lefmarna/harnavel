@@ -97,6 +97,25 @@ describe('Google OAuth コントローラ', function () {
         $this->assertGuest();
     });
 
+    it('callback() はメールアドレスが取得できない場合にログインせずログイン画面へ戻す', function () {
+        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
+        $googleUser->allows('getEmail')->andReturn(null);
+        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
+
+        $driver = Mockery::mock(GoogleProvider::class);
+        $driver->allows('user')->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+        mock(GoogleAuthServiceContract::class)
+            ->shouldNotReceive('findOrCreate');
+
+        $this->get(route('auth.google.callback'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('error', 'Googleアカウントのメールアドレスが取得できませんでした。別のアカウントでお試しください。');
+
+        $this->assertGuest();
+    });
+
     it('login view は Google OAuth 設定不足時に canGoogleLogin=false を返す', function () {
         config(['services.google.redirect' => null]);
 
@@ -365,6 +384,20 @@ describe('Google OAuth コントローラ', function () {
         $this->get(route('auth.google.callback'))
             ->assertRedirect(route('auth.google.link.confirm'))
             ->assertSessionHas('google_link_email_sent', true);
+    });
+
+    it('Google 連携確認画面は確認メール送信直後のフローでのみ表示できる', function () {
+        $this->withSession(['google_link_email_sent' => true])
+            ->get(route('auth.google.link.confirm'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('auth/google-link/confirm')
+                ->has('seo.title'));
+    });
+
+    it('Google 連携確認画面は直接アクセスすると404を返す', function () {
+        $this->get(route('auth.google.link.confirm'))
+            ->assertNotFound();
     });
 
     it('callback() で想定外例外が発生しても安全なメッセージでログイン画面に戻す', function () {

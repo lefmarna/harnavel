@@ -148,7 +148,8 @@ class ProductionExceptionNotifier
 
             $fields[] = [
                 'name' => $name,
-                'value' => Str::limit($stringValue, 1024),
+                // Discord のフィールド値上限は1024文字。Str::limit が付ける省略記号のぶんを引く。
+                'value' => Str::limit($stringValue, 1021),
                 'inline' => true,
             ];
         }

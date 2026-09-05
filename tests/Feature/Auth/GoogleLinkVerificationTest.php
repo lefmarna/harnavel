@@ -34,6 +34,23 @@ describe('Google 連携リンク検証', function () {
                 ->has('seo.title'));
     });
 
+    it('署名付き Google 連携リンクは署名対象外のクエリが付いても確認ページを表示する', function () {
+        $service = Mockery::mock(GoogleAuthServiceContract::class);
+        $service->shouldNotReceive('confirmLink');
+        app()->instance(GoogleAuthServiceContract::class, $service);
+
+        $url = googleLinkVerifyUrl('1', [
+            'google_id' => 'google-123',
+            'email' => 'existing@example.com',
+        ]).'&utm_source=test';
+
+        $this->get($url)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/google-link/verify')
+                ->where('status', 'confirm'));
+    });
+
     it('署名付き Google 連携リンクの POST で成功ページを表示する', function () {
         $service = Mockery::mock(GoogleAuthServiceContract::class);
         $service->shouldReceive('confirmLink')
@@ -108,6 +125,41 @@ describe('Google 連携リンク検証', function () {
                 ->component('auth/google-link/verify')
                 ->where('status', 'error'));
     });
+
+    it('Google 連携リンクに payload が無い場合はエラーページを表示する', function () {
+        $service = Mockery::mock(GoogleAuthServiceContract::class);
+        $service->shouldNotReceive('confirmLink');
+        app()->instance(GoogleAuthServiceContract::class, $service);
+
+        $url = URL::temporarySignedRoute('auth.google.link.verify', now()->addHour(), [
+            'userId' => '1',
+        ]);
+
+        $this->get($url)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/google-link/verify')
+                ->where('status', 'error'));
+    });
+
+    it('Google 連携リンクの payload に必須項目が欠けている場合はエラーページを表示する', function (array $payload) {
+        $service = Mockery::mock(GoogleAuthServiceContract::class);
+        $service->shouldNotReceive('confirmLink');
+        app()->instance(GoogleAuthServiceContract::class, $service);
+
+        $url = googleLinkVerifyUrl('1', $payload);
+
+        $this->get($url)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/google-link/verify')
+                ->where('status', 'error'));
+    })->with([
+        'google_id が無い' => [['email' => 'existing@example.com']],
+        'google_id が空文字' => [['google_id' => '', 'email' => 'existing@example.com']],
+        'email が無い' => [['google_id' => 'google-123']],
+        'email が空文字' => [['google_id' => 'google-123', 'email' => '']],
+    ]);
 
     it('Google 連携確定が失敗したときはエラーページを表示する', function () {
         Log::spy();
@@ -195,7 +247,7 @@ describe('Google 連携リンク検証', function () {
 });
 
 /**
- * @param  array{google_id: string, email: string}  $payload
+ * @param  array<string, string>  $payload
  */
 function googleLinkVerifyUrl(string $userId, array $payload, ?DateTimeInterface $expiresAt = null): string
 {

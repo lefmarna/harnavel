@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\Observability\ProductionExceptionNotifier;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request as HttpClientRequest;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +19,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 beforeEach(function () {
+    config()->set('app.name', 'app');
     config()->set('cache.default', 'array');
     config()->set('observability.discord.webhook_url', 'https://discord.test/webhook');
     config()->set('observability.discord.deduplication_seconds', 300);
@@ -54,13 +57,6 @@ function observabilityRequest(): Request
     $request->attributes->set('request_id', '01JZ0000000000000000000000');
 
     return $request;
-}
-
-function observabilityAppName(): string
-{
-    $appName = config('app.name');
-
-    return is_string($appName) && $appName !== '' ? $appName : 'Laravel';
 }
 
 describe('本番例外通知', function () {
@@ -104,6 +100,39 @@ describe('本番例外通知', function () {
         Http::assertNothingSent();
     });
 
+    it('通知予約後に Webhook URL が未設定になった場合は送信しない', function () {
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+
+        config()->set('observability.discord.webhook_url', null);
+        app()->terminate();
+
+        Http::assertNothingSent();
+    });
+
+    it('Webhook 未設定なら重複判定もせず通知しない', function () {
+        config()->set('observability.discord.webhook_url', null);
+
+        Cache::spy();
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertNothingSent();
+        Cache::shouldNotHaveReceived('add');
+    });
+
+    it('Webhook URL が文字列でない場合は通知せず例外も投げない', function () {
+        config()->set('observability.discord.webhook_url', 12345);
+
+        Log::spy();
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertNothingSent();
+        Log::shouldNotHaveReceived('warning');
+    });
+
     it('通知対象外の環境では通知しない', function () {
         $this->app->instance('env', 'local');
 
@@ -121,9 +150,8 @@ describe('本番例外通知', function () {
 
         Http::assertSent(function (HttpClientRequest $request): bool {
             $payload = $request->data();
-            $appName = observabilityAppName();
 
-            expect($payload['content'])->toBe("[{$appName}][01JZ0000000000000000000000] Develop exception: RuntimeException")
+            expect($payload['content'])->toBe('[app][01JZ0000000000000000000000] Develop exception: RuntimeException')
                 ->and($payload['embeds'][0]['title'])->toBe('Develop exception');
 
             return true;
@@ -166,6 +194,22 @@ describe('本番例外通知', function () {
         app()->terminate();
 
         Http::assertSentCount(1);
+    });
+
+    it('重複制御秒数が0なら同一例外キーでも毎回通知する', function () {
+        config()->set('observability.discord.deduplication_seconds', 0);
+
+        Cache::spy();
+
+        $exception = new RuntimeException('database is unavailable');
+        $request = observabilityRequest();
+
+        app(ProductionExceptionNotifier::class)->report($exception, $request);
+        app(ProductionExceptionNotifier::class)->report($exception, $request);
+        app()->terminate();
+
+        Http::assertSentCount(2);
+        Cache::shouldNotHaveReceived('add');
     });
 
     it('同じ経路とメッセージの例外は発生行が違っても再通知しない', function () {
@@ -214,6 +258,76 @@ describe('本番例外通知', function () {
         Http::assertSentCount(2);
     });
 
+    it('名前付きルートが無い同一例外も重複通知を抑制する', function () {
+        $exception = new RuntimeException('database is unavailable');
+
+        $request = Request::create('https://example.test/orders/123', 'GET');
+
+        app(ProductionExceptionNotifier::class)->report($exception, $request);
+        app(ProductionExceptionNotifier::class)->report($exception, $request);
+        app()->terminate();
+
+        Http::assertSentCount(1);
+    });
+
+    it('リクエストが無い同一例外も重複通知を抑制する', function () {
+        $exception = new RuntimeException('boom');
+
+        app(ProductionExceptionNotifier::class)->report($exception);
+        app(ProductionExceptionNotifier::class)->report($exception);
+        app()->terminate();
+
+        Http::assertSentCount(1);
+    });
+
+    it('重複判定キャッシュに環境・例外クラス・メッセージ・パス・ルートを含む正規キーを使う', function () {
+        $captured = [];
+        Cache::shouldReceive('add')->andReturnUsing(function (string $key, mixed $value, int $seconds) use (&$captured): bool {
+            $captured = compact('key', 'value', 'seconds');
+
+            return true;
+        });
+
+        app(ProductionExceptionNotifier::class)->report(
+            new RuntimeException('database is unavailable'),
+            observabilityRequest(),
+        );
+        app()->terminate();
+
+        $expectedFingerprint = implode('|', [
+            'production',
+            RuntimeException::class,
+            hash('sha256', 'database is unavailable'),
+            'orders/123',
+            'orders.store',
+        ]);
+
+        expect($captured['key'])->toBe('observability:discord-exception:'.hash('sha256', $expectedFingerprint))
+            ->and($captured['value'])->toBeTrue()
+            ->and($captured['seconds'])->toBe(300);
+    });
+
+    it('リクエストが無い場合の重複判定キーはパスとルートを空文字で構成する', function () {
+        $capturedKey = null;
+        Cache::shouldReceive('add')->andReturnUsing(function (string $key) use (&$capturedKey): bool {
+            $capturedKey = $key;
+
+            return true;
+        });
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('boom'));
+
+        $expectedFingerprint = implode('|', [
+            'production',
+            RuntimeException::class,
+            hash('sha256', 'boom'),
+            '',
+            '',
+        ]);
+
+        expect($capturedKey)->toBe('observability:discord-exception:'.hash('sha256', $expectedFingerprint));
+    });
+
     it('重複制御キャッシュが失敗しても例外処理を失敗させず通知できる', function () {
         Cache::shouldReceive('add')
             ->once()
@@ -242,49 +356,63 @@ describe('本番例外通知', function () {
     });
 
     it('Discord payload に request_id と調査用メタ情報を含められる', function () {
-        app(ProductionExceptionNotifier::class)->report(
-            new RuntimeException('database is unavailable'),
-            observabilityRequest(),
-        );
+        $exception = new RuntimeException('database is unavailable');
+
+        app(ProductionExceptionNotifier::class)->report($exception, observabilityRequest());
 
         app()->terminate();
 
-        Http::assertSent(function (HttpClientRequest $request): bool {
+        Http::assertSent(function (HttpClientRequest $request) use ($exception): bool {
             $payload = $request->data();
-            $fields = collect($payload['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
-            $appName = observabilityAppName();
+            $embed = $payload['embeds'][0];
+            $fields = collect($embed['fields']);
+            $byName = $fields->pluck('value', 'name');
 
-            expect($payload['content'])->toBe("[{$appName}][01JZ0000000000000000000000] Production exception: RuntimeException")
+            expect($payload['content'])->toBe('[app][01JZ0000000000000000000000] Production exception: RuntimeException')
                 ->and($request->url())->toBe('https://discord.test/webhook')
-                ->and($payload['embeds'][0]['title'])->toBe('Production exception')
-                ->and($payload['embeds'][0]['color'])->toBe(15_141_160)
-                ->and($fields->get('app'))->toBe($appName)
-                ->and($fields->get('request_id'))->toBe('01JZ0000000000000000000000')
-                ->and($fields->get('status'))->toBe('500')
-                ->and($fields->get('exception'))->toBe(RuntimeException::class)
-                ->and($fields->get('message'))->toBe('database is unavailable')
-                ->and($fields->get('method'))->toBe('POST')
-                ->and($fields->get('url'))->toBe('https://example.test/orders/123')
-                ->and($fields->get('route'))->toBe('orders.store')
-                ->and($fields->get('ip'))->toBe('127.0.0.1')
-                ->and($fields->get('user_agent'))->toBe('Pest Browser')
-                ->and($fields->get('file'))->toMatch('/ProductionExceptionNotifierTest\.php:\d+$/')
-                ->and($fields->get('environment'))->toBe('production')
-                ->and($payload['embeds'][0]['fields'])->each->toHaveKey('inline', true);
+                ->and($embed['title'])->toBe('Production exception')
+                ->and($embed['color'])->toBe(15_141_160)
+                ->and($fields->pluck('name')->all())->toBe([
+                    'app', 'request_id', 'environment', 'status', 'exception',
+                    'message', 'method', 'url', 'route', 'ip', 'user_agent', 'file',
+                ])
+                ->and($byName->get('app'))->toBe('app')
+                ->and($byName->get('request_id'))->toBe('01JZ0000000000000000000000')
+                ->and($byName->get('environment'))->toBe('production')
+                ->and($byName->get('status'))->toBe('500')
+                ->and($byName->get('exception'))->toBe(RuntimeException::class)
+                ->and($byName->get('message'))->toBe('database is unavailable')
+                ->and($byName->get('method'))->toBe('POST')
+                ->and($byName->get('url'))->toBe('https://example.test/orders/123')
+                ->and($byName->get('route'))->toBe('orders.store')
+                ->and($byName->get('ip'))->toBe('127.0.0.1')
+                ->and($byName->get('user_agent'))->toBe('Pest Browser')
+                ->and($byName->get('file'))->toBe($exception->getFile().':'.$exception->getLine());
+
+            $fields->each(function (array $field): void {
+                expect($field)->toHaveKeys(['name', 'value', 'inline'])
+                    ->and($field['inline'])->toBeTrue();
+            });
 
             return true;
         });
     });
 
-    it('request がない例外も通知できる', function () {
+    it('リクエストが無くても通知でき、リクエスト依存フィールドは省略する', function () {
         app(ProductionExceptionNotifier::class)->report(new RuntimeException('console failure'));
         app()->terminate();
 
-        Http::assertSent(function (HttpClientRequest $request): bool {
-            $fields = collect($request->data()['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
+        Http::assertSentCount(1);
 
-            expect($fields->get('request_id'))->toBe('unavailable')
-                ->and($fields)->not->toHaveKeys(['method', 'url', 'route', 'ip', 'user_agent']);
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $payload = $request->data();
+            $fields = collect($payload['embeds'][0]['fields']);
+
+            expect($payload['content'])->toBe('[app][unavailable] Production exception: RuntimeException')
+                ->and($fields->pluck('name')->all())->toBe([
+                    'app', 'request_id', 'environment', 'status', 'exception', 'message', 'file',
+                ])
+                ->and($fields->pluck('value', 'name')->get('request_id'))->toBe('unavailable');
 
             return true;
         });
@@ -300,10 +428,89 @@ describe('本番例外通知', function () {
         Http::assertSent(function (HttpClientRequest $request): bool {
             $payload = $request->data();
             $fields = collect($payload['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
-            $appName = observabilityAppName();
 
-            expect($payload['content'])->toBe("[{$appName}][unavailable] Production exception: RuntimeException")
+            expect($payload['content'])->toBe('[app][unavailable] Production exception: RuntimeException')
                 ->and($fields->get('request_id'))->toBe('unavailable');
+
+            return true;
+        });
+    });
+
+    it('例外メッセージが空なら message フィールドを省略する', function () {
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException(''), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $names = collect($request->data()['embeds'][0]['fields'])->pluck('name')->all();
+
+            expect($names)->not->toContain('message');
+
+            return true;
+        });
+    });
+
+    it('例外メッセージを500文字で打ち切る', function () {
+        app(ProductionExceptionNotifier::class)->report(
+            new RuntimeException(str_repeat('m', 600)),
+            observabilityRequest(),
+        );
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $fields = collect($request->data()['embeds'][0]['fields'])->pluck('value', 'name');
+
+            expect($fields->get('message'))->toBe(str_repeat('m', 500).'...');
+
+            return true;
+        });
+    });
+
+    it('フィールド値を省略記号込みで Discord の上限1024文字に収める', function () {
+        app(ProductionExceptionNotifier::class)->report(
+            new RuntimeException('failure'),
+            Request::create('https://example.test/'.str_repeat('a', 1100)),
+        );
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $url = collect($request->data()['embeds'][0]['fields'])->pluck('value', 'name')->get('url');
+
+            expect(mb_strlen($url))->toBe(1024)
+                ->and($url)->toStartWith('https://example.test/aaa')
+                ->and($url)->toEndWith('...');
+
+            return true;
+        });
+    });
+
+    it('User-Agent を200文字で打ち切る', function () {
+        $request = observabilityRequest();
+        $request->headers->set('User-Agent', str_repeat('u', 250));
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), $request);
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $fields = collect($request->data()['embeds'][0]['fields'])->pluck('value', 'name');
+
+            expect($fields->get('user_agent'))->toBe(str_repeat('u', 200).'...');
+
+            return true;
+        });
+    });
+
+    it('app.name が空なら content とフィールドのアプリ名に Laravel を使う', function () {
+        config()->set('app.name', '');
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $payload = $request->data();
+            $fields = collect($payload['embeds'][0]['fields'])->pluck('value', 'name');
+
+            expect($payload['content'])->toStartWith('[Laravel]')
+                ->and($fields->get('app'))->toBe('Laravel');
 
             return true;
         });
@@ -396,6 +603,51 @@ describe('本番例外通知', function () {
         });
     });
 
+    it('未認証時は Auth::user() を解決せずに通知する', function () {
+        Auth::shouldReceive('hasUser')->andReturnFalse();
+        Auth::shouldReceive('user')->never();
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSentCount(1);
+    });
+
+    it('認証済み判定でもユーザー実体が無ければ user_id を省く', function () {
+        Auth::shouldReceive('hasUser')->andReturnTrue();
+        Auth::shouldReceive('user')->andReturnNull();
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $names = collect($request->data()['embeds'][0]['fields'])->pluck('name')->all();
+
+            expect($names)->not->toContain('user_id');
+
+            return true;
+        });
+    });
+
+    it('整数の user_id も文字列フィールドへ変換して含める', function () {
+        $authenticatable = Mockery::mock(Authenticatable::class);
+        $authenticatable->shouldReceive('getAuthIdentifier')->andReturn(42);
+
+        Auth::shouldReceive('hasUser')->andReturnTrue();
+        Auth::shouldReceive('user')->andReturn($authenticatable);
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $fields = collect($request->data()['embeds'][0]['fields'])->pluck('value', 'name');
+
+            expect($fields->get('user_id'))->toBe('42');
+
+            return true;
+        });
+    });
+
     it('payload 構築に失敗しても例外を漏らさない', function () {
         Log::spy();
 
@@ -415,6 +667,24 @@ describe('本番例外通知', function () {
             ->once();
     });
 
+    it('payload 構築失敗時にログ出力も失敗しても元の例外処理を妨げない', function () {
+        Auth::shouldReceive('hasUser')
+            ->once()
+            ->andThrow(new RuntimeException('auth is unavailable'));
+        Log::shouldReceive('warning')
+            ->once()
+            ->andThrow(new RuntimeException('log is unavailable'));
+
+        app(ProductionExceptionNotifier::class)->report(
+            new RuntimeException('database is unavailable'),
+            observabilityRequest(),
+        );
+
+        app()->terminate();
+
+        Http::assertNothingSent();
+    });
+
     it('Discord 送信に失敗しても例外処理を失敗させない', function () {
         Log::spy();
 
@@ -430,5 +700,26 @@ describe('本番例外通知', function () {
                     && $context === ['exception_class' => ConnectionException::class];
             })
             ->once();
+    });
+
+    it('Discord 送信に型付き設定値のタイムアウトを適用する', function () {
+        config()->set('observability.discord.timeout', 5.0);
+        config()->set('observability.discord.connect_timeout', 3.0);
+
+        $captured = [];
+        Http::globalMiddleware(function (callable $handler) use (&$captured) {
+            return function ($request, array $options) use (&$captured, $handler) {
+                $captured[] = $options;
+
+                return $handler($request, $options);
+            };
+        });
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        expect($captured)->toHaveCount(1)
+            ->and($captured[0]['timeout'])->toBe(5.0)
+            ->and($captured[0]['connect_timeout'])->toBe(3.0);
     });
 });

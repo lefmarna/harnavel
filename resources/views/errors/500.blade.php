@@ -1,6 +1,6 @@
 @php
     $requestId = request()->attributes->get('request_id');
-    $displayRequestId = is_string($requestId) && $requestId !== '' ? $requestId : 'unavailable';
+    $displayRequestId = is_string($requestId) && $requestId !== '' ? $requestId : __('errors.reference_id_unavailable');
     $appName = config('app.name', 'Laravel');
 @endphp
 <!DOCTYPE html>

@@ -109,7 +109,9 @@ return [
 
     'locale' => env('APP_LOCALE', 'ja'),
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    // 原文は日本語なので、訳が無いキーの落とし先も日本語にする。既定の 'en' のままだと
+    // lang/en を持たないこのテンプレートでは、APP_LOCALE を動かした瞬間に画面へキー名が出る。
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'ja'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'ja_JP'),
 

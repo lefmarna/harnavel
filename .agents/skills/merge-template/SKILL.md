@@ -35,6 +35,9 @@ Special cases:
   app-owned wrapper that calls its default export.
 - Preserve flat App ADRs and the app-owned index in `docs/adr/README.md`; take Template ADRs from the
   template.
+- Translation keys travel with their consumer. When an app replaced or dropped the screen, request,
+  or mailable a template key serves, do not take the key: an unreferenced key is copy nobody renders
+  and, in a bilingual app, a parity test enforces its translation forever.
 - Vendored skills under `.claude/skills/` and `.agents/skills/` are shared. Each path stays
   byte-identical to the same path in the template. The two trees are not copies of each other —
   toolchain-specific frontmatter, pointer bodies, and `agents/openai.yaml` sidecars legitimately

@@ -62,6 +62,18 @@ describe('本番エラーページ', function () {
             ->toContain((string) $requestId);
     });
 
+    it('問い合わせIDが無いときは日本語で示す', function () {
+        // 事前生成の 503 や、リクエスト ID を割り当てる前に返る経路ではプレースホルダが出る。
+        // 読み手に見える位置なので、ここだけ英語が混じらないことを固定する。
+        foreach (['errors.500', 'errors.503'] as $view) {
+            $html = view($view)->render();
+
+            expect($html)
+                ->toContain('問い合わせID: <code>不明</code>')
+                ->not->toContain('unavailable');
+        }
+    });
+
     it('500 エラーページに定型文言を表示する', function () {
         $response = $this->get('/_testing/errors/500');
 

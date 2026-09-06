@@ -23,7 +23,7 @@ final readonly class WelcomePageViewModel extends PageViewModel
     {
         return [
             'canRegister' => $this->canRegister,
-            'seo' => $this->basicSeo('ホーム', Config::string('app.description')),
+            'seo' => $this->basicSeo(__('pages.home.title'), Config::string('app.description')),
         ];
     }
 }

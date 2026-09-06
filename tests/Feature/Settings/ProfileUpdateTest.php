@@ -127,6 +127,70 @@ describe('プロフィール設定', function () {
         expect($user->refresh()->email_verified_at)->not->toBeNull();
     });
 
+    it('プロフィール更新の検証文言を表示する', function (array $payload, string $field, string $expectedMessage) {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('profile.edit'))
+            ->patch(route('profile.update'), $payload);
+
+        $response->assertSessionHasErrors([$field => $expectedMessage]);
+    })->with([
+        '名前未入力' => [
+            ['email' => 'test@example.com'],
+            'name',
+            '名前を入力してください。',
+        ],
+        '名前が文字列でない' => [
+            ['name' => ['array'], 'email' => 'test@example.com'],
+            'name',
+            '名前は文字列で入力してください。',
+        ],
+        '名前が長すぎる' => [
+            ['name' => str_repeat('a', 256), 'email' => 'test@example.com'],
+            'name',
+            '名前は255文字以内で入力してください。',
+        ],
+        'メールアドレス未入力' => [
+            ['name' => 'Test User'],
+            'email',
+            'メールアドレスを入力してください。',
+        ],
+        'メールアドレスが文字列でない' => [
+            ['name' => 'Test User', 'email' => ['array']],
+            'email',
+            'メールアドレスは文字列で入力してください。',
+        ],
+        'メールアドレスの形式が不正' => [
+            ['name' => 'Test User', 'email' => 'not-an-email'],
+            'email',
+            '有効なメールアドレスを入力してください。',
+        ],
+        'メールアドレスが長すぎる' => [
+            ['name' => 'Test User', 'email' => str_repeat('a', 244).'@example.com'],
+            'email',
+            'メールアドレスは255文字以内で入力してください。',
+        ],
+    ]);
+
+    it('既に使われているメールアドレスの検証文言を表示する', function () {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('profile.edit'))
+            ->patch(route('profile.update'), [
+                'name' => 'Test User',
+                'email' => $other->email,
+            ]);
+
+        $response->assertSessionHasErrors([
+            'email' => 'このメールアドレスは既に使用されています。',
+        ]);
+    });
+
     it('アカウントを削除できる', function () {
         $user = User::factory()->create();
 
@@ -143,6 +207,21 @@ describe('プロフィール設定', function () {
         $this->assertGuest();
         expect($user->fresh())->toBeNull();
     });
+
+    it('アカウント削除の検証文言を表示する', function (array $payload, string $expectedMessage) {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('profile.edit'))
+            ->delete(route('profile.destroy'), $payload);
+
+        $response->assertSessionHasErrors(['password' => $expectedMessage]);
+    })->with([
+        'パスワード未入力' => [[], 'アカウント削除にはパスワードを入力してください。'],
+        'パスワードが文字列でない' => [['password' => 12345678], 'パスワードは文字列で入力してください。'],
+        'パスワードが不一致' => [['password' => 'wrong-password'], '入力されたパスワードが正しくありません。'],
+    ]);
 
     it('アカウント削除には正しいパスワードが必要', function () {
         $user = User::factory()->create();

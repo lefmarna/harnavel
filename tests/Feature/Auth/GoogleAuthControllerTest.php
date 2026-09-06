@@ -311,7 +311,7 @@ describe('Google OAuth コントローラ', function () {
 
         $this->get(route('auth.google.callback'))
             ->assertRedirect(route('login'))
-            ->assertSessionHas('error');
+            ->assertSessionHas('error', 'Googleアカウントのメールアドレスが未検証です。Googleでメール認証を完了してから再度お試しください。');
     });
 
     it('callback() で QueryException が発生してもセッションエラーに SQL が露出しない', function () {
@@ -392,7 +392,8 @@ describe('Google OAuth コントローラ', function () {
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('auth/google-link/confirm')
-                ->has('seo.title'));
+                ->where('seo.title', 'Googleログイン連携の確認')
+                ->where('seo.description', '確認メールからGoogleログイン連携を完了してください。'));
     });
 
     it('Google 連携確認画面は直接アクセスすると404を返す', function () {

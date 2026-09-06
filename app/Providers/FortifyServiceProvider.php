@@ -49,8 +49,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn (Request $request) => Inertia::render(
             'auth/login',
             new LoginPageViewModel(
-                title: 'ログイン',
-                description: 'メールアドレスとパスワードを入力してログインします。',
+                title: __('pages.auth.login.title'),
+                description: __('pages.auth.login.description'),
                 canResetPassword: Features::enabled(Features::resetPasswords()),
                 canRegister: Features::enabled(Features::registration()),
                 canGoogleLogin: GoogleOAuth::isConfigured(),
@@ -62,8 +62,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render(
             'auth/reset-password',
             new ResetPasswordPageViewModel(
-                title: 'パスワード再設定',
-                description: 'アカウントの新しいパスワードを設定します。',
+                title: __('pages.auth.reset_password.title'),
+                description: __('pages.auth.reset_password.description'),
                 email: is_string($email = $request->email) ? $email : '',
                 token: is_string($token = $request->route('token')) ? $token : '',
             ),
@@ -72,8 +72,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render(
             'auth/forgot-password',
             new StatusPageViewModel(
-                title: 'パスワードをお忘れの方',
-                description: 'メールアドレスを入力してパスワード再設定リンクを受け取ります。',
+                title: __('pages.auth.forgot_password.title'),
+                description: __('pages.auth.forgot_password.description'),
                 status: $this->sessionString($request, 'status'),
             ),
         ));
@@ -81,8 +81,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render(
             'auth/verify-email',
             new StatusPageViewModel(
-                title: 'メール認証',
-                description: 'メールアドレスの認証を完了してください。',
+                title: __('pages.auth.verify_email.title'),
+                description: __('pages.auth.verify_email.description'),
                 status: $this->sessionString($request, 'status'),
             ),
         ));
@@ -90,8 +90,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::registerView(fn () => Inertia::render(
             'auth/register',
             new StaticPageViewModel(
-                title: '新規登録',
-                description: '必要事項を入力して新しいアカウントを作成します。',
+                title: __('pages.auth.register.title'),
+                description: __('pages.auth.register.description'),
                 noIndex: true,
             ),
         ));
@@ -99,8 +99,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::twoFactorChallengeView(fn () => Inertia::render(
             'auth/two-factor-challenge',
             new StaticPageViewModel(
-                title: '二段階認証',
-                description: '認証アプリのコードを入力して続行します。',
+                title: __('pages.auth.two_factor.title'),
+                description: __('pages.auth.two_factor.description'),
                 noIndex: true,
             ),
         ));
@@ -108,8 +108,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::confirmPasswordView(fn () => Inertia::render(
             'auth/confirm-password',
             new StaticPageViewModel(
-                title: 'パスワード確認',
-                description: '続行するには現在のパスワードを入力してください。',
+                title: __('pages.auth.confirm_password.title'),
+                description: __('pages.auth.confirm_password.description'),
                 noIndex: true,
             ),
         ));

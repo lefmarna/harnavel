@@ -68,7 +68,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
             'google_id' => $googleId,
         ]);
 
-        throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。');
+        throw new GoogleAuthException(__('auth.google.failed'));
     }
 
     public function confirmLink(string $userId, string $googleId, string $email): bool
@@ -133,7 +133,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
         $userByEmail = $this->findCandidateByEmail($candidates, $email, $caseInsensitiveEmail);
 
         if ($userByGoogleId && $userByEmail && ! $userByGoogleId->is($userByEmail)) {
-            throw new GoogleAuthException('このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+            throw new GoogleAuthException(__('auth.google.account_conflict'));
         }
 
         $user = $userByGoogleId ?? $userByEmail;
@@ -163,7 +163,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
         $userByEmail = $this->userRepository->findByEmail($email);
 
         if ($userByGoogleId && $userByEmail && ! $userByGoogleId->is($userByEmail)) {
-            throw new GoogleAuthException('このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+            throw new GoogleAuthException(__('auth.google.account_conflict'));
         }
 
         if ($userByGoogleId === null && $userByEmail !== null && $userByEmail->google_id === null) {
@@ -182,7 +182,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
     private function syncGoogleAccount(User $user, string $googleId, bool $lowercaseUsernames, string $email): User
     {
         if ($user->google_id !== null && $user->google_id !== $googleId) {
-            throw new GoogleAuthException('このメールアドレスは別のGoogleアカウントに連携済みです。');
+            throw new GoogleAuthException(__('auth.google.email_taken'));
         }
 
         // @codeCoverageIgnoreStart
@@ -234,7 +234,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
             ], JSON_THROW_ON_ERROR));
             // @codeCoverageIgnoreStart
         } catch (JsonException $e) {
-            throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。', previous: $e);
+            throw new GoogleAuthException(__('auth.google.failed'), previous: $e);
         }
         // @codeCoverageIgnoreEnd
     }
@@ -255,7 +255,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
         }
 
         // @codeCoverageIgnoreStart
-        throw new GoogleAuthException('Google認証に失敗しました。もう一度お試しください。');
+        throw new GoogleAuthException(__('auth.google.failed'));
         // @codeCoverageIgnoreEnd
     }
 

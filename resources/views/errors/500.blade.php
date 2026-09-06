@@ -8,7 +8,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>エラーが発生しました - {{ $appName }}</title>
+    <title>{{ __('errors.500.title') }} - {{ $appName }}</title>
     <style>
         :root {
             color-scheme: light;
@@ -60,10 +60,10 @@
 </head>
 <body>
     <main>
-        <h1>エラーが発生しました</h1>
-        <p>時間をおいてもう一度お試しください。お問い合わせの際は、以下の問い合わせIDをお知らせください。</p>
-        <p>問い合わせID: <code>{{ $displayRequestId }}</code></p>
-        <p><a href="{{ url('/') }}">トップページへ戻る</a></p>
+        <h1>{{ __('errors.500.title') }}</h1>
+        <p>{{ __('errors.500.body') }}</p>
+        <p>{{ __('errors.reference_id') }}: <code>{{ $displayRequestId }}</code></p>
+        <p><a href="{{ url('/') }}">{{ __('errors.back_home') }}</a></p>
     </main>
 </body>
 </html>

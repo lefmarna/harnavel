@@ -309,6 +309,21 @@ describe('SEO メタ契約', function () {
         'reset-password' => ['password.reset', 'パスワード再設定', ['token' => 'test-token']],
     ]);
 
+    it('ゲスト向け認証ページはseo.descriptionを公開する', function (string $routeName, string $expectedDescription, array $routeParams = []) {
+        $response = $this->get(route($routeName, $routeParams));
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('seo')
+            ->where('seo.description', $expectedDescription)
+        );
+    })->with([
+        'login' => ['login', 'メールアドレスとパスワードを入力してログインします。'],
+        'register' => ['register', '必要事項を入力して新しいアカウントを作成します。'],
+        'forgot-password' => ['password.request', 'メールアドレスを入力してパスワード再設定リンクを受け取ります。'],
+        'reset-password' => ['password.reset', 'アカウントの新しいパスワードを設定します。', ['token' => 'test-token']],
+    ]);
+
     it('認証済みページはseo.titleとdescriptionを持つ', function (string $routeName, string $expectedTitle, string $expectedDescription) {
         $user = User::factory()->create();
 

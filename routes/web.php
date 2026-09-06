@@ -22,8 +22,8 @@ Route::get('dashboard', function () {
     return Inertia::render(
         'dashboard',
         new StaticPageViewModel(
-            title: 'ダッシュボード',
-            description: 'アプリケーションの利用状況や設定への導線を確認できます。',
+            title: __('pages.dashboard.title'),
+            description: __('pages.dashboard.description'),
         ),
     );
 })->middleware(['auth', 'verified'])->name('dashboard');

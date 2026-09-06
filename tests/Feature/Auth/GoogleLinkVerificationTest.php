@@ -31,7 +31,8 @@ describe('Google 連携リンク検証', function () {
                 ->where('status', 'confirm')
                 ->where('email', 'existing@example.com')
                 ->where('actionUrl', $url)
-                ->has('seo.title'));
+                ->where('seo.title', 'Googleログイン連携の確認')
+                ->where('seo.description', 'Googleログイン連携を確認してください。'));
     });
 
     it('署名付き Google 連携リンクは署名対象外のクエリが付いても確認ページを表示する', function () {
@@ -69,7 +70,8 @@ describe('Google 連携リンク検証', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('auth/google-link/verify')
                 ->where('status', 'success')
-                ->has('seo.title'));
+                ->where('seo.title', 'Googleログイン連携完了')
+                ->where('seo.description', 'Googleログイン連携が完了しました。'));
     });
 
     it('期限切れの Google 連携リンクはエラーページを表示する', function () {
@@ -180,7 +182,9 @@ describe('Google 連携リンク検証', function () {
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('auth/google-link/verify')
-                ->where('status', 'error'));
+                ->where('status', 'error')
+                ->where('seo.title', 'Googleログイン連携エラー')
+                ->where('seo.description', 'Googleログイン連携に失敗しました。'));
 
         Log::shouldHaveReceived('warning')
             ->withArgs(function (string $message, array $context): bool {

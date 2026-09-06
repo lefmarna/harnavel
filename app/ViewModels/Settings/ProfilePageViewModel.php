@@ -26,7 +26,7 @@ final readonly class ProfilePageViewModel extends PageViewModel
         return [
             'mustVerifyEmail' => $this->mustVerifyEmail,
             'status' => $this->status,
-            'seo' => $this->basicSeo('プロフィール設定', '名前とメールアドレスを管理します。'),
+            'seo' => $this->basicSeo(__('pages.settings.profile.title'), __('pages.settings.profile.description')),
         ];
     }
 }

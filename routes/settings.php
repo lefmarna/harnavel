@@ -29,8 +29,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render(
             'settings/appearance',
             new StaticPageViewModel(
-                title: '表示設定',
-                description: 'アカウントの表示設定を変更します。',
+                title: __('pages.settings.appearance.title'),
+                description: __('pages.settings.appearance.description'),
             ),
         );
     })->name('appearance.edit');

@@ -43,19 +43,9 @@ class ProfileDeleteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'password.required' => 'アカウント削除にはパスワードを入力してください。',
-            'password.string' => 'パスワードは文字列で入力してください。',
-            'password.current_password' => '入力されたパスワードが正しくありません。',
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function attributes(): array
-    {
-        return [
-            'password' => 'パスワード',
+            'password.required' => __('form.profile_delete.password_required'),
+            'password.string' => __('form.profile_delete.password_string'),
+            'password.current_password' => __('form.profile_delete.password_invalid'),
         ];
     }
 }

@@ -60,14 +60,14 @@ class ProfileUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => '名前を入力してください。',
-            'name.string' => '名前は文字列で入力してください。',
-            'name.max' => '名前は255文字以内で入力してください。',
-            'email.required' => 'メールアドレスを入力してください。',
-            'email.string' => 'メールアドレスは文字列で入力してください。',
-            'email.email' => '有効なメールアドレスを入力してください。',
-            'email.max' => 'メールアドレスは255文字以内で入力してください。',
-            'email.unique' => 'このメールアドレスは既に使用されています。',
+            'name.required' => __('form.profile_update.name_required'),
+            'name.string' => __('form.profile_update.name_string'),
+            'name.max' => __('form.profile_update.name_max'),
+            'email.required' => __('form.profile_update.email_required'),
+            'email.string' => __('form.profile_update.email_string'),
+            'email.email' => __('form.profile_update.email_email'),
+            'email.max' => __('form.profile_update.email_max'),
+            'email.unique' => __('form.profile_update.email_unique'),
         ];
     }
 
@@ -77,8 +77,8 @@ class ProfileUpdateRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name' => '名前',
-            'email' => 'メールアドレス',
+            'name' => __('form.profile_update.name'),
+            'email' => __('form.profile_update.email'),
         ];
     }
 }

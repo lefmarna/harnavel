@@ -79,6 +79,13 @@ describe('パスワードポリシー', function () {
         $this->assertGuest();
     });
 
+    it('新規登録の検証文言には共通の属性名を使う', function () use ($register) {
+        $register('abc1234')
+            ->assertSessionHasErrors([
+                'password' => 'パスワードの文字数は、8文字以上である必要があります。',
+            ]);
+    });
+
     it('ポリシーを満たすパスワードは受け付けられる', function () use ($register) {
         $register('valid-password1')
             ->assertSessionHasNoErrors()

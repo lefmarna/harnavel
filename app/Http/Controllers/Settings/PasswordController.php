@@ -23,8 +23,8 @@ class PasswordController extends Controller
         return Inertia::render(
             'settings/password',
             new StaticPageViewModel(
-                title: 'パスワード設定',
-                description: 'アカウントのパスワードを更新します。',
+                title: __('pages.settings.password.title'),
+                description: __('pages.settings.password.description'),
             ),
         );
     }

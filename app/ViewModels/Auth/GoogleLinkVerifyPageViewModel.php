@@ -25,11 +25,13 @@ final readonly class GoogleLinkVerifyPageViewModel extends PageViewModel
      */
     public function toInertiaProperties(RenderContext $context): array
     {
-        [$title, $description] = match ($this->status) {
-            'success' => ['Googleログイン連携完了', 'Googleログイン連携が完了しました。'],
-            'confirm' => ['Googleログイン連携の確認', 'Googleログイン連携を確認してください。'],
-            default => ['Googleログイン連携エラー', 'Googleログイン連携に失敗しました。'],
+        $key = match ($this->status) {
+            'success', 'confirm' => $this->status,
+            default => 'error',
         };
+
+        $title = __("pages.auth.google_link.{$key}.title");
+        $description = __("pages.auth.google_link.{$key}.description");
 
         $props = [
             'status' => $this->status,

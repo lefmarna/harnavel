@@ -1,3 +1,8 @@
+{{--
+    このビューは 2 通りの経路で出る。実行時の 503 応答と、配備時に
+    `artisan down --render='errors::503'` で焼かれる静的 HTML（.github/workflows/delivery.yml）。
+    後者はリクエストを持たないため、文言は配備時点の既定ロケールで固定される。
+--}}
 @php
     $requestId = request()->attributes->get('request_id');
     $displayRequestId = is_string($requestId) && $requestId !== '' ? $requestId : 'unavailable';
@@ -8,7 +13,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>現在利用できません - {{ $appName }}</title>
+    <title>{{ __('errors.503.title') }} - {{ $appName }}</title>
     <style>
         :root {
             color-scheme: light;
@@ -60,10 +65,10 @@
 </head>
 <body>
     <main>
-        <h1>現在利用できません</h1>
-        <p>時間をおいてもう一度お試しください。お問い合わせの際は、以下の問い合わせIDをお知らせください。</p>
-        <p>問い合わせID: <code>{{ $displayRequestId }}</code></p>
-        <p><a href="{{ url('/') }}">トップページへ戻る</a></p>
+        <h1>{{ __('errors.503.title') }}</h1>
+        <p>{{ __('errors.503.body') }}</p>
+        <p>{{ __('errors.reference_id') }}: <code>{{ $displayRequestId }}</code></p>
+        <p><a href="{{ url('/') }}">{{ __('errors.back_home') }}</a></p>
     </main>
 </body>
 </html>

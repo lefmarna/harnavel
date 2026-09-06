@@ -29,6 +29,10 @@ beforeEach(function () {
     Route::middleware('web')->get('/_testing/errors/503', function () {
         abort(503, 'maintenance secret message');
     });
+
+    Route::middleware('web')->get('/_testing/errors/419', function () {
+        abort(419);
+    });
 });
 
 describe('本番エラーページ', function () {
@@ -56,6 +60,26 @@ describe('本番エラーページ', function () {
         expect($response->getContent())
             ->toContain('問い合わせID')
             ->toContain((string) $requestId);
+    });
+
+    it('500 エラーページに定型文言を表示する', function () {
+        $response = $this->get('/_testing/errors/500');
+
+        expect($response->getContent())
+            ->toContain('<title>エラーが発生しました - ')
+            ->toContain('<h1>エラーが発生しました</h1>')
+            ->toContain('時間をおいてもう一度お試しください。お問い合わせの際は、以下の問い合わせIDをお知らせください。')
+            ->toContain('トップページへ戻る');
+    });
+
+    it('503 エラーページに定型文言を表示する', function () {
+        $response = $this->get('/_testing/errors/503');
+
+        expect($response->getContent())
+            ->toContain('<title>現在利用できません - ')
+            ->toContain('<h1>現在利用できません</h1>')
+            ->toContain('時間をおいてもう一度お試しください。お問い合わせの際は、以下の問い合わせIDをお知らせください。')
+            ->toContain('トップページへ戻る');
     });
 
     it('本番エラーページにスタックトレースや入力値を表示しない', function () {
@@ -122,6 +146,17 @@ describe('SPA遷移時の500エラーページ', function () {
         $response = $this->get('/_testing/errors/500', $this->inertiaHeaders);
 
         $response->assertInternalServerError();
+    });
+
+    it('SPA遷移時の419は直前のページへ有効期限切れのエラーを返す', function () {
+        $response = $this
+            ->from('/_testing/errors/500')
+            ->get('/_testing/errors/419', $this->inertiaHeaders);
+
+        $response->assertRedirect('/_testing/errors/500');
+        $response->assertSessionHasErrors([
+            'page_expired' => 'ページの有効期限が切れました。再度お試しください。',
+        ]);
     });
 
     it('デバッグ時はSPA遷移でも変換せず例外詳細を保持する', function () {

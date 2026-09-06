@@ -26,7 +26,7 @@ final readonly class TwoFactorAuthenticationPageViewModel extends PageViewModel
         return [
             'twoFactorEnabled' => $this->twoFactorEnabled,
             'requiresConfirmation' => $this->requiresConfirmation,
-            'seo' => $this->basicSeo('二段階認証設定', '二段階認証の設定を管理します。'),
+            'seo' => $this->basicSeo(__('pages.settings.two_factor.title'), __('pages.settings.two_factor.description')),
         ];
     }
 }

@@ -30,7 +30,9 @@ class LinkGoogleAccountMail extends Mailable
                 is_string($fromAddress) ? $fromAddress : '',
                 is_string($fromName) ? $fromName : '',
             )
-            ->subject(sprintf('【%s】Googleログイン連携の確認', is_string($appName) ? $appName : 'Laravel'))
+            ->subject(__('mail.link_google_account.subject', [
+                'app' => is_string($appName) ? $appName : 'Laravel',
+            ]))
             ->view('emails.link_google_account')
             ->with([
                 'appName' => is_string($appName) ? $appName : 'Laravel',

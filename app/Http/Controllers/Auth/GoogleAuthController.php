@@ -35,7 +35,7 @@ class GoogleAuthController extends Controller
     {
         if (! GoogleOAuth::isConfigured()) {
             return redirect()->route('login')
-                ->with('error', 'Googleログインは現在利用できません。');
+                ->with('error', __('auth.google.unavailable'));
         }
 
         /** @var GoogleProvider $driver */
@@ -48,7 +48,7 @@ class GoogleAuthController extends Controller
     {
         if (! GoogleOAuth::isConfigured()) {
             return redirect()->route('login')
-                ->with('error', 'Googleログインは現在利用できません。');
+                ->with('error', __('auth.google.unavailable'));
         }
 
         try {
@@ -60,7 +60,7 @@ class GoogleAuthController extends Controller
             Log::warning('Google OAuth callback failed.', ['exception_class' => $e::class]);
 
             return redirect()->route('login')
-                ->with('error', 'Google認証に失敗しました。もう一度お試しください。');
+                ->with('error', __('auth.google.failed'));
         }
 
         /** @var array<string, mixed> $rawData */
@@ -69,20 +69,20 @@ class GoogleAuthController extends Controller
 
         if (! $emailVerified) {
             return redirect()->route('login')
-                ->with('error', 'Googleアカウントのメールアドレスが未検証です。Googleでメール認証を完了してから再度お試しください。');
+                ->with('error', __('auth.google.email_unverified'));
         }
 
         $email = $googleUser->getEmail();
         if ($email === null) {
             return redirect()->route('login')
-                ->with('error', 'Googleアカウントのメールアドレスが取得できませんでした。別のアカウントでお試しください。');
+                ->with('error', __('auth.google.email_missing'));
         }
 
         /** @var mixed $googleId */
         $googleId = $googleUser->getId();
         if (! is_string($googleId) || $googleId === '') {
             return redirect()->route('login')
-                ->with('error', 'Googleアカウント情報の取得に失敗しました。もう一度お試しください。');
+                ->with('error', __('auth.google.profile_failed'));
         }
 
         $name = $googleUser->getName();
@@ -93,7 +93,7 @@ class GoogleAuthController extends Controller
             Log::warning('Google OAuth database error.', ['exception_class' => $e::class]);
 
             return redirect()->route('login')
-                ->with('error', 'Google認証に失敗しました。もう一度お試しください。');
+                ->with('error', __('auth.google.failed'));
         } catch (GoogleLinkConfirmationPendingException) {
             return redirect()
                 ->route('auth.google.link.confirm')
@@ -105,7 +105,7 @@ class GoogleAuthController extends Controller
             Log::warning('Google OAuth unexpected error.', ['exception_class' => $e::class]);
 
             return redirect()->route('login')
-                ->with('error', 'Google認証に失敗しました。もう一度お試しください。');
+                ->with('error', __('auth.google.failed'));
         }
 
         if (Features::canManageTwoFactorAuthentication() && $user->hasEnabledTwoFactorAuthentication()) {
@@ -134,8 +134,8 @@ class GoogleAuthController extends Controller
         return Inertia::render(
             'auth/google-link/confirm',
             new StaticPageViewModel(
-                title: 'Googleログイン連携の確認',
-                description: '確認メールからGoogleログイン連携を完了してください。',
+                title: __('pages.auth.google_link.title'),
+                description: __('pages.auth.google_link.description'),
                 noIndex: true,
             ),
         );

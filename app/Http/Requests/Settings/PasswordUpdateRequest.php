@@ -44,24 +44,25 @@ class PasswordUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'current_password.required' => '現在のパスワードを入力してください。',
-            'current_password.string' => '現在のパスワードは文字列で入力してください。',
-            'current_password.current_password' => '現在のパスワードが正しくありません。',
-            'password.required' => '新しいパスワードを入力してください。',
-            'password.string' => '新しいパスワードは文字列で入力してください。',
-            'password.confirmed' => 'パスワード確認が一致しません。',
+            'current_password.required' => __('form.password_update.current_password_required'),
+            'current_password.string' => __('form.password_update.current_password_string'),
+            'current_password.current_password' => __('form.password_update.current_password_invalid'),
+            'password.required' => __('form.password_update.password_required'),
+            'password.string' => __('form.password_update.password_string'),
+            'password.confirmed' => __('form.password_update.password_confirmed'),
         ];
     }
 
     /**
+     * この画面だけ password の意味が「新しいパスワード」に変わるので上書きする。
+     * current_password と password_confirmation は validation.attributes の既定と同じ。
+     *
      * @return array<string, string>
      */
     public function attributes(): array
     {
         return [
-            'current_password' => '現在のパスワード',
-            'password' => '新しいパスワード',
-            'password_confirmation' => 'パスワード確認',
+            'password' => __('form.password_update.new_password'),
         ];
     }
 }

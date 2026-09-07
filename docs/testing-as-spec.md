@@ -5,15 +5,15 @@ Direct review still covers security, migrations, concurrency, side effects, deli
 
 ## Responsibilities
 
-- Pest Feature specs own server and Inertia contracts; Playwright owns browser rendering smoke and
-  critical user flows.
-- Every new user-visible Inertia page needs both; non-page endpoints need only relevant coverage.
+- Before adding a test, identify the concrete defect it would catch beyond existing checks.
+  Do not add tests that duplicate coverage or merely restate implementation.
+- Pest Feature specs own server/Inertia contracts; Playwright owns browser smoke and critical flows.
+- New user-visible Inertia pages need both; other endpoints need relevant coverage.
 - Test titles are Japanese.
 
 ## Mutation testing
 
 - Opt deterministic application-logic classes with observable branches into mutation testing with
   `mutates()`; omit thin wiring and external-I/O orchestration.
-- Treat a survivor first as a missing assertion or simplification signal. Strengthen the spec when
-  it represents supported behavior; otherwise simplify the implementation.
+- For surviving mutations, strengthen assertions for supported behavior or simplify the implementation.
 - Do not weaken tests, add mutation ignores, or remove `mutates()` without user confirmation.

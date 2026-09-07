@@ -94,7 +94,7 @@ Special cases:
    Any output is a shared file the resolution rewrote. Restore it with
    `git checkout "$template_ref" -- <path>`.
 
-10. Run the checks required by `AGENTS.md`, starting narrowly.
+10. Run relevant checks from `AGENTS.md`, starting narrowly.
 11. Stage resolved files, review the staged diff, and stop before committing.
 
 Report template choices, preserved app choices, deleted or consolidated tests, verification

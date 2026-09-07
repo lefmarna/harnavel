@@ -300,8 +300,8 @@ not comparison noise.
 
 ### 3. Verify and finish
 
-- Run the narrowest relevant checks after each subsystem, then the complete backend, frontend,
-  docs, and Playwright E2E checks required by `AGENTS.md`.
+- Run the narrowest relevant checks after each subsystem, then the full verification listed in
+  Phase 1, step 6.
 - Re-run package audits if dependency files changed during skeleton synchronization.
 - Search again for removed packages, files, config keys, classes, and script names.
 - Repeat the full reference comparison and prove that every remaining difference is present in the

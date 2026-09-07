@@ -15,7 +15,7 @@ Important:
 
 - Keep docs short.
 - Do not add inferable generalities or long tutorials.
-- Keep only information that is project-specific, stable, and not obvious from code alone.
+- Keep project context specific, stable, and not obvious from code alone.
 
 ## Prerequisites
 
@@ -48,7 +48,7 @@ Files in the template docs structure that need project-specific updates:
 
 | File | Update |
 | --- | --- |
-| `AGENTS.md` | Set a one-line project summary and adapt essential, non-inferable session constraints. |
+| `AGENTS.md` | Adapt the project summary and session rules (Step 4). |
 | `CONTEXT.md` | Fill initial entries with domain terms extracted from context. Preserve the opening contract text and entry format. |
 | `docs/infrastructure.md` | Record only external production facts that differ from the template and cannot be read from repository configuration. |
 | `.env.example` | Update default values for `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port numbers. |
@@ -63,10 +63,6 @@ The following files are template-shared and should generally not be changed:
 - `docs/testing-as-spec.md` - testing-as-spec method; shared by the template.
 - `docs/adr/template/**` and the policy in `docs/adr/README.md` - template-owned; only the App ADRs index is app-owned.
 
-Notes:
-
-- `mise.toml` and `package.json` are the command indexes; do not copy their task lists into docs.
-
 ## Step 4: Update Entry Documents
 
 Adapt `README.md` and `AGENTS.md` within their existing roles:
@@ -80,10 +76,9 @@ Adapt `README.md` and `AGENTS.md` within their existing roles:
 
 **`AGENTS.md`**
 
-- Open with one short sentence describing the project's purpose and audience from the supplied context; replace any existing summary.
-- Keep only non-inferable constraints needed in every session; adapt project-specific ones in short rules.
-- Preserve applicable shared rules already present.
-- Beyond that summary, omit overviews, behavior descriptions, command lists, and information owned by other docs.
+- Replace the summary with one sentence about the project's purpose and audience.
+- Keep applicable shared rules, essential validation commands, and non-inferable session constraints.
+- Omit behavior descriptions, full task catalogs, and information owned by other docs.
 
 ## Step 5: Update Local Identifiers and Port Settings
 
@@ -116,7 +111,7 @@ XServer, changes PHP version, gains a `.user.ini`, or serves stale behavior afte
 
 1. Present the updates to the user and get approval.
 2. Run `pnpm lint:docs` to verify link consistency under `docs/`.
-3. Confirm README describes the app and AGENTS has only a one-line summary and essential constraints.
+3. Confirm README and AGENTS follow Step 4.
 4. Report unresolved context rather than forcing every source detail into docs.
 
 ## Output
@@ -133,5 +128,4 @@ After finishing, report:
 - Never edit generated files under `docs/generated/`.
 - Preserve the rule that files under `docs/` are English and `README.md` is Japanese.
 - Decide whether to add information by asking "would AI make a mistake if this were deleted?" If not, do not add it.
-- Avoid duplication: AGENTS holds a one-line summary and session constraints, README the overview, CONTEXT domain terms, App ADRs decision rationale, and infrastructure docs external facts.
 - In derived projects, the text should read as "this project documentation", not "template documentation".

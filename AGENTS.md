@@ -11,6 +11,5 @@ A Laravel + Inertia React starter template.
 - Do not hand-edit generated docs or Boost skills (Kiro exception: TADR-0008).
 - Run local Playwright serially; runs share `app_e2e`.
 - Delegate read-heavy exploration to `explorer`.
-- Keep only a one-line project summary and non-inferable session constraints.
 
 References: `CONTEXT.md`, `docs/adr/`, `docs/logging-guidelines.md`, `docs/generated/boost.md`.

@@ -5,7 +5,7 @@
 --}}
 @php
     $requestId = request()->attributes->get('request_id');
-    $displayRequestId = is_string($requestId) && $requestId !== '' ? $requestId : __('errors.reference_id_unavailable');
+    $hasRequestId = is_string($requestId) && $requestId !== '';
     $appName = config('app.name', 'Laravel');
 @endphp
 <!DOCTYPE html>
@@ -66,8 +66,10 @@
 <body>
     <main>
         <h1>{{ __('errors.503.title') }}</h1>
-        <p>{{ __('errors.503.body') }}</p>
-        <p>{{ __('errors.reference_id') }}: <code>{{ $displayRequestId }}</code></p>
+        <p>{{ $hasRequestId ? __('errors.503.body') : __('errors.503.retry_later') }}</p>
+        @if ($hasRequestId)
+            <p>{{ __('errors.reference_id') }}: <code>{{ $requestId }}</code></p>
+        @endif
         <p><a href="{{ url('/') }}">{{ __('errors.back_home') }}</a></p>
     </main>
 </body>

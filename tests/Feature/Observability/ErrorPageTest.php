@@ -62,13 +62,20 @@ describe('本番エラーページ', function () {
             ->toContain((string) $requestId);
     });
 
-    it('問い合わせIDが無いときは日本語で示す', function () {
-        // 事前生成の 503 や、リクエスト ID を割り当てる前に返る経路ではプレースホルダが出る。
-        // 読み手に見える位置なので、翻訳を通ることを固定する。訳が無ければキー名が出て落ちる。
-        // 503 のビューを多言語向けに書き換えた派生アプリは、この期待値も自分で持つ。
-        foreach (['errors.500', 'errors.503'] as $view) {
-            expect(view($view)->render())->toContain('問い合わせID: <code>不明</code>');
-        }
+    it('500 は問い合わせIDが無いときプレースホルダを日本語で示す', function () {
+        // AssignRequestId を通らない経路では ID が無い。読み手に見える位置なので、
+        // 翻訳を通ることを固定する。訳が無ければキー名が出て落ちる。
+        expect(view('errors.500')->render())->toContain('問い合わせID: <code>不明</code>');
+    });
+
+    it('503 は問い合わせIDが無いとき問い合わせIDを求めない', function () {
+        // 事前生成の 503 はリクエストを持たないため ID が常に無い。つまりこれが通常の状態で、
+        // 「IDをお知らせください」と促しながら中身を伏せ字にするのは案内として成立しない。
+        $html = view('errors.503')->render();
+
+        expect($html)
+            ->toContain('時間をおいてもう一度お試しください。')
+            ->not->toContain('問い合わせID');
     });
 
     it('500 エラーページに定型文言を表示する', function () {

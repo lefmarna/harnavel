@@ -1,21 +1,14 @@
 # Architecture Decision Records
 
-Template ADRs live under `docs/adr/template/` and use the `TADR-NNNN` namespace. Derived
-applications take them from the template and do not edit them. App-specific ADRs live directly
-under `docs/adr/` and use `ADR-NNNN`.
+Template ADRs (`template/NNNN-*.md`, `TADR-NNNN`) are template-owned and read-only in derived apps.
+App ADRs (`NNNN-*.md`, `ADR-NNNN`) and the index below are app-owned.
 
-Create an ADR only when a decision is hard to reverse, surprising without context, and the result
-of a real trade-off. Keep it as short as possible: the current decision and enough rationale to
-prevent the decision being repeated. Tests specify behavior; `AGENTS.md` holds every-session
-constraints; `CONTEXT.md` is only a domain glossary; procedures and external facts belong in other
-docs.
+Record only current decisions that are hard to reverse and surprising without their trade-off rationale.
+Omit what code or tests reveal. `AGENTS.md` holds a one-line summary and session constraints, `CONTEXT.md` domain terms,
+and other docs procedures and external facts.
 
-Delete proposed or temporary decisions that never acquired lasting consequences. When a current
-decision replaces an older one, merge the useful rationale and remove the history unless another
-record still depends on it. Renumber the remaining records after removal so the sequence stays
-contiguous, updating every reference in the same change.
-
-During a template merge, preserve the application's flat ADR files and the app-owned index below.
+Delete unadopted or superseded decisions; retain only rationale still in force unless another record
+requires a short supersession pointer. After removal, renumber owned records and update references.
 
 ## App ADRs
 

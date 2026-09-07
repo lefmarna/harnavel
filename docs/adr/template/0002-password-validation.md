@@ -1,7 +1,5 @@
 # Password validation trade-offs
 
-Passwords are 8–64 printable ASCII characters with at least one letter and one number; mixed case
-and symbols are optional. ASCII and the 64-character limit avoid bcrypt's 72-byte truncation
-ambiguity. HaveIBeenPwned checks fail open so a third-party outage cannot block registration or
-password changes; an application choosing another security/availability trade-off records its own
-ADR.
+Printable ASCII and a bounded byte length avoid bcrypt truncation ambiguity. Breach lookups fail
+open so a third-party outage cannot block registration or password changes; applications choosing
+a different security/availability balance record their own ADR.

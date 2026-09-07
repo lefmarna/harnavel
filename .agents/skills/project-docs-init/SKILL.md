@@ -48,64 +48,44 @@ Files in the template docs structure that need project-specific updates:
 
 | File | Update |
 | --- | --- |
-| `AGENTS.md` | Update the project purpose, non-obvious conventions, and operational rules for the derived project. |
+| `AGENTS.md` | Set a one-line project summary and adapt essential, non-inferable session constraints. |
 | `CONTEXT.md` | Fill initial entries with domain terms extracted from context. Preserve the opening contract text and entry format. |
 | `docs/infrastructure.md` | Record only external production facts that differ from the template and cannot be read from repository configuration. |
 | `.env.example` | Update default values for `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port numbers. |
 | `public/manifest.webmanifest` | Update the static app name and description in the Web App Manifest. |
-| `README.md` | Update the title, opening lead, overview, and setup text for the project. |
+| `README.md` | Update the project name, purpose, audience, scope, and setup text. |
+| `docs/adr/NNNN-*.md` | Record adopted app-specific trade-offs only when they meet `docs/adr/README.md`; update its App ADRs index. |
 
 The following files are template-shared and should generally not be changed:
 
 - `docs/generated/boost.md` - generated; do not edit.
 - `docs/generated/specs.md` - generated; do not edit.
 - `docs/testing-as-spec.md` - testing-as-spec method; shared by the template.
-- `docs/adr/template/**`, `docs/adr/README.md` - template ADRs and ADR numbering policy. Project-specific ADRs are created as `docs/adr/NNNN-*.md`.
+- `docs/adr/template/**` and the policy in `docs/adr/README.md` - template-owned; only the App ADRs index is app-owned.
 
 Notes:
 
 - `mise.toml` and `package.json` are the command indexes; do not copy their task lists into docs.
-- Preserve the structure and role of `README.md` and `AGENTS.md`, but do not leave the title and introduction as template wording.
-- Avoid introductory text that reads like someone else's template after expansion, such as "template", "starter", or "scaffold".
 
 ## Step 4: Update Entry Documents
 
-Update the top of `README.md` and `AGENTS.md` with the following policy:
+Adapt `README.md` and `AGENTS.md` within their existing roles:
 
 **`README.md`**
 
 - Change the title to the project name or project-name-based wording.
-- Rewrite the first one or two paragraphs to describe what the project does.
+- Describe the purpose, audience, and scope briefly in the opening paragraphs.
 - Do not leave scaffold-oriented explanations such as "this is a template" or "for horizontal rollout across multiple projects".
 - Keep setup steps for actual users.
 
 **`AGENTS.md`**
 
-- Update the project purpose, non-obvious rules, and verification commands for the derived project.
-- Do not leave template-assumption wording.
-- Keep mandatory operational rules such as generated-file edit bans, review rules, and docs responsibility separation.
+- Open with one short sentence describing the project's purpose and audience from the supplied context; replace any existing summary.
+- Keep only non-inferable constraints needed in every session; adapt project-specific ones in short rules.
+- Preserve applicable shared rules already present.
+- Beyond that summary, omit overviews, behavior descriptions, command lists, and information owned by other docs.
 
-## Step 5: Update Project Context in AGENTS.md
-
-Update `Project Context` and related sections in `AGENTS.md` using this policy:
-
-**Project-specific elements to rewrite:**
-
-- What this app is and what it provides to whom.
-- What is in the initial scope and what is out of scope.
-- Operational rules and constraints that are hard to infer from code alone.
-- Project-specific review and verification judgment criteria.
-
-**Elements to preserve because they are template-shared:**
-
-- Docs responsibility separation.
-- Generated-file edit ban.
-- Language rules for docs and README.
-- Template ownership direction: generic improvements go to the template, not a derived app's copy.
-
-If supplemental details such as screen structure or access control are needed, first summarize them briefly in `AGENTS.md` instead of adding a dedicated doc.
-
-## Step 6: Update Local Identifiers and Port Settings
+## Step 5: Update Local Identifiers and Port Settings
 
 Using the user-provided `APP_NAME`, `DB_DATABASE`, port numbers, and the project name extracted from context, update:
 
@@ -132,20 +112,19 @@ No OPcache measurement is required to start deploying. The deployment waits out 
 window while maintenance is active. Recheck the external assumption only if the environment leaves
 XServer, changes PHP version, gains a `.user.ini`, or serves stale behavior after a green deploy.
 
-## Step 7: Review and Verify
+## Step 6: Review and Verify
 
 1. Present the updates to the user and get approval.
 2. Run `pnpm lint:docs` to verify link consistency under `docs/`.
-3. Review `README.md` and `AGENTS.md` visually and confirm links, titles, and introductions no longer feel like the template.
-4. Do a final check for context-directory information that was not reflected.
+3. Confirm README describes the app and AGENTS has only a one-line summary and essential constraints.
+4. Report unresolved context rather than forcing every source detail into docs.
 
 ## Output
 
 After finishing, report:
 
 - List of updated files and summary of changes.
-- How the `README.md` and `AGENTS.md` titles / lead text were updated.
-- Information extracted from context that did not naturally fit in `AGENTS.md`, `README.md`, or `docs/infrastructure.md`, if any.
+- Essential context still unresolved or intentionally omitted, if any.
 - Recommended next actions, if additional confirmation is needed.
 
 ## Notes
@@ -154,5 +133,5 @@ After finishing, report:
 - Never edit generated files under `docs/generated/`.
 - Preserve the rule that files under `docs/` are English and `README.md` is Japanese.
 - Decide whether to add information by asking "would AI make a mistake if this were deleted?" If not, do not add it.
-- Avoid duplicated rules. Put durable rules in `AGENTS.md` and reference information in `docs/`.
+- Avoid duplication: AGENTS holds a one-line summary and session constraints, README the overview, CONTEXT domain terms, App ADRs decision rationale, and infrastructure docs external facts.
 - In derived projects, the text should read as "this project documentation", not "template documentation".

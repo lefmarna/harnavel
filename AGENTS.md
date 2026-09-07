@@ -1,24 +1,16 @@
-# Project context
+# Project rules
 
 A Laravel + Inertia React starter template.
 
-## Environment constraints
+- PHP/Composer/Artisan: Docker `app`. Node/pnpm/mise: host.
+- Production: XServer shared hosting; no queue workers, SSR, or long-running processes.
+- Behavior changes start with failing tests (`docs/testing-as-spec.md`).
+- No tests/checks for config/tooling/CI wiring except TADR-0001.
+- Generic improvements belong in the template.
+- README: Japanese; docs: English.
+- Do not hand-edit generated docs or Boost skills (Kiro exception: TADR-0008).
+- Run local Playwright serially; runs share `app_e2e`.
+- Delegate read-heavy exploration to `explorer`.
+- Keep only a one-line project summary and non-inferable session constraints.
 
-- Local development uses Docker; production runs on XServer shared hosting.
-- Run PHP, Composer, and Artisan in the Docker `app` container; run Node.js, pnpm, and mise on the host.
-- Production cannot depend on queue workers, SSR, or other long-running processes.
-
-## Project rules
-
-- Tests are the canonical specification of behavior: write a failing test before a behavioral change (`docs/testing-as-spec.md`).
-- Configuration, tooling, and CI wiring are not behavior and get no tests or checks of their own (TADR-0001 bounds the exception).
-- Generic improvements go to the template, not one app.
-- Copy in `resources/js` stays inline, unlike server-rendered copy in `lang/` (TADR-0011).
-- `README.md` is Japanese and `docs/` is English; `docs/generated/` and Boost-managed skills are generated, never hand-edited.
-- Validation: `mise run test` and `mise run mutate` (targeted backend), `mise run verify:backend:full` (full backend, mutation, and E2E), `pnpm format:check`, `lint:check`, `types:check`, `test:unit`, and `lint:docs`.
-- Run only one local Playwright process at a time because local runs share `app_e2e`.
-- Delegate read-heavy exploration to the `explorer` subagent.
-
-## References
-
-- `CONTEXT.md` (domain terms), `docs/adr/` (decisions), `docs/logging-guidelines.md` (log operations), and `docs/generated/boost.md` (Laravel guidance).
+References: `CONTEXT.md`, `docs/adr/`, `docs/logging-guidelines.md`, `docs/generated/boost.md`.

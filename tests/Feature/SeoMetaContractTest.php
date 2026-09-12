@@ -45,6 +45,18 @@ function extractStructuredDataItems(string $html): array
 }
 
 /**
+ * JSON-LD をデコードせずに取り出す。エスケープそのものを確かめる用途で使う。
+ *
+ * @return list<string>
+ */
+function extractStructuredDataPayloads(string $html): array
+{
+    preg_match_all('/<script type="application\\/ld\\+json">\\s*(.*?)\\s*<\\/script>/s', $html, $matches);
+
+    return array_values($matches[1] ?? []);
+}
+
+/**
  * @param  list<array<string, mixed>>  $schemas
  * @return array<string, mixed>
  */
@@ -287,6 +299,20 @@ describe('SEO メタ契約', function () {
         $schemas = extractStructuredDataItems($content);
 
         expect(findStructuredDataByType($schemas, 'WebSite')['description'] ?? null)->toBe($payload);
+    });
+
+    // `<` を退避していれば `</script>` は作れないが、`/` の退避（json_encode の既定）も
+    // 残して二重に塞ぐ。片方を落としたときに穴が開かないことを、構成として固定する。
+    //
+    // 見るのは JSON-LD の生の中身だけ。ページ全体には Inertia の data-page など別経路の
+    // JSON も載っていて、そちらのスラッシュを拾うと何も確かめられない。
+    it('構造化データはスラッシュも退避したまま出力する', function () {
+        $payloads = extractStructuredDataPayloads($this->get(route('home'))->getContent());
+        $siteUrl = rtrim((string) config('app.url'), '/');
+
+        expect($payloads)->not->toBeEmpty()
+            ->and($payloads[0])->toContain(str_replace('/', '\\/', $siteUrl))
+            ->and($payloads[0])->not->toContain($siteUrl);
     });
 
     it('ページ固有のdescriptionはWebPage構造化データにだけ反映される', function () {

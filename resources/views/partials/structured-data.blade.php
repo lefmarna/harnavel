@@ -92,12 +92,16 @@
      * JSON-LD を <script> 要素の内側へ直接埋め込むため、`<` `>` `&` `\'` `"` を
      * \uXXXX へ退避する。タイトルと説明はアプリが自由に流し込む枠で、ユーザー入力や
      * 生成物が届く経路を持つアプリもある。これが無いと `</script>` で script 要素を
-     * 脱出できてしまう。日本語と URL は読めるまま残したいので UNESCAPED_UNICODE /
-     * UNESCAPED_SLASHES は維持する。
+     * 脱出できてしまう。
+     *
+     * `/` の退避（json_encode の既定）も外さない。`<` を退避していれば `</script>` は
+     * 作れないが、二重に塞いでおけば片方を落としたときに穴が開かない。ここは
+     * Laravel が HTML へ JSON を埋めるときの既定（Illuminate\Support\Js）と同じ構成で、
+     * 読み手のために足すのは日本語をそのまま出す UNESCAPED_UNICODE だけ。
      */
     $encodeSchema = fn (array $schema): string => json_encode(
         $schema,
-        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+        JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
             | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
     );
 @endphp

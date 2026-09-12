@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia;
@@ -78,4 +79,17 @@ function assertInertiaShape(AssertableInertia $page, string $component, array $k
     }
 
     return $page;
+}
+
+/**
+ * 一意制約違反を FakeUserRepository の save へ差し込むための例外。
+ */
+function testingUniqueConstraintViolation(): UniqueConstraintViolationException
+{
+    return new UniqueConstraintViolationException(
+        'testing',
+        'INSERT INTO `users`',
+        [],
+        new PDOException('Integrity constraint violation')
+    );
 }

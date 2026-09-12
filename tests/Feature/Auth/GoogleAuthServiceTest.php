@@ -8,7 +8,6 @@ use App\Mail\LinkGoogleAccountMail;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Services\GoogleAuth\GoogleAuthService;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
@@ -617,13 +616,3 @@ describe('Google 認証サービス', function () {
         });
     });
 });
-
-function testingUniqueConstraintViolation(): UniqueConstraintViolationException
-{
-    return new UniqueConstraintViolationException(
-        'testing',
-        'INSERT INTO `users`',
-        [],
-        new PDOException('Integrity constraint violation')
-    );
-}

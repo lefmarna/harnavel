@@ -271,6 +271,24 @@ describe('SEO メタ契約', function () {
         expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
     });
 
+    // JSON-LD は <script> の内側へ文字列として埋まる。タイトルや説明はアプリが自由に
+    // 流し込む枠で、ユーザー入力や生成物が届く経路を持つアプリもある。エスケープが
+    // 無いと `</script>` で script 要素を抜け、後続が HTML として解釈される。
+    it('構造化データに script を閉じる文字列が入っても script 要素を抜けない', function () {
+        $payload = '</script><script>alert(1)</script>';
+        config(['app.description' => $payload]);
+
+        $content = $this->get(route('home'))->getContent();
+
+        // 生の HTML に現れないこと。現れた時点で script 要素は閉じている。
+        expect($content)->not->toContain($payload);
+
+        // 退避しても JSON としては元の値のまま読めること。
+        $schemas = extractStructuredDataItems($content);
+
+        expect(findStructuredDataByType($schemas, 'WebSite')['description'] ?? null)->toBe($payload);
+    });
+
     it('ページ固有のdescriptionはWebPage構造化データにだけ反映される', function () {
         $user = User::factory()->create();
 

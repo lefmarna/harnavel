@@ -87,19 +87,32 @@
     $websiteSchema = array_filter($websiteSchema, $schemaFilter);
     $webApplicationSchema = array_filter($webApplicationSchema, $schemaFilter);
     $webPageSchema = array_filter($webPageSchema, $schemaFilter);
+
+    /**
+     * JSON-LD を <script> 要素の内側へ直接埋め込むため、`<` `>` `&` `\'` `"` を
+     * \uXXXX へ退避する。タイトルと説明はアプリが自由に流し込む枠で、ユーザー入力や
+     * 生成物が届く経路を持つアプリもある。これが無いと `</script>` で script 要素を
+     * 脱出できてしまう。日本語と URL は読めるまま残したいので UNESCAPED_UNICODE /
+     * UNESCAPED_SLASHES は維持する。
+     */
+    $encodeSchema = fn (array $schema): string => json_encode(
+        $schema,
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+            | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT,
+    );
 @endphp
 
 <script type="application/ld+json">
-    {!! json_encode($websiteSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+    {!! $encodeSchema($websiteSchema) !!}
 </script>
 @if ($authorSchema)
     <script type="application/ld+json">
-        {!! json_encode($authorSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+        {!! $encodeSchema($authorSchema) !!}
     </script>
 @endif
 <script type="application/ld+json">
-    {!! json_encode($webApplicationSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+    {!! $encodeSchema($webApplicationSchema) !!}
 </script>
 <script type="application/ld+json">
-    {!! json_encode($webPageSchema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+    {!! $encodeSchema($webPageSchema) !!}
 </script>

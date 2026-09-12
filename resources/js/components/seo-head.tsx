@@ -47,6 +47,7 @@ export default function SeoHead({
 }: SeoProps) {
   const {
     seo,
+    name,
     appDisplayName,
     appDescription,
     defaultRobots,
@@ -54,7 +55,7 @@ export default function SeoHead({
     currentUrl,
   } = usePage<SharedData>().props;
   const sharedSeo: SeoData = seo;
-  const siteName = appDisplayName || "Laravel";
+  const siteName = appDisplayName || name;
   const resolvedTitle = title ?? sharedSeo.title;
   const metaType = type ?? sharedSeo.type ?? "website";
   const metaDescription = description ?? sharedSeo.description ?? appDescription ?? "";

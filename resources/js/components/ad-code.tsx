@@ -29,7 +29,6 @@ export const AdCode = (props: AdCodeProps) => {
   } = props;
 
   useLayoutEffect(() => {
-    // 開発環境では何もしない
     if (import.meta.env.DEV) {
       return;
     }
@@ -49,7 +48,6 @@ export const AdCode = (props: AdCodeProps) => {
     }
   }, [tracking.adsEnabled, tracking.adsensePublisherId]);
 
-  // 開発環境では何も表示しない
   if (import.meta.env.DEV) {
     return null;
   }

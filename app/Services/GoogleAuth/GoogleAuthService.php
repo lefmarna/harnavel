@@ -185,12 +185,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
             throw new GoogleAuthException(__('auth.google.email_taken'));
         }
 
-        // @codeCoverageIgnoreStart
-        if ($user->google_id === null) {
-            $user->google_id = $googleId;
-        }
-        // @codeCoverageIgnoreEnd
-
         if ($user->email_verified_at === null) {
             $user->forceFill(['email_verified_at' => now()]);
         }

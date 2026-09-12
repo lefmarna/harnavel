@@ -26,12 +26,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Google認証などのOAuth専用ユーザー（password IS NULL）が存在する場合、
-        // そのまま NOT NULL 制約に戻すとデータベース側のエラー（ALTER失敗）が発生します。
-        // そのため、ロールバック前にログイン不可能なランダムパスワードを補完します。
-        //
-        // Hash::make() を使用することで、アプリ設定のハッシュアルゴリズム（Argon2等）に従い
-        // 仮に認証処理が走っても「ハッシュ形式不正」による 500エラー を防ぎます。
+        // OAuth専用ユーザーは password IS NULL のため、先に埋めないと NOT NULL への ALTER が失敗する。
         DB::table('users')
             ->whereNull('password')
             ->update([

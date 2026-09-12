@@ -8,8 +8,8 @@ use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Process\Process;
 
 /**
- * Run an unchanged copy of the real entry point under an HTTP SAPI. All maintenance
- * files and child-process writes belong to this fixture, never the shared app.
+ * 本物のエントリポイントをそのままHTTP SAPIで動かす。メンテナンスファイルと
+ * 子プロセスの書き込みはこのフィクスチャ内に閉じ、共有アプリ側へ出さない。
  *
  * @param  Closure(string): void  $prepare
  * @param  array<string, string>  $headers
@@ -68,7 +68,7 @@ function securityEntryPointResponse(Closure $prepare, string $path = '/', array 
             return str_contains($output, "(http://{$address}) started");
         });
 
-        // A port selected above is only a candidate. Never accept another process's response.
+        // 上で選んだポートは候補にすぎない。別プロセスの応答を受け取らないこと。
         if (! $started || ! $server->isRunning()) {
             throw new RuntimeException('Test server did not start: '.$output);
         }
@@ -94,7 +94,7 @@ function securityEntryPointResponse(Closure $prepare, string $path = '/', array 
 
 function assertSecurityEntryPointBaseline(ResponseInterface $response): void
 {
-    // Independent contract literals; an array assertion also rejects duplicate header fields.
+    // 契約値は独立したリテラルで持つ。配列での比較はヘッダーフィールドの重複も弾く。
     expect($response->getHeader('Content-Security-Policy'))
         ->toBe(["frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"]);
     expect($response->getHeader('X-Content-Type-Options'))->toBe(['nosniff']);

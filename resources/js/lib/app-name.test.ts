@@ -1,16 +1,18 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { describe, it } from "node:test";
 
 import { resolveAppName } from "./app-name";
 
-test("設定されたアプリ名を保持する", () => {
-  assert.equal(resolveAppName("Custom App"), "Custom App");
-});
+describe("アプリ名の解決", function () {
+  it("設定されたアプリ名を保持する", function () {
+    assert.equal(resolveAppName("Custom App"), "Custom App");
+  });
 
-test("空のアプリ名は既定名へフォールバックする", () => {
-  assert.equal(resolveAppName(""), "Laravel App Template");
-});
+  it("空のアプリ名は既定名へフォールバックする", function () {
+    assert.equal(resolveAppName(""), "Laravel App Template");
+  });
 
-test("未設定のアプリ名は既定名へフォールバックする", () => {
-  assert.equal(resolveAppName(undefined), "Laravel App Template");
+  it("未設定のアプリ名は既定名へフォールバックする", function () {
+    assert.equal(resolveAppName(undefined), "Laravel App Template");
+  });
 });

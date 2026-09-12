@@ -22,7 +22,6 @@ class DomainServiceProvider extends ServiceProvider
      */
     private const PREFIXES = [
         'GoogleAuth',
-        // 'User', // 初回はコメントアウトか、User実装後に有効化
     ];
 
     /**

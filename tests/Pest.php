@@ -35,6 +35,7 @@ pest()->extend(TestCase::class)
 
 uses()
     ->beforeEach(function () {
+        Http::preventStrayRequests();
         Http::fake(['api.pwnedpasswords.com/*' => Http::response('')]);
     })
     ->in('Feature');
@@ -77,15 +78,4 @@ function assertInertiaShape(AssertableInertia $page, string $component, array $k
     }
 
     return $page;
-}
-
-function settingLine(string $relativePath, string $prefix): ?string
-{
-    $contents = file_get_contents(base_path($relativePath));
-
-    expect($contents)->not->toBeFalse();
-
-    return collect(explode("\n", (string) $contents))
-        ->map(fn (string $line): string => trim($line))
-        ->first(fn (string $line): bool => str_starts_with($line, $prefix));
 }

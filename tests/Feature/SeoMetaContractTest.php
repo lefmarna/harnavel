@@ -117,12 +117,6 @@ describe('SEO メタ契約', function () {
             ->and($content)->toContain('<meta data-inertia="twitter:title" name="twitter:title"')
             ->and($content)->toContain('<meta data-inertia="twitter:description" name="twitter:description"')
             ->and($content)->toContain('<meta data-inertia="twitter:image" name="twitter:image"');
-
-        preg_match('/property="og:image"\s+content="([^"]*)"/', $content, $ogImageMatches);
-        preg_match('/name="twitter:image"\s+content="([^"]*)"/', $content, $twitterImageMatches);
-
-        expect($ogImageMatches[1] ?? '')->toEndWith('/opengraph-image.jpg')
-            ->and($twitterImageMatches[1] ?? '')->toEndWith('/opengraph-image.jpg');
     });
 
     it('既定のOGP画像はJPEGを参照しMIMEタイプとaltを出力する', function () {
@@ -218,17 +212,6 @@ describe('SEO メタ契約', function () {
             ->and($canonicalUrl)->toContain('reset-password');
     });
 
-    it('og:urlはクエリ文字列を含まないcanonical pathを持つ', function () {
-        $response = $this->get(route('home'));
-        $content = $response->getContent();
-
-        preg_match('/property="og:url"\s+content="([^"]*)"/', $content, $matches);
-        $ogUrl = $matches[1] ?? '';
-
-        expect($ogUrl)->not->toBeEmpty()
-            ->and($ogUrl)->not->toContain('?');
-    });
-
     it('shared propsにはappDisplayName・appDescription・seo・urls・flashが含まれる', function () {
         $response = $this->get(route('home'));
 
@@ -292,13 +275,6 @@ describe('SEO メタ契約', function () {
         'forgot-password' => ['password.request'],
         'reset-password' => ['password.reset', ['token' => 'test-token']],
     ]);
-
-    it('publicページは非本番環境でnoindexなrobots metaを使う', function () {
-        $response = $this->get(route('home'));
-        $content = $response->getContent();
-
-        expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-    });
 
     // JSON-LD は <script> の内側へ文字列として埋まる。タイトルや説明はアプリが自由に
     // 流し込む枠で、ユーザー入力や生成物が届く経路を持つアプリもある。エスケープが

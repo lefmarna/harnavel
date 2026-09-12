@@ -47,7 +47,6 @@ class ProfileController extends Controller
 
         $user->fill($validated);
 
-        // Single-model profile updates stay in the controller per TADR-0005.
         $emailChanged = config('fortify.lowercase_usernames')
             ? $user->isDirty('email')
             : Str::lower($originalEmail) !== Str::lower($user->email);

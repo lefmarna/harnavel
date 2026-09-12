@@ -40,8 +40,7 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        // Docker assigns Nginx a dynamic address. Trust it only while Nginx is loopback-bound
-        // and the FPM service remains unpublished.
+        // DockerのNginxはアドレスが固定されない。Nginxがloopbackに閉じ、FPMが未公開の間だけ信頼する。
         if (config('app.trust_local_reverse_proxy')) {
             TrustProxies::at('REMOTE_ADDR');
             TrustProxies::withHeaders(Request::HEADER_X_FORWARDED_PROTO);

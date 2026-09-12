@@ -28,7 +28,6 @@ Route::get('dashboard', function () {
     );
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// Google OAuth認証ルート（ゲスト専用）
 Route::middleware('guest')->group(function () {
     Route::get('auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');
     Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');

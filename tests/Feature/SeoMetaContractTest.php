@@ -31,29 +31,34 @@ function extractHeadAttribute(string $html, string $tag, array $requiredAttribut
 }
 
 /**
- * @return list<array<string, mixed>>
- */
-function extractStructuredDataItems(string $html): array
-{
-    preg_match_all('/<script type="application\/ld\+json">\s*(.*?)\s*<\/script>/s', $html, $matches);
-
-    return collect($matches[1] ?? [])
-        ->map(fn (string $json): mixed => json_decode($json, true))
-        ->filter(fn (mixed $schema): bool => is_array($schema))
-        ->values()
-        ->all();
-}
-
-/**
  * JSON-LD をデコードせずに取り出す。エスケープそのものを確かめる用途で使う。
+ *
+ * nonce 付きの CSP を敷くと script 要素に type 以外の属性が増える。属性の並びに
+ * 依存しないよう、開始タグの中を先読みで突き合わせる。
  *
  * @return list<string>
  */
 function extractStructuredDataPayloads(string $html): array
 {
-    preg_match_all('/<script type="application\\/ld\\+json">\\s*(.*?)\\s*<\\/script>/s', $html, $matches);
+    preg_match_all(
+        '/<script\b(?=[^>]*\btype="application\/ld\+json")[^>]*>\s*(.*?)\s*<\/script>/s',
+        $html,
+        $matches,
+    );
 
     return array_values($matches[1] ?? []);
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function extractStructuredDataItems(string $html): array
+{
+    return collect(extractStructuredDataPayloads($html))
+        ->map(fn (string $json): mixed => json_decode($json, true))
+        ->filter(fn (mixed $schema): bool => is_array($schema))
+        ->values()
+        ->all();
 }
 
 /**
@@ -64,6 +69,18 @@ function findStructuredDataByType(array $schemas, string $type): array
 {
     return collect($schemas)
         ->first(fn (array $schema): bool => ($schema['@type'] ?? null) === $type, []);
+}
+
+/**
+ * 構造化データへ載るサイト説明を差し替える。
+ *
+ * テンプレートは config から引くだけで足りるが、説明文を翻訳ファイルへ移したアプリでは
+ * ロケールを添えて訳文を差し替えることになる。注入をこの関数へ閉じ込めておけば、
+ * アプリ側は中身だけを置き換えればよく、テスト本体はそのまま使える。
+ */
+function replaceSiteDescription(string $description): void
+{
+    config(['app.description' => $description]);
 }
 
 describe('SEO メタ契約', function () {
@@ -288,12 +305,19 @@ describe('SEO メタ契約', function () {
     // 無いと `</script>` で script 要素を抜け、後続が HTML として解釈される。
     it('構造化データに script を閉じる文字列が入っても script 要素を抜けない', function () {
         $payload = '</script><script>alert(1)</script>';
-        config(['app.description' => $payload]);
+        replaceSiteDescription($payload);
 
         $content = $this->get(route('home'))->getContent();
 
         // 生の HTML に現れないこと。現れた時点で script 要素は閉じている。
         expect($content)->not->toContain($payload);
+
+        // `<` そのものを退避していること。`/` の退避だけでも生の `</script>` は出ないため、
+        // 上の assert では `<` を塞ぐ側（JSON_HEX_TAG）が落ちても気づけない。
+        $payloads = extractStructuredDataPayloads($content);
+
+        expect($payloads)->not->toBeEmpty()
+            ->and($payloads[0])->toContain('\u003C\/script\u003E');
 
         // 退避しても JSON としては元の値のまま読めること。
         $schemas = extractStructuredDataItems($content);

@@ -44,8 +44,6 @@
   "The given data was invalid.": "指定されたデータは無効でした。",
   "The provided password does not match your current password.": "パスワードが現在のパスワードと一致しません。",
   "The provided password was incorrect.": "パスワードが違います。",
-  "The provided two factor authentication code was invalid.": "二要素認証コードが無効です。",
-  "The provided two factor recovery code was invalid.": "二要素認証のリカバリーコードが無効です。",
   "The response is not a streamed response.": "レスポンスは、ストリーミング形式ではありません。",
   "The response is not a view.": "レスポンスは、ビューではありません。",
   "This action is unauthorized.": "この行為は許可されていません。",

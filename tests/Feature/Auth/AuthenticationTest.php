@@ -6,7 +6,6 @@ use App\Models\User;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Testing\AssertableInertia as Assert;
-use Laravel\Fortify\Features;
 
 describe('ログイン', function () {
     it('ログイン画面を表示できる', function () {
@@ -22,7 +21,7 @@ describe('ログイン', function () {
             );
     });
 
-    it('二段階認証未設定ユーザーはログイン画面から認証できる', function () {
+    it('ログイン画面から認証できる', function () {
         $user = User::factory()->create();
 
         $response = $this->post(route('login.store'), [
@@ -32,32 +31,6 @@ describe('ログイン', function () {
 
         $this->assertAuthenticated();
         $response->assertRedirect(config('fortify.home'));
-    });
-
-    it('二段階認証有効ユーザーは二段階認証チャレンジへリダイレクトされる', function () {
-        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
-
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-        ]);
-
-        $user = User::factory()->create();
-
-        $user->forceFill([
-            'two_factor_secret' => encrypt('test-secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-            'two_factor_confirmed_at' => now(),
-        ])->save();
-
-        $response = $this->post(route('login'), [
-            'email' => $user->email,
-            'password' => UserFactory::DEFAULT_PASSWORD,
-        ]);
-
-        $response->assertRedirect(route('two-factor.login'));
-        $response->assertSessionHas('login.id', $user->id);
-        $this->assertGuest();
     });
 
     it('無効なパスワードでは認証できない', function () {

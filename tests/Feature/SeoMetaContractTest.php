@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
-use Laravel\Fortify\Features;
 
 function extractHeadAttribute(string $html, string $tag, array $requiredAttributes, string $targetAttribute): string
 {
@@ -237,25 +236,7 @@ describe('SEO メタ契約', function () {
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->has('auth.user')
             ->where('auth.user.avatar', null)
-            ->where('auth.user.two_factor_enabled', false)
             ->where('auth.hasPassword', true)
-        );
-    });
-
-    it('shared auth userは二段階認証の有効状態を返す', function () {
-        $user = User::factory()->create();
-        $user->forceFill([
-            'two_factor_secret' => encrypt('test-secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-            'two_factor_confirmed_at' => now(),
-        ])->save();
-
-        $response = $this->actingAs($user)->get(route('dashboard'));
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('auth.user')
-            ->where('auth.user.two_factor_enabled', true)
         );
     });
 
@@ -386,21 +367,6 @@ describe('SEO メタ契約', function () {
         'appearance' => ['appearance.edit', '表示設定', 'アカウントの表示設定を変更します。'],
     ]);
 
-    it('二段階認証設定ページはseo.titleとdescriptionを持つ', function () {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('two-factor.show'));
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('seo')
-            ->where('seo.title', '二段階認証設定')
-            ->where('seo.description', '二段階認証の設定を管理します。')
-        );
-    });
-
     it('メール認証ページはseo.titleとdescriptionを持つ', function () {
         $user = User::factory()->create(['email_verified_at' => null]);
 
@@ -435,32 +401,4 @@ describe('SEO メタ契約', function () {
         expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
     });
 
-    it('二段階認証チャレンジページはseo.titleとdescriptionを持つ', function () {
-        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
-
-        $user = User::factory()->create();
-        $user->forceFill([
-            'two_factor_secret' => encrypt('test-secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-            'two_factor_confirmed_at' => now(),
-        ])->save();
-
-        $this->post(route('login'), [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
-
-        $response = $this->get(route('two-factor.login'));
-        $content = $response->getContent();
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('seo')
-            ->where('seo.title', '二段階認証')
-            ->where('seo.description', '認証アプリのコードを入力して続行します。')
-            ->where('seo.robots', 'noindex, nofollow')
-        );
-
-        expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-    });
 });

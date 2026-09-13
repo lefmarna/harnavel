@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
-use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
 use App\ViewModels\StaticPageViewModel;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,7 +33,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ),
         );
     })->name('appearance.edit');
-
-    Route::get('settings/two-factor', [TwoFactorAuthenticationController::class, 'show'])
-        ->name('two-factor.show');
 });

@@ -96,15 +96,6 @@ class FortifyServiceProvider extends ServiceProvider
             ),
         ));
 
-        Fortify::twoFactorChallengeView(fn () => Inertia::render(
-            'auth/two-factor-challenge',
-            new StaticPageViewModel(
-                title: __('pages.auth.two_factor.title'),
-                description: __('pages.auth.two_factor.description'),
-                noIndex: true,
-            ),
-        ));
-
         Fortify::confirmPasswordView(fn () => Inertia::render(
             'auth/confirm-password',
             new StaticPageViewModel(
@@ -127,10 +118,6 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureRateLimiting(): void
     {
-        RateLimiter::for('two-factor', function (Request $request) {
-            return Limit::perMinute(5)->by($request->session()->get('login.id'));
-        });
-
         RateLimiter::for('login', function (Request $request) {
             $usernameInput = $request->input(Fortify::username(), '');
             $username = is_string($usernameInput) ? $usernameInput : '';

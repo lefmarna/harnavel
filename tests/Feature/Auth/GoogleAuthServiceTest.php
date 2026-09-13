@@ -222,22 +222,6 @@ describe('Google 認証サービス', function () {
             ->toThrow(GoogleAuthException::class, 'このメールアドレスは別のGoogleアカウントに連携済みです。');
     });
 
-    it('二段階認証が有効な既存ユーザーもサービス層では返却する', function () {
-        $existing = User::factory()->create([
-            'email' => 'two-factor@example.com',
-            'google_id' => 'google-2fa',
-            'two_factor_secret' => encrypt('test-secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-            'two_factor_confirmed_at' => now(),
-        ]);
-
-        $service = app(GoogleAuthService::class);
-
-        $user = $service->findOrCreate('google-2fa', 'two-factor@example.com', 'Two Factor User');
-
-        expect($user->is($existing))->toBeTrue();
-    });
-
     it('交差入力（google_id と email が別ユーザーに対応）で衝突 GoogleAuthException を投げる', function () {
         User::factory()->create([
             'google_id' => 'google-X',

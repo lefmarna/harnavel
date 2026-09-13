@@ -19,7 +19,7 @@ application code does not log them again.
 | `info`    | A business event worth keeping for a later investigation. |
 
 Three kinds of event qualify as that business event: authentication (login, logout, password reset
-completion, 2FA enable and disable, Google account link and unlink), irreversible or high-impact data
+completion, passkey registration and removal, Google account link and unlink), irreversible or high-impact data
 changes (registration, account deletion, email address change), and the outcome of an external
 service call. Routine CRUD and individual HTTP requests are not logged.
 

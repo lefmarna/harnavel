@@ -8,11 +8,8 @@ use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia;
-use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
-use Laravel\Fortify\Features;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
 
@@ -134,7 +131,7 @@ describe('Google OAuth コントローラ', function () {
                 ->where('canGoogleLogin', true));
     });
 
-    it('callback() で二段階認証が無効ならそのままログイン完了して fortify.home へリダイレクトする', function () {
+    it('callback() でログイン完了して fortify.home へリダイレクトする', function () {
         $existingUser = User::factory()->create(['email' => 'test@example.com']);
 
         $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
@@ -153,9 +150,7 @@ describe('Google OAuth コントローラ', function () {
             ->andReturn($existingUser);
 
         $this->get(route('auth.google.callback'))
-            ->assertRedirect(config('fortify.home'))
-            ->assertSessionMissing('login.id')
-            ->assertSessionMissing('login.remember');
+            ->assertRedirect(config('fortify.home'));
 
         $this->assertAuthenticatedAs($existingUser);
     });
@@ -209,83 +204,6 @@ describe('Google OAuth コントローラ', function () {
             ->assertRedirect(config('fortify.home'));
 
         $this->assertAuthenticatedAs($existingUser);
-    });
-
-    it('callback() で二段階認証が有効ならチャレンジ画面へリダイレクトする', function () {
-        Event::fake([TwoFactorAuthenticationChallenged::class]);
-
-        $existingUser = User::factory()->create([
-            'email' => 'test@example.com',
-            'two_factor_secret' => encrypt('test-secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-            'two_factor_confirmed_at' => now(),
-        ]);
-
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('test@example.com');
-        $googleUser->allows('getName')->andReturn('Test User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
-
-        mock(GoogleAuthServiceContract::class)
-            ->shouldReceive('findOrCreate')
-            ->with('google-123', 'test@example.com', 'Test User')
-            ->andReturn($existingUser);
-
-        $this->get(route('auth.google.callback'))
-            ->assertRedirect(route('two-factor.login'))
-            ->assertSessionHas('login.id', $existingUser->getKey())
-            ->assertSessionHas('login.remember', false);
-
-        $this->assertGuest();
-
-        Event::assertDispatched(TwoFactorAuthenticationChallenged::class);
-    });
-
-    it('callback() で二段階認証 feature が無効なら二段階認証設定が残っていてもそのままログイン完了する', function () {
-        Event::fake([TwoFactorAuthenticationChallenged::class]);
-
-        config([
-            'fortify.features' => array_values(array_filter(
-                config('fortify.features', []),
-                fn (string $feature): bool => $feature !== Features::twoFactorAuthentication(),
-            )),
-        ]);
-
-        $existingUser = User::factory()->create([
-            'email' => 'feature-disabled@example.com',
-            'two_factor_secret' => encrypt('test-secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
-            'two_factor_confirmed_at' => now(),
-        ]);
-
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-feature-disabled');
-        $googleUser->allows('getEmail')->andReturn('feature-disabled@example.com');
-        $googleUser->allows('getName')->andReturn('Feature Disabled User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
-
-        mock(GoogleAuthServiceContract::class)
-            ->shouldReceive('findOrCreate')
-            ->with('google-feature-disabled', 'feature-disabled@example.com', 'Feature Disabled User')
-            ->andReturn($existingUser);
-
-        $this->get(route('auth.google.callback'))
-            ->assertRedirect(config('fortify.home'))
-            ->assertSessionMissing('login.id')
-            ->assertSessionMissing('login.remember');
-
-        $this->assertAuthenticatedAs($existingUser);
-
-        Event::assertNotDispatched(TwoFactorAuthenticationChallenged::class);
     });
 
     it('callback() で Socialite が例外を投げたらログイン画面にリダイレクトする', function () {
@@ -508,8 +426,6 @@ describe('Google OAuth コントローラ', function () {
                 ->has('auth.user')
                 ->missing('auth.user.google_id')
                 ->missing('auth.user.password')
-                ->missing('auth.user.two_factor_secret')
-                ->missing('auth.user.two_factor_recovery_codes')
                 ->missing('auth.user.remember_token')
                 ->where('auth.hasPassword', true)
             );

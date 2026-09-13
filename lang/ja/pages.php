@@ -46,10 +46,6 @@ return [
             'title' => 'メール認証',
             'description' => 'メールアドレスの認証を完了してください。',
         ],
-        'two_factor' => [
-            'title' => '二段階認証',
-            'description' => '認証アプリのコードを入力して続行します。',
-        ],
         'confirm_password' => [
             'title' => 'パスワード確認',
             'description' => '続行するには現在のパスワードを入力してください。',
@@ -84,10 +80,6 @@ return [
         'appearance' => [
             'title' => '表示設定',
             'description' => 'アカウントの表示設定を変更します。',
-        ],
-        'two_factor' => [
-            'title' => '二段階認証設定',
-            'description' => '二段階認証の設定を管理します。',
         ],
     ],
 ];

@@ -20,8 +20,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
-use Laravel\Fortify\Events\TwoFactorAuthenticationChallenged;
-use Laravel\Fortify\Features;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
 use Laravel\Socialite\Two\User;
@@ -106,17 +104,6 @@ class GoogleAuthController extends Controller
 
             return redirect()->route('login')
                 ->with('error', __('auth.google.failed'));
-        }
-
-        if (Features::canManageTwoFactorAuthentication() && $user->hasEnabledTwoFactorAuthentication()) {
-            $request->session()->put([
-                'login.id' => $user->getKey(),
-                'login.remember' => false,
-            ]);
-
-            TwoFactorAuthenticationChallenged::dispatch($user);
-
-            return redirect()->route('two-factor.login');
         }
 
         Auth::login($user);

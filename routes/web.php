@@ -39,4 +39,11 @@ Route::prefix('auth/google/link')->name('auth.google.link.')->controller(GoogleA
     Route::post('/verify/{userId}', 'linkComplete')->name('complete');
 });
 
+Route::get('.well-known/passkey-endpoints', function () {
+    return response()->json([
+        'enroll' => route('security.edit'),
+        'manage' => route('security.edit'),
+    ]);
+})->name('well-known.passkeys');
+
 require __DIR__.'/settings.php';

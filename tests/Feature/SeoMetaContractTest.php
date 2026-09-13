@@ -352,7 +352,9 @@ describe('SEO メタ契約', function () {
     it('認証済みページはseo.titleとdescriptionを持つ', function (string $routeName, string $expectedTitle, string $expectedDescription) {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->get(route($routeName));
+        $response = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route($routeName));
 
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
@@ -363,7 +365,7 @@ describe('SEO メタ契約', function () {
     })->with([
         'dashboard' => ['dashboard', 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。'],
         'profile' => ['profile.edit', 'プロフィール設定', '名前とメールアドレスを管理します。'],
-        'password' => ['user-password.edit', 'パスワード設定', 'アカウントのパスワードを更新します。'],
+        'security' => ['security.edit', 'セキュリティ設定', 'パスワードとパスキーを管理します。'],
         'appearance' => ['appearance.edit', '表示設定', 'アカウントの表示設定を変更します。'],
     ]);
 

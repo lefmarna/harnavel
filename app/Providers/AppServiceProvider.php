@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Listeners\ShareAuthenticatedUserLogContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Authenticated;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -18,6 +23,22 @@ use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        $this->app->bind(RequirePasswordWhenSet::class, function (Application $app): RequirePasswordWhenSet {
+            $timeout = Config::get('auth.password_timeout');
+
+            return new RequirePasswordWhenSet(
+                $app->make(ResponseFactory::class),
+                $app->make(UrlGenerator::class),
+                is_numeric($timeout) ? (int) $timeout : null,
+            );
+        });
+    }
+
     /**
      * Bootstrap any application services.
      */

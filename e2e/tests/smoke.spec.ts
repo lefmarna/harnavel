@@ -9,7 +9,7 @@ test("認証済みユーザーでダッシュボードが正常に表示され�
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill("test@example.com");
   await page.getByLabel("パスワード").fill("password");
-  await page.getByRole("button", { name: "ログイン" }).click();
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByText("ダッシュボード").first()).toBeVisible();

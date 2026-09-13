@@ -6,6 +6,7 @@ use App\Http\Middleware\AddSecurityHeaders;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Services\Observability\ProductionExceptionNotifier;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(AddSecurityHeaders::class);
+
+        $middleware->alias(['password.confirm' => RequirePasswordWhenSet::class]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 

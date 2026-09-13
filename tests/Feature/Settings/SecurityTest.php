@@ -6,23 +6,28 @@ use App\Models\User;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
 
-describe('パスワード設定', function () {
-    it('パスワード更新画面を表示できる', function () {
+describe('セキュリティ設定', function () {
+    it('セキュリティ設定画面を表示できる', function () {
         $user = User::factory()->create();
 
         $response = $this
             ->actingAs($user)
-            ->get(route('user-password.edit'));
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('security.edit'));
 
         $response
             ->assertOk()
             ->assertInertia(
-                fn ($page) => assertInertiaShape($page, 'settings/password', [
+                fn ($page) => assertInertiaShape($page, 'settings/security', [
+                    'canManagePasskeys',
+                    'passkeys',
                     'seo.title',
                     'seo.description',
                 ])
-                    ->where('seo.title', 'パスワード設定')
-                    ->where('seo.description', 'アカウントのパスワードを更新します。')
+                    ->where('canManagePasskeys', true)
+                    ->where('passkeys', [])
+                    ->where('seo.title', 'セキュリティ設定')
+                    ->where('seo.description', 'パスワードとパスキーを管理します。')
             );
     });
 
@@ -31,7 +36,7 @@ describe('パスワード設定', function () {
 
         $response = $this
             ->actingAs($user)
-            ->from(route('user-password.edit'))
+            ->from(route('security.edit'))
             ->put(route('user-password.update'), [
                 'current_password' => UserFactory::DEFAULT_PASSWORD,
                 'password' => 'new-password1',
@@ -40,7 +45,7 @@ describe('パスワード設定', function () {
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('user-password.edit'));
+            ->assertRedirect(route('security.edit'));
 
         expect(Hash::check('new-password1', $user->refresh()->password))->toBeTrue();
     });
@@ -51,7 +56,7 @@ describe('パスワード設定', function () {
 
         $response = $this
             ->actingAs($user)
-            ->from(route('user-password.edit'))
+            ->from(route('security.edit'))
             ->put(route('user-password.update'), [
                 'current_password' => UserFactory::DEFAULT_PASSWORD,
                 'password' => $password,
@@ -60,7 +65,7 @@ describe('パスワード設定', function () {
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('user-password.edit'));
+            ->assertRedirect(route('security.edit'));
 
         $storedPassword = $user->refresh()->password;
 
@@ -75,7 +80,7 @@ describe('パスワード設定', function () {
 
         $response = $this
             ->actingAs($user)
-            ->from(route('user-password.edit'))
+            ->from(route('security.edit'))
             ->put(route('user-password.update'), $payload);
 
         $response->assertSessionHasErrors([$field => $expectedMessage]);
@@ -124,7 +129,7 @@ describe('パスワード設定', function () {
 
         $response = $this
             ->actingAs($user)
-            ->from(route('user-password.edit'))
+            ->from(route('security.edit'))
             ->put(route('user-password.update'), [
                 'current_password' => 'wrong-password',
                 'password' => 'new-password1',
@@ -133,6 +138,112 @@ describe('パスワード設定', function () {
 
         $response
             ->assertSessionHasErrors('current_password')
-            ->assertRedirect(route('user-password.edit'));
+            ->assertRedirect(route('security.edit'));
+    });
+
+    it('登録済みのパスキーを一覧で返す', function () {
+        $user = User::factory()->create();
+
+        $user->passkeys()->create([
+            'name' => 'MacBook Pro',
+            'credential_id' => 'credential-1',
+            'credential' => ['id' => 'credential-1'],
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('security.edit'));
+
+        $response
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('passkeys', 1)
+                ->where('passkeys.0.name', 'MacBook Pro')
+                ->where('passkeys.0.last_used_at_diff', null)
+                ->has('passkeys.0.created_at_diff')
+            );
+    });
+
+    it('パスワードを持つユーザーはパスワード確認を求められる', function () {
+        $user = User::factory()->create();
+
+        $this
+            ->actingAs($user)
+            ->get(route('security.edit'))
+            ->assertRedirect(route('password.confirm'));
+    });
+
+    it('パスワード未設定のユーザーはパスワード確認なしで到達できる', function () {
+        $user = User::factory()->create(['password' => null]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('security.edit'))
+            ->assertOk();
+    });
+
+    it('パスキーを削除できる', function () {
+        $user = User::factory()->create();
+
+        $passkey = $user->passkeys()->create([
+            'name' => 'iPhone',
+            'credential_id' => 'credential-2',
+            'credential' => ['id' => 'credential-2'],
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete(route('passkey.destroy', $passkey))
+            ->assertRedirect();
+
+        expect($user->passkeys()->count())->toBe(0);
+    });
+
+    it('他人のパスキーは削除できない', function () {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+
+        $passkey = $other->passkeys()->create([
+            'name' => 'Someone else',
+            'credential_id' => 'credential-3',
+            'credential' => ['id' => 'credential-3'],
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete(route('passkey.destroy', $passkey))
+            ->assertForbidden();
+
+        expect($other->passkeys()->count())->toBe(1);
+    });
+
+    it('パスキーを持つパスワード未設定ユーザーはパスワード確認を求められる', function () {
+        $user = User::factory()->create(['password' => null]);
+
+        $user->passkeys()->create([
+            'name' => 'Google のみのユーザーのパスキー',
+            'credential_id' => 'credential-4',
+            'credential' => ['id' => 'credential-4'],
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('security.edit'))
+            ->assertRedirect(route('password.confirm'));
+    });
+
+    it('パスワード確認の有効期限に auth.password_timeout を使う', function () {
+        config(['auth.password_timeout' => 60]);
+
+        $user = User::factory()->create();
+
+        $this
+            ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time() - 120])
+            ->get(route('security.edit'))
+            ->assertRedirect(route('password.confirm'));
     });
 });

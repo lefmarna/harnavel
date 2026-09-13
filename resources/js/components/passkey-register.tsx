@@ -1,0 +1,124 @@
+import { router } from "@inertiajs/react";
+import { usePasskeyRegister } from "@laravel/passkeys/react";
+import { useState } from "react";
+
+import InputError from "@/components/input-error";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+type Props = {
+  onSuccess: () => void;
+};
+
+const defaultPasskeyName = (): string => {
+  const ua = navigator.userAgent;
+
+  const browser = [
+    { pattern: /Edg|Edge/, name: "Edge" },
+    { pattern: /OPR|Opera|OPiOS/, name: "Opera" },
+    { pattern: /Firefox|FxiOS/, name: "Firefox" },
+    { pattern: /Chrome|CriOS/, name: "Chrome" },
+    { pattern: /Safari/, name: "Safari" },
+  ].find(({ pattern }) => pattern.test(ua))?.name;
+
+  const os = [
+    { pattern: /iPhone/, name: "iPhone" },
+    { pattern: /iPad|Macintosh(?=.*Mobile)/, name: "iPad" },
+    { pattern: /Android/, name: "Android" },
+    { pattern: /Mac/, name: "Mac" },
+    { pattern: /Windows/, name: "Windows" },
+  ].find(({ pattern }) => pattern.test(ua))?.name;
+
+  return [os, browser].filter(Boolean).join(" の ");
+};
+
+export default function PasskeyRegister({ onSuccess }: Props) {
+  const [name, setName] = useState(defaultPasskeyName);
+  const [showForm, setShowForm] = useState(false);
+
+  const { register, isLoading, error, isSupported } = usePasskeyRegister({
+    onSuccess: () => {
+      setName(defaultPasskeyName());
+      setShowForm(false);
+      onSuccess();
+    },
+    // キャンセルや重複登録は固有のエラー名を持つため、ここには入らない。残るのは期限切れの
+    // パスワード確認（423）や通信エラーで、再訪すれば確認画面へ送られるか同じ画面に戻るだけ。
+    onError: (passkeyError) => {
+      if (passkeyError.name === "PasskeyError") {
+        router.reload();
+      }
+    },
+  });
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!name.trim()) {
+      return;
+    }
+
+    await register(name);
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setName(defaultPasskeyName());
+  };
+
+  if (!isSupported) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        このブラウザはパスキーに対応していません。
+      </div>
+    );
+  }
+
+  if (!showForm) {
+    return (
+      <Button variant="outline" onClick={() => setShowForm(true)} data-test="add-passkey-button">
+        パスキーを追加
+      </Button>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 rounded-lg border border-border bg-muted/50 p-4"
+    >
+      <div className="grid gap-2">
+        <Label htmlFor="passkey-name">パスキーの名前</Label>
+
+        <Input
+          id="passkey-name"
+          type="text"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="例: MacBook Pro、iPhone"
+          className="mt-1 block w-full border-foreground/20"
+          autoFocus
+        />
+
+        <p className="text-xs text-muted-foreground">あとで見分けるための名前です。</p>
+      </div>
+
+      {error && <InputError message={error} />}
+
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          disabled={isLoading || !name.trim()}
+          data-test="register-passkey-button"
+        >
+          {isLoading ? "登録しています..." : "パスキーを登録"}
+        </Button>
+
+        <Button type="button" variant="ghost" onClick={handleCancel}>
+          キャンセル
+        </Button>
+      </div>
+    </form>
+  );
+}

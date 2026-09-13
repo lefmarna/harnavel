@@ -20,6 +20,9 @@ importers:
       '@inertiajs/react':
         specifier: ^3.0.0
         version: 3.7.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@laravel/passkeys':
+        specifier: ^0.2.0
+        version: 0.2.0(react@19.2.8)
       '@radix-ui/react-avatar':
         specifier: ^1.1.3
         version: 1.2.6(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -448,6 +451,21 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@laravel/passkeys@0.2.0':
+    resolution: {integrity: sha512-K+owv26weKrYaoTJutqU40UsJZpwYkqB9jdlz5Bv/C54nxj2+Py9jbVwxASWg21fLsPhn3ngPKZE5RnfakCQKg==}
+    engines: {node: '>=20.19.0'}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+      svelte: ^5.0.0
+      vue: ^3.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
 
   '@laravel/vite-plugin-wayfinder@0.1.7':
     resolution: {integrity: sha512-yZYIr1iwuCQ7LFI+GsJk9vacw1HWMp3ZlDlW0pdfz3zXyKeu4US7oH79KmQQ031L0cYaSyaUMo/Ha1D4BosKqw==}
@@ -1314,6 +1332,9 @@ packages:
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
+
+  '@simplewebauthn/browser@13.3.0':
+    resolution: {integrity: sha512-BE/UWv6FOToAdVk0EokzkqQQDOWtNydYlY6+OrmiZ5SCNmb41VehttboTetUM3T/fr6EAFYVXjz4My2wg230rQ==}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -2939,6 +2960,12 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
+  '@laravel/passkeys@0.2.0(react@19.2.8)':
+    dependencies:
+      '@simplewebauthn/browser': 13.3.0
+    optionalDependencies:
+      react: 19.2.8
+
   '@laravel/vite-plugin-wayfinder@0.1.7': {}
 
   '@oxc-project/runtime@0.146.0': {}
@@ -3604,6 +3631,8 @@ snapshots:
       vite: '@voidzero-dev/vite-plus-core@0.3.0(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(typescript@7.0.2)(yaml@2.9.0)'
 
   '@rolldown/pluginutils@1.0.1': {}
+
+  '@simplewebauthn/browser@13.3.0': {}
 
   '@standard-schema/spec@1.1.0': {}
 

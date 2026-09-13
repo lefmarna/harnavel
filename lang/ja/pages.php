@@ -73,9 +73,9 @@ return [
             'title' => 'プロフィール設定',
             'description' => '名前とメールアドレスを管理します。',
         ],
-        'password' => [
-            'title' => 'パスワード設定',
-            'description' => 'アカウントのパスワードを更新します。',
+        'security' => [
+            'title' => 'セキュリティ設定',
+            'description' => 'パスワードとパスキーを管理します。',
         ],
         'appearance' => [
             'title' => '表示設定',

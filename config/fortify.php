@@ -118,6 +118,7 @@ return [
 
     'limiters' => [
         'login' => 'login',
+        'passkeys' => 'passkeys',
     ],
 
     /*
@@ -135,6 +136,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Passkeys
+    |--------------------------------------------------------------------------
+    |
+    | These settings configure Fortify's passkey (WebAuthn) support. The user
+    | handle secret is kept separate from the application key: rotating the
+    | application key would otherwise invalidate every stored passkey.
+    |
+    */
+
+    'passkeys' => [
+        'relying_party_id' => parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST),
+        'allowed_origins' => [(string) env('APP_URL', 'http://localhost')],
+        'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET') ?: env('APP_KEY'),
+        'timeout' => 60000,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Features
     |--------------------------------------------------------------------------
     |
@@ -148,6 +167,9 @@ return [
         Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
+        Features::passkeys([
+            'confirmPassword' => true,
+        ]),
     ],
 
 ];

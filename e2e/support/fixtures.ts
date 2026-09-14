@@ -7,7 +7,6 @@ type PageErrorFixtures = {
 export const formatPageError = (error: Error): string =>
   error.stack?.trim() || `${error.name}: ${error.message}`;
 
-/** Fail every E2E test that emits an uncaught browser error. */
 export const test = base.extend<PageErrorFixtures>({
   pageErrors: [
     async ({ page }, use) => {

@@ -82,7 +82,7 @@ runs:
       shell: bash
       run: pnpm run types:check
 
-    # rhysd/actionlint has no action.yml; run the official Docker image (pinned) instead.
+    # rhysd/actionlint は action.yml を提供しないため、バージョン固定の公式 Docker イメージを使う。
     - name: Lint GitHub Actions Workflows
       uses: docker://rhysd/actionlint:1.7.12
       with:

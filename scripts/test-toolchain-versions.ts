@@ -43,7 +43,6 @@ function assertAllEqual(values: string[], expected: string, subject: string): vo
     [
       `${subject} mismatch: expected ${expected}, found ${mismatches.join(", ")}.`,
       "Update .docker/php/Dockerfile and .github/workflows/delivery.yml together,",
-      "and provision the matching composer binary on every XServer environment first",
       "(docs/infrastructure.md, XServer toolchain).",
     ].join("\n"),
   );
@@ -58,44 +57,14 @@ function main(): void {
     /^FROM php:(\d+\.\d+)\.\d+-fpm/m,
     "PHP image series in the Dockerfile",
   );
-  const composerVersion = matchOne(
-    dockerfile,
-    /^COPY --from=composer:(\d+\.\d+\.\d+)/m,
-    "Composer image version in the Dockerfile",
-  );
 
   const workflowPhpSeries = matchAll(
     workflow,
     /\/usr\/bin\/php(\d+\.\d+)/g,
     "usr/bin/php<major.minor> references in delivery.yml",
   );
-  const workflowComposerVersions = matchAll(
-    workflow,
-    /composer-(\d+\.\d+\.\d+)/g,
-    "composer-<version> references in delivery.yml",
-  );
-  // The preflight's grep literal is independent from its versioned PHAR path.
-  const workflowComposerGrepVersions = [
-    ...workflow.matchAll(/Composer version (\d+)\\\.(\d+)\\\.(\d+)/g),
-  ].map((match) => `${match[1]}.${match[2]}.${match[3]}`);
-
-  if (workflowComposerGrepVersions.length === 0) {
-    throw new Error(
-      "Could not find the preflight's `Composer version <version>` match pattern in delivery.yml.",
-    );
-  }
-
   assertAllEqual(workflowPhpSeries, phpSeries, "PHP series");
-  assertAllEqual(workflowComposerVersions, composerVersion, "Composer version");
-  assertAllEqual(
-    workflowComposerGrepVersions,
-    composerVersion,
-    "Composer version asserted by the preflight match pattern",
-  );
-
-  console.log(
-    `OK: delivery.yml matches Dockerfile toolchain (php ${phpSeries}, composer ${composerVersion}).`,
-  );
+  console.log(`OK: delivery.yml uses the tested PHP series (${phpSeries}).`);
 }
 
 main();

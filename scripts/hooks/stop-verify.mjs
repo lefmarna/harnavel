@@ -3,7 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, extname, join } from "node:path";
 
-// Pest bindings make isolated Larastan analysis of tests unreliable; Pint and Pest still run.
+// Pest のバインドは単独の Larastan 解析では解決できないため、テストは Pint と Pest で検証する。
 const PHPSTAN_EXCLUDED_DIRS = ["tests/"];
 const isExcludedFromPhpStan = (file) => PHPSTAN_EXCLUDED_DIRS.some((dir) => file.startsWith(dir));
 
@@ -78,7 +78,7 @@ if (dockerReady) {
   ensureDockerGitSafeDirectory(repo);
 }
 
-// ---- Auto-fix phase (sequential, lefthook order) ----
+// 自動修正は lefthook と同じ順序で逐次実行する。
 
 const fixFailures = [];
 
@@ -124,7 +124,7 @@ if (oxfmtFiles.length && hasPnpm) {
   );
 }
 
-// ---- Verify phase (parallel, scoped where possible) ----
+// 検証は対象を絞り、並列実行する。
 
 const tasks = [];
 

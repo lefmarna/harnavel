@@ -18,15 +18,9 @@ use Laravel\Passkeys\Passkey;
 
 class SecurityController extends Controller
 {
-    /**
-     * Show the user's security settings page.
-     */
     public function edit(Request $request): Response
     {
-        $user = $request->user();
-        if (! $user instanceof User) {
-            abort(403);
-        }
+        $user = $this->currentUser($request);
 
         $canManagePasskeys = Features::canManagePasskeys();
 
@@ -39,15 +33,9 @@ class SecurityController extends Controller
         );
     }
 
-    /**
-     * Update the user's password.
-     */
     public function update(PasswordUpdateRequest $request): RedirectResponse
     {
-        $user = $request->user();
-        if (! $user instanceof User) {
-            abort(403);
-        }
+        $user = $this->currentUser($request);
 
         /** @var array{password: string} $validated */
         $validated = $request->validated();
@@ -57,6 +45,16 @@ class SecurityController extends Controller
         ]);
 
         return back();
+    }
+
+    private function currentUser(Request $request): User
+    {
+        $user = $request->user();
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        return $user;
     }
 
     /**

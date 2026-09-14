@@ -81,7 +81,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 return $response;
             }
 
-            // 419: CSRF Token Mismatch / Session Expired
             if ($status === 419) {
                 return back()->withErrors([
                     'page_expired' => __('errors.page_expired'),

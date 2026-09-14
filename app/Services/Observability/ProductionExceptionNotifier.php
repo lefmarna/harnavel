@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PDOException;
-use Stringable;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
 
@@ -115,7 +114,7 @@ class ProductionExceptionNotifier
                         'app' => $this->appName(),
                         'request_id' => $requestId,
                         'environment' => app()->environment(),
-                        'status' => (string) $statusCode,
+                        'status' => $statusCode,
                         'exception' => $exception::class,
                         'message' => $this->exceptionMessage($exception),
                         'method' => $request?->method(),
@@ -163,8 +162,8 @@ class ProductionExceptionNotifier
             app()->environment(),
             $exception::class,
             hash('sha256', $this->exceptionMessage($exception)),
-            $request?->path() ?? '',
-            $request?->route()?->getName() ?? '',
+            $request?->path(),
+            $request?->route()?->getName(),
         ]);
 
         return 'observability:discord-exception:'.hash('sha256', $fingerprint);
@@ -188,7 +187,7 @@ class ProductionExceptionNotifier
     {
         $webhookUrl = config('observability.discord.webhook_url');
 
-        return is_string($webhookUrl) && $webhookUrl !== '' ? $webhookUrl : null;
+        return is_string($webhookUrl) ? $webhookUrl : null;
     }
 
     private function deduplicationSeconds(): int
@@ -240,10 +239,6 @@ class ProductionExceptionNotifier
         }
 
         if (is_int($value) || is_float($value) || is_bool($value)) {
-            return (string) $value;
-        }
-
-        if ($value instanceof Stringable) {
             return (string) $value;
         }
 

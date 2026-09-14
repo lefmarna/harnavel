@@ -258,6 +258,42 @@ describe('本番例外通知', function () {
         Http::assertSentCount(2);
     });
 
+    it('同じパスでもルート名が異なれば別キーとして通知する', function () {
+        $exception = new RuntimeException('database is unavailable');
+
+        $makeRequest = function (string $routeName): Request {
+            $request = Request::create('https://example.test/orders/123', 'POST');
+            $route = new RoutingRoute(['POST'], 'orders/{order}', []);
+            $route->name($routeName);
+            $request->setRouteResolver(fn (): RoutingRoute => $route);
+
+            return $request;
+        };
+
+        app(ProductionExceptionNotifier::class)->report($exception, $makeRequest('orders.store'));
+        app(ProductionExceptionNotifier::class)->report($exception, $makeRequest('orders.update'));
+        app()->terminate();
+
+        Http::assertSentCount(2);
+    });
+
+    it('同じパスでもルート名の有無で別キーとして通知する', function () {
+        $exception = new RuntimeException('database is unavailable');
+
+        $withRoute = Request::create('https://example.test/orders/123', 'POST');
+        $route = new RoutingRoute(['POST'], 'orders/{order}', []);
+        $route->name('orders.store');
+        $withRoute->setRouteResolver(fn (): RoutingRoute => $route);
+
+        $withoutRoute = Request::create('https://example.test/orders/123', 'POST');
+
+        app(ProductionExceptionNotifier::class)->report($exception, $withRoute);
+        app(ProductionExceptionNotifier::class)->report($exception, $withoutRoute);
+        app()->terminate();
+
+        Http::assertSentCount(2);
+    });
+
     it('名前付きルートが無い同一例外も重複通知を抑制する', function () {
         $exception = new RuntimeException('database is unavailable');
 
@@ -328,6 +364,20 @@ describe('本番例外通知', function () {
         expect($capturedKey)->toBe('observability:discord-exception:'.hash('sha256', $expectedFingerprint));
     });
 
+    it('重複判定キーの環境は実行時に解決するので環境が変われば再通知する', function () {
+        $exception = new RuntimeException('database is unavailable');
+        $request = observabilityRequest();
+
+        app(ProductionExceptionNotifier::class)->report($exception, $request);
+
+        $this->app->instance('env', 'develop');
+
+        app(ProductionExceptionNotifier::class)->report($exception, $request);
+        app()->terminate();
+
+        Http::assertSentCount(2);
+    });
+
     it('重複制御キャッシュが失敗しても例外処理を失敗させず通知できる', function () {
         Cache::shouldReceive('add')
             ->once()
@@ -348,7 +398,7 @@ describe('本番例外通知', function () {
         $request = observabilityRequest();
 
         app(ProductionExceptionNotifier::class)->report($exception, $request);
-        Cache::flush();
+        $this->travel(301)->seconds();
         app(ProductionExceptionNotifier::class)->report($exception, $request);
         app()->terminate();
 
@@ -413,6 +463,25 @@ describe('本番例外通知', function () {
                     'app', 'request_id', 'environment', 'status', 'exception', 'message', 'file',
                 ])
                 ->and($fields->pluck('value', 'name')->get('request_id'))->toBe('unavailable');
+
+            return true;
+        });
+    });
+
+    it('ルートが解決できないリクエストは route を省き method と url は残す', function () {
+        $request = Request::create('https://example.test/orders/123', 'POST');
+        $request->attributes->set('request_id', '01JZ0000000000000000000000');
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), $request);
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $sent): bool {
+            $fields = collect($sent->data()['embeds'][0]['fields']);
+            $byName = $fields->pluck('value', 'name');
+
+            expect($fields->pluck('name')->all())->not->toContain('route')
+                ->and($byName->get('method'))->toBe('POST')
+                ->and($byName->get('url'))->toBe('https://example.test/orders/123');
 
             return true;
         });
@@ -501,6 +570,23 @@ describe('本番例外通知', function () {
 
     it('app.name が空なら content とフィールドのアプリ名に Laravel を使う', function () {
         config()->set('app.name', '');
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $payload = $request->data();
+            $fields = collect($payload['embeds'][0]['fields'])->pluck('value', 'name');
+
+            expect($payload['content'])->toStartWith('[Laravel]')
+                ->and($fields->get('app'))->toBe('Laravel');
+
+            return true;
+        });
+    });
+
+    it('app.name が文字列でなければ content とフィールドのアプリ名に Laravel を使う', function () {
+        config()->set('app.name', ['array-name']);
 
         app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
         app()->terminate();

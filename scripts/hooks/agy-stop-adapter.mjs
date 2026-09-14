@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Claude Code and Codex allow stopping with empty output and block with `decision: "block"`;
- * Antigravity allows it with `{}` and blocks with `decision: "continue"`.
+ * Claude Code と Codex は空の出力で停止を許可し、decision: "block" で継続させる。
+ * Antigravity は {} で停止を許可し、decision: "continue" で継続させる。
  */
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";

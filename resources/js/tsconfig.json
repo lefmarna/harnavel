@@ -1,10 +1,10 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    // Unit tests execute in Node while importing modules written for the browser.
+    // ブラウザ用モジュールを読み込むユニットテストは Node で実行する。
     "types": ["node", "vite/client"]
   },
-  // A child include replaces its parent's include, so tests must name shared declarations again.
+  // 子の include は親を置き換えるため、共有の型宣言も指定する。
   "include": ["**/*.d.ts", "**/*.test.*"],
   "exclude": ["../../node_modules"]
 }

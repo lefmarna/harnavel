@@ -7,10 +7,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Serviceクラスの依存関係を定義するProvider
- * サービスを追加するたびにPREFIXES定数に追記してください。
- *
- * NOTE: 全てのServiceはステートレスであることを前提とし、Singletonとして登録されます。
+ * singleton として共有するため、サービスにリクエスト固有の状態を持たせない。
  */
 class DomainServiceProvider extends ServiceProvider
 {
@@ -24,9 +21,6 @@ class DomainServiceProvider extends ServiceProvider
         'GoogleAuth',
     ];
 
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         foreach ($this->getPrefixes() as $prefix) {

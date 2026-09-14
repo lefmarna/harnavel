@@ -17,7 +17,7 @@
     "paths": {
       "@/*": ["./resources/js/*"]
     },
-    // Production browser code must not inherit Node globals from its test runner.
+    // ブラウザ用コードにテストランナーの Node グローバル型を持ち込まない。
     "types": ["vite/client"],
     "jsx": "react-jsx"
   },

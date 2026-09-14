@@ -6,12 +6,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 
 /**
- * DatabaseSeeder は本番でも安全に実行できる必要がある。本番は composer --no-dev で
- * faker（require-dev）が無いため、faker を使う開発用 Test User の作成はローカル/テスト
- * 限定にガードする。
- *
- * seeder の run() を直接呼ぶのは、`$this->seed()` 経由だと db:seed コマンドの本番確認
- * プロンプト（ConfirmableTrait）に当たり、seeder 自身の env 分岐を検証できないため。
+ * db:seed の本番確認プロンプトを経由せず、Seeder 自身の環境分岐を検証する。
  */
 function runDatabaseSeeder(string $environment): void
 {

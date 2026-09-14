@@ -10,15 +10,10 @@ use Illuminate\Support\Collection;
 interface UserRepositoryContract
 {
     /**
-     * ユーザーを作成する。
-     *
      * @param  array{name: string, email: string, password: string}  $attributes
      */
     public function create(array $attributes): User;
 
-    /**
-     * 主キーでユーザーを検索する。
-     */
     public function find(string|int $id, bool $lock = false): ?User;
 
     /**
@@ -31,9 +26,6 @@ interface UserRepositoryContract
      */
     public function findCandidates(string $googleId, string $email, bool $lock = false): Collection;
 
-    /**
-     * google_id でユーザーを検索する（フォールバック再取得用）。
-     */
     public function findByGoogleId(string $googleId, bool $lock = false): ?User;
 
     /**
@@ -43,13 +35,7 @@ interface UserRepositoryContract
      */
     public function findByEmail(string $email, bool $lock = false): ?User;
 
-    /**
-     * ユーザーを保存する（INSERT / UPDATE どちらも対応）。
-     */
     public function save(User $user): void;
 
-    /**
-     * ユーザーのパスワードを更新する。
-     */
     public function updatePassword(User $user, string $newPassword): void;
 }

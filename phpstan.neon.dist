@@ -14,5 +14,5 @@ parameters:
 
     level: max
 
-    # Required for casts() return-type inference; the architecture test guards it.
+    # casts() の戻り値から属性の型を推論するために必要。
     parseModelCastsMethod: true

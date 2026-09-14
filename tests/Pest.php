@@ -23,17 +23,7 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
-/*
-|--------------------------------------------------------------------------
-| HTTP Fakes
-|--------------------------------------------------------------------------
-|
-| Password::defaults() の uncompromised() は HaveIBeenPwned API へ実 HTTP を飛ばす。
-| Feature テストでは既定で「未漏洩」応答にスタブし、オフライン・決定的に保つ。
-| 漏洩あり/なしを出し分ける PasswordPolicyTest は各テスト内で HTTP fake をリセットしている。
-|
-*/
-
+// 漏洩パスワード照会を外部へ送らず、各テストで漏洩の有無を差し替えられるようにする。
 uses()
     ->beforeEach(function () {
         Http::preventStrayRequests();
@@ -51,10 +41,6 @@ uses()
 | to assert different things. Of course, you may extend the Expectation API at any time.
 |
 */
-
-expect()->extend('toBeOne', function () {
-    return $this->toBe(1);
-});
 
 /*
 |--------------------------------------------------------------------------

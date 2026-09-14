@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Shared with the entry point, which must work before Composer or Laravel boots.
+// Composer や Laravel の起動前にも応答するエントリーポイントと共有する。
 return [
     'Content-Security-Policy' => "frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'",
     'X-Content-Type-Options' => 'nosniff',

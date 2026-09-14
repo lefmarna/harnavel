@@ -7,10 +7,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Repositoryクラスの依存関係を定義するProvider
- * モデルを追加するたびにMODELS定数に追記してください。
- *
- * NOTE: 全てのRepositoryはステートレスであることを前提とし、Singletonとして登録されます。
+ * singleton として共有するため、リポジトリにリクエスト固有の状態を持たせない。
  */
 class RepositoryServiceProvider extends ServiceProvider
 {
@@ -21,9 +18,6 @@ class RepositoryServiceProvider extends ServiceProvider
         'User',
     ];
 
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         foreach ($this->getModels() as $model) {

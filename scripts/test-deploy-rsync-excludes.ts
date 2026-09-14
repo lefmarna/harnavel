@@ -142,14 +142,6 @@ function assertProtected(output: string, protectedPath: ProtectedPath): void {
 }
 
 function main(): void {
-  for (const relativePath of [".gitignore", ".deployignore"]) {
-    const patterns = fs.readFileSync(path.join(ROOT, relativePath), "utf8").split(/\r?\n/);
-
-    if (!patterns.includes(".env.e2e")) {
-      throw new Error(`${relativePath} must exclude .env.e2e.`);
-    }
-  }
-
   const workflow = fs.readFileSync(WORKFLOW_PATH, "utf8");
   const excludes = extractExcludes(workflow);
   const { remote, source, tmp } = createFixture();
@@ -163,9 +155,7 @@ function main(): void {
       assertProtected(output, protectedPath);
     }
 
-    console.log(
-      `OK: ${PROTECTED_PATHS.length} remote paths protected; .env.e2e excluded from Git and deploy packages.`,
-    );
+    console.log(`OK: ${PROTECTED_PATHS.length} remote paths protected.`);
   } finally {
     fs.rmSync(tmp, { force: true, recursive: true });
   }

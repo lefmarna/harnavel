@@ -23,7 +23,7 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        $user = $this->currentUser($request);
+        $this->currentUser($request);
         $status = $request->session()->get('status');
 
         return Inertia::render(

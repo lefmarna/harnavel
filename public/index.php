@@ -10,9 +10,8 @@ define('LARAVEL_START', microtime(true));
 /** @var array<string, string> $securityHeaders */
 $securityHeaders = require __DIR__.'/../bootstrap/security-headers.php';
 
-// Keep the fallback available even if maintenance or startup exits before Laravel.
-// Add only missing headers at send time so application policies are never duplicated.
-// PHP has one header callback slot; integrations must preserve this callback.
+// Laravel 起動前の応答にも不足するヘッダーだけを補う。
+// PHP のヘッダーコールバックは 1 枠なので、追加の連携でもこの処理を維持する。
 header_register_callback(static function () use ($securityHeaders): void {
     $present = array_map(
         static fn (string $header): string => strtolower(explode(':', $header, 2)[0]),

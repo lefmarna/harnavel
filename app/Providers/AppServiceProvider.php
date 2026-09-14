@@ -77,9 +77,6 @@ class AppServiceProvider extends ServiceProvider
         );
     }
 
-    /**
-     * Register framework event listeners.
-     */
     protected function registerEventListeners(): void
     {
         Event::listen(Authenticated::class, ShareAuthenticatedUserLogContext::class);

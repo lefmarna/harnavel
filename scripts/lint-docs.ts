@@ -269,7 +269,7 @@ function checkSkillPointers(): LintError[] {
   const errors: LintError[] = [];
 
   for (const name of REPO_OWNED_SKILLS) {
-    // Markdown paths remain POSIX-style even when filesystem paths do not.
+    // Markdown のパス区切りは OS に関係なく / を使う。
     const canonical = `.agents/skills/${name}/SKILL.md`;
     const pointer = `.claude/skills/${name}/SKILL.md`;
     const canonicalPath = path.join(ROOT, ".agents", "skills", name, "SKILL.md");

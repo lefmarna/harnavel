@@ -8,7 +8,7 @@ import { execFileSync } from "node:child_process";
  * 絞ると同じテンプレート由来の別リポジトリのコンテナまで拾うので、PORT まで含めて照合する。
  */
 const resolveContainer = (): string => {
-  const port = process.env.PLAYWRIGHT_E2E_CONTAINER?.split("-")[2];
+  const port = process.env.PLAYWRIGHT_E2E_CONTAINER?.match(/^playwright-e2e-(\d+)-\d+$/)?.[1];
 
   if (!port) {
     throw new Error("Playwright E2E container name is missing or invalid.");

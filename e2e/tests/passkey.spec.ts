@@ -1,6 +1,9 @@
 import { expirePasswordConfirmation } from "../support/artisan";
 import { expect, test } from "../support/fixtures";
 
+// ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
+const HOME_URL = /\/dashboard$/;
+
 test("パスキーを登録してパスキーだけでログインできる", async ({ page, context, browserName }) => {
   test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
 
@@ -21,11 +24,11 @@ test("パスキーを登録してパスキーだけでログインできる", as
   await page.getByLabel("メールアドレス").fill("test@example.com");
   await page.getByLabel("パスワード").fill("password");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(HOME_URL);
 
   await page.goto("/settings/security");
-  await page.getByLabel("現在のパスワード").fill("password");
-  await page.getByRole("button", { name: "パスワードを確認" }).click();
+  await page.locator('input[name="password"]').fill("password");
+  await page.locator('[data-test="confirm-password-button"]').click();
   await expect(page).toHaveURL(/\/settings\/security$/);
 
   await page.getByRole("button", { name: "パスキーを追加" }).click();
@@ -39,7 +42,7 @@ test("パスキーを登録してパスキーだけでログインできる", as
   await page.goto("/login");
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(HOME_URL);
 });
 
 test("パスワード確認の期限が切れても再確認してパスキーを登録できる", async ({
@@ -66,11 +69,11 @@ test("パスワード確認の期限が切れても再確認してパスキー�
   await page.getByLabel("メールアドレス").fill("test@example.com");
   await page.getByLabel("パスワード").fill("password");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(HOME_URL);
 
   await page.goto("/settings/security");
-  await page.getByLabel("現在のパスワード").fill("password");
-  await page.getByRole("button", { name: "パスワードを確認" }).click();
+  await page.locator('input[name="password"]').fill("password");
+  await page.locator('[data-test="confirm-password-button"]').click();
   await expect(page).toHaveURL(/\/settings\/security$/);
 
   expirePasswordConfirmation();
@@ -81,8 +84,8 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await expect(page).toHaveURL(/\/user\/confirm-password$/);
 
-  await page.getByLabel("現在のパスワード").fill("password");
-  await page.getByRole("button", { name: "パスワードを確認" }).click();
+  await page.locator('input[name="password"]').fill("password");
+  await page.locator('[data-test="confirm-password-button"]').click();
   await expect(page).toHaveURL(/\/settings\/security$/);
 
   await page.getByRole("button", { name: "パスキーを追加" }).click();

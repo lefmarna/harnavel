@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { passkeyErrorMessage } from "@/lib/passkey-error";
-import { dashboard } from "@/routes";
 
 type Props = {
   routes?: {
@@ -29,7 +28,9 @@ export default function PasskeyVerify({ routes, label, loadingLabel, separator }
       },
     }),
     onSuccess: (response) => {
-      router.visit(response.redirect ?? dashboard().url);
+      // サーバーは常に redirect を返す（PasskeyLoginResponse）。型が省略可能なので
+      // 既定値だけ置く。vendor 側の config("passkeys.redirect", "/") と同じ値。
+      router.visit(response.redirect ?? "/");
     },
   });
 

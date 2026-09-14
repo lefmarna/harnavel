@@ -22,12 +22,12 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill("test@example.com");
-  await page.getByLabel("パスワード").fill("password");
+  await page.getByLabel("パスワード").fill("Test1234");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page).toHaveURL(HOME_URL);
 
   await page.goto("/settings/security");
-  await page.locator('input[name="password"]').fill("password");
+  await page.locator('input[name="password"]').fill("Test1234");
   await page.locator('[data-test="confirm-password-button"]').click();
   await expect(page).toHaveURL(/\/settings\/security$/);
 
@@ -67,12 +67,12 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill("test@example.com");
-  await page.getByLabel("パスワード").fill("password");
+  await page.getByLabel("パスワード").fill("Test1234");
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page).toHaveURL(HOME_URL);
 
   await page.goto("/settings/security");
-  await page.locator('input[name="password"]').fill("password");
+  await page.locator('input[name="password"]').fill("Test1234");
   await page.locator('[data-test="confirm-password-button"]').click();
   await expect(page).toHaveURL(/\/settings\/security$/);
 
@@ -84,7 +84,7 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await expect(page).toHaveURL(/\/user\/confirm-password$/);
 
-  await page.locator('input[name="password"]').fill("password");
+  await page.locator('input[name="password"]').fill("Test1234");
   await page.locator('[data-test="confirm-password-button"]').click();
   await expect(page).toHaveURL(/\/settings\/security$/);
 

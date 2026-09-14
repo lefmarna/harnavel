@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
-    public const string DEFAULT_PASSWORD = 'password';
+    public const string DEFAULT_PASSWORD = 'Test1234';
 
     /**
      * The current password being used by the factory.

@@ -6,6 +6,7 @@ import InputError from "@/components/input-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { passkeyErrorMessage } from "@/lib/passkey-error";
 
 type Props = {
   onSuccess: () => void;
@@ -37,7 +38,7 @@ export default function PasskeyRegister({ onSuccess }: Props) {
   const [name, setName] = useState(defaultPasskeyName);
   const [showForm, setShowForm] = useState(false);
 
-  const { register, isLoading, error, isSupported } = usePasskeyRegister({
+  const { register, isLoading, errorInstance, isSupported } = usePasskeyRegister({
     onSuccess: () => {
       setName(defaultPasskeyName());
       setShowForm(false);
@@ -51,6 +52,8 @@ export default function PasskeyRegister({ onSuccess }: Props) {
       }
     },
   });
+
+  const errorMessage = passkeyErrorMessage(errorInstance);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -104,7 +107,7 @@ export default function PasskeyRegister({ onSuccess }: Props) {
         <p className="text-xs text-muted-foreground">あとで見分けるための名前です。</p>
       </div>
 
-      {error && <InputError message={error} />}
+      {errorMessage && <InputError message={errorMessage} />}
 
       <div className="flex gap-2">
         <Button

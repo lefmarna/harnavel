@@ -7,6 +7,7 @@ import InputError from "@/components/input-error";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
+import { passkeyErrorMessage } from "@/lib/passkey-error";
 import { dashboard } from "@/routes";
 
 type Props = {
@@ -20,7 +21,7 @@ type Props = {
 };
 
 export default function PasskeyVerify({ routes, label, loadingLabel, separator }: Props = {}) {
-  const { verify, isLoading, error, isSupported } = usePasskeyVerify({
+  const { verify, isLoading, errorInstance, isSupported } = usePasskeyVerify({
     ...(routes && {
       routes: {
         options: routes.options.url,
@@ -31,6 +32,8 @@ export default function PasskeyVerify({ routes, label, loadingLabel, separator }
       router.visit(response.redirect ?? dashboard().url);
     },
   });
+
+  const errorMessage = passkeyErrorMessage(errorInstance);
 
   if (!isSupported) {
     return null;
@@ -51,7 +54,7 @@ export default function PasskeyVerify({ routes, label, loadingLabel, separator }
           {isLoading ? (loadingLabel ?? "認証しています...") : (label ?? "パスキーでログイン")}
         </Button>
 
-        {error && <InputError message={error} className="text-center" />}
+        {errorMessage && <InputError message={errorMessage} className="text-center" />}
       </div>
 
       <div className="relative my-6">

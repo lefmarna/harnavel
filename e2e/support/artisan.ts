@@ -3,14 +3,20 @@ import { execFileSync } from "node:child_process";
 /**
  * 実行中の E2E コンテナ名を探す。
  *
- * playwright.config.ts が組み立てる名前は起動プロセスの PID を含むが、Playwright は
- * ワーカーでも config を読み直すため、ワーカー側の環境変数は別の PID の名前になる。
- * そのため名前を受け取らず、走っているコンテナから引き当てる。
+ * 名前は playwright-e2e-<PORT>-<PID>。Playwright はワーカーでも config を読み直すため
+ * 環境変数の PID 部分は当てにならないが、PORT は NGINX_PORT + 1000 で一致する。接頭辞だけで
+ * 絞ると同じテンプレート由来の別リポジトリのコンテナまで拾うので、PORT まで含めて照合する。
  */
 const resolveContainer = (): string => {
+  const port = process.env.PLAYWRIGHT_E2E_CONTAINER?.split("-")[2];
+
+  if (!port) {
+    throw new Error("Playwright E2E container name is missing or invalid.");
+  }
+
   const names = execFileSync(
     "docker",
-    ["ps", "--filter", "name=^playwright-e2e-", "--format", "{{.Names}}"],
+    ["ps", "--filter", `name=^playwright-e2e-${port}-`, "--format", "{{.Names}}"],
     { encoding: "utf8", stdio: "pipe" },
   )
     .split("\n")

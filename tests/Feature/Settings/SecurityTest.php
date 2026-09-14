@@ -36,6 +36,7 @@ describe('セキュリティ設定', function () {
 
         $response = $this
             ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->from(route('security.edit'))
             ->put(route('user-password.update'), [
                 'current_password' => UserFactory::DEFAULT_PASSWORD,
@@ -56,6 +57,7 @@ describe('セキュリティ設定', function () {
 
         $response = $this
             ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->from(route('security.edit'))
             ->put(route('user-password.update'), [
                 'current_password' => UserFactory::DEFAULT_PASSWORD,
@@ -80,6 +82,7 @@ describe('セキュリティ設定', function () {
 
         $response = $this
             ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->from(route('security.edit'))
             ->put(route('user-password.update'), $payload);
 
@@ -129,6 +132,7 @@ describe('セキュリティ設定', function () {
 
         $response = $this
             ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->from(route('security.edit'))
             ->put(route('user-password.update'), [
                 'current_password' => 'wrong-password',
@@ -245,5 +249,39 @@ describe('セキュリティ設定', function () {
             ->withSession(['auth.password_confirmed_at' => time() - 120])
             ->get(route('security.edit'))
             ->assertRedirect(route('password.confirm'));
+    });
+
+    it('パスキーを持つパスワード未設定ユーザーは確認なしにパスワードを設定できない', function () {
+        $user = User::factory()->create(['password' => null]);
+
+        $user->passkeys()->create([
+            'name' => 'パスキーのみのユーザー',
+            'credential_id' => 'credential-5',
+            'credential' => ['id' => 'credential-5'],
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->put(route('user-password.update'), [
+                'password' => 'attacker-password1',
+                'password_confirmation' => 'attacker-password1',
+            ])
+            ->assertRedirect(route('password.confirm'));
+
+        expect($user->refresh()->password)->toBeNull();
+    });
+
+    it('資格情報を持たないユーザーは確認なしで最初のパスワードを設定できる', function () {
+        $user = User::factory()->create(['password' => null]);
+
+        $this
+            ->actingAs($user)
+            ->put(route('user-password.update'), [
+                'password' => 'first-password1',
+                'password_confirmation' => 'first-password1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        expect($user->refresh()->password)->not->toBeNull();
     });
 });

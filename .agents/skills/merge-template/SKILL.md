@@ -20,6 +20,11 @@ Resolve `git pull <remote> <branch>` conflicts by applying TADR-0003.
 
 Special cases:
 
+- A template change that restructures migrations (folding `add_`/`make_` migrations into their
+  create migration, or dropping a create/drop pair) arrives as resolved deletions, not conflicts, so
+  it never appears in step 3. An app whose production database cannot be rebuilt must restore its own
+  applied migrations from `git status` before committing; otherwise migrations the live schema
+  depends on disappear from the repository.
 - Never take template lockfiles over app lockfiles. When manifests change, run unscoped
   `composer update` and `pnpm update` for the merged app; package-scoped updates can retain stale
   transitive dependencies.

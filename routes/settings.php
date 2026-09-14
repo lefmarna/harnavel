@@ -23,7 +23,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('security.edit');
 
     Route::put('settings/password', [SecurityController::class, 'update'])
-        ->middleware('throttle:6,1')
+        ->middleware(['password.confirm', 'throttle:6,1'])
         ->name('user-password.update');
 
     Route::get('settings/appearance', function () {

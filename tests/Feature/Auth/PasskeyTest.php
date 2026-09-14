@@ -30,4 +30,10 @@ describe('パスキー', function () {
             ->getJson(route('passkey.registration-options'))
             ->assertStatus(423);
     });
+
+    it('ルートビューは csrf-token meta を出さない', function () {
+        // @laravel/passkeys は meta があれば XSRF-TOKEN cookie より優先するが、ログイン時の
+        // トークン再生成後も meta は古いままで、CSRF 検証が cookie を見に行かなくなる。
+        $this->get(route('login'))->assertDontSee('name="csrf-token"', escape: false);
+    });
 });

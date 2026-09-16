@@ -221,11 +221,14 @@ unadopted reference-surface package and the omitted consumer surface. The mismat
 empty except for individually documented, approved compatibility exceptions. Include this
 machine-generated comparison in the report; a prose disposition table alone is insufficient.
 
-In this template source repository, this skill owns Composer constraint changes. Routine security
-patches and lockfile refreshes resolve within approved constraints; shared constraint changes are
-classified here against a fresh Laravel reference. Derived apps maintain app-owned constraints in
-their own workflows and return changes to shared requirements through the template. Dependabot
-Alerts reports default-branch advisories; automated dependency PRs are not used.
+In this template source repository, this skill owns every shared constraint string, Composer and
+pnpm alike. Routine security patches and lockfile refreshes resolve within approved constraints;
+shared constraint changes are classified here against a fresh Laravel reference. A derived app
+reproduces those strings verbatim and maintains only the constraints of packages the template does
+not declare, so its routine maintenance updates resolutions rather than declarations; see
+[routine app-side maintenance](../merge-template/references/dependency-reconciliation.md#routine-app-side-maintenance).
+Changes to shared requirements return through the template. Dependabot Alerts reports
+default-branch advisories; automated dependency PRs are not used.
 
 ### 5. Resolve and audit
 
@@ -236,6 +239,11 @@ Alerts reports default-branch advisories; automated dependency PRs are not used.
 - Generate the pnpm lockfile with host `pnpm update --no-save --lockfile-only`. This template
   maintenance workflow intentionally refreshes the dependency graph; preserve the approved
   declarations instead of letting pnpm rewrite their ranges.
+- Confirm the regenerated lockfile still records each aliased or overridden importer's resolved
+  specifier. pnpm 12.2.1 writes the raw manifest range instead, so `pnpm-workspace.yaml`'s `vite@*`
+  override makes the later frozen install fail with `ERR_PNPM_OUTDATED_LOCKFILE`. Re-run plain
+  `pnpm install --lockfile-only` to restore it; that keeps the refreshed resolutions. Never repair
+  the mismatch by editing the lockfile.
 - Review direct and transitive changes before continuing.
 - Run `composer audit --locked` and `pnpm audit`. Resolve findings where possible. Require approval
   for accepted advisories, abandoned packages without a safe replacement, or fixes outside the

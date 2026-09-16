@@ -119,6 +119,37 @@ versions, preserved declarations, reasons for lockfile changes, required shared 
 and outstanding findings. If the app has no maintenance owner or cadence, report that gap; template
 merges do not replace ongoing dependency maintenance.
 
+## Routine app-side maintenance
+
+This section governs an app's own dependency maintenance between merges, not the merge itself.
+Running it is app work; the rules below keep it from manufacturing the drift a later merge must
+reconcile.
+
+Constraint strings divide by provenance, not by which repository the file sits in. A package the
+template also declares carries a shared constraint: the template owns that string, and the app
+reproduces it verbatim. A package only this app declares carries an app-owned constraint the app
+maintains freely. Routine maintenance therefore updates resolutions, never shared declarations.
+
+Use commands that leave declarations alone. `pnpm install --lockfile-only` refreshes the lockfile
+against the current manifest; `pnpm update --no-save --lockfile-only` refreshes resolutions within
+the declared ranges. Do not use a range-rewriting update such as `pnpm update --latest` on shared
+packages: it raises shared floors silently, and every app that runs it raises them differently.
+After regenerating, confirm that the manifest is unchanged except for app-owned packages, and that
+the lockfile still records each aliased or overridden importer's resolved specifier. pnpm 12.2.1
+writes the raw manifest range instead, so the inherited `vite@*` override makes the next frozen
+install fail with `ERR_PNPM_OUTDATED_LOCKFILE`; re-run plain `pnpm install --lockfile-only` to
+restore it, keeping the refreshed resolutions. Then verify with `pnpm install --frozen-lockfile`.
+
+Widening a shared constraint back to the template string does not downgrade anything. The locked
+version still satisfies the wider range, so pnpm keeps it and rewrites only the importer
+`specifier` lines. An app that has already drifted can therefore realign its declarations in one
+step, and its resolutions stay where they are.
+
+If the app needs a version the shared constraint does not allow, that is a shared requirement, not
+a local fix. Record the package, the required condition, and the consumer evidence, and take it to
+the template so every app gets it; see
+[the provenance policy](../../update-laravel-packages/references/provenance-and-sync-policy.md#shared-dependency-compatibility).
+
 ## Official command references
 
 - [Composer update](https://getcomposer.org/doc/03-cli.md#update-u-upgrade)

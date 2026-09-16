@@ -4,8 +4,10 @@ Shared behavior converges on the template; domain, presentation, environment val
 stay app-owned. Generic improvements return through the template to avoid divergent shared behavior.
 Coverage floors and mutation selections are app-owned; mutation eligibility and blocking score are shared.
 
-Dependency declarations combine shared requirements with app-specific consumers; lockfiles are
-app-owned because only the app has its complete dependency graph. Template merges reconcile that
+Dependency declarations combine shared requirements with app-specific consumers: the constraint of
+a package the template declares is shared and apps reproduce it verbatim, while a package only the
+app declares carries an app-owned constraint. Lockfiles are app-owned because only the app has its
+complete dependency graph. Template merges reconcile that
 graph with minimal necessary changes, while routine maintenance and unrelated security fixes are
 separate work so regressions remain attributable. Convergence requires compatible shared behavior
 and dependency conditions, not identical resolved versions; the template must state required

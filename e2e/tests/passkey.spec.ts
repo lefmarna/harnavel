@@ -39,6 +39,11 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await context.clearCookies();
 
+  // Conditional UI 対応環境ではボタンが非表示になり、フックも autofill 認証を開始するため、
+  // 手動経路のテスト用に isConditionalMediationAvailable を false に固定する
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+  });
   await page.goto("/login");
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
 

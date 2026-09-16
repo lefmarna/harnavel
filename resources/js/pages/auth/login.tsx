@@ -31,7 +31,7 @@ export default function Login({
 }: Props) {
   return (
     <AuthLayout>
-      <PasskeyVerify />
+      <PasskeyVerify autofill />
 
       <Form {...store.form()} resetOnSuccess={["password"]} className="flex flex-col gap-6">
         {({ processing, errors }) => (
@@ -46,7 +46,7 @@ export default function Login({
                   required
                   autoFocus
                   tabIndex={1}
-                  autoComplete="email"
+                  autoComplete="email webauthn"
                   placeholder="you@example.com"
                 />
                 <InputError message={errors.email} />

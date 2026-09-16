@@ -2,6 +2,7 @@ import type { UrlMethodPair } from "@inertiajs/core";
 import { router } from "@inertiajs/react";
 import { usePasskeyVerify } from "@laravel/passkeys/react";
 import { KeyRound } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import InputError from "@/components/input-error";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { passkeyErrorMessage } from "@/lib/passkey-error";
 
 type Props = {
+  autofill?: boolean;
   routes?: {
     options: UrlMethodPair;
     submit: UrlMethodPair;
@@ -19,8 +21,15 @@ type Props = {
   separator?: string;
 };
 
-export default function PasskeyVerify({ routes, label, loadingLabel, separator }: Props = {}) {
+export default function PasskeyVerify({
+  autofill,
+  routes,
+  label,
+  loadingLabel,
+  separator,
+}: Props = {}) {
   const { verify, isLoading, errorInstance, isSupported } = usePasskeyVerify({
+    autofill,
     ...(routes && {
       routes: {
         options: routes.options.url,
@@ -34,10 +43,26 @@ export default function PasskeyVerify({ routes, label, loadingLabel, separator }
     },
   });
 
+  // autofill モードでは Conditional UI 対応ブラウザのみボタンを非表示にする。
+  // 非対応環境ではフォールバックとしてボタンを表示する。
+  const [isAutofillActive, setIsAutofillActive] = useState(false);
+  useEffect(() => {
+    if (!autofill) return;
+    if (typeof PublicKeyCredential === "undefined") return;
+    void PublicKeyCredential.isConditionalMediationAvailable?.().then((available) => {
+      setIsAutofillActive(available);
+    });
+  }, [autofill]);
+
   const errorMessage = passkeyErrorMessage(errorInstance);
 
   if (!isSupported) {
     return null;
+  }
+
+  // autofill が有効かつブラウザが Conditional UI に対応 → ボタン非表示、エラーのみ表示
+  if (isAutofillActive) {
+    return errorMessage ? <InputError message={errorMessage} className="text-center" /> : null;
   }
 
   return (

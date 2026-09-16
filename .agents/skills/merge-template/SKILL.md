@@ -5,7 +5,11 @@ description: Resolve conflicts from pulling the template repository according to
 
 # Merge Template
 
-Resolve `git pull <remote> <branch>` conflicts by applying TADR-0003.
+Integrate `git pull <remote> <branch>` changes and resolve conflicts by applying TADR-0003.
+
+Read [Dependency reconciliation](references/dependency-reconciliation.md) before pulling or
+resuming an existing merge. It defines how to preserve the app's dependency baseline and apply
+required template changes without coupling the merge to routine package maintenance.
 
 ## Ownership
 
@@ -25,9 +29,11 @@ Special cases:
   it never appears in step 3. An app whose production database cannot be rebuilt must restore its own
   applied migrations from `git status` before committing; otherwise migrations the live schema
   depends on disappear from the repository.
-- Never take template lockfiles over app lockfiles. When manifests change, run unscoped
-  `composer update` and `pnpm update` for the merged app; package-scoped updates can retain stale
-  transitive dependencies.
+- Dependency declarations are hybrid: align shared requirements and retain app-specific consumers
+  and constraints. Lockfiles are app-owned, including when git merges them without conflicts. Use
+  the pre-pull app lockfiles to reconcile merged dependency inputs with minimal changes; do not
+  adopt template lockfiles or run routine full updates as part of a merge. Required shared fixes
+  and toolchain migrations follow the dependency reconciliation reference.
 - Keep app-specific `delivery.yml` rsync excludes, release-critical files, environment secrets, and
   extra deploy steps while aligning the shared Laravel maintenance and `/up` health flow.
 - Keep `parseModelCastsMethod: true`; preserve app-specific PHPStan paths and ignores.
@@ -53,13 +59,15 @@ Special cases:
 ## Workflow
 
 1. Resolve `REMOTE` and `BRANCH` from the invocation, defaulting to `template` and `main`, then
-   inspect `git status`, remotes, the current branch, and `MERGE_HEAD`.
+   inspect `git status`, remotes, the current branch, and `MERGE_HEAD`. Preserve or recover the
+   pre-pull app dependency baseline before changing lockfiles.
 2. Pull the resolved remote and branch when they have not already been pulled.
 3. List unresolved paths with `git diff --diff-filter=U --name-only`.
 4. Read both sides and nearby tests before resolving each conflict.
 5. Classify each hunk as shared, hybrid, or app-owned and remove dead code introduced by the
    resolution.
-6. Regenerate lockfiles and Wayfinder output when their inputs changed.
+6. Reconcile dependency inputs and required shared fixes using the dependency reference, checking
+   cleanly merged paths too. Regenerate Wayfinder output when its inputs changed.
 7. List app paths that the template once deleted and still omits:
 
    ```bash
@@ -103,5 +111,6 @@ Special cases:
 11. Stage resolved files, review the staged diff, and stop before committing.
 
 Report template choices, preserved app choices, deleted or consolidated tests, verification
-results, and any improvement that should move upstream. Prefer the safer side for security and
-personal data, and move shared tests only with the implementation they specify.
+results, dependency changes and their reasons, audit findings and maintenance follow-ups, and any
+improvement that should move upstream. Prefer the safer side for security and personal data, and
+move shared tests only with the implementation they specify.

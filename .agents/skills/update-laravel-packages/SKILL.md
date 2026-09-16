@@ -32,8 +32,10 @@ Before changing files:
   a `template` remote exists, `origin` identifies another repository, or ownership cannot be
   established, stop and direct the work to the template repository. A derived app synchronizing
   its skeleton against a fresh Laravel application would fight template convergence; derived apps
-  take these updates through `git pull template main` + `/merge-template`, plus ordinary
-  `composer update` / `pnpm update` for their own lockfiles.
+  take these updates through `git pull template main` + `/merge-template`, which reconciles their
+  app-owned lockfiles according to its
+  [dependency policy](../merge-template/references/dependency-reconciliation.md). Routine package
+  maintenance and unrelated security fixes are separate app work.
 - Require a clean worktree before starting. If unrelated changes exist, stop unless the user has
   explicitly scoped and protected them.
 - Run PHP, Composer, and Artisan only inside the Docker `app` container, and the template's Node,
@@ -86,12 +88,12 @@ it.
 - Resolve the latest stable Node and pnpm versions using their official registries or mise and
   update `mise.toml`.
 - Treat a Node or pnpm major-version bump as a breaking toolchain change, not a silent number
-  update. A pnpm major upgrade changes the store version, so environments need
-  `rm -rf node_modules && pnpm install` rather than `pnpm update`, and it can escalate ignored
-  dependency build scripts to a hard `pnpm install` failure. Resolve that decision explicitly in
-  `pnpm-workspace.yaml` (`allowBuilds`) so install succeeds while `prepare`/lefthook still runs; the
-  reference's `.npmrc` `ignore-scripts=true` shortcut conflicts with this template's `prepare` hook.
-  Record the resulting derived-app steps in the report.
+  update. Read the affected versions' official migration guidance for lockfile, store, engine, and
+  build-script compatibility; do not assume every pnpm major requires a new lockfile or store.
+  Recreate `node_modules` when the migration requires it, preserving the lockfile, and resolve any
+  dependency build-script decisions explicitly in `pnpm-workspace.yaml` (`allowBuilds`) so install
+  succeeds while `prepare`/lefthook still runs. A blanket `ignore-scripts` workaround conflicts
+  with this template's `prepare` hook. Record the resulting derived-app steps in the report.
 - Keep the Docker PHP image tag byte-for-byte unchanged. Composer, Laravel Installer, Node, and
   pnpm being latest never authorizes a PHP patch, minor, or major update. Treat Composer's
   `require.php` constraint separately as a manifest constraint, and check the reference's own
@@ -207,23 +209,33 @@ the current behavior by default, and obtain explicit approval before changing it
 request must explain how the behavior and its tests will flow to derived applications through
 template convergence; do not leave that downstream decision to each app implicitly.
 
+Apply the shared dependency compatibility rules in
+[the provenance policy](references/provenance-and-sync-policy.md#shared-dependency-compatibility).
+Required APIs, bug fixes, and security fixes must reach derived apps that preserve compatible
+locked versions. Record their minimum versions or excluded versions in the shared inputs, and
+document necessary targeted migrations, including fixes delivered by lockfile-only changes.
+
 Before lockfile resolution, run a manifest-convergence gate that compares every adopted current
 Laravel-owned package's section and constraint string with the reference. Separately list every
 unadopted reference-surface package and the omitted consumer surface. The mismatch list must be
 empty except for individually documented, approved compatibility exceptions. Include this
 machine-generated comparison in the report; a prose disposition table alone is insufficient.
 
-This skill is the only thing that changes Composer constraint strings. Routine security patches and
-lockfile refreshes resolve within existing constraints. A change outside those constraints belongs
-here, where it is classified against a fresh Laravel reference. Dependabot Alerts reports default-
-branch advisories; automated dependency PRs are not used.
+In this template source repository, this skill owns Composer constraint changes. Routine security
+patches and lockfile refreshes resolve within approved constraints; shared constraint changes are
+classified here against a fresh Laravel reference. Derived apps maintain app-owned constraints in
+their own workflows and return changes to shared requirements through the template. Dependabot
+Alerts reports default-branch advisories; automated dependency PRs are not used.
 
 ### 5. Resolve and audit
 
-- Edit the manifests only after the disposition table is complete.
+- Edit the manifests only after the disposition table is complete, then preserve the approved
+  manifests and resolution settings for comparison after resolution.
 - Generate the Composer lockfile with `composer update --no-interaction --no-scripts` inside the
   container. Delaying scripts keeps Boost generation out of the dependency-resolution step.
-- Generate the pnpm lockfile with host pnpm.
+- Generate the pnpm lockfile with host `pnpm update --no-save --lockfile-only`. This template
+  maintenance workflow intentionally refreshes the dependency graph; preserve the approved
+  declarations instead of letting pnpm rewrite their ranges.
 - Review direct and transitive changes before continuing.
 - Run `composer audit --locked` and `pnpm audit`. Resolve findings where possible. Require approval
   for accepted advisories, abandoned packages without a safe replacement, or fixes outside the
@@ -232,6 +244,10 @@ branch advisories; automated dependency PRs are not used.
   If a fix requires changing a Laravel-owned manifest constraint, make the smallest compatible
   change, record it as an explicit reference exception, and obtain approval. Never replace all
   reference constraints with registry-latest constraints as an audit shortcut.
+- After resolution and audit fixes, compare manifests and resolution settings with the approved
+  snapshot and rerun the manifest-convergence gate. Investigate unexpected writes; accept only
+  classified changes and documented exceptions. Keep shared minimum-version and migration
+  requirements current when an audit fix changes what derived apps must install.
 - Search code, configuration, scripts, CI, tests, and docs for every removed package and command.
 - Delete `vendor` and `node_modules`, then run `composer install --no-interaction` in the container
   and `pnpm install --frozen-lockfile` on the host. This is the reproducibility test; do not delete
@@ -326,7 +342,10 @@ Keep one concise report in the conversation throughout the run with:
 6. audit findings and resolution;
 7. file disposition table;
 8. verification results;
-9. blockers, approvals, and the two commit IDs when created.
+9. derived-app requirements: necessary minimum versions or fixes, their reasons, and toolchain or
+   targeted migration steps and where they are recorded; distinguish required adoption from
+   routine lockfile refreshes;
+10. blockers, approvals, and the two commit IDs when created.
 
 Mark the update complete only when clean installs, required checks, and the final classified
 reference comparison pass, and audits either pass or have explicit documented exceptions.

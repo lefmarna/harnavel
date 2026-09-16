@@ -139,9 +139,7 @@ return [
     | Passkeys
     |--------------------------------------------------------------------------
     |
-    | These settings configure Fortify's passkey (WebAuthn) support. The user
-    | handle secret is kept separate from the application key: rotating the
-    | application key would otherwise invalidate every stored passkey.
+    | These settings configure Fortify's passkey (WebAuthn) support.
     |
     */
 

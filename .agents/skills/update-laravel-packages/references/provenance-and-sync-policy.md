@@ -17,6 +17,29 @@ package assumptions.
 Package names can move between the first two Laravel-owned categories as the upstream starter
 changes. Rebuild the package disposition table on every run.
 
+## Shared dependency compatibility
+
+Derived apps reconcile their own lockfiles through `merge-template`; they do not inherit this
+template's exact resolved versions or perform routine full updates during a merge. For an adopted
+shared capability, identify the required APIs and fixes from its consumers and upstream evidence.
+Passing tests on the template's locked version does not establish compatibility with every older
+version permitted by the reference constraint.
+
+If the reference allows versions that cannot support retained shared behavior, use the smallest
+compatible constraint or resolution-setting change that expresses the actual requirement. Record
+the package, reference constraint, required condition, consumer or advisory evidence, and relevant
+verification as a compatibility exception, and obtain approval before adopting it. This is an
+exception to reference-string convergence, not a reason to raise every constraint to registry latest.
+
+Express durable minimum versions, broken-version exclusions, and necessary coordinated pins in
+shared inputs where possible. If a required fix needs a targeted migration, document the affected
+packages, required condition, reason, and derived-app steps even when only a lockfile changes.
+Persist required rollout instructions with the template change in a versioned migration note or
+commit description, not only in the execution report. Routine lockfile refreshes carry no
+requirement to match the template's resolutions. Explain removals with consumer evidence so
+derived apps can retain their own direct declarations when their app-specific consumers still
+need the package.
+
 ## Known template-owned capabilities
 
 These capabilities are deliberate. Preserve the capability, but do not assume its current package

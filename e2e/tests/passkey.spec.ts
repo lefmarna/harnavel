@@ -1,5 +1,6 @@
 import { expirePasswordConfirmation } from "../support/artisan";
 import { expect, test } from "../support/fixtures";
+import { enableVirtualAuthenticator } from "../support/passkey";
 
 // ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
 const HOME_URL = /\/dashboard$/;
@@ -7,18 +8,7 @@ const HOME_URL = /\/dashboard$/;
 test("パスキーを登録してパスキーだけでログインできる", async ({ page, context, browserName }) => {
   test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
 
-  const client = await context.newCDPSession(page);
-  await client.send("WebAuthn.enable");
-  await client.send("WebAuthn.addVirtualAuthenticator", {
-    options: {
-      protocol: "ctap2",
-      transport: "internal",
-      hasResidentKey: true,
-      hasUserVerification: true,
-      isUserVerified: true,
-      automaticPresenceSimulation: true,
-    },
-  });
+  await enableVirtualAuthenticator(page, context);
 
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill("test@example.com");
@@ -57,18 +47,7 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 }) => {
   test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
 
-  const client = await context.newCDPSession(page);
-  await client.send("WebAuthn.enable");
-  await client.send("WebAuthn.addVirtualAuthenticator", {
-    options: {
-      protocol: "ctap2",
-      transport: "internal",
-      hasResidentKey: true,
-      hasUserVerification: true,
-      isUserVerified: true,
-      automaticPresenceSimulation: true,
-    },
-  });
+  await enableVirtualAuthenticator(page, context);
 
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill("test@example.com");
@@ -98,4 +77,74 @@ test("パスワード確認の期限が切れても再確認してパスキー�
   await page.getByRole("button", { name: "パスキーを登録" }).click();
 
   await expect(page.getByText("期限切れ後のパスキー")).toBeVisible();
+});
+
+test("自動入力が失敗しても再読み込みなしでパスキー認証を再試行できる", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await enableVirtualAuthenticator(page, context);
+
+  await page.goto("/login");
+  await page.getByLabel("メールアドレス").fill("test@example.com");
+  await page.getByLabel("パスワード").fill("Test1234");
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(HOME_URL);
+
+  await page.goto("/settings/security");
+  await page.locator('input[name="password"]').fill("Test1234");
+  await page.locator('[data-test="confirm-password-button"]').click();
+  await expect(page).toHaveURL(/\/settings\/security$/);
+
+  await page.getByRole("button", { name: "パスキーを追加" }).click();
+  await page.getByLabel("パスキーの名前").fill("自動入力リトライ用");
+  await page.getByRole("button", { name: "パスキーを登録" }).click();
+
+  await expect(page.getByText("自動入力リトライ用")).toBeVisible();
+
+  await context.clearCookies();
+
+  // Conditional UI 対応環境の再現。この分岐でだけ自動入力が起動し、手動ボタンが隠れる。
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => true;
+  });
+
+  // 自動入力のオプション取得だけを 429 で落とす。スロットリングや一時的な通信断と同じ状態。
+  await page.route("**/passkeys/login/options", async (route) => {
+    await route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Too Many Attempts." }),
+    });
+  });
+
+  await page.goto("/login");
+  await expect(page.getByText("Too Many Attempts.")).toBeVisible();
+
+  // 通信が復旧しても、フックは自動入力を再試行しない。再試行の導線がなければここで詰まる。
+  await page.unroute("**/passkeys/login/options");
+
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
+
+  await expect(page).toHaveURL(HOME_URL);
+});
+
+test("Conditional UI が使える環境では手動のパスキーボタンを表示しない", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "PublicKeyCredential の差し替えは Chromium で検証する");
+
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => true;
+  });
+
+  await page.goto("/login");
+
+  // React のマウントを待ってから、ボタンが出ないことを確かめる。
+  await expect(page.getByLabel("メールアドレス")).toBeVisible();
+  await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeHidden();
 });

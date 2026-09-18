@@ -43,14 +43,13 @@ export default function PasskeyVerify({
     },
   });
 
-  // autofill モードでは Conditional UI 対応ブラウザのみボタンを非表示にする。
-  // 非対応環境ではフォールバックとしてボタンを表示する。
-  const [isAutofillActive, setIsAutofillActive] = useState(false);
+  // Conditional UI 対応ブラウザでは自動入力に任せ、非対応環境ではボタンで補う。
+  const [isConditionalUiAvailable, setIsConditionalUiAvailable] = useState(false);
   useEffect(() => {
     if (!autofill) return;
     if (typeof PublicKeyCredential === "undefined") return;
     void PublicKeyCredential.isConditionalMediationAvailable?.().then((available) => {
-      setIsAutofillActive(available);
+      setIsConditionalUiAvailable(available);
     });
   }, [autofill]);
 
@@ -60,9 +59,12 @@ export default function PasskeyVerify({
     return null;
   }
 
-  // autofill が有効かつブラウザが Conditional UI に対応 → ボタン非表示、エラーのみ表示
+  // 失敗時はボタンを出す。usePasskeyVerify はマウント時に一度しか自動入力を起動しないため、
+  // ボタンがないと通信が復旧してもページを再読み込みするまで再試行できない。
+  const isAutofillActive = isConditionalUiAvailable && !errorMessage;
+
   if (isAutofillActive) {
-    return errorMessage ? <InputError message={errorMessage} className="text-center" /> : null;
+    return null;
   }
 
   return (

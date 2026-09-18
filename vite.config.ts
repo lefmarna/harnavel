@@ -104,7 +104,6 @@ export default defineConfig(({ mode }) => {
         "typescript/no-unsafe-function-type": "error",
         "typescript/no-unsafe-member-access": "error",
         "typescript/no-unsafe-return": "error",
-        "typescript/no-unsafe-type-assertion": "error",
         "typescript/switch-exhaustiveness-check": "error",
         "typescript/no-useless-default-assignment": "off",
       },

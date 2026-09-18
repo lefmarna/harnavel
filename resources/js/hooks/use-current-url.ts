@@ -12,7 +12,7 @@ export type WhenCurrentUrlFn = <TIfTrue, TIfFalse = null>(
   urlToCheck: NonNullable<InertiaLinkProps["href"]>,
   ifTrue: TIfTrue,
   ifFalse?: TIfFalse,
-) => TIfTrue | TIfFalse;
+) => TIfTrue | TIfFalse | null;
 
 export type UseCurrentUrlReturn = {
   currentUrl: string;
@@ -44,12 +44,8 @@ export function useCurrentUrl(): UseCurrentUrlReturn {
     }
   };
 
-  const whenCurrentUrl: WhenCurrentUrlFn = <TIfTrue, TIfFalse = null>(
-    urlToCheck: NonNullable<InertiaLinkProps["href"]>,
-    ifTrue: TIfTrue,
-    ifFalse: TIfFalse = null as TIfFalse,
-  ): TIfTrue | TIfFalse => {
-    return isCurrentUrl(urlToCheck) ? ifTrue : ifFalse;
+  const whenCurrentUrl: WhenCurrentUrlFn = (urlToCheck, ifTrue, ifFalse) => {
+    return isCurrentUrl(urlToCheck) ? ifTrue : (ifFalse ?? null);
   };
 
   return {

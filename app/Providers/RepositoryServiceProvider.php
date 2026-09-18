@@ -12,7 +12,7 @@ use Illuminate\Support\ServiceProvider;
 class RepositoryServiceProvider extends ServiceProvider
 {
     /**
-     * @var array<string>
+     * @var list<string>
      */
     private const MODELS = [
         'User',
@@ -20,19 +20,11 @@ class RepositoryServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        foreach ($this->getModels() as $model) {
+        foreach (self::MODELS as $model) {
             $this->app->singleton(
                 "App\Repositories\\{$model}\\{$model}RepositoryContract",
                 "App\Repositories\\{$model}\\Eloquent{$model}Repository"
             );
         }
-    }
-
-    /**
-     * @return array<string>
-     */
-    protected function getModels(): array
-    {
-        return self::MODELS;
     }
 }

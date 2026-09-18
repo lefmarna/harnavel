@@ -14,9 +14,7 @@ import { resolveAppName } from "./lib/app-name";
 const configuredAppName: unknown = import.meta.env.VITE_APP_NAME;
 const appName = resolveAppName(configuredAppName);
 
-type ReactRootElement = HTMLElement & {
-  reactRoot?: Root;
-};
+const roots = new WeakMap<HTMLElement, Root>();
 
 function SeoWrapper({ children }: { children: ReactNode }) {
   return (
@@ -32,10 +30,13 @@ void createInertiaApp({
   title: (title) => (title ? `${title} - ${appName}` : appName),
   layout: () => SeoWrapper,
   setup: ({ el, App, props }) => {
-    const rootElement = el as ReactRootElement;
-    const root = rootElement.reactRoot ?? createRoot(rootElement);
+    if (el === null) {
+      throw new Error("Inertia のマウント先要素が見つかりません。");
+    }
 
-    rootElement.reactRoot = root;
+    const root = roots.get(el) ?? createRoot(el);
+
+    roots.set(el, root);
 
     root.render(
       <StrictMode>

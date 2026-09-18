@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Laravel\Passkeys\Passkey;
 use ParagonIE\ConstantTime\Base64UrlSafe;
+use Symfony\Component\Process\Process;
 
 describe('パスキー', function () {
     it('パスキー登録の候補は未認証では取得できない', function () {
@@ -81,3 +82,67 @@ describe('パスキーの credential_id', function () {
         expect(Passkey::query()->where('credential_id', 'abc')->value('name'))->toBe('小文字だけのほう');
     });
 });
+
+describe('パスキーのユーザーハンドル秘密鍵', function () {
+    it('本番環境では PASSKEYS_USER_HANDLE_SECRET が未設定だと起動しない', function () {
+        $process = bootWithEnvironment(['APP_ENV' => 'production', 'PASSKEYS_USER_HANDLE_SECRET' => '']);
+
+        expect($process->isSuccessful())->toBeFalse()
+            ->and($process->getOutput().$process->getErrorOutput())->toContain('PASSKEYS_USER_HANDLE_SECRET');
+    });
+
+    it('本番環境でも秘密鍵が明示されていれば起動する', function () {
+        $process = bootWithEnvironment(['APP_ENV' => 'production', 'PASSKEYS_USER_HANDLE_SECRET' => 'passkey-user-handle-secret']);
+
+        expect($process->isSuccessful())->toBeTrue($process->getOutput().$process->getErrorOutput());
+    });
+
+    it('フォールバック時代のパスキーを保つため APP_KEY と同じ値を明示しても起動する', function () {
+        $appKey = 'base64:'.base64_encode(random_bytes(32));
+
+        $process = bootWithEnvironment(['APP_ENV' => 'production', 'APP_KEY' => $appKey, 'PASSKEYS_USER_HANDLE_SECRET' => $appKey]);
+
+        expect($process->isSuccessful())->toBeTrue($process->getOutput().$process->getErrorOutput());
+    });
+
+    it('Artisan の --env で本番を指定した場合も秘密鍵の未設定を検出する', function () {
+        $process = new Process(
+            [PHP_BINARY, 'artisan', 'env', '--env=production'],
+            base_path(),
+            ['APP_ENV' => 'local', 'PASSKEYS_USER_HANDLE_SECRET' => ''],
+        );
+        $process->run();
+
+        expect($process->isSuccessful())->toBeFalse()
+            ->and($process->getOutput().$process->getErrorOutput())->toContain('PASSKEYS_USER_HANDLE_SECRET');
+    });
+
+    it('本番以外では秘密鍵が未設定でも APP_KEY からユーザーハンドルを導出する', function () {
+        $process = bootWithEnvironment(
+            ['APP_ENV' => 'testing', 'PASSKEYS_USER_HANDLE_SECRET' => ''],
+            'echo (new App\Models\User)->forceFill(["id" => 1])->getPasskeyUserHandle();',
+        );
+
+        expect($process->isSuccessful())->toBeTrue($process->getOutput().$process->getErrorOutput())
+            ->and($process->getOutput())->not->toBe('');
+    });
+});
+
+/**
+ * @param  array<string, string>  $env
+ */
+function bootWithEnvironment(array $env, string $afterBoot = ''): Process
+{
+    $process = new Process(
+        [
+            PHP_BINARY,
+            '-r',
+            'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();'.$afterBoot,
+        ],
+        base_path(),
+        $env,
+    );
+    $process->run();
+
+    return $process;
+}

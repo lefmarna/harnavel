@@ -84,7 +84,7 @@ function SidebarProvider({
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
+    return isMobile ? setOpenMobile((current) => !current) : setOpen((current) => !current);
   }, [isMobile, setOpen, setOpenMobile]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
@@ -122,13 +122,11 @@ function SidebarProvider({
       <TooltipProvider delayDuration={0}>
         <div
           data-slot="sidebar-wrapper"
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH,
-              "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-              ...style,
-            } as React.CSSProperties
-          }
+          style={{
+            "--sidebar-width": SIDEBAR_WIDTH,
+            "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+            ...style,
+          }}
           className={cn(
             "group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
             className,
@@ -183,11 +181,7 @@ function Sidebar({
           data-slot="sidebar"
           data-mobile="true"
           className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
+          style={{ "--sidebar-width": SIDEBAR_WIDTH_MOBILE }}
           side={side}
         >
           <div className="flex h-full w-full flex-col">{children}</div>
@@ -580,12 +574,9 @@ function SidebarMenuSkeleton({
 }) {
   // wrapping in useState to ensure the width is stable across renders
   // also ensures we have a stable reference to the style object
-  const [skeletonStyle] = React.useState(
-    () =>
-      ({
-        "--skeleton-width": `${Math.floor(Math.random() * 40) + 50}%`, // Random width between 50 to 90%.
-      }) as React.CSSProperties,
-  );
+  const [skeletonStyle] = React.useState<React.CSSProperties>(() => ({
+    "--skeleton-width": `${Math.floor(Math.random() * 40) + 50}%`, // Random width between 50 to 90%.
+  }));
 
   return (
     <div

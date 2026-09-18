@@ -2,9 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Models\User;
+use App\ViewModels\Settings\SecurityPageViewModel;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
+
+mutates(RequirePasswordWhenSet::class, SecurityPageViewModel::class);
 
 describe('セキュリティ設定', function () {
     it('セキュリティ設定画面を表示できる', function () {
@@ -185,6 +190,12 @@ describe('セキュリティ設定', function () {
             ->actingAs($user)
             ->get(route('security.edit'))
             ->assertOk();
+    });
+
+    it('ゲストがパスワード確認付きルートに到達した場合は確認画面へ誘導する', function () {
+        Route::middleware(['web', 'password.confirm'])->get('/_spec/password-confirm', fn (): string => 'ok');
+
+        $this->get('/_spec/password-confirm')->assertRedirect(route('password.confirm'));
     });
 
     it('パスキーを削除できる', function () {

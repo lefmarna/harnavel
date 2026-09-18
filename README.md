@@ -53,7 +53,7 @@ mise run up             # コンテナ起動
 mise run stop           # コンテナ停止
 mise run down           # コンテナ停止 + 削除
 mise run app            # app コンテナへ入る
-mise run verify:backend # Pint -> Larastan -> Pest
+mise run verify:backend # Pint -> Larastan -> Pest（カバレッジ 90% 以上）
 pnpm format:check       # Oxfmt チェックのみ
 pnpm lint:check         # type-aware Oxlint（変更なし）
 pnpm fix                # Oxlint の safe fix + Oxfmt
@@ -70,6 +70,7 @@ pnpm test:e2e --project=chromium
 - [AGENTS.md](AGENTS.md): AI エージェント向けの起点（`CLAUDE.md` / `GEMINI.md` はここへのポインタ）
 - [CONTEXT.md](CONTEXT.md): ドメイン用語集（展開先プロジェクトで育てる）
 - [docs/testing-as-spec.md](docs/testing-as-spec.md): テストの責務分担とミューテーション方針
+- [docs/logging-guidelines.md](docs/logging-guidelines.md): アプリケーションログの運用ルール
 - [TADR-0009](docs/adr/template/0009-frontend-quality-harness.md): フロントエンド品質ゲートの責務分担
 - [docs/infrastructure.md](docs/infrastructure.md): XServerの運用前提（Composer、OPcache）
 - [docs/adr/README.md](docs/adr/README.md): 設計判断の記録（ADR / Template ADR）

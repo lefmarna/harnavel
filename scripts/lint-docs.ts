@@ -38,7 +38,7 @@ async function findMarkdownFiles(dir: string): Promise<string[]> {
     }
   }
 
-  return files.sort();
+  return files.toSorted();
 }
 
 function checkLinks(filePath: string, content: string): LinkError[] {

@@ -103,6 +103,10 @@ per-environment GitHub settings the first deployment needs, for Develop and Prod
   authentication.
 - Enable the GitHub dependency graph and Dependabot Alerts. Leave dependency update PRs disabled.
 
+The server-side `.env` of each deployed environment also needs `PASSKEYS_USER_HANDLE_SECRET` set
+explicitly, independent of `APP_KEY` for a new app; production refuses to boot without it
+([TADR-0013](../../../docs/adr/template/0013-passkey-credentials.md)).
+
 No OPcache measurement is required to start deploying. The deployment waits out the revalidation
 window while maintenance is active. Recheck the external assumption only if the environment leaves
 XServer, changes PHP version, gains a `.user.ini`, or serves stale behavior after a green deploy.

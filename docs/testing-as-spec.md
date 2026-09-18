@@ -15,5 +15,7 @@ Direct review still covers security, migrations, concurrency, side effects, deli
 
 - Opt deterministic application-logic classes with observable branches into mutation testing with
   `mutates()`; omit thin wiring and external-I/O orchestration.
+- Only tests in files that declare `mutates()` run against mutants, so a test that must kill a
+  mutant lives in such a file; several files may declare the same class.
 - For surviving mutations, strengthen assertions for supported behavior or simplify the implementation.
 - Do not weaken tests, add mutation ignores, or remove `mutates()` without user confirmation.

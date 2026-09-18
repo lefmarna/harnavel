@@ -17,72 +17,63 @@ use Illuminate\Support\Collection;
  */
 final class FakeUserRepository implements UserRepositoryContract
 {
-    /** @var array<string, Closure> */
-    private readonly array $handlers;
-
+    /**
+     * @param  (Closure(array{name: string, email: string, password: string}): User)|null  $create
+     * @param  (Closure(string|int, bool): ?User)|null  $find
+     * @param  (Closure(string, string, bool): Collection<int, User>)|null  $findCandidates
+     * @param  (Closure(string, bool): ?User)|null  $findByGoogleId
+     * @param  (Closure(string, bool): ?User)|null  $findByEmail
+     * @param  (Closure(User): void)|null  $save
+     * @param  (Closure(User, string): void)|null  $updatePassword
+     */
     public function __construct(
-        ?Closure $create = null,
-        ?Closure $find = null,
-        ?Closure $findCandidates = null,
-        ?Closure $findByGoogleId = null,
-        ?Closure $findByEmail = null,
-        ?Closure $save = null,
-        ?Closure $updatePassword = null,
-    ) {
-        $this->handlers = array_filter(compact(
-            'create',
-            'find',
-            'findCandidates',
-            'findByGoogleId',
-            'findByEmail',
-            'save',
-            'updatePassword',
-        ));
-    }
+        private readonly ?Closure $create = null,
+        private readonly ?Closure $find = null,
+        private readonly ?Closure $findCandidates = null,
+        private readonly ?Closure $findByGoogleId = null,
+        private readonly ?Closure $findByEmail = null,
+        private readonly ?Closure $save = null,
+        private readonly ?Closure $updatePassword = null,
+    ) {}
 
     public function create(array $attributes): User
     {
-        /** @var User */
-        return ($this->handler('create'))($attributes);
+        return ($this->create ?? $this->missing(__FUNCTION__))($attributes);
     }
 
     public function find(string|int $id, bool $lock = false): ?User
     {
-        /** @var User|null */
-        return ($this->handler('find'))($id, $lock);
+        return ($this->find ?? $this->missing(__FUNCTION__))($id, $lock);
     }
 
     public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
     {
-        /** @var Collection<int, User> */
-        return ($this->handler('findCandidates'))($googleId, $email, $lock);
+        return ($this->findCandidates ?? $this->missing(__FUNCTION__))($googleId, $email, $lock);
     }
 
     public function findByGoogleId(string $googleId, bool $lock = false): ?User
     {
-        /** @var User|null */
-        return ($this->handler('findByGoogleId'))($googleId, $lock);
+        return ($this->findByGoogleId ?? $this->missing(__FUNCTION__))($googleId, $lock);
     }
 
     public function findByEmail(string $email, bool $lock = false): ?User
     {
-        /** @var User|null */
-        return ($this->handler('findByEmail'))($email, $lock);
+        return ($this->findByEmail ?? $this->missing(__FUNCTION__))($email, $lock);
     }
 
     public function save(User $user): void
     {
-        ($this->handler('save'))($user);
+        ($this->save ?? $this->missing(__FUNCTION__))($user);
     }
 
     public function updatePassword(User $user, string $newPassword): void
     {
-        ($this->handler('updatePassword'))($user, $newPassword);
+        ($this->updatePassword ?? $this->missing(__FUNCTION__))($user, $newPassword);
     }
 
-    private function handler(string $method): Closure
+    private function missing(string $method): never
     {
-        return $this->handlers[$method] ?? throw new BadMethodCallException(
+        throw new BadMethodCallException(
             sprintf('%s::%s() は差し込まれていません。', self::class, $method),
         );
     }

@@ -28,14 +28,14 @@ function EmptyState() {
   );
 }
 
-export default function ManagePasskeys({ canManagePasskeys, passkeys }: Props) {
-  const handleDelete = (id: number, onError: () => void) => {
-    router.delete(destroy.url(id), {
-      preserveScroll: true,
-      onError,
-    });
-  };
+const handleDelete = (id: number, onError: () => void): void => {
+  router.delete(destroy.url(id), {
+    preserveScroll: true,
+    onError,
+  });
+};
 
+export default function ManagePasskeys({ canManagePasskeys, passkeys }: Props) {
   if (!canManagePasskeys) {
     return null;
   }

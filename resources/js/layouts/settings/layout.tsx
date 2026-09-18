@@ -32,11 +32,6 @@ const sidebarNavItems: NavItem[] = [
 export default function SettingsLayout({ children }: PropsWithChildren) {
   const { isCurrentUrl } = useCurrentUrl();
 
-  // When server-side rendering, we only render the layout on the client...
-  if (typeof window === "undefined") {
-    return null;
-  }
-
   return (
     <div className="px-4 py-6">
       <Heading title="設定" description="プロフィールとアカウント設定を管理します" />
@@ -44,9 +39,9 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
       <div className="flex flex-col lg:flex-row lg:space-x-12">
         <aside className="w-full max-w-xl lg:w-48">
           <nav className="flex flex-col space-y-1 space-x-0" aria-label="設定">
-            {sidebarNavItems.map((item, index) => (
+            {sidebarNavItems.map((item) => (
               <Button
-                key={`${toUrl(item.href)}-${index}`}
+                key={toUrl(item.href)}
                 size="sm"
                 variant="ghost"
                 asChild

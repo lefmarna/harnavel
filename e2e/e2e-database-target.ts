@@ -13,22 +13,33 @@ export type DatabaseTarget = {
   database: string;
 };
 
+const TARGET_KEYS: readonly (keyof DatabaseTarget)[] = ["host", "database"];
+
+const describeTarget = (target: DatabaseTarget): string => `${target.host} / ${target.database}`;
+
+export function isDatabaseTarget(value: unknown): value is DatabaseTarget {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "host" in value &&
+    typeof value.host === "string" &&
+    "database" in value &&
+    typeof value.database === "string"
+  );
+}
+
 export function assertE2eTarget(
   resolved: DatabaseTarget,
   expected: DatabaseTarget = E2E_TARGET,
 ): void {
-  const mismatched = (Object.keys(expected) as (keyof DatabaseTarget)[]).filter(
-    (key) => resolved[key] !== expected[key],
-  );
+  const mismatched = TARGET_KEYS.filter((key) => resolved[key] !== expected[key]);
 
   if (mismatched.length === 0) {
     return;
   }
 
-  const describe = (target: DatabaseTarget): string => `${target.host} / ${target.database}`;
-
   throw new Error(
-    `E2E の接続先が ${describe(expected)} ではなく ${describe(resolved)} です` +
+    `E2E の接続先が ${describeTarget(expected)} ではなく ${describeTarget(resolved)} です` +
       `（不一致: ${mismatched.join(", ")}）。migrate:fresh はデータを消すため中止しました。` +
       " .env の DB_URL とPlaywrightのDB上書きを確認してください。",
   );

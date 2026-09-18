@@ -2,7 +2,12 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { assertE2eTarget, CI_E2E_TARGET, E2E_TARGET } from "./e2e-database-target";
+import {
+  assertE2eTarget,
+  CI_E2E_TARGET,
+  E2E_TARGET,
+  isDatabaseTarget,
+} from "./e2e-database-target";
 import type { DatabaseTarget } from "./e2e-database-target";
 import { assertViteDevAssets, createViteDevAssetsProbe } from "./vite-dev-assets";
 
@@ -48,7 +53,13 @@ function resolvedTarget(artisan: ArtisanRunner): DatabaseTarget {
     throw new Error(`E2E の接続先を確認できませんでした:\n${output}`);
   }
 
-  return JSON.parse(probe) as DatabaseTarget;
+  const target: unknown = JSON.parse(probe);
+
+  if (!isDatabaseTarget(target)) {
+    throw new Error(`E2E の接続先の形式が想定と異なります:\n${probe}`);
+  }
+
+  return target;
 }
 
 async function waitForDatabase(artisan: ArtisanRunner, timeoutMs = 60_000): Promise<void> {
@@ -61,11 +72,12 @@ async function waitForDatabase(artisan: ArtisanRunner, timeoutMs = 60_000): Prom
       return;
     } catch (error) {
       if (Date.now() - startedAt > timeoutMs) {
-        throw new Error(
-          `E2E データベースへ接続できません。接続先と起動状態を確認してください。\n${String(error)}`,
-        );
+        throw new Error("E2E データベースへ接続できません。接続先と起動状態を確認してください。", {
+          cause: error,
+        });
       }
 
+      // oxlint-disable-next-line eslint/no-await-in-loop
       await sleep(500);
     }
   }

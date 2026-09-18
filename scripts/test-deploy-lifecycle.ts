@@ -30,7 +30,12 @@ function fail(message: string): never {
   throw new Error(`Deployment lifecycle check failed: ${message}`);
 }
 
-const workflow = parse(fs.readFileSync(WORKFLOW, "utf8")) as Workflow;
+function isWorkflow(value: unknown): value is Workflow {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const parsedWorkflow: unknown = parse(fs.readFileSync(WORKFLOW, "utf8"));
+const workflow = isWorkflow(parsedWorkflow) ? parsedWorkflow : fail("workflow is not a mapping");
 const jobs = workflow.jobs ?? {};
 const steps = jobs.deploy?.steps ?? [];
 

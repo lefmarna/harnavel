@@ -3,7 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\ViewModels\StaticPageViewModel;
+use App\ViewModels\WelcomePageViewModel;
 use Inertia\Testing\AssertableInertia;
+
+mutates(StaticPageViewModel::class, WelcomePageViewModel::class);
 
 function extractHeadAttribute(string $html, string $tag, array $requiredAttributes, string $targetAttribute): string
 {

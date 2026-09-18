@@ -20,7 +20,7 @@ final class RequirePasswordWhenSet extends RequirePassword
 {
     /**
      * @param  Request  $request
-     * @param  string|int|null  $passwordTimeoutSeconds
+     * @param  int|null  $passwordTimeoutSeconds
      */
     protected function shouldConfirmPassword($request, $passwordTimeoutSeconds = null): bool
     {
@@ -30,9 +30,6 @@ final class RequirePasswordWhenSet extends RequirePassword
             return false;
         }
 
-        return parent::shouldConfirmPassword(
-            $request,
-            $passwordTimeoutSeconds === null ? null : (int) $passwordTimeoutSeconds,
-        );
+        return parent::shouldConfirmPassword($request, $passwordTimeoutSeconds);
     }
 }

@@ -257,30 +257,30 @@ if (failures.length) {
   );
 }
 
-function changedFiles(repo) {
-  const tracked = run(["git", "diff", "--name-only", "HEAD"], repo);
-  const untracked = run(["git", "ls-files", "--others", "--exclude-standard"], repo);
+function changedFiles(cwd) {
+  const tracked = run(["git", "diff", "--name-only", "HEAD"], cwd);
+  const untracked = run(["git", "ls-files", "--others", "--exclude-standard"], cwd);
   const merged = [...tracked.stdout.split("\n"), ...untracked.stdout.split("\n")];
-  const all = [...new Set(merged)].filter(Boolean).sort();
-  const existing = all.filter((file) => existsSync(join(repo, file)));
+  const changed = [...new Set(merged)].filter(Boolean).toSorted();
+  const present = changed.filter((file) => existsSync(join(cwd, file)));
 
-  return { all, existing };
+  return { all: changed, existing: present };
 }
 
 function byExt(files, extensions) {
   return files.filter((file) => extensions.has(extname(file)));
 }
 
-function dockerAppRunning(repo) {
-  const result = run(["docker", "compose", "ps", "--services", "--filter", "status=running"], repo);
+function dockerAppRunning(cwd) {
+  const result = run(["docker", "compose", "ps", "--services", "--filter", "status=running"], cwd);
 
   return result.status === 0 && result.stdout.split("\n").includes("app");
 }
 
-function ensureDockerGitSafeDirectory(repo) {
+function ensureDockerGitSafeDirectory(cwd) {
   const result = run(
     ["docker", "compose", "exec", "-T", "app", "git", "rev-parse", "--show-toplevel"],
-    repo,
+    cwd,
   );
 
   if (result.status === 0) {
@@ -293,7 +293,7 @@ function ensureDockerGitSafeDirectory(repo) {
     return;
   }
 
-  const pwd = run(["docker", "compose", "exec", "-T", "app", "pwd"], repo);
+  const pwd = run(["docker", "compose", "exec", "-T", "app", "pwd"], cwd);
   const safeDirectory = pwd.status === 0 ? pwd.stdout.trim() : "/app";
 
   run(
@@ -310,7 +310,7 @@ function ensureDockerGitSafeDirectory(repo) {
       "safe.directory",
       safeDirectory,
     ],
-    repo,
+    cwd,
   );
 }
 
@@ -327,7 +327,7 @@ function run(command, cwd) {
   });
 }
 
-function captureFailure(command, cwd, title, failures) {
+function captureFailure(command, cwd, title, sink) {
   const result = run(command, cwd);
 
   if (result.status === 0) {
@@ -335,7 +335,7 @@ function captureFailure(command, cwd, title, failures) {
   }
 
   const output = `${result.stdout}\n${result.stderr}`.trim();
-  failures.push({
+  sink.push({
     title,
     output: trim(output || `Exited with ${result.status}.`),
   });

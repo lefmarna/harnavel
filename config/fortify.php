@@ -146,7 +146,8 @@ return [
     'passkeys' => [
         'relying_party_id' => parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST),
         'allowed_origins' => [(string) env('APP_URL', 'http://localhost')],
-        'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET') ?: env('APP_KEY'),
+        // 未設定は null のまま渡す。AppServiceProvider が本番では起動を止め、それ以外は APP_KEY へ倒す。
+        'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET') ?: null,
         'timeout' => 60000,
     ],
 

@@ -9,6 +9,8 @@ use App\ViewModels\PageViewModel;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+mutates(LoginPageViewModel::class, ResetPasswordPageViewModel::class, StatusPageViewModel::class);
+
 describe('Auth 専用 PageViewModel', function () {
     /**
      * @param  array<string, mixed>  $expectedProps

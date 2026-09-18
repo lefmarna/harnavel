@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,8 +45,25 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configurePasskeySecret();
         $this->configureDefaults();
         $this->registerEventListeners();
+    }
+
+    /**
+     * 秘密鍵が APP_KEY へ黙って倒れたままだと、鍵のローテーションで全パスキーが失効する（TADR-0013）。
+     */
+    private function configurePasskeySecret(): void
+    {
+        if (is_string(config('fortify.passkeys.user_handle_secret'))) {
+            return;
+        }
+
+        if ($this->app->isProduction()) {
+            throw new RuntimeException('PASSKEYS_USER_HANDLE_SECRET must be set in production.');
+        }
+
+        Config::set('passkeys.user_handle_secret', config('app.key'));
     }
 
     /**

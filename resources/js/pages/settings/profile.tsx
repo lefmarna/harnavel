@@ -1,7 +1,7 @@
 import { Transition } from "@headlessui/react";
 import { Form, Link, usePage } from "@inertiajs/react";
 
-import ProfileController from "@/actions/App/Http/Controllers/Settings/ProfileController";
+import { update } from "@/actions/App/Http/Controllers/Settings/ProfileController";
 import DeleteUser from "@/components/delete-user";
 import Heading from "@/components/heading";
 import InputError from "@/components/input-error";
@@ -48,7 +48,7 @@ export default function Profile({
           />
 
           <Form
-            {...ProfileController.update.form()}
+            {...update.form()}
             options={{
               preserveScroll: true,
             }}

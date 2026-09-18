@@ -39,6 +39,10 @@ runs:
         restore-keys: |
           ${{ runner.os }}-composer-
 
+    - name: Copy Environment File
+      shell: bash
+      run: cp .env.example .env
+
     - name: Install Dependencies
       shell: bash
       run: |
@@ -70,7 +74,6 @@ runs:
     - name: Generate Wayfinder Files
       shell: bash
       run: |
-        cp .env.example .env
         php artisan key:generate
         php artisan wayfinder:generate --with-form
 

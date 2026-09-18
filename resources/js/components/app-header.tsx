@@ -54,7 +54,9 @@ const rightNavItems: NavItem[] = [
 
 const activeItemStyles = "text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100";
 
-export function AppHeader({ breadcrumbs = [] }: Props) {
+const NO_BREADCRUMBS: BreadcrumbItem[] = [];
+
+export function AppHeader({ breadcrumbs = NO_BREADCRUMBS }: Props) {
   const page = usePage<SharedData>();
   const { auth } = page.props;
   const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
@@ -127,8 +129,11 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
           <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">
             <NavigationMenu className="flex h-full items-stretch">
               <NavigationMenuList className="flex h-full items-stretch space-x-2">
-                {mainNavItems.map((item, index) => (
-                  <NavigationMenuItem key={index} className="relative flex h-full items-center">
+                {mainNavItems.map((item) => (
+                  <NavigationMenuItem
+                    key={item.title}
+                    className="relative flex h-full items-center"
+                  >
                     <Link
                       href={item.href}
                       className={cn(

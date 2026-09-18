@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\ViewModels\Settings\ProfilePageViewModel;
 use Database\Factories\UserFactory;
 use Inertia\Testing\AssertableInertia as Assert;
+
+mutates(ProfilePageViewModel::class);
 
 describe('プロフィール設定', function () {
     it('プロフィール設定画面を表示できる', function () {

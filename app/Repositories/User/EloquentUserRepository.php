@@ -10,17 +10,11 @@ use Illuminate\Support\Facades\Hash;
 
 class EloquentUserRepository implements UserRepositoryContract
 {
-    /**
-     * {@inheritDoc}
-     */
     public function create(array $attributes): User
     {
         return User::create($attributes);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function find(string|int $id, bool $lock = false): ?User
     {
         $query = User::query()->whereKey($id);
@@ -32,9 +26,6 @@ class EloquentUserRepository implements UserRepositoryContract
         return $query->first();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findCandidates(string $googleId, string $email, bool $lock = false): Collection
     {
         $query = User::query()
@@ -49,9 +40,6 @@ class EloquentUserRepository implements UserRepositoryContract
         return $query->get();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findByGoogleId(string $googleId, bool $lock = false): ?User
     {
         $query = User::query()->where('google_id', $googleId);
@@ -63,9 +51,6 @@ class EloquentUserRepository implements UserRepositoryContract
         return $query->first();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function findByEmail(string $email, bool $lock = false): ?User
     {
         $query = User::query()->where('email', $email);
@@ -77,17 +62,11 @@ class EloquentUserRepository implements UserRepositoryContract
         return $query->first();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function save(User $user): void
     {
         $user->save();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function updatePassword(User $user, string $newPassword): void
     {
         $user->password = Hash::make($newPassword);

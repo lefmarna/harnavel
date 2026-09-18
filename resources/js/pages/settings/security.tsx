@@ -2,7 +2,7 @@ import { Transition } from "@headlessui/react";
 import { Form, usePage } from "@inertiajs/react";
 import { useRef } from "react";
 
-import SecurityController from "@/actions/App/Http/Controllers/Settings/SecurityController";
+import { update } from "@/actions/App/Http/Controllers/Settings/SecurityController";
 import Heading from "@/components/heading";
 import InputError from "@/components/input-error";
 import ManagePasskeys from "@/components/manage-passkeys";
@@ -46,7 +46,7 @@ export default function Security({ canManagePasskeys, passkeys }: Props) {
             />
 
             <Form
-              {...SecurityController.update.form()}
+              {...update.form()}
               options={{
                 preserveScroll: true,
               }}

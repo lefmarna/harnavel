@@ -15,7 +15,7 @@ class DomainServiceProvider extends ServiceProvider
      * バインド対象のサービス名プレフィックスリスト
      * 例: 'User' -> UserServiceContract / UserService
      *
-     * @var array<string>
+     * @var list<string>
      */
     private const PREFIXES = [
         'GoogleAuth',
@@ -23,19 +23,11 @@ class DomainServiceProvider extends ServiceProvider
 
     public function register(): void
     {
-        foreach ($this->getPrefixes() as $prefix) {
+        foreach (self::PREFIXES as $prefix) {
             $this->app->singleton(
                 "App\Services\\{$prefix}\\{$prefix}ServiceContract",
                 "App\Services\\{$prefix}\\{$prefix}Service"
             );
         }
-    }
-
-    /**
-     * @return array<string>
-     */
-    protected function getPrefixes(): array
-    {
-        return self::PREFIXES;
     }
 }

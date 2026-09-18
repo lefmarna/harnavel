@@ -17,7 +17,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
-use JsonException;
 
 class GoogleAuthService implements GoogleAuthServiceContract
 {
@@ -221,16 +220,10 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     private function encryptLinkPayload(string $googleId, string $email): string
     {
-        try {
-            return Crypt::encryptString(json_encode([
-                'google_id' => $googleId,
-                'email' => $email,
-            ], JSON_THROW_ON_ERROR));
-            // @codeCoverageIgnoreStart
-        } catch (JsonException $e) {
-            throw new GoogleAuthException(__('auth.google.failed'), previous: $e);
-        }
-        // @codeCoverageIgnoreEnd
+        return Crypt::encryptString(json_encode([
+            'google_id' => $googleId,
+            'email' => $email,
+        ], JSON_THROW_ON_ERROR));
     }
 
     private function normalizeName(?string $name, string $email): string
@@ -242,15 +235,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     private function userKey(User $user): string
     {
-        $key = $user->getKey();
-
-        if (is_int($key) || is_string($key)) {
-            return (string) $key;
-        }
-
-        // @codeCoverageIgnoreStart
-        throw new GoogleAuthException(__('auth.google.failed'));
-        // @codeCoverageIgnoreEnd
+        return (string) $user->id;
     }
 
     /**

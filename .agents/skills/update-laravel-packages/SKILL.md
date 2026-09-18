@@ -240,10 +240,9 @@ default-branch advisories; automated dependency PRs are not used.
   maintenance workflow intentionally refreshes the dependency graph; preserve the approved
   declarations instead of letting pnpm rewrite their ranges.
 - Confirm the regenerated lockfile still records each aliased or overridden importer's resolved
-  specifier. pnpm 12.2.1 writes the raw manifest range instead, so `pnpm-workspace.yaml`'s `vite@*`
-  override makes the later frozen install fail with `ERR_PNPM_OUTDATED_LOCKFILE`. Re-run plain
-  `pnpm install --lockfile-only` to restore it; that keeps the refreshed resolutions. Never repair
-  the mismatch by editing the lockfile.
+  specifier; the pnpm `vite@*` override symptom and its fix are in
+  [routine app-side maintenance](../merge-template/references/dependency-reconciliation.md#routine-app-side-maintenance).
+  Never repair the mismatch by editing the lockfile.
 - Review direct and transitive changes before continuing.
 - Run `composer audit --locked` and `pnpm audit`. Resolve findings where possible. Require approval
   for accepted advisories, abandoned packages without a safe replacement, or fixes outside the

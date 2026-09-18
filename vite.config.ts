@@ -40,7 +40,8 @@ export default defineConfig(({ mode }) => {
         input: ["resources/css/app.css", "resources/js/app.tsx"],
         refresh: true,
       }),
-      inertia(),
+      // 既定では app.tsx を SSR エントリとみなして dev サーバーが読み込もうとする。
+      inertia({ ssr: false }),
       react(),
       babel({
         presets: [reactCompilerPreset()],
@@ -54,6 +55,8 @@ export default defineConfig(({ mode }) => {
     lint: {
       categories: {
         correctness: "error",
+        perf: "warn",
+        suspicious: "warn",
       },
       plugins: ["eslint", "import", "typescript", "unicorn", "oxc", "react"],
       options: {
@@ -61,8 +64,13 @@ export default defineConfig(({ mode }) => {
       },
       rules: {
         "eslint/no-fallthrough": "error",
+        // scripts の __dirname / __filename は Node の慣習で、見た目の警告に価値がない。
+        "eslint/no-underscore-dangle": "off",
         "import/default": "off",
         "import/namespace": "off",
+        "import/no-unassigned-import": ["warn", { allow: ["**/*.css"] }],
+        // 自動 JSX ランタイムでは React の import が不要。
+        "react/react-in-jsx-scope": "off",
         "react/rules-of-hooks": "error",
         "react/exhaustive-deps": "error",
         // コンポーネントの関数呼び出しを検出するルールは correctness に含まれないため、個別に有効化する。
@@ -96,6 +104,7 @@ export default defineConfig(({ mode }) => {
         "typescript/no-unsafe-function-type": "error",
         "typescript/no-unsafe-member-access": "error",
         "typescript/no-unsafe-return": "error",
+        "typescript/no-unsafe-type-assertion": "error",
         "typescript/switch-exhaustiveness-check": "error",
         "typescript/no-useless-default-assignment": "off",
       },

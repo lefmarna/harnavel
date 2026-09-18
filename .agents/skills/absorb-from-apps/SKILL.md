@@ -117,8 +117,8 @@ git -C "$d" grep -nI -E '<<<<<<<|>>>>>>>' -- . ':(exclude)vendor/**' ':(exclude)
 ## Example
 
 ```bash
-# Absorb from four derived apps.
-/absorb-from-apps APPS="../app-one ../app-two ../app-three ../app-four"
+# Absorb from two derived apps checked out beside the template.
+/absorb-from-apps APPS="../app-one ../app-two"
 ```
 
 ## Related

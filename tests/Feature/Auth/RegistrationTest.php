@@ -3,10 +3,22 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\ViewModels\WelcomePageViewModel;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 
+mutates(WelcomePageViewModel::class);
+
 describe('ユーザー登録', function () {
+    it('登録機能が有効なときホームページは登録導線を公開する', function () {
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('welcome')
+                ->where('canRegister', true)
+            );
+    });
+
     it('登録画面を表示できる', function () {
         $response = $this->get(route('register'));
 

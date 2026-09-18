@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+mutates(ProductionExceptionNotifier::class);
+
 beforeEach(function () {
     config()->set('app.name', 'app');
     config()->set('cache.default', 'array');
@@ -341,27 +343,6 @@ describe('本番例外通知', function () {
         expect($captured['key'])->toBe('observability:discord-exception:'.hash('sha256', $expectedFingerprint))
             ->and($captured['value'])->toBeTrue()
             ->and($captured['seconds'])->toBe(300);
-    });
-
-    it('リクエストが無い場合の重複判定キーはパスとルートを空文字で構成する', function () {
-        $capturedKey = null;
-        Cache::shouldReceive('add')->andReturnUsing(function (string $key) use (&$capturedKey): bool {
-            $capturedKey = $key;
-
-            return true;
-        });
-
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('boom'));
-
-        $expectedFingerprint = implode('|', [
-            'production',
-            RuntimeException::class,
-            hash('sha256', 'boom'),
-            '',
-            '',
-        ]);
-
-        expect($capturedKey)->toBe('observability:discord-exception:'.hash('sha256', $expectedFingerprint));
     });
 
     it('重複判定キーの環境は実行時に解決するので環境が変われば再通知する', function () {

@@ -57,6 +57,7 @@ function proxyRequestMetadata(string $environment, string $dockerBindAddress = '
     $response = $kernel->handle($request);
 
     echo json_encode([
+        'status' => $response->getStatusCode(),
         'secure' => $request->secure(),
         'url' => url('/probe'),
         'host' => $request->host(),
@@ -72,13 +73,18 @@ function proxyRequestMetadata(string $environment, string $dockerBindAddress = '
         [
             'APP_ENV' => $environment,
             'DOCKER_BIND_ADDRESS' => $dockerBindAddress,
+            'PASSKEYS_USER_HANDLE_SECRET' => 'test-reverse-proxy-dummy-secret',
         ],
     );
     $process->mustRun();
 
+    /** @var array{status: int, secure: bool, url: string, host: string, clientIp: string|null} $metadata */
     $metadata = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
 
-    expect($metadata)->toBeArray();
+    expect($metadata)->toBeArray()
+        ->and($metadata['status'])->toBe(200, "子プロセスの HTTP レスポンスが 200 ではありません（実際: {$metadata['status']}）");
+
+    unset($metadata['status']);
 
     /** @var array{secure: bool, url: string, host: string, clientIp: string|null} $metadata */
     return $metadata;

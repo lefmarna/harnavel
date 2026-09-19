@@ -58,7 +58,7 @@ function securityEntryPointResponse(Closure $prepare, string $path = '/', array 
             'VIEW_COMPILED_PATH' => $directory.'/storage/framework/views',
             'LOG_CHANNEL' => 'stderr',
             'PHP_CLI_SERVER_WORKERS' => false,
-        ], timeout: 10);
+        ], timeout: 60);
 
         $server->start();
         $output = '';

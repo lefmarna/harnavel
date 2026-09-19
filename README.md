@@ -53,7 +53,7 @@ mise run up             # コンテナ起動
 mise run stop           # コンテナ停止
 mise run down           # コンテナ停止 + 削除
 mise run app            # app コンテナへ入る
-mise run verify:backend # Pint -> Larastan -> Pest（カバレッジ 90% 以上）
+mise run verify:backend # Pint -> Larastan -> Pest（カバレッジ閾値は mise.toml を参照）
 pnpm format:check       # Oxfmt チェックのみ
 pnpm lint:check         # type-aware Oxlint（変更なし）
 pnpm fix                # Oxlint の safe fix + Oxfmt

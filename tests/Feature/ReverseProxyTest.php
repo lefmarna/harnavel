@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Symfony\Component\Process\Process;
+use Tests\Support\AppSubprocess;
 
 describe('リバースプロキシ', function () {
     it('ローカル環境では直前のproxyが伝えたHTTPS schemeだけを信頼する', function () {
@@ -67,16 +67,13 @@ function proxyRequestMetadata(string $environment, string $dockerBindAddress = '
     $kernel->terminate($request, $response);
     PHP;
 
-    $process = new Process(
-        [PHP_BINARY, '-r', $script],
-        base_path(),
-        [
-            'APP_ENV' => $environment,
-            'DOCKER_BIND_ADDRESS' => $dockerBindAddress,
-            'PASSKEYS_USER_HANDLE_SECRET' => 'test-reverse-proxy-dummy-secret',
-        ],
-    );
-    $process->mustRun();
+    $process = AppSubprocess::php($script, AppSubprocess::productionEnvironment([
+        'APP_ENV' => $environment,
+        'DOCKER_BIND_ADDRESS' => $dockerBindAddress,
+    ]));
+
+    expect($process->isSuccessful())
+        ->toBeTrue($process->getOutput().$process->getErrorOutput());
 
     /** @var array{status: int, secure: bool, url: string, host: string, clientIp: string|null} $metadata */
     $metadata = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);

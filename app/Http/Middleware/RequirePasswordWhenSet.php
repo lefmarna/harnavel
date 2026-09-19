@@ -19,6 +19,9 @@ use Illuminate\Http\Request;
 final class RequirePasswordWhenSet extends RequirePassword
 {
     /**
+     * 親の宣言どおり int|null で受け、そのまま渡す。Laravel の handle() は string|int|null だが、
+     * 広げてキャストで詰めると数値文字列の比較が実行時等価になり、殺せないミュータントが残る。
+     *
      * @param  Request  $request
      * @param  int|null  $passwordTimeoutSeconds
      */

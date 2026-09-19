@@ -132,19 +132,24 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
   await expect(page).toHaveURL(HOME_URL);
 });
 
-test("Conditional UI が使える環境では手動のパスキーボタンを表示しない", async ({
+test("Conditional UI 対応ブラウザでは自動入力に任せて手動ボタンを出さない", async ({
   page,
+  context,
   browserName,
 }) => {
-  test.skip(browserName !== "chromium", "PublicKeyCredential の差し替えは Chromium で検証する");
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
 
-  await page.addInitScript(() => {
-    PublicKeyCredential.isConditionalMediationAvailable = async () => true;
-  });
+  // isConditionalMediationAvailable はヘッドレスでも true を返すので、この分岐には常に入る。
+  // 仮想オーセンティケータがないと自動入力の ceremony が NotSupportedError で落ち、
+  // フォールバックのボタンが出てしまう。
+  await enableVirtualAuthenticator(page, context);
 
+  const loginOptions = page.waitForResponse("**/passkeys/login/options");
   await page.goto("/login");
+  await loginOptions;
 
-  // React のマウントを待ってから、ボタンが出ないことを確かめる。
-  await expect(page.getByLabel("メールアドレス")).toBeVisible();
+  // Conditional UI は autocomplete の末尾が webauthn の入力欄を要求する。無いと ceremony が
+  // 例外になり、ボタンも隠れたままログイン導線が消える。
+  await expect(page.locator('input[autocomplete$="webauthn"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeHidden();
 });

@@ -151,5 +151,7 @@ test("Conditional UI 対応ブラウザでは自動入力に任せて手動ボ�
   // Conditional UI は autocomplete の末尾が webauthn の入力欄を要求する。無いと ceremony が
   // 例外になり、ボタンも隠れたままログイン導線が消える。
   await expect(page.locator('input[autocomplete$="webauthn"]')).toBeVisible();
-  await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeHidden();
+  // 非表示の検証にアクセシブル名を使わない。ボタン名は label / loadingLabel props で変わり、
+  // 変わった瞬間に 0 件マッチとなって toBeHidden が素通りする。
+  await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();
 });

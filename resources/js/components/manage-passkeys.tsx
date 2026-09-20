@@ -28,17 +28,17 @@ function EmptyState() {
   );
 }
 
-const handleDelete = (id: number, onError: () => void): void => {
-  router.delete(destroy.url(id), {
-    preserveScroll: true,
-    onError,
-  });
-};
-
 export default function ManagePasskeys({ canManagePasskeys, passkeys }: Props) {
   if (!canManagePasskeys) {
     return null;
   }
+
+  const handleDelete = (id: number, onError: () => void): void => {
+    router.delete(destroy.url(id), {
+      preserveScroll: true,
+      onError,
+    });
+  };
 
   return (
     <div className="space-y-6">

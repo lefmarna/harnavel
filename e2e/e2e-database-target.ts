@@ -15,8 +15,6 @@ export type DatabaseTarget = {
 
 const TARGET_KEYS: readonly (keyof DatabaseTarget)[] = ["host", "database"];
 
-const describeTarget = (target: DatabaseTarget): string => `${target.host} / ${target.database}`;
-
 export function isDatabaseTarget(value: unknown): value is DatabaseTarget {
   return (
     typeof value === "object" &&
@@ -37,6 +35,8 @@ export function assertE2eTarget(
   if (mismatched.length === 0) {
     return;
   }
+
+  const describeTarget = (target: DatabaseTarget): string => `${target.host} / ${target.database}`;
 
   throw new Error(
     `E2E の接続先が ${describeTarget(expected)} ではなく ${describeTarget(resolved)} です` +

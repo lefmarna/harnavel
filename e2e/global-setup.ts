@@ -77,7 +77,6 @@ async function waitForDatabase(artisan: ArtisanRunner, timeoutMs = 60_000): Prom
         });
       }
 
-      // oxlint-disable-next-line eslint/no-await-in-loop
       await sleep(500);
     }
   }

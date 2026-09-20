@@ -80,7 +80,6 @@ table.
 - Frontend pages, components, layouts, hooks, and presentation that this template implements
   independently from Laravel's default starter UI.
 - Layer decisions and PageViewModel/Wayfinder conventions established by Template ADRs and tests.
-- The one-line `CLAUDE.md` and `GEMINI.md` pointers to `AGENTS.md`.
 
 ### Follow upstream by default
 

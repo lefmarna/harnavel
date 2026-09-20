@@ -30,7 +30,7 @@ async function findMarkdownFiles(dir: string): Promise<string[]> {
     files.push(path.join(dir, entry));
   }
 
-  for (const name of ["AGENTS.md", "CLAUDE.md", "GEMINI.md", "CONTEXT.md", "README.md"]) {
+  for (const name of ["AGENTS.md", "CONTEXT.md", "README.md"]) {
     const p = path.join(ROOT, name);
 
     if (fs.existsSync(p)) {
@@ -77,31 +77,6 @@ function checkLinks(filePath: string, content: string): LinkError[] {
           reason: `Target not found: ${path.relative(ROOT, resolved)}`,
         });
       }
-    }
-  }
-
-  return errors;
-}
-
-function checkPointerFiles(): LintError[] {
-  const errors: LintError[] = [];
-  const pointerFiles = ["CLAUDE.md", "GEMINI.md"];
-
-  for (const name of pointerFiles) {
-    const filePath = path.join(ROOT, name);
-
-    if (!fs.existsSync(filePath)) {
-      continue;
-    }
-
-    const content = fs.readFileSync(filePath, "utf-8");
-    const trimmed = content.trim();
-
-    if (trimmed !== "@AGENTS.md") {
-      errors.push({
-        file: name,
-        reason: `Must contain exactly "@AGENTS.md" (one-line pointer). Found: ${JSON.stringify(trimmed.slice(0, 80))}`,
-      });
     }
   }
 
@@ -327,19 +302,14 @@ async function main() {
     allLinkErrors.push(...checkLinks(file, content));
   }
 
-  const pointerErrors = checkPointerFiles();
   const frontmatterErrors = await checkSkillFrontmatter();
   const pointerSkillErrors = checkSkillPointers();
 
   const hasErrors =
-    allLinkErrors.length > 0 ||
-    pointerErrors.length > 0 ||
-    frontmatterErrors.length > 0 ||
-    pointerSkillErrors.length > 0;
+    allLinkErrors.length > 0 || frontmatterErrors.length > 0 || pointerSkillErrors.length > 0;
 
   if (!hasErrors) {
     console.log(`✓ ${files.length} markdown files checked, no broken links found.`);
-    console.log("✓ Pointer files (CLAUDE.md, GEMINI.md) are valid.");
     console.log("✓ Skill frontmatter valid in .claude/skills and .agents/skills.");
     console.log(
       `✓ Repo-owned skills (${REPO_OWNED_SKILLS.join(", ")}) point at their canonical body.`,
@@ -352,15 +322,6 @@ async function main() {
 
     for (const err of allLinkErrors) {
       console.error(`  ${err.file}:${err.line} → ${err.link}`);
-      console.error(`    ${err.reason}\n`);
-    }
-  }
-
-  if (pointerErrors.length > 0) {
-    console.error(`✗ Found ${pointerErrors.length} pointer file error(s):\n`);
-
-    for (const err of pointerErrors) {
-      console.error(`  ${err.file}`);
       console.error(`    ${err.reason}\n`);
     }
   }

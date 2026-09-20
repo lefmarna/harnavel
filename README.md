@@ -58,7 +58,7 @@ pnpm format:check       # Oxfmt チェックのみ
 pnpm lint:check         # type-aware Oxlint（変更なし）
 pnpm fix                # Oxlint の safe fix + Oxfmt
 pnpm types:check        # TypeScript 型チェック
-pnpm lint:docs          # docs/ + README/AGENTS/CLAUDE のリンク検証
+pnpm lint:docs          # docs/ + README/AGENTS/CONTEXT のリンク検証
 pnpm test:e2e --project=chromium
 ```
 
@@ -67,7 +67,7 @@ pnpm test:e2e --project=chromium
 ## ドキュメントの見方
 
 - [README](README.md): 人間向けの概要とセットアップ
-- [AGENTS.md](AGENTS.md): AI エージェント向けの起点（`CLAUDE.md` / `GEMINI.md` はここへのポインタ）
+- [AGENTS.md](AGENTS.md): AI エージェント向けの起点
 - [CONTEXT.md](CONTEXT.md): ドメイン用語集（展開先プロジェクトで育てる）
 - [docs/testing-as-spec.md](docs/testing-as-spec.md): テストの責務分担とミューテーション方針
 - [docs/logging-guidelines.md](docs/logging-guidelines.md): アプリケーションログの運用ルール

@@ -327,7 +327,7 @@ function run(command, cwd) {
   });
 }
 
-function captureFailure(command, cwd, title, sink) {
+function captureFailure(command, cwd, title, failures) {
   const result = run(command, cwd);
 
   if (result.status === 0) {
@@ -335,7 +335,7 @@ function captureFailure(command, cwd, title, sink) {
   }
 
   const output = `${result.stdout}\n${result.stderr}`.trim();
-  sink.push({
+  failures.push({
     title,
     output: trim(output || `Exited with ${result.status}.`),
   });

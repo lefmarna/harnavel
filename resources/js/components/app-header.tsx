@@ -54,9 +54,7 @@ const rightNavItems: NavItem[] = [
 
 const activeItemStyles = "text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100";
 
-const NO_BREADCRUMBS: BreadcrumbItem[] = [];
-
-export function AppHeader({ breadcrumbs = NO_BREADCRUMBS }: Props) {
+export function AppHeader({ breadcrumbs = [] }: Props) {
   const page = usePage<SharedData>();
   const { auth } = page.props;
   const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();

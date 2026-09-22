@@ -1,7 +1,7 @@
 # DOCKER_BIND_ADDRESS は別端末から見るときだけ 0.0.0.0 にする。単一 bind なので個別 IP を指定すると localhost が届かなくなる。
 services:
   nginx:
-    build: "./.docker/nginx"
+    image: nginx:stable
     container_name: ${APP_NAME:-app}-nginx
     ports:
       - "${DOCKER_BIND_ADDRESS:-127.0.0.1}:${NGINX_PORT:-80}:80"

@@ -9,6 +9,12 @@ Composer PHARs are provisioned manually, outside the repository. A matching PHAR
 Develop and Production before repository configuration selects that version. The delivery workflow
 verifies the remote PHAR and its version but does not provision it.
 
+## Web server layers
+
+A vendor-managed nginx layer fronts an Apache layer that reads `.htaccess`. Production behavior that
+needs a server layer therefore belongs in `.htaccess`; the nginx configuration in this repository is
+local only.
+
 ## OPcache
 
 Last measured: September 2026.

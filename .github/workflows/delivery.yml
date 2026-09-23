@@ -86,6 +86,8 @@ jobs:
           '
 
       - name: Create deployment package
+        env:
+          XSERVER_USER: ${{ secrets.XSERVER_USER }}
         run: |
           mkdir -p .deploy
           rsync -av --exclude-from='.deployignore' ./ .deploy/
@@ -93,6 +95,19 @@ jobs:
           if [ "${{ github.ref_name }}" = "develop" ]; then
             test -f .htaccess.develop
             cp .htaccess.develop .deploy/.htaccess
+            if [[ -z "${XSERVER_USER:-}" ]]; then
+              echo "XSERVER_USER is required." >&2
+              exit 1
+            fi
+            if [[ ! "$XSERVER_USER" =~ ^[a-z][a-z0-9]{2,11}$ ]]; then
+              echo "XSERVER_USER must be a valid XServer server ID." >&2
+              exit 1
+            fi
+            if ! grep -Fq '{XSERVER_USER}' .deploy/.htaccess; then
+              echo "Deployment .htaccess is missing {XSERVER_USER}." >&2
+              exit 1
+            fi
+            sed -i "s/{XSERVER_USER}/${XSERVER_USER}/g" .deploy/.htaccess
             printf 'User-agent: *\nDisallow: /\n' > .deploy/public/robots.txt
             rm -f .deploy/public/sitemap.xml
           fi

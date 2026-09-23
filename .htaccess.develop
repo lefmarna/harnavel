@@ -29,14 +29,13 @@
   Require all denied
 </FilesMatch>
 
-# HTTP転送とSSL検証をBasic認証で妨げないため
+# SSL証明書のHTTP-01検証をBasic認証で妨げないため
 <IfModule mod_rewrite.c>
   AuthUserFile "/home/{XSERVER_USER}/laravel-app-template.com/htpasswd/dev.laravel-app-template.com/.htpasswd"
   AuthName "Member Site"
   AuthType Basic
 
   <RequireAny>
-    Require expr "%{HTTPS} != 'on'"
     Require expr "%{REQUEST_URI} =~ m#^/\.well-known/acme-challenge(?:/|$)#"
     Require valid-user
   </RequireAny>

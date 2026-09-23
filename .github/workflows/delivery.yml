@@ -92,7 +92,7 @@ jobs:
           mkdir -p .deploy
           rsync -av --exclude-from='.deployignore' ./ .deploy/
 
-          if [ "${{ github.ref_name }}" = "develop" ]; then
+          if [ "$GITHUB_REF_NAME" = "develop" ]; then
             test -f .htaccess.develop
             cp .htaccess.develop .deploy/.htaccess
             if [[ -z "${XSERVER_USER:-}" ]]; then

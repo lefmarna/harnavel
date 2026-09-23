@@ -1,6 +1,6 @@
 name = "explorer"
 description = "Read-only codebase explorer for self-contained, search-heavy evidence gathering."
-model = "gpt-5.6-luna"
+model = "gpt-6-luna"
 model_reasoning_effort = "max"
 service_tier = "fast"
 sandbox_mode = "read-only"

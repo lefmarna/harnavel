@@ -25,7 +25,7 @@
 
   # public/への再転送ループを防ぐため
   RewriteCond %{REQUEST_URI} !^/public/
-  RewriteRule ^(.*)$ public/$1 [QSA,L]
+  RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
 # セキュリティルールが適用できない状態で公開しないため

@@ -46,6 +46,7 @@ export type SharedData = {
   appDisplayName: string;
   appDescription: string;
   defaultRobots?: string | null;
+  passkeyAllowedOrigins: string[];
   seo: SeoData;
   auth: Auth;
   tracking: Tracking;

@@ -5,6 +5,23 @@ import { enableVirtualAuthenticator } from "../support/passkey";
 // ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
 const HOME_URL = /\/dashboard$/;
 
+test("設定した origin と異なる URL ではパスキー操作を隠しパスワードログイン画面を表示する", async ({
+  page,
+}) => {
+  const baseURL = test.info().project.use.baseURL;
+  if (!baseURL) {
+    throw new Error("E2E の baseURL が必要です");
+  }
+
+  const loginURL = new URL("/login", baseURL);
+  loginURL.hostname = "127.0.0.1";
+
+  await page.goto(loginURL.href, { waitUntil: "networkidle" });
+
+  await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
+  await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();
+});
+
 test("パスキーを登録してパスキーだけでログインできる", async ({ page, context, browserName }) => {
   test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
 

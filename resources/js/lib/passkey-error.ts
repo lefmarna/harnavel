@@ -1,20 +1,31 @@
-import type { PasskeyError } from "@laravel/passkeys";
-
-/**
- * ライブラリがブラウザ内で組み立てる文言。lang ファイルでは訳せないため、エラー名で対応づける。
- * サーバーが返した文言は Laravel 側で訳されているので、そのまま通す。
- */
-const BROWSER_MESSAGES: Record<string, string> = {
-  UserCancelledError: "パスキーの操作をキャンセルしました。",
-  PasskeyExistsError: "この端末はすでにパスキーとして登録されています。",
-  NotSupportedError: "このブラウザはパスキーに対応していません。",
-  InvalidDomainError: "このドメインではパスキーを利用できません。",
-};
+import {
+  InvalidDomainError,
+  NotSupportedError,
+  PasskeyExistsError,
+  UserCancelledError,
+  type PasskeyError,
+} from "@laravel/passkeys";
 
 export const passkeyErrorMessage = (error: PasskeyError | null): string | null => {
   if (!error) {
     return null;
   }
 
-  return BROWSER_MESSAGES[error.name] ?? error.message;
+  if (error instanceof UserCancelledError) {
+    return "パスキーの操作をキャンセルしました。";
+  }
+
+  if (error instanceof PasskeyExistsError) {
+    return "この端末はすでにパスキーとして登録されています。";
+  }
+
+  if (error instanceof NotSupportedError) {
+    return "このブラウザはパスキーに対応していません。";
+  }
+
+  if (error instanceof InvalidDomainError) {
+    return "このドメインではパスキーを利用できません。";
+  }
+
+  return error.message;
 };

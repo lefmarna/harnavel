@@ -7,6 +7,7 @@ namespace App\Http\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use Inertia\Middleware;
+use Laravel\Passkeys\Passkeys;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -65,6 +66,7 @@ class HandleInertiaRequests extends Middleware
             'appDisplayName' => config('app.display_name', config('app.name', 'Laravel')),
             'appDescription' => config('app.description', ''),
             'defaultRobots' => $defaultRobots,
+            'passkeyAllowedOrigins' => Passkeys::allowedOrigins(),
             'seo' => [
                 'title' => null,
                 'description' => null,

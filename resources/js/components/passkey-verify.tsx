@@ -1,5 +1,5 @@
 import type { UrlMethodPair } from "@inertiajs/core";
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import { usePasskeyVerify } from "@laravel/passkeys/react";
 import { KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { passkeyErrorMessage } from "@/lib/passkey-error";
+import type { SharedData } from "@/types";
 
 type Props = {
   autofill?: boolean;
@@ -21,13 +22,17 @@ type Props = {
   separator?: string;
 };
 
-export default function PasskeyVerify({
-  autofill,
-  routes,
-  label,
-  loadingLabel,
-  separator,
-}: Props = {}) {
+export default function PasskeyVerify(props: Props = {}) {
+  const { passkeyAllowedOrigins } = usePage<SharedData>().props;
+
+  if (!passkeyAllowedOrigins.includes(window.location.origin)) {
+    return null;
+  }
+
+  return <AvailablePasskeyVerify {...props} />;
+}
+
+function AvailablePasskeyVerify({ autofill, routes, label, loadingLabel, separator }: Props = {}) {
   const { verify, isLoading, errorInstance, isSupported } = usePasskeyVerify({
     autofill,
     ...(routes && {
@@ -43,7 +48,6 @@ export default function PasskeyVerify({
     },
   });
 
-  // Conditional UI 対応ブラウザでは自動入力に任せ、非対応環境ではボタンで補う。
   const [isConditionalUiAvailable, setIsConditionalUiAvailable] = useState(false);
   useEffect(() => {
     if (!autofill) return;

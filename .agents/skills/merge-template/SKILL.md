@@ -108,7 +108,8 @@ Special cases:
    `git checkout "$template_ref" -- <path>`.
 
 10. Run relevant checks from `AGENTS.md`, starting narrowly.
-11. Stage resolved files, review the staged diff, and stop before committing.
+11. Stage resolved files, review the staged diff, and stop before committing. Resolve a deletion
+    by removing the file with `rm` and staging the path with `git add`; never use `git rm`.
 
 Report template choices, preserved app choices, deleted or consolidated tests, verification
 results, dependency changes and their reasons, audit findings and maintenance follow-ups, and any

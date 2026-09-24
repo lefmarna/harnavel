@@ -5,7 +5,7 @@ import { enableVirtualAuthenticator } from "../support/passkey";
 // ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
 const HOME_URL = /\/dashboard$/;
 
-test("設定した origin と異なる URL ではパスキー操作を隠しパスワードログイン画面を表示する", async ({
+test("設定した origin と異なる URL ではパスキー操作を隠し利用できない理由を案内する", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -19,6 +19,7 @@ test("設定した origin と異なる URL ではパスキー操作を隠しパ�
 
   const loginURL = new URL("/login", baseURL);
   loginURL.hostname = "127.0.0.1";
+  const securityURL = new URL("/settings/security", loginURL);
 
   await page.goto("/login");
   await expect(page.locator('[data-test="passkey-verify-button"]')).toBeVisible();
@@ -27,6 +28,19 @@ test("設定した origin と異なる URL ではパスキー操作を隠しパ�
 
   await expect(page.locator('[data-test="login-button"]')).toBeVisible();
   await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();
+
+  await page.getByLabel("メールアドレス").fill("test@example.com");
+  await page.getByLabel("パスワード").fill("Test1234");
+  await page.locator('[data-test="login-button"]').click();
+  await expect(page).toHaveURL(HOME_URL);
+
+  await page.goto(securityURL.href);
+  await page.locator('input[name="password"]').fill("Test1234");
+  await page.locator('[data-test="confirm-password-button"]').click();
+  await expect(page).toHaveURL(/\/settings\/security$/);
+
+  await expect(page.locator('[data-test="add-passkey-button"]')).toBeHidden();
+  await expect(page.locator('[data-test="passkey-register-unavailable"]')).toHaveText(/\S/);
 });
 
 test("パスキーを登録してパスキーだけでログインできる", async ({ page, context, browserName }) => {

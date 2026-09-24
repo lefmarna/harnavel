@@ -1,4 +1,4 @@
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import { usePasskeyRegister } from "@laravel/passkeys/react";
 import { useState } from "react";
 
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { passkeyErrorMessage } from "@/lib/passkey-error";
+import type { SharedData } from "@/types";
 
 type Props = {
   onSuccess: () => void;
@@ -34,7 +35,21 @@ const defaultPasskeyName = (): string => {
   return [os, browser].filter(Boolean).join(" の ");
 };
 
-export default function PasskeyRegister({ onSuccess }: Props) {
+export default function PasskeyRegister(props: Props) {
+  const { passkeyAllowedOrigins } = usePage<SharedData>().props;
+
+  if (!passkeyAllowedOrigins.includes(window.location.origin)) {
+    return (
+      <p className="text-sm text-muted-foreground" data-test="passkey-register-unavailable">
+        このURLではパスキーを追加できません。
+      </p>
+    );
+  }
+
+  return <AvailablePasskeyRegister {...props} />;
+}
+
+function AvailablePasskeyRegister({ onSuccess }: Props) {
   const [name, setName] = useState(defaultPasskeyName);
   const [showForm, setShowForm] = useState(false);
 
@@ -44,8 +59,7 @@ export default function PasskeyRegister({ onSuccess }: Props) {
       setShowForm(false);
       onSuccess();
     },
-    // キャンセルや重複登録は固有のエラー名を持つため、ここには入らない。残るのは期限切れの
-    // パスワード確認（423）や通信エラーで、再訪すれば確認画面へ送られるか同じ画面に戻るだけ。
+    // 423 を含む汎用エラーでは画面を更新し、期限切れのパスワード確認へ遷移できるようにする。
     onError: (passkeyError) => {
       if (passkeyError.name === "PasskeyError") {
         router.reload();

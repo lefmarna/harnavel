@@ -3,12 +3,27 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Inertia\Testing\AssertableInertia;
 use Laravel\Passkeys\Passkey;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Symfony\Component\Process\Process;
 use Tests\Support\AppSubprocess;
 
 describe('パスキー', function () {
+    it('画面へ渡す許可 origin はサーバーの照合と同じ表記に正規化する', function () {
+        config(['passkeys.allowed_origins' => ['https://example.test/', 'example.test:8443']]);
+
+        $this->get(route('login'))->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('passkeyAllowedOrigins', ['https://example.test']));
+    });
+
+    it('許可 origin が空でもログイン画面を表示しパスキー導線を止める', function () {
+        config(['passkeys.allowed_origins' => []]);
+
+        $this->get(route('login'))->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('passkeyAllowedOrigins', []));
+    });
+
     it('パスキー登録の候補は未認証では取得できない', function () {
         $this->get(route('passkey.registration-options'))
             ->assertRedirect(route('login'));

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Support\PasskeyBrowserOrigins;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use Inertia\Middleware;
 use Laravel\Passkeys\Passkeys;
+use RuntimeException;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -58,6 +60,13 @@ class HandleInertiaRequests extends Middleware
 
         View::share('tracking', $tracking);
 
+        try {
+            $allowedOrigins = Passkeys::allowedOrigins();
+        } catch (RuntimeException) {
+            // パスキー設定の欠落で、ほかの画面まで表示不能にしない。
+            $allowedOrigins = [];
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -66,7 +75,7 @@ class HandleInertiaRequests extends Middleware
             'appDisplayName' => config('app.display_name', config('app.name', 'Laravel')),
             'appDescription' => config('app.description', ''),
             'defaultRobots' => $defaultRobots,
-            'passkeyAllowedOrigins' => Passkeys::allowedOrigins(),
+            'passkeyAllowedOrigins' => PasskeyBrowserOrigins::from($allowedOrigins),
             'seo' => [
                 'title' => null,
                 'description' => null,

@@ -1,9 +1,30 @@
+import type { Page } from "@playwright/test";
+
 import { expirePasswordConfirmation } from "../support/artisan";
 import { expect, test } from "../support/fixtures";
 import { enableVirtualAuthenticator } from "../support/passkey";
 
 // ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
 const HOME_URL = /\/dashboard$/;
+
+const openSecuritySettings = async (page: Page): Promise<void> => {
+  await page.goto("/login");
+  await page.getByLabel("メールアドレス").fill("test@example.com");
+  await page.getByLabel("パスワード").fill("Test1234");
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(HOME_URL);
+
+  await page.goto("/settings/security");
+  await page.locator('input[name="password"]').fill("Test1234");
+  await page.locator('[data-test="confirm-password-button"]').click();
+  await expect(page).toHaveURL(/\/settings\/security$/);
+};
+
+const registerPasskey = async (page: Page, name: string): Promise<void> => {
+  await page.getByRole("button", { name: "パスキーを追加" }).click();
+  await page.getByLabel("パスキーの名前").fill(name);
+  await page.getByRole("button", { name: "パスキーを登録" }).click();
+};
 
 test("設定した origin と異なる URL ではパスキー操作を隠し利用できない理由を案内する", async ({
   page,
@@ -48,20 +69,9 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await enableVirtualAuthenticator(page, context);
 
-  await page.goto("/login");
-  await page.getByLabel("メールアドレス").fill("test@example.com");
-  await page.getByLabel("パスワード").fill("Test1234");
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(HOME_URL);
+  await openSecuritySettings(page);
 
-  await page.goto("/settings/security");
-  await page.locator('input[name="password"]').fill("Test1234");
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(/\/settings\/security$/);
-
-  await page.getByRole("button", { name: "パスキーを追加" }).click();
-  await page.getByLabel("パスキーの名前").fill("E2E オーセンティケータ");
-  await page.getByRole("button", { name: "パスキーを登録" }).click();
+  await registerPasskey(page, "E2E オーセンティケータ");
 
   await expect(page.getByText("E2E オーセンティケータ")).toBeVisible();
 
@@ -87,22 +97,11 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await enableVirtualAuthenticator(page, context);
 
-  await page.goto("/login");
-  await page.getByLabel("メールアドレス").fill("test@example.com");
-  await page.getByLabel("パスワード").fill("Test1234");
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(HOME_URL);
-
-  await page.goto("/settings/security");
-  await page.locator('input[name="password"]').fill("Test1234");
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(/\/settings\/security$/);
+  await openSecuritySettings(page);
 
   expirePasswordConfirmation();
 
-  await page.getByRole("button", { name: "パスキーを追加" }).click();
-  await page.getByLabel("パスキーの名前").fill("期限切れ後のパスキー");
-  await page.getByRole("button", { name: "パスキーを登録" }).click();
+  await registerPasskey(page, "期限切れ後のパスキー");
 
   await expect(page).toHaveURL(/\/user\/confirm-password$/);
 
@@ -110,9 +109,7 @@ test("パスワード確認の期限が切れても再確認してパスキー�
   await page.locator('[data-test="confirm-password-button"]').click();
   await expect(page).toHaveURL(/\/settings\/security$/);
 
-  await page.getByRole("button", { name: "パスキーを追加" }).click();
-  await page.getByLabel("パスキーの名前").fill("期限切れ後のパスキー");
-  await page.getByRole("button", { name: "パスキーを登録" }).click();
+  await registerPasskey(page, "期限切れ後のパスキー");
 
   await expect(page.getByText("期限切れ後のパスキー")).toBeVisible();
 });
@@ -126,20 +123,9 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
 
   await enableVirtualAuthenticator(page, context);
 
-  await page.goto("/login");
-  await page.getByLabel("メールアドレス").fill("test@example.com");
-  await page.getByLabel("パスワード").fill("Test1234");
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(HOME_URL);
+  await openSecuritySettings(page);
 
-  await page.goto("/settings/security");
-  await page.locator('input[name="password"]').fill("Test1234");
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(/\/settings\/security$/);
-
-  await page.getByRole("button", { name: "パスキーを追加" }).click();
-  await page.getByLabel("パスキーの名前").fill("自動入力リトライ用");
-  await page.getByRole("button", { name: "パスキーを登録" }).click();
+  await registerPasskey(page, "自動入力リトライ用");
 
   await expect(page.getByText("自動入力リトライ用")).toBeVisible();
 

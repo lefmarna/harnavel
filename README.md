@@ -62,7 +62,7 @@ pnpm lint:docs          # docs/ + README/AGENTS/CONTEXT のリンク検証
 pnpm test:e2e --project=chromium
 ```
 
-`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。ローカル hook は pre-commit で staged files に Oxlint の safe fix、Oxfmt、Pint を順に適用してから、lint/typecheck/unit test/docs と Docker 前提の Larastan を実行します。CI は同じ品質ゲートをリポジトリ全体へ適用します。
+`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。ローカル hook は pre-commit で staged files に Pint、Oxlint の safe fix、Oxfmt を順に適用してから、lint/typecheck/unit test/docs と Docker 前提の Larastan を実行します。CI は同じ品質ゲートをリポジトリ全体へ適用します。
 
 ## ドキュメントの見方
 

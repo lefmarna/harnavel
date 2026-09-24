@@ -9,7 +9,7 @@ use Inertia\Inertia;
 mutates(DynamicPageViewModel::class);
 
 describe('DynamicPageViewModel', function () {
-    it('fragment の props と SEO を合成して Inertia props を返せる', function () {
+    it('ページ固有の props と SEO を合成して Inertia props を返せる', function () {
         Route::middleware('web')->get('/_spec/dynamic-page', fn () => Inertia::render(
             'dashboard',
             new DynamicPageViewModel(

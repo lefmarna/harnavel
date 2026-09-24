@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
-use App\Models\User;
 use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +22,6 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        $this->currentUser($request);
         $status = $request->session()->get('status');
 
         return Inertia::render(
@@ -75,15 +73,5 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
-    }
-
-    private function currentUser(Request $request): User
-    {
-        $user = $request->user();
-        if (! $user instanceof User) {
-            abort(403);
-        }
-
-        return $user;
     }
 }

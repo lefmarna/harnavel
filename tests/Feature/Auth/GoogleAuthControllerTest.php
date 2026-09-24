@@ -23,6 +23,24 @@ beforeEach(function () {
     ]);
 });
 
+/**
+ * Socialite が返す Google ユーザーを差し替える。渡したメソッドだけを許可するので、
+ * 呼ばれる前に処理が打ち切られるべきメソッドは省く。
+ *
+ * @param  array<string, mixed>  $returns
+ */
+function fakeGoogleUser(array $returns): void
+{
+    $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
+    foreach ($returns as $method => $value) {
+        $googleUser->allows($method)->andReturn($value);
+    }
+
+    $driver = Mockery::mock(GoogleProvider::class);
+    $driver->allows('user')->andReturn($googleUser);
+    Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+}
+
 describe('Google OAuth コントローラ', function () {
     it('redirect() でゲストを Google OAuth にリダイレクトする', function () {
         $driver = Mockery::mock(GoogleProvider::class);
@@ -52,15 +70,12 @@ describe('Google OAuth コントローラ', function () {
     it('callback() は google id が null の場合にログインせずログイン画面へ戻す', function () {
         $existingUser = User::factory()->create(['google_id' => null]);
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn(null);
-        $googleUser->allows('getEmail')->andReturn('any@example.com');
-        $googleUser->allows('getName')->andReturn('Any User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => null,
+            'getEmail' => 'any@example.com',
+            'getName' => 'Any User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldNotReceive('findOrCreate');
@@ -74,15 +89,12 @@ describe('Google OAuth コントローラ', function () {
     });
 
     it('callback() は google id が空文字の場合にログインせずログイン画面へ戻す', function () {
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('');
-        $googleUser->allows('getEmail')->andReturn('any@example.com');
-        $googleUser->allows('getName')->andReturn('Any User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => '',
+            'getEmail' => 'any@example.com',
+            'getName' => 'Any User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldNotReceive('findOrCreate');
@@ -95,13 +107,10 @@ describe('Google OAuth コントローラ', function () {
     });
 
     it('callback() はメールアドレスが取得できない場合にログインせずログイン画面へ戻す', function () {
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getEmail')->andReturn(null);
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getEmail' => null,
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldNotReceive('findOrCreate');
@@ -134,15 +143,12 @@ describe('Google OAuth コントローラ', function () {
     it('callback() でログイン完了して fortify.home へリダイレクトする', function () {
         $existingUser = User::factory()->create(['email' => 'test@example.com']);
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('test@example.com');
-        $googleUser->allows('getName')->andReturn('Test User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'test@example.com',
+            'getName' => 'Test User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
@@ -158,15 +164,12 @@ describe('Google OAuth コントローラ', function () {
     it('callback() は intended URL があれば fortify.home より優先してリダイレクトする', function () {
         $existingUser = User::factory()->create(['email' => 'test@example.com']);
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('test@example.com');
-        $googleUser->allows('getName')->andReturn('Test User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'test@example.com',
+            'getName' => 'Test User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
@@ -185,15 +188,12 @@ describe('Google OAuth コントローラ', function () {
     it('callback() は Google プロフィール名が null の場合もそのままサービスへ渡す', function () {
         $existingUser = User::factory()->create(['email' => 'test@example.com']);
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('test@example.com');
-        $googleUser->allows('getName')->andReturn(null);
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'test@example.com',
+            'getName' => null,
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
@@ -217,15 +217,12 @@ describe('Google OAuth コントローラ', function () {
     });
 
     it('callback() でメール未検証なら警告でログイン画面にリダイレクトする', function () {
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('unverified@example.com');
-        $googleUser->allows('getName')->andReturn('Unverified User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => false]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'unverified@example.com',
+            'getName' => 'Unverified User',
+            'getRaw' => ['email_verified' => false],
+        ]);
 
         $this->get(route('auth.google.callback'))
             ->assertRedirect(route('login'))
@@ -235,15 +232,12 @@ describe('Google OAuth コントローラ', function () {
     it('callback() で QueryException が発生してもセッションエラーに SQL が露出しない', function () {
         $secretSql = 'INSERT INTO `users` (`email`, `secret_data`) VALUES (?, ?)';
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('test@example.com');
-        $googleUser->allows('getName')->andReturn('Test User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'test@example.com',
+            'getName' => 'Test User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
@@ -260,15 +254,12 @@ describe('Google OAuth コントローラ', function () {
     it('callback() で GoogleAuthException のビジネスメッセージがセッションに設定される', function () {
         $errorMessage = 'このメールアドレスは別のGoogleアカウントに連携済みです。';
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('test@example.com');
-        $googleUser->allows('getName')->andReturn('Test User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'test@example.com',
+            'getName' => 'Test User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
@@ -285,15 +276,12 @@ describe('Google OAuth コントローラ', function () {
             'google_id' => null,
         ]);
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('existing@example.com');
-        $googleUser->allows('getName')->andReturn('Existing User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'existing@example.com',
+            'getName' => 'Existing User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
@@ -320,15 +308,12 @@ describe('Google OAuth コントローラ', function () {
     });
 
     it('callback() で想定外例外が発生しても安全なメッセージでログイン画面に戻す', function () {
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('test@example.com');
-        $googleUser->allows('getName')->andReturn('Test User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'test@example.com',
+            'getName' => 'Test User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
@@ -359,15 +344,12 @@ describe('Google OAuth コントローラ', function () {
     it('callback() で QueryException が発生してもログにバインディング値が残らない', function () {
         Log::spy();
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('leaked@example.com');
-        $googleUser->allows('getName')->andReturn('Test User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'leaked@example.com',
+            'getName' => 'Test User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
@@ -391,15 +373,12 @@ describe('Google OAuth コントローラ', function () {
     it('callback() で想定外例外が発生してもログには例外クラス名だけを残す', function () {
         Log::spy();
 
-        $googleUser = Mockery::mock(Laravel\Socialite\Two\User::class);
-        $googleUser->allows('getId')->andReturn('google-123');
-        $googleUser->allows('getEmail')->andReturn('test@example.com');
-        $googleUser->allows('getName')->andReturn('Test User');
-        $googleUser->allows('getRaw')->andReturn(['email_verified' => true]);
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'test@example.com',
+            'getName' => 'Test User',
+            'getRaw' => ['email_verified' => true],
+        ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')

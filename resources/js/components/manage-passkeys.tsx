@@ -7,7 +7,7 @@ import PasskeyItem from "@/components/passkey-item";
 import PasskeyRegister from "@/components/passkey-register";
 import type { Passkey } from "@/types";
 
-export type Props = {
+type Props = {
   canManagePasskeys: boolean;
   passkeys: Passkey[];
 };

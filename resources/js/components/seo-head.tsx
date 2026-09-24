@@ -2,17 +2,6 @@ import { Head, usePage } from "@inertiajs/react";
 
 import type { SeoData, SharedData } from "@/types";
 
-interface SeoProps {
-  title?: string;
-  description?: string;
-  robots?: string;
-  googlebot?: string;
-  image?: string;
-  imageAlt?: string;
-  url?: string;
-  type?: "website" | "article";
-}
-
 function imageMimeType(imageUrl: string): string | undefined {
   const extension = new URL(imageUrl).pathname.split(".").pop()?.toLowerCase();
 
@@ -44,7 +33,7 @@ export default function SeoHead({
   imageAlt,
   url,
   type,
-}: SeoProps) {
+}: SeoData) {
   const {
     seo,
     name,
@@ -54,16 +43,15 @@ export default function SeoHead({
     url: appUrl,
     currentUrl,
   } = usePage<SharedData>().props;
-  const sharedSeo: SeoData = seo;
   const siteName = appDisplayName || name;
-  const resolvedTitle = title ?? sharedSeo.title;
-  const metaType = type ?? sharedSeo.type ?? "website";
-  const metaDescription = description ?? sharedSeo.description ?? appDescription ?? "";
-  const metaRobots = robots ?? sharedSeo.robots ?? defaultRobots ?? undefined;
-  const metaGooglebot = googlebot ?? sharedSeo.googlebot ?? "max-image-preview:large";
-  const metaUrl = new URL(url ?? sharedSeo.url ?? currentUrl, appUrl).toString();
-  const metaImage = new URL(image ?? sharedSeo.image ?? "/opengraph-image.jpg", appUrl).toString();
-  const metaImageAlt = imageAlt ?? sharedSeo.imageAlt ?? siteName;
+  const resolvedTitle = title ?? seo.title;
+  const metaType = type ?? seo.type ?? "website";
+  const metaDescription = description ?? seo.description ?? appDescription ?? "";
+  const metaRobots = robots ?? seo.robots ?? defaultRobots;
+  const metaGooglebot = googlebot ?? seo.googlebot ?? "max-image-preview:large";
+  const metaUrl = new URL(url ?? seo.url ?? currentUrl, appUrl).toString();
+  const metaImage = new URL(image ?? seo.image ?? "/opengraph-image.jpg", appUrl).toString();
+  const metaImageAlt = imageAlt ?? seo.imageAlt ?? siteName;
   const metaImageType = imageMimeType(metaImage);
   const pageTitle = resolvedTitle ? `${resolvedTitle} - ${siteName}` : siteName;
 

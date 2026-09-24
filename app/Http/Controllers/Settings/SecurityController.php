@@ -47,16 +47,6 @@ class SecurityController extends Controller
         return back();
     }
 
-    private function currentUser(Request $request): User
-    {
-        $user = $request->user();
-        if (! $user instanceof User) {
-            abort(403);
-        }
-
-        return $user;
-    }
-
     /**
      * @return list<array{id: int, name: string, authenticator: string|null, created_at_diff: string, last_used_at_diff: string|null}>
      */

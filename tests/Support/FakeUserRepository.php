@@ -18,27 +18,23 @@ use Illuminate\Support\Collection;
 final class FakeUserRepository implements UserRepositoryContract
 {
     /**
-     * @param  (Closure(array{name: string, email: string, password: string}): User)|null  $create
      * @param  (Closure(string|int, bool): ?User)|null  $find
      * @param  (Closure(string, string, bool): Collection<int, User>)|null  $findCandidates
      * @param  (Closure(string, bool): ?User)|null  $findByGoogleId
      * @param  (Closure(string, bool): ?User)|null  $findByEmail
      * @param  (Closure(User): void)|null  $save
-     * @param  (Closure(User, string): void)|null  $updatePassword
      */
     public function __construct(
-        private readonly ?Closure $create = null,
         private readonly ?Closure $find = null,
         private readonly ?Closure $findCandidates = null,
         private readonly ?Closure $findByGoogleId = null,
         private readonly ?Closure $findByEmail = null,
         private readonly ?Closure $save = null,
-        private readonly ?Closure $updatePassword = null,
     ) {}
 
     public function create(array $attributes): User
     {
-        return ($this->create ?? $this->missing(__FUNCTION__))($attributes);
+        $this->missing(__FUNCTION__);
     }
 
     public function find(string|int $id, bool $lock = false): ?User
@@ -68,7 +64,7 @@ final class FakeUserRepository implements UserRepositoryContract
 
     public function updatePassword(User $user, string $newPassword): void
     {
-        ($this->updatePassword ?? $this->missing(__FUNCTION__))($user, $newPassword);
+        $this->missing(__FUNCTION__);
     }
 
     private function missing(string $method): never

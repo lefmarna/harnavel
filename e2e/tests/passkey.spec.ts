@@ -8,6 +8,10 @@ const HOME_URL = /\/dashboard$/;
 test("設定した origin と異なる URL ではパスキー操作を隠しパスワードログイン画面を表示する", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+  });
+
   const baseURL = test.info().project.use.baseURL;
   if (!baseURL) {
     throw new Error("E2E の baseURL が必要です");
@@ -16,9 +20,12 @@ test("設定した origin と異なる URL ではパスキー操作を隠しパ�
   const loginURL = new URL("/login", baseURL);
   loginURL.hostname = "127.0.0.1";
 
+  await page.goto("/login");
+  await expect(page.locator('[data-test="passkey-verify-button"]')).toBeVisible();
+
   await page.goto(loginURL.href, { waitUntil: "networkidle" });
 
-  await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
+  await expect(page.locator('[data-test="login-button"]')).toBeVisible();
   await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();
 });
 

@@ -35,6 +35,10 @@ export default defineConfig(({ mode }) => {
       port: vitePort,
       strictPort: true,
     },
+    // ページの依存も起動時に取り込み、初回アクセス時の全体リロードを防ぐ。
+    optimizeDeps: {
+      entries: ["resources/js/app.tsx", "resources/js/pages/**/*.tsx"],
+    },
     plugins: lazyPlugins(() => [
       laravel({
         input: ["resources/css/app.css", "resources/js/app.tsx"],

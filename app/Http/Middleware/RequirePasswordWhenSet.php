@@ -9,8 +9,6 @@ use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Http\Request;
 
 /**
- * Confirm the credential only for accounts that hold one.
- *
  * Google だけで登録したユーザーは password が null で、パスキーも持たないうちは
  * Fortify のパスワード確認もパスキー確認も通過できない。素の RequirePassword では
  * そのユーザーが最初の資格情報を登録する画面そのものに到達できなくなる。

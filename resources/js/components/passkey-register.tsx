@@ -116,9 +116,12 @@ function AvailablePasskeyRegister({ onSuccess }: Props) {
           placeholder="例: MacBook Pro、iPhone"
           className="mt-1 block w-full border-foreground/20"
           autoFocus
+          aria-describedby="passkey-name-help"
         />
 
-        <p className="text-xs text-muted-foreground">あとで見分けるための名前です。</p>
+        <p id="passkey-name-help" className="text-xs text-muted-foreground">
+          あとで見分けるための名前です。
+        </p>
       </div>
 
       {errorMessage && <InputError message={errorMessage} />}

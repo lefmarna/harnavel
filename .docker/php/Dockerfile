@@ -1,6 +1,5 @@
 FROM php:8.5.9-fpm-bookworm AS app
 
-# Install Composer
 COPY --from=composer:2.10.2 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
@@ -21,12 +20,9 @@ RUN apt-get update \
   libzip-dev \
   mariadb-client \
   unzip \
-  # Configure GD with JPEG/WebP/FreeType support
   && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-  # Install PCOV (fast code-coverage driver)
   && pecl install pcov \
   && docker-php-ext-enable pcov \
-  # Install PHP Extension
   && docker-php-ext-install \
   bcmath \
   exif \
@@ -35,9 +31,7 @@ RUN apt-get update \
   mbstring \
   pdo_mysql \
   zip \
-  # Install Laravel
   && composer global require "laravel/installer" \
-  # Clean up
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 

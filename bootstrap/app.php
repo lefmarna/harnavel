@@ -25,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // 最外側へ置く。末尾に置くとメンテナンスの 503、POST サイズ超過、パス検査が
+        // 先に応答を返し、エラー応答にだけヘッダーが付かない（TADR-0012）。
         $middleware->prepend(AddSecurityHeaders::class);
 
         $middleware->alias(['password.confirm' => RequirePasswordWhenSet::class]);
@@ -56,16 +58,12 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         });
 
-        // Inertiaリクエストに対するHTTPエラーをハンドリング
-        // セッション切れ(419)やサーバーエラー(500)などをユーザーフレンドリーに処理
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             $status = $response->getStatusCode();
 
-            // 500: SPA 遷移時のみ Inertia ページへ変換する
-            // フルページロード時は Blade（TADR-0004）を維持し、Vite/JS 非依存を保証する
-            // X-Inertia ヘッダがある = JS はすでに動作中なので Inertia 応答は安全
-            // デバッグ時は変換せず素通しし、Ignition のデバッグレスポンスを保持する
-            // （Blade 500 が debug 時に未捕捉例外を握り潰さないのと同じ方針）
+            // フルページロードの 500 は Blade（TADR-0004）のまま返し、Vite と JS に依存させない。
+            // X-Inertia があれば JS はすでに動いているので、Inertia ページで返してよい。
+            // デバッグ時は Blade 500 と同じく変換せず、Ignition の応答を残す。
             if ($status === 500 && $request->header('X-Inertia') && ! config('app.debug')) {
                 $requestId = $request->attributes->get('request_id');
 
@@ -76,7 +74,6 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->setStatusCode(500);
             }
 
-            // Inertiaリクエストでない場合はデフォルトのレスポンスを返す
             if (! $request->header('X-Inertia')) {
                 return $response;
             }

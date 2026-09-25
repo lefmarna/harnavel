@@ -11,7 +11,6 @@ beforeEach(function () {
     config()->set('app.debug', false);
     config()->set('observability.discord.webhook_url', null);
 
-    // SPA 遷移をシミュレートするための X-Inertia ヘッダ。
     // GET の場合はバージョン不一致で 409 に差し替えられるため、実際の値を一致させる。
     $this->inertiaHeaders = [
         'X-Inertia' => 'true',

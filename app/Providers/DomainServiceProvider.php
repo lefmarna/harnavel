@@ -12,9 +12,6 @@ use Illuminate\Support\ServiceProvider;
 class DomainServiceProvider extends ServiceProvider
 {
     /**
-     * バインド対象のサービス名プレフィックスリスト
-     * 例: 'User' -> UserServiceContract / UserService
-     *
      * @var list<string>
      */
     private const PREFIXES = [

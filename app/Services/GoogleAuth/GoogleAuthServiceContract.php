@@ -12,8 +12,6 @@ use Illuminate\Database\QueryException;
 interface GoogleAuthServiceContract
 {
     /**
-     * Google OAuth の情報をもとにユーザーを取得または作成する。
-     *
      * @throws GoogleAuthException ビジネスルール違反（アカウント衝突・別 Google アカウント連携済み等）
      * @throws GoogleLinkConfirmationPendingException 既存メールユーザーの本人確認メール送信が必要な場合
      * @throws QueryException DB 例外（接続エラー・保存失敗など）

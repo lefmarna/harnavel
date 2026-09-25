@@ -22,6 +22,9 @@ const openSecuritySettings = async (page: Page): Promise<void> => {
 
 const registerPasskey = async (page: Page, name: string): Promise<void> => {
   await page.getByRole("button", { name: "パスキーを追加" }).click();
+  await expect(page.getByLabel("パスキーの名前")).toHaveAccessibleDescription(
+    "あとで見分けるための名前です。",
+  );
   await page.getByLabel("パスキーの名前").fill(name);
   await page.getByRole("button", { name: "パスキーを登録" }).click();
 };
@@ -73,7 +76,11 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await registerPasskey(page, "E2E オーセンティケータ");
 
-  await expect(page.getByText("E2E オーセンティケータ")).toBeVisible();
+  await expect(page.getByText("E2E オーセンティケータ", { exact: true })).toBeVisible();
+  // 複数のパスキーが並んでも、読み上げで削除対象を取り違えないこと。
+  await expect(
+    page.getByRole("button", { name: "「E2E オーセンティケータ」を削除" }),
+  ).toBeVisible();
 
   await context.clearCookies();
 
@@ -111,7 +118,7 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await registerPasskey(page, "期限切れ後のパスキー");
 
-  await expect(page.getByText("期限切れ後のパスキー")).toBeVisible();
+  await expect(page.getByText("期限切れ後のパスキー", { exact: true })).toBeVisible();
 });
 
 test("自動入力が失敗しても再読み込みなしでパスキー認証を再試行できる", async ({
@@ -127,7 +134,7 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
 
   await registerPasskey(page, "自動入力リトライ用");
 
-  await expect(page.getByText("自動入力リトライ用")).toBeVisible();
+  await expect(page.getByText("自動入力リトライ用", { exact: true })).toBeVisible();
 
   await context.clearCookies();
 

@@ -17,8 +17,6 @@ use Illuminate\Testing\TestResponse;
  */
 describe('パスワードポリシー', function () {
     /**
-     * @param  string  $password  検証対象のパスワード
-     * @param  bool  $breached  HaveIBeenPwned が漏洩ありを返す状態にするか
      * @return TestResponse
      */
     $register = function (string $password, bool $breached = false) {

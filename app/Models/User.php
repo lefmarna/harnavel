@@ -15,7 +15,7 @@ use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 
 /**
- * Larastan は Blueprint::rememberToken() の nullable を推論できない。
+ * Larastan は Blueprint::rememberToken() の nullable を推論できない。推論できるようになったら消す。
  *
  * @property string|null $remember_token
  */

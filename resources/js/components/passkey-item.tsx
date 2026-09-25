@@ -65,7 +65,7 @@ export default function PasskeyItem({ passkey, onDelete }: Props) {
             data-test="delete-passkey-button"
           >
             <Trash2 className="h-4 w-4" />
-            <span className="sr-only">削除</span>
+            <span className="sr-only">「{passkey.name}」を削除</span>
           </Button>
         </DialogTrigger>
 

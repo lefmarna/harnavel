@@ -39,14 +39,14 @@ return [
 
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', env('GEMINI_MODEL_NAME', 'gemini-2.5-flash')),
+        'model' => env('GEMINI_MODEL', env('GEMINI_MODEL_NAME', 'gemini-3.5-flash-lite')),
     ],
 
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
-        'analytics_tracking_id' => env('GA_TRACKING_ID', env('VITE_GA_TRACKING_ID')),
+        'analytics_tracking_id' => env('GA_TRACKING_ID'),
         'adsense_publisher_id' => env('ADSENSE_PUBLISHER_ID'),
 
         // Socialite はこの配列を OAuth 用 HTTP クライアントへ渡す。未設定だと総 timeout は 0（無制限）で、

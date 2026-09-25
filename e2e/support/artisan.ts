@@ -1,8 +1,6 @@
 import { execFileSync } from "node:child_process";
 
 /**
- * 実行中の E2E コンテナ名を探す。
- *
  * 名前は playwright-e2e-<PORT>-<PID>。Playwright はワーカーでも config を読み直すため
  * 環境変数の PID 部分は当てにならないが、PORT は NGINX_PORT + 1000 で一致する。接頭辞だけで
  * 絞ると同じテンプレート由来の別リポジトリのコンテナまで拾うので、PORT まで含めて照合する。

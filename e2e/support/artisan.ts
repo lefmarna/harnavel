@@ -33,7 +33,7 @@ const resolveContainer = (): string => {
 };
 
 /** E2E アプリが動く場所で artisan を実行する。ローカルは使い捨てコンテナ、CI はホスト。 */
-const runArtisan = (args: string[]): string => {
+export const runArtisan = (args: string[]): string => {
   if (process.env.CI) {
     return execFileSync("php", ["artisan", ...args], { encoding: "utf8", stdio: "pipe" });
   }

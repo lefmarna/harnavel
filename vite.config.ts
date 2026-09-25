@@ -34,6 +34,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: vitePort,
       strictPort: true,
+      // E2E のレポート出力で開いているページが再読み込みされないようにする。
+      watch: {
+        ignored: ["**/playwright-report/**"],
+      },
     },
     // ページの依存も起動時に取り込み、初回アクセス時の全体リロードを防ぐ。
     optimizeDeps: {

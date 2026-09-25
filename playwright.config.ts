@@ -78,6 +78,11 @@ export default defineConfig({
           command: "pnpm dev",
           url: `http://localhost:${VITE_PORT}/@vite/client`,
           reuseExistingServer: true,
+          // 強制終了では public/hot が残り、停止後もアプリが dev server を参照し続ける。
+          gracefulShutdown: {
+            signal: "SIGTERM",
+            timeout: 5_000,
+          },
         },
         {
           command:

@@ -61,7 +61,8 @@ Special cases:
 1. Resolve `REMOTE` and `BRANCH` from the invocation, defaulting to `template` and `main`, then
    inspect `git status`, remotes, the current branch, and `MERGE_HEAD`. Preserve or recover the
    pre-pull app dependency baseline before changing lockfiles.
-2. Pull the resolved remote and branch when they have not already been pulled.
+2. Pull the resolved remote and branch with `git pull --no-commit --no-ff` when they have not
+   already been pulled, so a conflict-free merge still stops before committing.
 3. List unresolved paths with `git diff --diff-filter=U --name-only`.
 4. Read both sides and nearby tests before resolving each conflict.
 5. Classify each hunk as shared, hybrid, or app-owned and remove dead code introduced by the

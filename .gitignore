@@ -15,6 +15,9 @@
 .DS_Store
 .env
 .env.backup
+.env.worktree-backup
+/storage/framework/.dev-ready
+/storage/framework/.dev-seed-pending
 .env.e2e
 .env.production
 .claude/settings.local.json

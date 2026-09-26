@@ -5,7 +5,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import {
   assertE2eTarget,
   CI_E2E_TARGET,
-  E2E_TARGET,
+  localE2eTarget,
   isDatabaseTarget,
 } from "./e2e-database-target";
 import type { DatabaseTarget } from "./e2e-database-target";
@@ -23,7 +23,7 @@ const dockerArtisan: ArtisanRunner = (args, stdio) => {
     throw new Error("Playwright E2E container name is missing or invalid.");
   }
 
-  return execFileSync("docker", ["exec", "-i", container, "php", "artisan", ...args], {
+  return execFileSync("docker", ["exec", "-i", container, "scripts/run-e2e-artisan.sh", ...args], {
     encoding: "utf8",
     stdio,
   });
@@ -103,5 +103,8 @@ export default async function globalSetup(): Promise<void> {
     await assertViteDevAssets(createViteDevAssetsProbe(REPO_ROOT));
   }
 
-  await prepareE2eDatabase(isCI ? ciArtisan : dockerArtisan, isCI ? CI_E2E_TARGET : E2E_TARGET);
+  await prepareE2eDatabase(
+    isCI ? ciArtisan : dockerArtisan,
+    isCI ? CI_E2E_TARGET : localE2eTarget(REPO_ROOT),
+  );
 }

@@ -22,21 +22,12 @@ describe('リバースプロキシ', function () {
             'clientIp' => '172.18.0.2',
         ]);
     });
-
-    it('ローカル環境でもNginxを外部公開した場合は転送ヘッダーを信頼しない', function () {
-        expect(proxyRequestMetadata('local', '0.0.0.0'))->toBe([
-            'secure' => false,
-            'url' => 'http://dev-machine.example.ts.net/probe',
-            'host' => 'dev-machine.example.ts.net',
-            'clientIp' => '172.18.0.2',
-        ]);
-    });
 });
 
 /**
  * @return array{secure: bool, url: string, host: string, clientIp: string|null}
  */
-function proxyRequestMetadata(string $environment, string $dockerBindAddress = '127.0.0.1'): array
+function proxyRequestMetadata(string $environment): array
 {
     $script = <<<'PHP'
     require 'vendor/autoload.php';
@@ -69,7 +60,6 @@ function proxyRequestMetadata(string $environment, string $dockerBindAddress = '
 
     $process = AppSubprocess::php($script, AppSubprocess::productionEnvironment([
         'APP_ENV' => $environment,
-        'DOCKER_BIND_ADDRESS' => $dockerBindAddress,
     ]));
 
     expect($process->isSuccessful())

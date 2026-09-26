@@ -1,27 +1,15 @@
-import fs from "node:fs";
-
 import { defineConfig, devices } from "@playwright/test";
 
+import { envPort, readLocalEnv } from "./scripts/local-env";
+
 const isCI = !!process.env.CI;
-const envFile = fs.existsSync(".env") ? fs.readFileSync(".env", "utf8") : "";
-const parseEnvPort = (name: string, fallback?: number): number => {
-  const value = process.env[name] ?? envFile.match(new RegExp(`^${name}=(\\d+)$`, "m"))?.[1];
-  const port = Number.parseInt(value ?? "", 10);
-
-  if (Number.isNaN(port)) {
-    if (fallback === undefined) {
-      throw new Error(`.env に ${name} を追加してください（.env.example 参照）。`);
-    }
-
-    return fallback;
-  }
-
-  return port;
-};
+const repoRoot = import.meta.dirname;
+const env = readLocalEnv(repoRoot);
 
 const CONTAINER_E2E_PORT = 8001;
-const PORT = isCI ? 8000 : parseEnvPort("NGINX_PORT") + 1000;
-const VITE_PORT = parseEnvPort("VITE_PORT", 5173);
+// Worktree のポート枠（NGINX_PORT から10番）のうち +5 を E2E に使う。
+const PORT = isCI ? 8000 : envPort(env, "NGINX_PORT") + 5;
+const VITE_PORT = envPort(env, "VITE_PORT", 5173);
 const E2E_APP_URL = `http://localhost:${PORT}`;
 const E2E_READY_URL = `${E2E_APP_URL}/up`;
 const E2E_CONTAINER_NAME = `playwright-e2e-${PORT}-${process.pid}`;
@@ -76,6 +64,7 @@ export default defineConfig({
     : [
         {
           command: "pnpm dev",
+          cwd: repoRoot,
           url: `http://localhost:${VITE_PORT}/@vite/client`,
           reuseExistingServer: true,
           // 強制終了では public/hot が残り、停止後もアプリが dev server を参照し続ける。
@@ -89,9 +78,8 @@ export default defineConfig({
             `docker compose run --rm --no-deps -T --name ${E2E_CONTAINER_NAME}` +
             ` -p 127.0.0.1:${PORT}:${CONTAINER_E2E_PORT}` +
             ` -e APP_URL=${E2E_APP_URL}` +
-            ` -e BOOST_BROWSER_LOGS_WATCHER=false` +
-            " -e DB_HOST=mariadb-e2e -e DB_DATABASE=app_e2e" +
-            ` app php artisan serve --no-reload --host=0.0.0.0 --port=${CONTAINER_E2E_PORT}`,
+            " app scripts/run-e2e-artisan.sh serve --no-reload --host=0.0.0.0 --port=8001",
+          cwd: repoRoot,
           url: E2E_READY_URL,
           reuseExistingServer: false,
           gracefulShutdown: {

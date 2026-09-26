@@ -1,0 +1,7 @@
+scripts:
+  setup: mise run setup
+  archive: mise run worktree:remove
+setupAgentStartupPolicy: wait-for-setup
+defaultTabs:
+  - title: Vite
+    command: mise run dev:vite

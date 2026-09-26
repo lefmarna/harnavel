@@ -79,7 +79,7 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        // DockerのNginxはアドレスが固定されない。Nginxがloopbackに閉じ、FPMが未公開の間だけ信頼する。
+        // DockerのNginxはアドレスが固定されない。ローカルのComposeはNginxをloopbackに閉じ、FPMを公開しないため信頼する。
         if (config('app.trust_local_reverse_proxy')) {
             TrustProxies::at('REMOTE_ADDR');
             TrustProxies::withHeaders(Request::HEADER_X_FORWARDED_PROTO);

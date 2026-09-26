@@ -1,7 +1,13 @@
-export const E2E_TARGET = {
-  host: "mariadb-e2e",
-  database: "app_e2e",
-} as const;
+import { readLocalEnv } from "../scripts/local-env";
+
+export function localE2eTarget(root: string): DatabaseTarget {
+  // compose.yaml が E2E サーバーへ渡す E2E_DB_DATABASE と同じ規則で期待値を作る。
+  const env = readLocalEnv(root);
+  if (!env.DEV_INFRA_PROJECT || !env.DB_DATABASE) {
+    throw new Error("Worktree 専用 E2E DB が未設定です。mise run setup を実行してください。");
+  }
+  return { host: "mariadb", database: `${env.DB_DATABASE}_e2e` };
+}
 
 export const CI_E2E_TARGET = {
   host: "127.0.0.1",
@@ -26,10 +32,7 @@ export function isDatabaseTarget(value: unknown): value is DatabaseTarget {
   );
 }
 
-export function assertE2eTarget(
-  resolved: DatabaseTarget,
-  expected: DatabaseTarget = E2E_TARGET,
-): void {
+export function assertE2eTarget(resolved: DatabaseTarget, expected: DatabaseTarget): void {
   const mismatched = TARGET_KEYS.filter((key) => resolved[key] !== expected[key]);
 
   if (mismatched.length === 0) {

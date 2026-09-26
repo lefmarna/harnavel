@@ -6,13 +6,12 @@ pnpm = "12.2.1"
 [tasks.setup]
 description = "Setup entire project from scratch"
 run = [
+  "rm -f storage/framework/.dev-ready",
   "mise run setup:tools",
   "mise run setup:env",
-  "mise run build",
   "mise run up",
   "mise run setup:backend",
-  "mise run migrate",
-  "mise run seed",
+  "node --import tsx scripts/dev-environment.ts initialize-app",
 ]
 
 [tasks."setup:tools"]
@@ -21,25 +20,20 @@ run = ["mise install", "pnpm install --frozen-lockfile"]
 
 [tasks."setup:env"]
 description = "Create local environment file if missing"
-run = "[ -f .env ] || cp .env.example .env"
+run = "node --import tsx scripts/dev-environment.ts env"
 
 [tasks."setup:backend"]
 description = "Setup backend (requires running containers)"
-run = """
-docker compose exec app bash -c "
-  composer install --no-interaction && \
-  php -r \"file_exists('.env') || copy('.env.example', '.env');\" && \
-  php artisan key:generate"
-"""
+run = "node --import tsx scripts/dev-environment.ts backend"
 
 [tasks.build]
 description = "Build docker containers"
-run = "docker compose build --no-cache --force-rm"
+depends = ["setup:env"]
+run = "docker compose build"
 
 [tasks.up]
 description = "Start docker containers"
-depends = ["setup:env"]
-run = "docker compose up -d"
+run = "node --import tsx scripts/dev-environment.ts up"
 
 [tasks.stop]
 description = "Stop docker containers"
@@ -50,8 +44,28 @@ description = "Remove docker containers"
 run = "docker compose down"
 
 [tasks.destroy]
-description = "Destroy docker containers and volumes"
-run = "docker compose down --rmi all --volumes"
+description = "Remove this Worktree's containers (shared DB and cache are preserved)"
+run = "docker compose down"
+
+[tasks."dev:migrate"]
+description = "Move the legacy local stack to shared infrastructure without deleting DB data"
+run = "node --import tsx scripts/dev-environment.ts migrate"
+
+[tasks."dev:info"]
+description = "Show this Worktree's local URLs and database names"
+run = "node --import tsx scripts/dev-environment.ts info"
+
+[tasks."dev:vite"]
+description = "Wait for successful setup, then start Vite"
+run = "sh scripts/run-vite-after-setup.sh"
+
+[tasks."infra:stop"]
+description = "Stop shared infrastructure after all Worktrees are down"
+run = "node --import tsx scripts/dev-environment.ts infra-stop"
+
+[tasks."worktree:remove"]
+description = "Remove this extra Worktree's containers, DBs, users and port allocation"
+run = "node --import tsx scripts/dev-environment.ts remove"
 
 [tasks.ps]
 description = "List docker containers"

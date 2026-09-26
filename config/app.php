@@ -54,8 +54,7 @@ return [
 
     'env' => env('APP_ENV', 'production'),
 
-    'trust_local_reverse_proxy' => env('APP_ENV', 'production') === 'local'
-        && env('DOCKER_BIND_ADDRESS', '127.0.0.1') === '127.0.0.1',
+    'trust_local_reverse_proxy' => env('APP_ENV', 'production') === 'local',
 
     /*
     |--------------------------------------------------------------------------

@@ -32,7 +32,7 @@ Laravel 13 + Inertia React + MariaDB を Docker で開発するためのテン�
 # 任意: デフォルト値を調整したい場合だけ先に作成
 cp .env.example .env
 
-# ツール導入、依存関係、Git hooks、コンテナ構築、起動、Laravel初期化、migrate、seed まで実行
+# ツール導入、依存関係、Git hooks、共有環境とこの Worktree の起動、Laravel初期化まで実行
 mise run setup
 
 # フロントエンド開発サーバーを起動
@@ -41,8 +41,14 @@ pnpm dev
 
 セットアップ完了後の既定 URL:
 
-- アプリ: `http://localhost:8080`
-- Mailpit: `http://localhost:8025`
+- アプリ: `http://localhost:20000`
+- Mailpit: `http://localhost:20004`
+
+各アプリは `DEV_PORT_BASE` で100ポート分を確保し、追加 Worktree に10番ずつ割り当てます。MariaDB と Mailpit は同じアプリの Worktree 間で共有し、開発・テスト・E2E の DB と接続ユーザーは Worktree ごとに分離します。通常は4コンテナ、追加 Worktree は2コンテナだけ起動します。
+
+既存の6コンテナ構成からは、主 Worktree で `mise run dev:migrate` を実行してください。旧 DB を停止してから同じ `storage/mariadb` を引き継ぎ、既存データとアプリケーションキーを保持します。ポートも新しい割り当てに変わります。
+
+Orca は [orca.yaml](orca.yaml) の作成時コマンドでセットアップ完了を待ち、Vite ターミナルを開きます。既存の Repository 設定が local-only の場合は、リポジトリのコマンドを使用する設定に切り替えてください。終了・削除と4アプリへの反映手順は [Worktree development](docs/worktree-development.md) を参照してください。
 
 `pnpm dev` の二重起動は避けてください。ポート衝突で終了した側が `public/hot` を削除するため、先に起動した dev server が生きたままアプリだけビルド済みアセットの配信に切り替わります（E2E はこの状態を検出して中止します）。
 
@@ -52,6 +58,8 @@ pnpm dev
 mise run up             # コンテナ起動
 mise run stop           # コンテナ停止
 mise run down           # コンテナ停止 + 削除
+mise run dev:info       # この Worktree の URL・DB・Compose 名
+mise run infra:stop     # 全 Worktree を down した後で共有 DB・Mailpit を停止
 mise run app            # app コンテナへ入る
 mise run verify:backend # Pint -> Larastan -> Pest（カバレッジ閾値は mise.toml を参照）
 pnpm format:check       # Oxfmt チェックのみ
@@ -73,6 +81,7 @@ pnpm test:e2e --project=chromium
 - [docs/logging-guidelines.md](docs/logging-guidelines.md): アプリケーションログの運用ルール
 - [TADR-0009](docs/adr/template/0009-frontend-quality-harness.md): フロントエンド品質ゲートの責務分担
 - [docs/infrastructure.md](docs/infrastructure.md): XServerの運用前提（Composer、OPcache）
+- [docs/worktree-development.md](docs/worktree-development.md): 共有開発環境・Orca・Worktree の作成と削除
 - [docs/adr/README.md](docs/adr/README.md): 設計判断の記録（ADR / Template ADR）
 
 プロジェクト固有ルールは `AGENTS.md`、参照情報は `docs/` を確認してください。

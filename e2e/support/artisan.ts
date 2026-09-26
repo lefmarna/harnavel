@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 /**
  * 名前は playwright-e2e-<PORT>-<PID>。Playwright はワーカーでも config を読み直すため
- * 環境変数の PID 部分は当てにならないが、PORT は NGINX_PORT + 1000 で一致する。接頭辞だけで
+ * 環境変数の PID 部分は当てにならないが、PORT は NGINX_PORT + 5 で一致する。接頭辞だけで
  * 絞ると同じテンプレート由来の別リポジトリのコンテナまで拾うので、PORT まで含めて照合する。
  */
 const resolveContainer = (): string => {
@@ -36,10 +36,11 @@ export const runArtisan = (args: string[]): string => {
     return execFileSync("php", ["artisan", ...args], { encoding: "utf8", stdio: "pipe" });
   }
 
-  return execFileSync("docker", ["exec", "-i", resolveContainer(), "php", "artisan", ...args], {
-    encoding: "utf8",
-    stdio: "pipe",
-  });
+  return execFileSync(
+    "docker",
+    ["exec", "-i", resolveContainer(), "scripts/run-e2e-artisan.sh", ...args],
+    { encoding: "utf8", stdio: "pipe" },
+  );
 };
 
 /**

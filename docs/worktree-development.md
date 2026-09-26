@@ -75,8 +75,10 @@ The checked-in `orca.yaml` defines:
 
 - Setup: `mise run setup`.
 - Agent startup: wait for setup.
-- Default terminal: `mise run dev:vite`, titled Vite. It waits for successful setup
-  before starting `pnpm dev`.
+- Default tabs: an empty Terminal tab, then `mise run dev:vite` titled Vite. When a
+  Worktree is created with an agent, Orca 1.4.212 starts the agent in the first
+  default tab and skips that tab's command, so the first tab stays commandless. The
+  Vite task waits for successful setup before starting `pnpm dev`.
 - Archive/removal: `mise run worktree:remove`.
 
 In Repository settings, select the repository/shared command source. A pre-existing

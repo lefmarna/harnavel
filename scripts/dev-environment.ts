@@ -446,7 +446,7 @@ async function remove(): Promise<void> {
   if (!allocation || allocation.database !== env.DB_DATABASE)
     throw new Error("削除する Worktree の DB を特定できません。");
   fs.rmSync(path.join(root, "storage/framework/.dev-ready"), { force: true });
-  command([...compose(env), "down"]);
+  command([...compose(env), "down", "--rmi", "local"]);
   const queries = sql(
     env,
     `SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE ${literal(parallelTestDatabases(`${allocation.database}_testing`))};`,

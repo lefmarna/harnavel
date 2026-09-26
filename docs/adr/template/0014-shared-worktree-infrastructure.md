@@ -32,7 +32,8 @@ the Compose project, ports, and credentials in each Worktree's private `.env` be
 starting services. Symlinks to mutable dependency trees or state are rejected.
 
 Orca runs repository-defined setup and archive commands, waits for setup before
-launching an agent, and opens a separate Vite terminal. Browser profiles must still
+launching an agent, and opens a separate Vite terminal after a commandless first
+tab that Orca reuses for an agent. Browser profiles must still
 be isolated when multiple Worktrees use the same hostname: ports do not isolate
 cookies, including Laravel's fixed-name XSRF cookie.
 Default tabs start before the setup terminal in Orca 1.4.211. The Vite command

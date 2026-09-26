@@ -1,4 +1,7 @@
+default_permissions = "workspace-docker"
+
 [features]
+network_proxy = true
 hooks = true
 multi_agent = true
 
@@ -14,3 +17,20 @@ args = ["compose", "exec", "app", "php", "artisan", "boost:mcp"]
 
 [mcp_servers.laravel-boost.tools.search-docs]
 approval_mode = "approve"
+
+[permissions.workspace-docker]
+description = "Docker とローカル開発サーバーへの接続を許可"
+extends = ":workspace"
+
+[permissions.workspace-docker.network]
+enabled = true
+allow_local_binding = true
+
+[permissions.workspace-docker.network.domains]
+"localhost" = "allow"
+"127.0.0.1" = "allow"
+"::1" = "allow"
+
+# 環境固有のソケットパスは、ユーザー設定の同名テーブルで追加する。
+[permissions.workspace-docker.network.unix_sockets]
+"/var/run/docker.sock" = "allow"

@@ -2,8 +2,3 @@ scripts:
   setup: mise run setup
   archive: mise run worktree:remove
 setupAgentStartupPolicy: wait-for-setup
-defaultTabs:
-  # エージェント付きで作成すると、1つ目のタブはコマンドを実行せずエージェントに使われる。
-  - title: Terminal
-  - title: Vite
-    command: mise run dev:vite

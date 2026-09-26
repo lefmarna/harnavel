@@ -445,7 +445,6 @@ async function remove(): Promise<void> {
   const allocation = registry.allocations.find((item) => item.path === root);
   if (!allocation || allocation.database !== env.DB_DATABASE)
     throw new Error("削除する Worktree の DB を特定できません。");
-  fs.rmSync(path.join(root, "storage/framework/.dev-ready"), { force: true });
   command([...compose(env), "down", "--rmi", "local"]);
   const queries = sql(
     env,
@@ -512,10 +511,6 @@ async function main(): Promise<void> {
           command([...compose(env), "exec", "-T", "app", "php", "artisan", "db:seed"]);
           fs.rmSync(seedPending);
         }
-        fs.writeFileSync(
-          path.join(root, "storage/framework/.dev-ready"),
-          env.COMPOSE_PROJECT_NAME || "",
-        );
         break;
       }
       case "remove":

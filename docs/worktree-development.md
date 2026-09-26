@@ -75,20 +75,15 @@ The checked-in `orca.yaml` defines:
 
 - Setup: `mise run setup`.
 - Agent startup: wait for setup.
-- Default tabs: an empty Terminal tab, then `mise run dev:vite` titled Vite. When a
-  Worktree is created with an agent, Orca 1.4.212 starts the agent in the first
-  default tab and skips that tab's command, so the first tab stays commandless. The
-  Vite task waits for successful setup before starting `pnpm dev`.
 - Archive/removal: `mise run worktree:remove`.
 
 In Repository settings, select the repository/shared command source. A pre-existing
 local-only command such as `pnpm install` overrides the repository setup definition.
 Do not add `.env`, `storage`, `vendor`, `node_modules`, Laravel caches, or build output
-to Worktree Shared Paths or `worktree.sharedDirectories`. Setup must run before Vite.
-Orca 1.4.211 creates default tabs before the setup terminal. The startup policy
-only delays agents, so the Vite task separately waits for
-`storage/framework/.dev-ready`, which setup removes first and writes after migrations
-and initial seeding succeed. Keep that marker Worktree-local too. When setup finds an
+to Worktree Shared Paths or `worktree.sharedDirectories`. Orca opens no Vite tab:
+setup and `dev:migrate` run `mise run assets`, which drops a `public/hot` left by a
+stopped Vite and builds `public/build`. `pnpm dev` runs only while frontend changes
+need a live server, so idle Worktrees stay light. When setup finds an
 empty database, it records `storage/framework/.dev-seed-pending` before migrating and
 removes it only after seeding, so a rerun retries an interrupted initial seed.
 Use a separate Orca browser profile for each Worktree, or separate browser hostnames;
@@ -104,7 +99,7 @@ primary-checkout data. Run it before plain `git worktree remove` too; deleting a
 directory without running the hook leaves its database and reservation behind. A
 failed archive hook must be resolved before deleting the Worktree. An archived
 Worktree can be initialized again if its files are retained.
-Stop the Worktree's Vite terminal before running manual cleanup.
+Stop the Worktree's Vite server, if running, before running manual cleanup.
 
 `mise run down` and `mise run destroy` remove only this Worktree's containers. They
 preserve the shared database, caches, and image. After all Worktrees are down,
@@ -132,8 +127,8 @@ Apply these files together so the setup and cleanup hooks use the same lifecycle
 
 - `compose.yaml`, `compose.infrastructure.yaml`, and `compose.legacy.yaml`.
 - `scripts/dev-environment.ts`, `scripts/local-env.ts`,
-  `scripts/run-pest-locked.sh`, `scripts/run-e2e-artisan.sh`, and
-  `scripts/run-vite-after-setup.sh` (retain executable permission on the shell scripts).
+  `scripts/run-pest-locked.sh`, and `scripts/run-e2e-artisan.sh` (retain executable
+  permission on the shell scripts).
 - `mise.toml` setup/runtime tasks and `orca.yaml`.
 - `.env.example` infrastructure/port defaults and the backup/ready-marker entries
   in `.gitignore`.

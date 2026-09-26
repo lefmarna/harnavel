@@ -6,12 +6,12 @@ pnpm = "12.2.1"
 [tasks.setup]
 description = "Setup entire project from scratch"
 run = [
-  "rm -f storage/framework/.dev-ready",
   "mise run setup:tools",
   "mise run setup:env",
   "mise run up",
   "mise run setup:backend",
   "node --import tsx scripts/dev-environment.ts initialize-app",
+  "mise run assets",
 ]
 
 [tasks."setup:tools"]
@@ -49,15 +49,19 @@ run = "docker compose down"
 
 [tasks."dev:migrate"]
 description = "Move the legacy local stack to shared infrastructure without deleting DB data"
-run = "node --import tsx scripts/dev-environment.ts migrate"
+run = ["node --import tsx scripts/dev-environment.ts migrate", "mise run assets"]
+
+[tasks.assets]
+description = "Build frontend assets and drop a hot file left by a stopped Vite"
+run = [
+  # 停止済みの Vite を指す public/hot が残ると、ビルド済みアセットが使われない。
+  '[ ! -f public/hot ] || curl -gfsS -m 3 "$(cat public/hot)/@vite/client" >/dev/null 2>&1 || rm -f public/hot',
+  "pnpm build",
+]
 
 [tasks."dev:info"]
 description = "Show this Worktree's local URLs and database names"
 run = "node --import tsx scripts/dev-environment.ts info"
-
-[tasks."dev:vite"]
-description = "Wait for successful setup, then start Vite"
-run = "sh scripts/run-vite-after-setup.sh"
 
 [tasks."infra:stop"]
 description = "Stop shared infrastructure after all Worktrees are down"

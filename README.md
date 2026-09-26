@@ -32,12 +32,14 @@ Laravel 13 + Inertia React + MariaDB を Docker で開発するためのテン�
 # 任意: デフォルト値を調整したい場合だけ先に作成
 cp .env.example .env
 
-# ツール導入、依存関係、Git hooks、共有環境とこの Worktree の起動、Laravel初期化まで実行
+# ツール導入、依存関係、Git hooks、共有環境とこの Worktree の起動、Laravel初期化、アセットのビルドまで実行
 mise run setup
 
-# フロントエンド開発サーバーを起動
+# フロントエンドを変更するときだけ Vite を起動
 pnpm dev
 ```
+
+Vite は負荷を抑えるため常駐させません。起動していない間は `mise run setup` 時にビルドしたアセットで表示するため、フロントエンドの変更を画面で確認するときは `pnpm dev` を起動してください。
 
 セットアップ完了後の既定 URL:
 
@@ -48,7 +50,7 @@ pnpm dev
 
 既存の6コンテナ構成からは、主 Worktree で `mise run dev:migrate` を実行してください。旧 DB を停止してから同じ `storage/mariadb` を引き継ぎ、既存データとアプリケーションキーを保持します。ポートも新しい割り当てに変わります。
 
-Orca は [orca.yaml](orca.yaml) の作成時コマンドでセットアップ完了を待ち、Vite ターミナルを開きます。既存の Repository 設定が local-only の場合は、リポジトリのコマンドを使用する設定に切り替えてください。終了・削除と4アプリへの反映手順は [Worktree development](docs/worktree-development.md) を参照してください。
+Orca は [orca.yaml](orca.yaml) の作成時コマンドでセットアップし、完了を待ってからエージェントを起動します。既存の Repository 設定が local-only の場合は、リポジトリのコマンドを使用する設定に切り替えてください。終了・削除と4アプリへの反映手順は [Worktree development](docs/worktree-development.md) を参照してください。
 
 `pnpm dev` の二重起動は避けてください。ポート衝突で終了した側が `public/hot` を削除するため、先に起動した dev server が生きたままアプリだけビルド済みアセットの配信に切り替わります（E2E はこの状態を検出して中止します）。
 

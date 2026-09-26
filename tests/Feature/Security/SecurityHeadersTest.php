@@ -100,13 +100,11 @@ it('実行中のメンテナンスの503にも基本のヘッダーを付与す�
 });
 
 it('POSTサイズ超過の413にも基本のヘッダーを付与する', function () {
-    $limit = (int) (ini_get('post_max_size') ?: 0);
-
     // 巨大な本文は送らず、CONTENT_LENGTH の申告だけで ValidatePostSize を通す。
     $response = $this->call(
         'POST',
         '/_testing/security-headers-post',
-        server: ['CONTENT_LENGTH' => (string) (max($limit, 1) * 1024 * 1024 * 1024)],
+        server: ['CONTENT_LENGTH' => (string) PHP_INT_MAX],
     );
 
     $response->assertStatus(413);

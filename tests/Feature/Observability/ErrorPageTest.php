@@ -11,10 +11,10 @@ beforeEach(function () {
     config()->set('app.debug', false);
     config()->set('observability.discord.webhook_url', null);
 
-    // GET の場合はバージョン不一致で 409 に差し替えられるため、実際の値を一致させる。
+    // GET はバージョン不一致で 409 になるため、Inertia と同じく文字列化して一致させる（ビルド前は null）。
     $this->inertiaHeaders = [
         'X-Inertia' => 'true',
-        'X-Inertia-Version' => app(HandleInertiaRequests::class)->version(request()),
+        'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
     ];
 
     Route::middleware('web')->get('/_testing/errors/500', function () {

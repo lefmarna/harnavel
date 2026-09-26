@@ -373,9 +373,7 @@ async function up(): Promise<void> {
   provision(env);
   // Dockerfile の変更を反映する。変更がなければビルドキャッシュで同一レイヤーになる。
   command([...compose(env), "up", "-d", "--build"]);
-  console.log(
-    `Web: ${env.APP_URL}\nVite: http://localhost:${env.VITE_PORT}\nMailpit: http://localhost:${env.MAILPIT_UI_PORT}`,
-  );
+  console.log(`Web: ${env.APP_URL}`);
 }
 
 function configured(): Record<string, string> {
@@ -519,7 +517,7 @@ async function main(): Promise<void> {
       case "info": {
         const env = configured();
         console.log(
-          `Web: ${env.APP_URL}\nVite: http://localhost:${env.VITE_PORT}\nE2E: http://localhost:${envPort(env, "NGINX_PORT") + 5}\nMailpit: http://localhost:${env.MAILPIT_UI_PORT}\nDB: ${env.DB_DATABASE}\nCompose: ${env.COMPOSE_PROJECT_NAME}\n共有環境: ${env.DEV_INFRA_PROJECT}`,
+          `Web: ${env.APP_URL}\nVite: http://localhost:${env.VITE_PORT}（pnpm dev 実行時）\nE2E: http://localhost:${envPort(env, "NGINX_PORT") + 5}（Playwright 実行時）\nMailpit: http://localhost:${env.MAILPIT_UI_PORT}\nDB: ${env.DB_DATABASE}\nCompose: ${env.COMPOSE_PROJECT_NAME}\n共有環境: ${env.DEV_INFRA_PROJECT}`,
         );
         break;
       }

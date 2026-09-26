@@ -216,7 +216,11 @@ async function initialize(): Promise<Record<string, string>> {
   const base = envPort(
     readLocalEnv(primary),
     "DEV_PORT_BASE",
-    envPort(env, "DEV_PORT_BASE", 20000),
+    envPort(
+      env,
+      "DEV_PORT_BASE",
+      envPort(readLocalEnv(primary, ".env.example"), "DEV_PORT_BASE", 20000),
+    ),
   );
   if (base + 99 > 65535) throw new Error("DEV_PORT_BASE + 99 が65535を超えます。");
   const infra = `dev-${hash(primary)}-infra`;

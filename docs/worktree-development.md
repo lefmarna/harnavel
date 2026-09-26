@@ -10,8 +10,9 @@ shared database affects every active Worktree of that application.
 
 ## Initial setup
 
-Use `mise run setup` for a fresh checkout. Set `DEV_PORT_BASE` in the primary `.env`
-before first setup if the default application block is already in use.
+Use `mise run setup` for a fresh checkout. Setup reads `DEV_PORT_BASE` from the
+primary `.env`, falling back to `.env.example`; change it before first setup if that
+application block is already in use.
 
 For an existing six-container checkout, run `mise run dev:migrate` in the primary
 checkout first. It saves `.env.worktree-backup`, shuts down the legacy stack, and
@@ -120,8 +121,9 @@ These are proposed blocks, not changes already applied to the applications:
 
 Merge the shared Compose files, local environment scripts, test runners, Playwright
 configuration, and mise tasks from the template, preserving application-specific
-tasks and E2E setup. Set the application's base port in both `.env.example` and the
-primary local `.env`, then run `mise run dev:migrate` from its primary checkout.
+tasks and E2E setup. Set the application's base port in `.env.example`; migration
+copies it into the primary `.env`. Then run `mise run dev:migrate` from its primary
+checkout.
 
 Apply these files together so the setup and cleanup hooks use the same lifecycle:
 

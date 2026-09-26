@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseEnv } from "node:util";
 
-export const readLocalEnv = (root: string): Record<string, string> => {
-  const file = path.join(root, ".env");
+export const readLocalEnv = (root: string, name = ".env"): Record<string, string> => {
+  const file = path.join(root, name);
   const values = fs.existsSync(file) ? parseEnv(fs.readFileSync(file, "utf8")) : {};
 
   const expand = (value: string, seen: Set<string>): string =>

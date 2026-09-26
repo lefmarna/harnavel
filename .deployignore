@@ -13,7 +13,7 @@ vendor
 
 # Docker関連
 .docker
-compose.yaml
+compose*.yaml
 docker-compose.yml
 
 # テスト
@@ -38,6 +38,7 @@ test-results
 .gemini
 .github
 .kiro
+orca.yaml
 .pnpm-store
 .serena
 .vscode
@@ -72,6 +73,7 @@ docs
 .env
 .env.example
 .env.backup
+.env.worktree-backup
 .env.e2e
 .env.production
 

@@ -44,6 +44,5 @@ A MariaDB image upgrade updates system tables on start. Delete the resulting
 ## Orca
 
 `orca.yaml` runs setup and removal and makes agents wait for setup. Orca reads it
-from the new checkout, so commit it first. Let Orca use the repository commands, not
-local-only ones, and give each Worktree its own browser profile: ports do not isolate
-cookies.
+from the new checkout, so commit it first. Give each Worktree its own browser
+profile: ports do not isolate cookies.

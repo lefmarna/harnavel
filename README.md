@@ -48,7 +48,7 @@ Vite は負荷を抑えるため常駐させません。起動していない間
 
 各アプリは `DEV_PORT_BASE` で100ポート分を確保し、追加 Worktree に10番ずつ割り当てます。MariaDB と Mailpit は同じアプリの Worktree 間で共有し、開発・テスト・E2E の DB と接続ユーザーは Worktree ごとに分離します。通常は4コンテナ、追加 Worktree は2コンテナだけ起動します。
 
-Orca は [orca.yaml](orca.yaml) の作成時コマンドでセットアップし、完了を待ってからエージェントを起動します。既存の Repository 設定が local-only の場合は、リポジトリのコマンドを使用する設定に切り替えてください。終了・削除の手順は [Worktree development](docs/worktree-development.md) を参照してください。
+Orca は [orca.yaml](orca.yaml) の作成時コマンドでセットアップし、完了を待ってからエージェントを起動します。終了・削除の手順は [Worktree development](docs/worktree-development.md) を参照してください。
 
 `pnpm dev` の二重起動は避けてください。ポート衝突で終了した側が `public/hot` を削除するため、先に起動した dev server が生きたままアプリだけビルド済みアセットの配信に切り替わります（E2E はこの状態を検出して中止します）。
 

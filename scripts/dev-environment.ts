@@ -91,6 +91,11 @@ function privatePaths(): void {
   }
 }
 
+const readRegistry = (): Registry | undefined =>
+  fs.existsSync(registryFile)
+    ? (JSON.parse(fs.readFileSync(registryFile, "utf8")) as Registry)
+    : undefined;
+
 function saveRegistry(registry: Registry): void {
   const temporary = `${registryFile}.${process.pid}`;
   fs.writeFileSync(temporary, JSON.stringify(registry, null, 2), { mode: 0o600 });
@@ -183,9 +188,7 @@ async function initialize(): Promise<Record<string, string>> {
   const base = appBasePort();
   if (base + 99 > 65535) throw new Error("DEV_PORT_BASE + 99 が65535を超えます。");
   const infra = `dev-${hash(primary)}-infra`;
-  const registry: Registry = fs.existsSync(registryFile)
-    ? (JSON.parse(fs.readFileSync(registryFile, "utf8")) as Registry)
-    : { basePort: base, infra, allocations: [] };
+  const registry: Registry = readRegistry() ?? { basePort: base, infra, allocations: [] };
   if (registry.basePort !== base || registry.infra !== infra)
     throw new Error(
       "登録済み環境の DEV_PORT_BASE・パスは変更できません。停止・削除後に設定してください。",
@@ -329,6 +332,18 @@ async function up(): Promise<void> {
   // Dockerfile の変更を反映する。時間がかかるため共有状態のロックの外で行う。
   command([...compose(env), "build"]);
   await locked(async () => {
+    // ビルド中に worktree:remove されていたら、削除済みの環境を作り直さない。
+    const allocation = readRegistry()?.allocations.find((item) => item.path === root);
+    if (
+      !allocation ||
+      allocation.project !== env.COMPOSE_PROJECT_NAME ||
+      allocation.database !== env.DB_DATABASE
+    ) {
+      command([...compose(env), "down", "--rmi", "local"]);
+      throw new Error(
+        "この Worktree の登録は削除されました。使うときは mise run setup を実行してください。",
+      );
+    }
     startSharedServices(env);
     command([
       "docker",
@@ -363,10 +378,6 @@ async function remove(): Promise<void> {
     throw new Error(
       "主 Worktree の DB は自動削除できません。停止には mise run down を使ってください。",
     );
-  const readRegistry = (): Registry | undefined =>
-    fs.existsSync(registryFile)
-      ? (JSON.parse(fs.readFileSync(registryFile, "utf8")) as Registry)
-      : undefined;
   const allocation = readRegistry()?.allocations.find((item) => item.path === root);
   if (!allocation) {
     console.log("この Worktree に削除する開発環境はありません。");

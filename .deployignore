@@ -70,12 +70,7 @@ public/hot
 docs
 
 # 環境設定（サーバーで別途作成）
-.env
-.env.example
-.env.backup
-.env.worktree-backup
-.env.e2e
-.env.production
+.env*
 
 # 開発環境用 .htaccess テンプレート（GitHub Actions でビルド時に .htaccess へ変換）
 .htaccess.develop

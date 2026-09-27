@@ -43,8 +43,54 @@ const primary = path.dirname(commonDir);
 const registryFile = path.join(commonDir, "dev-worktrees.json");
 const lockDir = path.join(commonDir, "dev-worktrees.lock");
 
+const lockOwner = (): string | undefined => {
+  try {
+    return fs.readFileSync(path.join(lockDir, "pid"), "utf8");
+  } catch {
+    return undefined;
+  }
+};
+
+const olderThan = (target: string, milliseconds: number): boolean => {
+  try {
+    return Date.now() - fs.statSync(target).mtimeMs > milliseconds;
+  } catch {
+    return false;
+  }
+};
+
+// pid を書く前に落ちたロックは、作成から時間が経ったものだけ古いとみなす。
+function isStale(owner: string | undefined): boolean {
+  if (owner === undefined) return olderThan(lockDir, 30_000);
+  try {
+    process.kill(Number(owner), 0);
+    return false;
+  } catch (error) {
+    return error instanceof Error && "code" in error && error.code === "ESRCH";
+  }
+}
+
+// 回収も排他にし、確認した持ち主のままのときだけ消す。回収中に落ちた印は時間で古いとみなす。
+function reclaim(owner: string | undefined): void {
+  const reclaimDir = `${lockDir}.reclaim`;
+  try {
+    fs.mkdirSync(reclaimDir);
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+    if (olderThan(reclaimDir, 30_000)) fs.rmSync(reclaimDir, { recursive: true, force: true });
+    return;
+  }
+  try {
+    if (lockOwner() === owner && isStale(owner))
+      fs.rmSync(lockDir, { recursive: true, force: true });
+  } finally {
+    fs.rmSync(reclaimDir, { recursive: true, force: true });
+  }
+}
+
+// 共有状態（ポート枠・共有サービス・DB アカウント）の更新だけを排他にする。
 async function locked<T>(action: () => Promise<T>): Promise<T> {
-  const deadline = Date.now() + 120_000;
+  const deadline = Date.now() + 600_000;
   for (;;) {
     try {
       fs.mkdirSync(lockDir);
@@ -52,18 +98,10 @@ async function locked<T>(action: () => Promise<T>): Promise<T> {
       break;
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
-      const pidFile = path.join(lockDir, "pid");
-      if (fs.existsSync(pidFile)) {
-        try {
-          process.kill(Number(fs.readFileSync(pidFile, "utf8")), 0);
-        } catch (pidError) {
-          if (pidError instanceof Error && "code" in pidError && pidError.code === "ESRCH") {
-            fs.rmSync(lockDir, { recursive: true });
-            continue;
-          }
-        }
-      }
-      if (Date.now() > deadline) throw new Error("別の Worktree の初期化・終了処理が実行中です。");
+      const owner = lockOwner();
+      if (isStale(owner)) reclaim(owner);
+      else if (Date.now() > deadline)
+        throw new Error("別の Worktree の初期化・終了処理が実行中です。");
       await sleep(250);
     }
   }
@@ -149,34 +187,6 @@ function validName(value: string): string {
   return value;
 }
 
-function legacyRunning(): boolean {
-  const ids = command([
-    "docker",
-    "ps",
-    "-q",
-    "--filter",
-    "label=com.docker.compose.service=mariadb",
-  ])
-    .split("\n")
-    .filter(Boolean);
-  if (!ids.length) return false;
-  const mounts = command([
-    "docker",
-    "inspect",
-    "--format",
-    '{{json .Mounts}}|{{index .Config.Labels "com.docker.compose.project"}}',
-    ...ids,
-  ]);
-  return mounts.split("\n").some((line) => {
-    const [encoded, project] = line.split("|");
-    const volumes = JSON.parse(encoded || "[]") as { Source: string }[];
-    return (
-      project !== `dev-${hash(primary)}-infra` &&
-      volumes.some((volume) => volume.Source === path.join(primary, "storage/mariadb"))
-    );
-  });
-}
-
 async function available(port: number): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const server = net.createServer();
@@ -195,12 +205,12 @@ function assertNoDatabaseUrl(env: Record<string, string>): void {
     throw new Error(".env の DB_URL を空にしてください。Worktree ごとの DB 設定より優先されます。");
 }
 
+// アプリ共通の値。主 checkout が未セットアップでも .env.example から決まる。
+const primaryValue = (key: string): string =>
+  readLocalEnv(primary)[key] ?? readLocalEnv(primary, ".env.example")[key] ?? "";
+
 async function initialize(): Promise<Record<string, string>> {
   privatePaths();
-  if (legacyRunning())
-    throw new Error(
-      "旧 DB コンテナが実行中です。主 Worktree で mise run dev:migrate を実行してください。保存先を二重使用するため起動を中止しました。",
-    );
   if (!fs.existsSync(envFile)) {
     // API キー等はコピーし、ポート・接続先は下で Worktree 固有に書き換える。
     const source =
@@ -213,15 +223,7 @@ async function initialize(): Promise<Record<string, string>> {
   if (env.APP_ENV !== "local")
     throw new Error("開発環境の操作は APP_ENV=local でのみ実行できます。");
   assertNoDatabaseUrl(env);
-  const base = envPort(
-    readLocalEnv(primary),
-    "DEV_PORT_BASE",
-    envPort(
-      env,
-      "DEV_PORT_BASE",
-      envPort(readLocalEnv(primary, ".env.example"), "DEV_PORT_BASE", 20000),
-    ),
-  );
+  const base = envPort({ DEV_PORT_BASE: primaryValue("DEV_PORT_BASE") }, "DEV_PORT_BASE");
   if (base + 99 > 65535) throw new Error("DEV_PORT_BASE + 99 が65535を超えます。");
   const infra = `dev-${hash(primary)}-infra`;
   const registry: Registry = fs.existsSync(registryFile)
@@ -245,10 +247,8 @@ async function initialize(): Promise<Record<string, string>> {
       );
     const database =
       root === primary
-        ? validName(env.DB_DATABASE || "app")
-        : validName(
-            `${readLocalEnv(primary).DB_DATABASE || "app"}`.slice(0, 35) + `_w${hash(root)}`,
-          );
+        ? validName(env.DB_DATABASE ?? "")
+        : validName(primaryValue("DB_DATABASE").slice(0, 35) + `_w${hash(root)}`);
     allocation = { path: root, slot, project: `dev-${hash(root)}`, database };
     const ports = [0, 1, 5].map((offset) => base + slot * 10 + offset);
     // 最初の割り当てでは共有サービスも未起動のため、DEV_PORT_BASE が固定される前に確認する。
@@ -363,20 +363,28 @@ function provision(env: Record<string, string>): void {
   sql(env, queries.join("\n"));
 }
 
-async function up(): Promise<void> {
-  const env = await initialize();
+const startSharedServices = (env: Record<string, string>): void => {
   command([...compose(env, true), "up", "-d", "--wait", "--wait-timeout", "90"]);
-  command([
-    "docker",
-    "volume",
-    "create",
-    "--label",
-    `com.docker.compose.project=${env.DEV_INFRA_PROJECT}`,
-    `${env.DEV_INFRA_PROJECT}-composer-cache`,
-  ]);
-  provision(env);
-  // Dockerfile の変更を反映する。変更がなければビルドキャッシュで同一レイヤーになる。
-  command([...compose(env), "up", "-d", "--build"]);
+};
+
+async function up(): Promise<void> {
+  const env = await locked(initialize);
+  // Dockerfile の変更を反映する。時間がかかるため共有状態のロックの外で行う。
+  command([...compose(env), "build"]);
+  await locked(async () => {
+    startSharedServices(env);
+    command([
+      "docker",
+      "volume",
+      "create",
+      "--label",
+      `com.docker.compose.project=${env.DEV_INFRA_PROJECT}`,
+      `${env.DEV_INFRA_PROJECT}-composer-cache`,
+    ]);
+    provision(env);
+    // 起動済みにしてからロックを外し、infra:stop の実行中判定に含める。
+    command([...compose(env), "up", "-d"]);
+  });
   console.log(`Web: ${env.APP_URL}`);
 }
 
@@ -393,146 +401,106 @@ function configured(): Record<string, string> {
   return env;
 }
 
-async function migrate(): Promise<void> {
-  if (root !== primary) throw new Error("旧環境の移行は主 Worktree で実行してください。");
-  privatePaths();
-  const env = readLocalEnv(root);
-  if (env.APP_ENV !== "local") throw new Error("APP_ENV=local の環境だけ移行できます。");
-  if (env.DEV_INFRA_PROJECT) {
-    await up();
-    command([
-      ...compose(readLocalEnv(root)),
-      "exec",
-      "-T",
-      "app",
-      "php",
-      "artisan",
-      "config:clear",
-    ]);
-    return;
-  }
-  const backup = `${envFile}.worktree-backup`;
-  if (!fs.existsSync(backup)) {
-    fs.copyFileSync(envFile, backup);
-    fs.chmodSync(backup, 0o600);
-  }
-  const oldProject = env.COMPOSE_PROJECT_NAME || path.basename(root).toLowerCase();
-  command([
-    "docker",
-    "compose",
-    "--project-directory",
-    root,
-    "--env-file",
-    backup,
-    "-p",
-    oldProject,
-    "-f",
-    path.join(root, "compose.legacy.yaml"),
-    "down",
-  ]);
-  await up();
-  command([...compose(readLocalEnv(root)), "exec", "-T", "app", "php", "artisan", "config:clear"]);
-  console.log(
-    "旧コンテナを停止し、既存 storage/mariadb を共有 DB へ引き継ぎました。旧 .env は .env.worktree-backup に保存しています。",
-  );
-}
-
 async function remove(): Promise<void> {
   if (root === primary)
     throw new Error(
       "主 Worktree の DB は自動削除できません。停止には mise run down を使ってください。",
     );
-  const registry = fs.existsSync(registryFile)
-    ? (JSON.parse(fs.readFileSync(registryFile, "utf8")) as Registry)
-    : undefined;
-  const allocation = registry?.allocations.find((item) => item.path === root);
-  if (!registry || !allocation) {
+  const readRegistry = (): Registry | undefined =>
+    fs.existsSync(registryFile)
+      ? (JSON.parse(fs.readFileSync(registryFile, "utf8")) as Registry)
+      : undefined;
+  const allocation = readRegistry()?.allocations.find((item) => item.path === root);
+  if (!allocation) {
     console.log("この Worktree に削除する開発環境はありません。");
     return;
   }
   const env = configured();
   if (allocation.database !== env.DB_DATABASE)
     throw new Error("削除する Worktree の DB を特定できません。");
-  command([...compose(env), "down", "--rmi", "local"]);
-  const queries = sql(
-    env,
-    `SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE ${literal(parallelTestDatabases(`${allocation.database}_testing`))};`,
-  )
-    .split("\n")
-    .filter(Boolean)
-    .map((database) => `DROP DATABASE IF EXISTS \`${validName(database)}\`;`);
-  for (const [database, user] of accounts(allocation.database, `dev_${hash(root)}`)) {
-    queries.push(
-      `DROP DATABASE IF EXISTS \`${validName(database)}\`;`,
-      `DROP USER IF EXISTS ${literal(user)}@'%';`,
-    );
-  }
-  sql(env, queries.join("\n"));
-  registry.allocations = registry.allocations.filter((item) => item.path !== root);
-  saveRegistry(registry);
+  // infra:stop と排他にし、共有 DB が動いている間にコンテナ停止から登録解除までを終える。
+  await locked(async () => {
+    startSharedServices(env);
+    command([...compose(env), "down", "--rmi", "local"]);
+    const queries = sql(
+      env,
+      `SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE ${literal(parallelTestDatabases(`${allocation.database}_testing`))};`,
+    )
+      .split("\n")
+      .filter(Boolean)
+      .map((database) => `DROP DATABASE IF EXISTS \`${validName(database)}\`;`);
+    for (const [database, user] of accounts(allocation.database, `dev_${hash(root)}`)) {
+      queries.push(
+        `DROP DATABASE IF EXISTS \`${validName(database)}\`;`,
+        `DROP USER IF EXISTS ${literal(user)}@'%';`,
+      );
+    }
+    sql(env, queries.join("\n"));
+    const registry = readRegistry();
+    if (!registry) return;
+    registry.allocations = registry.allocations.filter((item) => item.path !== root);
+    saveRegistry(registry);
+  });
   console.log("この Worktree のコンテナ・DB・接続ユーザー・ポート枠を削除しました。");
 }
 
 async function main(): Promise<void> {
   const action = process.argv[2] ?? "";
-  await locked(async () => {
-    switch (action) {
-      case "env":
-        await initialize();
-        break;
-      case "up":
-        await up();
-        break;
-      case "migrate":
-        await migrate();
-        break;
-      case "backend": {
-        const env = configured();
-        fs.rmSync(path.join(root, "bootstrap/cache/config.php"), { force: true });
-        command([
-          ...compose(env),
-          "exec",
-          "-T",
-          "app",
-          "composer",
-          "install",
-          "--no-interaction",
-          "--prefer-dist",
-        ]);
-        if (!readLocalEnv(root).APP_KEY)
-          command([...compose(env), "exec", "-T", "app", "php", "artisan", "key:generate"]);
-        break;
+  switch (action) {
+    case "env":
+      await locked(initialize);
+      break;
+    case "up":
+      await up();
+      break;
+    case "backend": {
+      const env = configured();
+      fs.rmSync(path.join(root, "bootstrap/cache/config.php"), { force: true });
+      command([
+        ...compose(env),
+        "exec",
+        "-T",
+        "app",
+        "composer",
+        "install",
+        "--no-interaction",
+        "--prefer-dist",
+      ]);
+      if (!readLocalEnv(root).APP_KEY)
+        command([...compose(env), "exec", "-T", "app", "php", "artisan", "key:generate"]);
+      break;
+    }
+    case "initialize-app": {
+      const env = configured();
+      // migrate・seed が途中で失敗しても、次回 setup で初期シードを再試行できるよう記録する。
+      const seedPending = path.join(root, "storage/framework/.dev-seed-pending");
+      if (
+        sql(
+          env,
+          `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ${literal(env.DB_DATABASE || "")};`,
+        ) === "0"
+      )
+        fs.writeFileSync(seedPending, "");
+      command([...compose(env), "exec", "-T", "app", "php", "artisan", "migrate"]);
+      if (fs.existsSync(seedPending)) {
+        command([...compose(env), "exec", "-T", "app", "php", "artisan", "db:seed"]);
+        fs.rmSync(seedPending);
       }
-      case "initialize-app": {
-        const env = configured();
-        // migrate・seed が途中で失敗しても、次回 setup で初期シードを再試行できるよう記録する。
-        const seedPending = path.join(root, "storage/framework/.dev-seed-pending");
-        if (
-          sql(
-            env,
-            `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ${literal(env.DB_DATABASE || "")};`,
-          ) === "0"
-        )
-          fs.writeFileSync(seedPending, "");
-        command([...compose(env), "exec", "-T", "app", "php", "artisan", "migrate"]);
-        if (fs.existsSync(seedPending)) {
-          command([...compose(env), "exec", "-T", "app", "php", "artisan", "db:seed"]);
-          fs.rmSync(seedPending);
-        }
-        break;
-      }
-      case "remove":
-        await remove();
-        break;
-      case "info": {
-        const env = configured();
-        console.log(
-          `Web: ${env.APP_URL}\nVite: http://localhost:${env.VITE_PORT}（pnpm dev 実行時）\nE2E: http://localhost:${envPort(env, "NGINX_PORT") + 5}（Playwright 実行時）\nMailpit: http://localhost:${env.MAILPIT_UI_PORT}\nDB: ${env.DB_DATABASE}\nCompose: ${env.COMPOSE_PROJECT_NAME}\n共有環境: ${env.DEV_INFRA_PROJECT}`,
-        );
-        break;
-      }
-      case "infra-stop": {
-        const env = configured();
+      break;
+    }
+    case "remove":
+      await remove();
+      break;
+    case "info": {
+      const env = configured();
+      console.log(
+        `Web: ${env.APP_URL}\nVite: http://localhost:${env.VITE_PORT}（pnpm dev 実行時）\nE2E: http://localhost:${envPort(env, "NGINX_PORT") + 5}（Playwright 実行時）\nMailpit: http://localhost:${env.MAILPIT_UI_PORT}\nDB: ${env.DB_DATABASE}\nCompose: ${env.COMPOSE_PROJECT_NAME}\n共有環境: ${env.DEV_INFRA_PROJECT}`,
+      );
+      break;
+    }
+    case "infra-stop": {
+      const env = configured();
+      await locked(async () => {
         const running = command([
           "docker",
           "ps",
@@ -548,12 +516,12 @@ async function main(): Promise<void> {
             "実行中の Worktree があります。先に各 Worktree で mise run down を実行してください。",
           );
         command([...compose(env, true), "stop"]);
-        break;
-      }
-      default:
-        throw new Error("env / up / migrate / remove / info / infra-stop を指定してください。");
+      });
+      break;
     }
-  });
+    default:
+      throw new Error("env / up / remove / info / infra-stop を指定してください。");
+  }
 }
 
 main().catch((error: unknown) => {

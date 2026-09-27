@@ -1,43 +1,18 @@
 # Shared development infrastructure with isolated Worktree state
 
-Local development usually uses one Worktree, occasionally two or three, and at most
-five. A dedicated database process for every development, PHPUnit, and E2E database
-adds memory and disk overhead even when no tests are running.
+Local development usually runs one Worktree and at most five at once. A database
+process per development, PHPUnit, and E2E database costs memory even when idle.
 
-Each application shares one MariaDB 10.11 service, one Mailpit service, and a Composer
-download cache across its Worktrees. Each active Worktree runs its own PHP and Nginx
-containers and host Vite process. Each Worktree tags its own PHP image, but an
-identical Dockerfile resolves to the same layers through Docker's build cache
-instead of forcing a complete rebuild.
+Each application shares one MariaDB, one Mailpit, and a Composer cache across its
+Worktrees; the primary checkout owns the data directory. Each Worktree runs only PHP
+and Nginx and gets separate development, PHPUnit, and E2E databases with restricted
+accounts, so tests cannot touch the development database. No application or test
+process uses the administrator account.
 
-Development, PHPUnit, and E2E use separate databases and separate restricted accounts
-per Worktree. The PHPUnit and E2E names derive from the development database and
-account by suffix and share its password: the accounts separate privileges, not
-secrets, because all three live in the same `.env`. No application or test process
-uses the database administrator account, which keeps the legacy fixed local password
-behind the loopback-only port.
-Database names and service addresses are explicit inputs to E2E's destructive-target
-guard. CI retains its existing disposable database services and configuration.
+The Git common directory holds the slot registry and its lock. An application
+reserves 100 ports and each Worktree ten. Vite does not run by default: setup builds
+assets, and `pnpm dev` runs only for frontend work.
 
-The primary checkout owns the persistent database directory, and every Worktree
-operates the shared services through the primary checkout's Compose definition. Moving from the legacy
-stack stops its database before the shared service mounts the same directory. Neither
-normal Worktree shutdown nor image cleanup removes the shared database or cache.
-Deleting an additional Worktree removes only its allocated databases and accounts;
-the primary database cannot be deleted by that command.
-
-The Git common directory stores the application-wide allocation registry and lock.
-An application reserves 100 ports; Worktrees reserve ten-port slots. Setup records
-the Compose project, ports, and credentials in each Worktree's private `.env` before
-starting services. Symlinks to mutable dependency trees or state are rejected.
-
-Orca runs repository-defined setup and archive commands and waits for setup before
-launching an agent. Vite does not run per Worktree by default: setup builds assets
-so every Worktree renders, and `pnpm dev` starts only for frontend work, keeping
-idle Worktrees light. Browser profiles must still
-be isolated when multiple Worktrees use the same hostname: ports do not isolate
-cookies, including Laravel's fixed-name XSRF cookie.
-
-The tradeoff is a shared failure domain: database restarts affect all Worktrees of
-that application, and Mailpit's inbox mixes their mail. Shared infrastructure is
-stopped explicitly only after every attached Worktree has shut down.
+The tradeoff is a shared failure domain: a database restart affects every Worktree of
+the application, Mailpit mixes their mail, and browsers need separate profiles
+because ports do not isolate cookies.

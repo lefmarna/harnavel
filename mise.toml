@@ -47,10 +47,6 @@ run = "docker compose down"
 description = "Remove this Worktree's containers (shared DB and cache are preserved)"
 run = "docker compose down"
 
-[tasks."dev:migrate"]
-description = "Move the legacy local stack to shared infrastructure without deleting DB data"
-run = ["node --import tsx scripts/dev-environment.ts migrate", "mise run assets"]
-
 [tasks.assets]
 description = "Build frontend assets and drop a hot file left by a stopped Vite"
 run = [

@@ -3,7 +3,7 @@ services:
   nginx:
     image: nginx:stable
     ports:
-      - "127.0.0.1:${NGINX_PORT:-80}:80"
+      - "127.0.0.1:${NGINX_PORT}:80"
     volumes:
       - ./public:/app/public
       - ./.docker/nginx/nginx.conf:/etc/nginx/nginx.conf
@@ -38,7 +38,7 @@ services:
 networks:
   backend:
     external: true
-    name: ${DEV_INFRA_PROJECT:?mise run setup または dev:migrate を実行してください}-backend
+    name: ${DEV_INFRA_PROJECT:?mise run setup を実行してください}-backend
 
 volumes:
   composer-cache:

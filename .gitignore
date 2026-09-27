@@ -13,12 +13,9 @@
 /vendor
 /.deploy
 .DS_Store
-.env
-.env.backup
-.env.worktree-backup
+.env*
+!.env.example
 /storage/framework/.dev-seed-pending
-.env.e2e
-.env.production
 .claude/settings.local.json
 .phpactor.json
 .phpunit.result.cache

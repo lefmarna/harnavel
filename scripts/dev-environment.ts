@@ -442,10 +442,16 @@ async function remove(): Promise<void> {
     throw new Error(
       "主 Worktree の DB は自動削除できません。停止には mise run down を使ってください。",
     );
+  const registry = fs.existsSync(registryFile)
+    ? (JSON.parse(fs.readFileSync(registryFile, "utf8")) as Registry)
+    : undefined;
+  const allocation = registry?.allocations.find((item) => item.path === root);
+  if (!registry || !allocation) {
+    console.log("この Worktree に削除する開発環境はありません。");
+    return;
+  }
   const env = configured();
-  const registry = JSON.parse(fs.readFileSync(registryFile, "utf8")) as Registry;
-  const allocation = registry.allocations.find((item) => item.path === root);
-  if (!allocation || allocation.database !== env.DB_DATABASE)
+  if (allocation.database !== env.DB_DATABASE)
     throw new Error("削除する Worktree の DB を特定できません。");
   command([...compose(env), "down", "--rmi", "local"]);
   const queries = sql(

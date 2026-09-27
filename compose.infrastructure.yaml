@@ -9,6 +9,7 @@ services:
       - "./storage/mariadb:/var/lib/mysql"
     environment:
       MARIADB_ROOT_PASSWORD: password
+      MARIADB_AUTO_UPGRADE: "1"
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 2s

@@ -107,6 +107,9 @@ preserve the shared database, caches, and image. After all Worktrees are down,
 `mise run infra:stop` stops the shared services; it refuses while any attached
 Worktree or E2E server remains running.
 
+A MariaDB image upgrade updates system tables on start. Delete the resulting
+`storage/mariadb/system_mysql_backup_*.sql.zst` once verified.
+
 ## Applying the change to derived applications
 
 These are proposed blocks, not changes already applied to the applications:

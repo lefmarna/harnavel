@@ -22,6 +22,7 @@ app-three. The primary checkout uses slot 0; additional Worktrees get slots 1-9.
 | 3      | Mailpit SMTP   | Shared                 |
 | 4      | Mailpit UI     | Shared                 |
 | 5      | E2E web server | Per slot, during tests |
+| 9      | Setup lock     | Shared, while updating |
 
 Setup writes only keys listed in `.env.example`, at the same position. Keep `DB_URL`
 empty; it would override the Worktree's database. Do not share `.env`, `storage`,

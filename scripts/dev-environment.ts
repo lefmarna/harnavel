@@ -41,74 +41,35 @@ const commonDir = fs.realpathSync(
 );
 const primary = path.dirname(commonDir);
 const registryFile = path.join(commonDir, "dev-worktrees.json");
-const lockDir = path.join(commonDir, "dev-worktrees.lock");
+// アプリ共通の値。主 checkout が未セットアップでも .env.example から決まる。
+const primaryValue = (key: string): string =>
+  readLocalEnv(primary)[key] ?? readLocalEnv(primary, ".env.example")[key] ?? "";
 
-const lockOwner = (): string | undefined => {
-  try {
-    return fs.readFileSync(path.join(lockDir, "pid"), "utf8");
-  } catch {
-    return undefined;
-  }
-};
-
-const olderThan = (target: string, milliseconds: number): boolean => {
-  try {
-    return Date.now() - fs.statSync(target).mtimeMs > milliseconds;
-  } catch {
-    return false;
-  }
-};
-
-// pid を書く前に落ちたロックは、作成から時間が経ったものだけ古いとみなす。
-function isStale(owner: string | undefined): boolean {
-  if (owner === undefined) return olderThan(lockDir, 30_000);
-  try {
-    process.kill(Number(owner), 0);
-    return false;
-  } catch (error) {
-    return error instanceof Error && "code" in error && error.code === "ESRCH";
-  }
-}
-
-// 回収も排他にし、確認した持ち主のままのときだけ消す。回収中に落ちた印は時間で古いとみなす。
-function reclaim(owner: string | undefined): void {
-  const reclaimDir = `${lockDir}.reclaim`;
-  try {
-    fs.mkdirSync(reclaimDir);
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
-    if (olderThan(reclaimDir, 30_000)) fs.rmSync(reclaimDir, { recursive: true, force: true });
-    return;
-  }
-  try {
-    if (lockOwner() === owner && isStale(owner))
-      fs.rmSync(lockDir, { recursive: true, force: true });
-  } finally {
-    fs.rmSync(reclaimDir, { recursive: true, force: true });
-  }
-}
+const appBasePort = (): number =>
+  envPort({ DEV_PORT_BASE: primaryValue("DEV_PORT_BASE") }, "DEV_PORT_BASE");
 
 // 共有状態（ポート枠・共有サービス・DB アカウント）の更新だけを排他にする。
+// アプリのポート範囲の +9 を待ち受けて錠にする。異常終了しても OS が解放するため回収が要らない。
 async function locked<T>(action: () => Promise<T>): Promise<T> {
+  const port = appBasePort() + 9;
   const deadline = Date.now() + 600_000;
+  let server: net.Server;
   for (;;) {
-    try {
-      fs.mkdirSync(lockDir);
-      fs.writeFileSync(path.join(lockDir, "pid"), String(process.pid));
-      break;
-    } catch (error) {
-      if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
-      const owner = lockOwner();
-      if (isStale(owner)) reclaim(owner);
-      else if (Date.now() > deadline)
-        throw new Error("別の Worktree の初期化・終了処理が実行中です。");
-      await sleep(250);
-    }
+    // 排他には待ち受けだけを使う。接続が残ると close() が終わらないため即座に切る。
+    server = net.createServer((socket) => socket.destroy());
+    const error = await new Promise<NodeJS.ErrnoException | undefined>((resolve) => {
+      server.once("error", resolve);
+      server.listen(port, "127.0.0.1", () => resolve(undefined));
+    });
+    if (!error) break;
+    if (error.code !== "EADDRINUSE") throw error;
+    if (Date.now() > deadline) throw new Error("別の Worktree の初期化・終了処理が実行中です。");
+    await sleep(250);
   }
   try {
     return await action();
   } finally {
-    fs.rmSync(lockDir, { recursive: true, force: true });
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 }
 
@@ -205,10 +166,6 @@ function assertNoDatabaseUrl(env: Record<string, string>): void {
     throw new Error(".env の DB_URL を空にしてください。Worktree ごとの DB 設定より優先されます。");
 }
 
-// アプリ共通の値。主 checkout が未セットアップでも .env.example から決まる。
-const primaryValue = (key: string): string =>
-  readLocalEnv(primary)[key] ?? readLocalEnv(primary, ".env.example")[key] ?? "";
-
 async function initialize(): Promise<Record<string, string>> {
   privatePaths();
   if (!fs.existsSync(envFile)) {
@@ -223,7 +180,7 @@ async function initialize(): Promise<Record<string, string>> {
   if (env.APP_ENV !== "local")
     throw new Error("開発環境の操作は APP_ENV=local でのみ実行できます。");
   assertNoDatabaseUrl(env);
-  const base = envPort({ DEV_PORT_BASE: primaryValue("DEV_PORT_BASE") }, "DEV_PORT_BASE");
+  const base = appBasePort();
   if (base + 99 > 65535) throw new Error("DEV_PORT_BASE + 99 が65535を超えます。");
   const infra = `dev-${hash(primary)}-infra`;
   const registry: Registry = fs.existsSync(registryFile)

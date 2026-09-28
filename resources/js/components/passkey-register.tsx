@@ -1,3 +1,4 @@
+import { Transition } from "@headlessui/react";
 import { router, usePage } from "@inertiajs/react";
 import { usePasskeyRegister } from "@laravel/passkeys/react";
 import { useState } from "react";
@@ -52,11 +53,14 @@ export default function PasskeyRegister(props: Props) {
 function AvailablePasskeyRegister({ onSuccess }: Props) {
   const [name, setName] = useState(defaultPasskeyName);
   const [showForm, setShowForm] = useState(false);
+  const [recentlyAdded, setRecentlyAdded] = useState(false);
 
   const { register, isLoading, errorInstance, isSupported } = usePasskeyRegister({
     onSuccess: () => {
       setName(defaultPasskeyName());
       setShowForm(false);
+      setRecentlyAdded(true);
+      window.setTimeout(() => setRecentlyAdded(false), 2000);
       onSuccess();
     },
     // 423 を含む汎用エラーでは画面を更新し、期限切れのパスワード確認へ遷移できるようにする。
@@ -94,9 +98,21 @@ function AvailablePasskeyRegister({ onSuccess }: Props) {
 
   if (!showForm) {
     return (
-      <Button variant="outline" onClick={() => setShowForm(true)} data-test="add-passkey-button">
-        パスキーを追加
-      </Button>
+      <div className="flex items-center gap-4">
+        <Button variant="outline" onClick={() => setShowForm(true)} data-test="add-passkey-button">
+          パスキーを追加
+        </Button>
+
+        <Transition
+          show={recentlyAdded}
+          enter="transition ease-in-out"
+          enterFrom="opacity-0"
+          leave="transition ease-in-out"
+          leaveTo="opacity-0"
+        >
+          <p className="text-sm text-neutral-600">パスキーを追加しました</p>
+        </Transition>
+      </div>
     );
   }
 

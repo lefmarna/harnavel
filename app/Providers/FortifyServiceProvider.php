@@ -6,7 +6,9 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
 use App\Support\GoogleOAuth;
+use App\ViewModels\Auth\ConfirmPasswordPageViewModel;
 use App\ViewModels\Auth\LoginPageViewModel;
 use App\ViewModels\Auth\ResetPasswordPageViewModel;
 use App\ViewModels\Auth\StatusPageViewModel;
@@ -96,12 +98,12 @@ class FortifyServiceProvider extends ServiceProvider
             ),
         ));
 
-        Fortify::confirmPasswordView(fn () => Inertia::render(
+        Fortify::confirmPasswordView(fn (Request $request) => Inertia::render(
             'auth/confirm-password',
-            new StaticPageViewModel(
+            new ConfirmPasswordPageViewModel(
                 title: __('pages.auth.confirm_password.title'),
                 description: __('pages.auth.confirm_password.description'),
-                noIndex: true,
+                hasPasskeys: ($user = $request->user()) instanceof User && $user->passkeys()->exists(),
             ),
         ));
     }

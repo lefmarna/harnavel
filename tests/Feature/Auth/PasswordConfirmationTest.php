@@ -21,6 +21,29 @@ describe('パスワード確認', function () {
         );
     });
 
+    it('パスキーを持たないユーザーにはパスキーでの確認を案内しない', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('password.confirm'))
+            ->assertInertia(fn (Assert $page) => $page->where('hasPasskeys', false));
+    });
+
+    it('パスキーを持つユーザーにはパスキーでの確認を案内する', function () {
+        $user = User::factory()->create(['password' => null]);
+        $user->passkeys()->create([
+            'name' => 'iPhone',
+            'credential_id' => 'credential-1',
+            'credential' => ['id' => 'credential-1'],
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('password.confirm'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('auth.hasPassword', false)
+                ->where('hasPasskeys', true));
+    });
+
     it('パスワード確認には認証が必要', function () {
         $response = $this->get(route('password.confirm'));
 

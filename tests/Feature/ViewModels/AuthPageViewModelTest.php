@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\ViewModels\Auth\ConfirmPasswordPageViewModel;
 use App\ViewModels\Auth\LoginPageViewModel;
 use App\ViewModels\Auth\ResetPasswordPageViewModel;
 use App\ViewModels\Auth\StatusPageViewModel;
@@ -9,7 +10,7 @@ use App\ViewModels\PageViewModel;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-mutates(LoginPageViewModel::class, ResetPasswordPageViewModel::class, StatusPageViewModel::class);
+mutates(ConfirmPasswordPageViewModel::class, LoginPageViewModel::class, ResetPasswordPageViewModel::class, StatusPageViewModel::class);
 
 describe('Auth 専用 PageViewModel', function () {
     /**
@@ -84,6 +85,15 @@ describe('Auth 専用 PageViewModel', function () {
                 status: null,
             ),
             ['status' => null],
+        ],
+        'パスワード確認' => [
+            'auth/confirm-password',
+            new ConfirmPasswordPageViewModel(
+                title: 'カスタムタイトル',
+                description: 'カスタム説明。',
+                hasPasskeys: true,
+            ),
+            ['hasPasskeys' => true],
         ],
     ]);
 });

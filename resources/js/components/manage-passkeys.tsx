@@ -22,7 +22,7 @@ function EmptyState() {
       <p className="font-medium">パスキーはまだありません</p>
 
       <p className="mt-1 text-sm text-muted-foreground">
-        パスキーを追加すると、パスワードなしでログインできます
+        パスキーを追加すると、端末の画面ロック（指紋・顔認証・PIN）でパスワードなしにログインできます。
       </p>
     </div>
   );
@@ -45,7 +45,11 @@ export default function ManagePasskeys({ canManagePasskeys, passkeys }: Props) {
       <Heading
         variant="small"
         title="パスキー"
-        description="パスワードを使わずにログインするためのパスキーを管理します"
+        description={
+          passkeys.length > 0
+            ? "ログイン画面の「パスキーでログイン」から使えます。対応するブラウザでは、メールアドレス欄の候補にも表示されます。"
+            : "パスワードを使わずにログインするためのパスキーを管理します"
+        }
       />
 
       <div className="overflow-hidden rounded-lg border border-border">

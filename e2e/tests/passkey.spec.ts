@@ -1,23 +1,40 @@
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 
-import { expirePasswordConfirmation } from "../support/artisan";
+import {
+  createUser,
+  expirePasswordConfirmation,
+  setUserPassword,
+  type UserCredentials,
+} from "../support/artisan";
 import { expect, test } from "../support/fixtures";
 import { enableVirtualAuthenticator } from "../support/passkey";
 
 // ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
 const HOME_URL = /\/dashboard$/;
+const SECURITY_URL = /\/settings\/security$/;
+const CONFIRM_PASSWORD_URL = /\/user\/confirm-password$/;
 
-const openSecuritySettings = async (page: Page): Promise<void> => {
+const SEEDED_USER: UserCredentials = { email: "test@example.com", password: "Test1234" };
+
+const login = async (page: Page, user: UserCredentials): Promise<void> => {
   await page.goto("/login");
-  await page.getByLabel("メールアドレス").fill("test@example.com");
-  await page.getByLabel("パスワード").fill("Test1234");
+  await page.getByLabel("メールアドレス").fill(user.email);
+  await page.getByLabel("パスワード").fill(user.password);
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await expect(page).toHaveURL(HOME_URL);
+};
+
+const confirmPassword = async (page: Page, password: string): Promise<void> => {
+  await page.locator('input[name="password"]').fill(password);
+  await page.locator('[data-test="confirm-password-button"]').click();
+  await expect(page).toHaveURL(SECURITY_URL);
+};
+
+const openSecuritySettings = async (page: Page, user = SEEDED_USER): Promise<void> => {
+  await login(page, user);
 
   await page.goto("/settings/security");
-  await page.locator('input[name="password"]').fill("Test1234");
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(/\/settings\/security$/);
+  await confirmPassword(page, user.password);
 };
 
 const registerPasskey = async (page: Page, name: string): Promise<void> => {
@@ -32,10 +49,6 @@ const registerPasskey = async (page: Page, name: string): Promise<void> => {
 test("設定した origin と異なる URL ではパスキー操作を隠し利用できない理由を案内する", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
-  });
-
   const baseURL = test.info().project.use.baseURL;
   if (!baseURL) {
     throw new Error("E2E の baseURL が必要です");
@@ -76,6 +89,7 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await registerPasskey(page, "E2E オーセンティケータ");
 
+  await expect(page.getByText("パスキーを追加しました")).toBeVisible();
   await expect(page.getByText("E2E オーセンティケータ", { exact: true })).toBeVisible();
   // 複数のパスキーが並んでも、読み上げで削除対象を取り違えないこと。
   await expect(
@@ -84,8 +98,8 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await context.clearCookies();
 
-  // Conditional UI 対応環境ではボタンが非表示になり、フックも autofill 認証を開始するため、
-  // 手動経路のテスト用に isConditionalMediationAvailable を false に固定する
+  // 仮想オーセンティケータは環境によって待機中の自動入力に自ら応じ、ボタンより先にログインを
+  // 済ませてしまう。ボタンの経路は自動入力を止めてから確かめる。
   await page.addInitScript(() => {
     PublicKeyCredential.isConditionalMediationAvailable = async () => false;
   });
@@ -93,6 +107,298 @@ test("パスキーを登録してパスキーだけでログインできる", as
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
 
   await expect(page).toHaveURL(HOME_URL);
+});
+
+type AutofillStage = "options" | "support-check";
+
+type AutofillRaceWindow = Window & { releaseAutofill: () => void };
+
+/**
+ * 自動入力を stage で止める。自動入力の ceremony は中断されるまで待ち、手動の ceremony は
+ * 自動入力の ceremony が始まるまで待つ。手動側が自動入力の決着を待っていなければ中断される。
+ */
+const prepareAutofillRace = async (
+  page: Page,
+  context: BrowserContext,
+  stage: AutofillStage,
+): Promise<void> => {
+  await enableVirtualAuthenticator(page, context);
+
+  // シードユーザーはログインの試行制限に近い。
+  await openSecuritySettings(page, createUser());
+  await registerPasskey(page, "自動入力と競合するボタン");
+  await expect(page.getByText("自動入力と競合するボタン", { exact: true })).toBeVisible();
+
+  await context.clearCookies();
+
+  await page.addInitScript((stage: AutofillStage) => {
+    let release = () => {};
+    const released = new Promise<void>((resolve) => (release = resolve));
+    let markConditionalStarted = () => {};
+    const conditionalStarted = new Promise<void>((resolve) => (markConditionalStarted = resolve));
+    let optionsFetched = false;
+
+    (window as unknown as AutofillRaceWindow).releaseAutofill = release;
+
+    const fetch = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      const response = await fetch(input, init);
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      optionsFetched ||= url.includes("/passkeys/login/options");
+
+      return response;
+    };
+
+    // 自動入力は options の取得後、ceremony の直前にもう一度対応を判定する。
+    PublicKeyCredential.isConditionalMediationAvailable = async () => {
+      if (stage === "support-check" && optionsFetched) {
+        await released;
+      }
+
+      return true;
+    };
+
+    const get = navigator.credentials.get.bind(navigator.credentials);
+    navigator.credentials.get = async (options) => {
+      if (options?.mediation === "conditional") {
+        markConditionalStarted();
+
+        return new Promise((_, reject) => {
+          options.signal?.addEventListener("abort", () =>
+            reject(new DOMException("The operation was aborted.", "AbortError")),
+          );
+        });
+      }
+
+      release();
+      await Promise.race([
+        conditionalStarted,
+        new Promise((resolve) => setTimeout(resolve, 2_000)),
+      ]);
+
+      return get(options);
+    };
+  }, stage);
+};
+
+/**
+ * ボタンより前の options 取得（自動入力）を、released か手動側の取得まで止める。
+ * 手動側の応答は自動入力の応答の後に返し、challenge が上書きされる順序を作る。
+ */
+const holdAutofillOptions = async (page: Page, released: Promise<void>) => {
+  let clicked = false;
+  let markManualFetched = () => {};
+  const manualFetched = new Promise<void>((resolve) => (markManualFetched = resolve));
+  const autofillResponses: Promise<unknown>[] = [];
+  let manualRequests = 0;
+
+  await page.route("**/passkeys/login/options", async (route) => {
+    if (!clicked) {
+      const request = route.request();
+      autofillResponses.push(page.waitForResponse((response) => response.request() === request));
+      await Promise.race([manualFetched, released]);
+      await route.continue();
+      return;
+    }
+
+    manualRequests += 1;
+    const response = await route.fetch();
+    markManualFetched();
+    await Promise.all(autofillResponses);
+    await route.fulfill({ response });
+  });
+
+  return {
+    markClicked: () => {
+      clicked = true;
+    },
+    autofillResponded: () => Promise.all(autofillResponses),
+    manualRequests: () => manualRequests,
+  };
+};
+
+test("自動入力の options 取得中にボタンを押しても、パスキーでログインできる", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await prepareAutofillRace(page, context, "options");
+
+  let release = () => {};
+  const options = await holdAutofillOptions(
+    page,
+    new Promise<void>((resolve) => (release = resolve)),
+  );
+
+  await page.goto("/login");
+  options.markClicked();
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
+  // 手動側が待つなら手動の取得は来ないので、時間で流す。
+  await page.waitForTimeout(1_000);
+  release();
+
+  await expect(page).toHaveURL(HOME_URL);
+});
+
+test("自動入力の対応判定中にボタンを押しても、パスキーでログインできる", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await prepareAutofillRace(page, context, "support-check");
+
+  const autofillOptions = page.waitForResponse("**/passkeys/login/options");
+  await page.goto("/login");
+  await autofillOptions;
+
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
+  // 手動側が待つなら手動の ceremony は始まらないので、時間で流す。
+  await page.waitForTimeout(1_000);
+  await page.evaluate(() => (window as unknown as AutofillRaceWindow).releaseAutofill());
+
+  await expect(page).toHaveURL(HOME_URL);
+});
+
+test("自動入力を待っている間に画面を離れたら、パスキー認証を始めない", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await prepareAutofillRace(page, context, "options");
+
+  let release = () => {};
+  const options = await holdAutofillOptions(
+    page,
+    new Promise<void>((resolve) => (release = resolve)),
+  );
+
+  await page.goto("/login");
+  options.markClicked();
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
+  await page.getByRole("link", { name: "新規登録" }).click();
+  await expect(page).toHaveURL(/\/register$/);
+
+  release();
+  await options.autofillResponded();
+  await page.waitForTimeout(1_000);
+
+  expect(options.manualRequests()).toBe(0);
+});
+
+test("ログイン画面に戻った後の手動認証を、前の画面の自動入力が中断しない", async ({ page }) => {
+  let releaseOld = () => {};
+  const oldReleased = new Promise<void>((resolve) => (releaseOld = resolve));
+  await page.exposeFunction("releaseOldAutofill", () => releaseOld());
+
+  // ceremony は中断されるまで待たせる。手動の ceremony が始まったら、前の画面の応答を流す。
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => true;
+    navigator.credentials.get = (options) => {
+      if (options?.mediation !== "conditional") {
+        document.documentElement.setAttribute("data-manual-started", "");
+        void (
+          window as unknown as { releaseOldAutofill: () => Promise<void> }
+        ).releaseOldAutofill();
+      }
+
+      return new Promise((_, reject) => {
+        options?.signal?.addEventListener("abort", () =>
+          reject(new DOMException("The operation was aborted.", "AbortError")),
+        );
+      });
+    };
+  });
+
+  let returned = false;
+  const oldResponses: Promise<unknown>[] = [];
+  await page.route("**/passkeys/login/options", async (route) => {
+    if (!returned) {
+      const request = route.request();
+      oldResponses.push(page.waitForResponse((response) => response.request() === request));
+      await oldReleased;
+    }
+
+    await route.continue();
+  });
+
+  await page.goto("/login");
+  await expect.poll(() => oldResponses.length).toBeGreaterThan(0);
+  await page.getByRole("link", { name: "新規登録" }).click();
+  await expect(page).toHaveURL(/\/register$/);
+  returned = true;
+  await page.getByRole("link", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
+  // 手動側が待つなら手動の ceremony は始まらないので、時間で流す。
+  await page.waitForTimeout(1_000);
+  releaseOld();
+  await Promise.all(oldResponses);
+
+  await expect(page.locator("html[data-manual-started]")).toBeAttached();
+  // 前の画面の自動入力は、応答から間を置かずに ceremony を始める。
+  await page.waitForTimeout(500);
+  await expect(page.getByText("Authentication ceremony was sent an abort signal")).toBeHidden();
+});
+
+test("ログイン画面の自動入力が残っていても、パスキーで本人確認できる", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await enableVirtualAuthenticator(page, context);
+
+  const user = createUser();
+  await openSecuritySettings(page, user);
+  await registerPasskey(page, "本人確認用");
+  await expect(page.getByText("本人確認用", { exact: true })).toBeVisible();
+
+  await context.clearCookies();
+
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => true;
+  });
+
+  // ログイン画面の自動入力を、本人確認を始めるまで決着させない。
+  let releaseAutofill = () => {};
+  const autofillReleased = new Promise<void>((resolve) => (releaseAutofill = resolve));
+  let markRequested = () => {};
+  const requested = new Promise<void>((resolve) => (markRequested = resolve));
+  await page.route("**/passkeys/login/options", async (route) => {
+    markRequested();
+    await autofillReleased;
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Temporarily unavailable." }),
+    });
+  });
+
+  await page.goto("/login");
+  await requested;
+  await page.getByLabel("メールアドレス").fill(user.email);
+  await page.getByLabel("パスワード").fill(user.password);
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page).toHaveURL(HOME_URL);
+
+  // 再読み込みすると残っている自動入力が消えるので、画面内の導線で移動する。
+  await page.locator('[data-test="sidebar-menu-button"]').click();
+  await page.getByRole("menuitem", { name: "Settings" }).click();
+  await page.getByRole("link", { name: "セキュリティ", exact: true }).click();
+  await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
+
+  await page.getByRole("button", { name: "パスキーで確認" }).click();
+  releaseAutofill();
+
+  await expect(page).toHaveURL(SECURITY_URL);
 });
 
 test("パスワード確認の期限が切れても再確認してパスキーを登録できる", async ({
@@ -110,11 +416,9 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await registerPasskey(page, "期限切れ後のパスキー");
 
-  await expect(page).toHaveURL(/\/user\/confirm-password$/);
+  await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
 
-  await page.locator('input[name="password"]').fill("Test1234");
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(/\/settings\/security$/);
+  await confirmPassword(page, SEEDED_USER.password);
 
   await registerPasskey(page, "期限切れ後のパスキー");
 
@@ -138,7 +442,7 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
 
   await context.clearCookies();
 
-  // Conditional UI 対応環境の再現。この分岐でだけ自動入力が起動し、手動ボタンが隠れる。
+  // Conditional UI 対応環境の再現。この分岐でだけ自動入力が起動する。
   await page.addInitScript(() => {
     PublicKeyCredential.isConditionalMediationAvailable = async () => true;
   });
@@ -155,7 +459,7 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
   await page.goto("/login");
   await expect(page.getByText("Too Many Attempts.")).toBeVisible();
 
-  // 通信が復旧しても、フックは自動入力を再試行しない。再試行の導線がなければここで詰まる。
+  // 自動入力は再試行しないので、ボタンから再試行する。
   await page.unroute("**/passkeys/login/options");
 
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
@@ -163,7 +467,44 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
   await expect(page).toHaveURL(HOME_URL);
 });
 
-test("Conditional UI 対応ブラウザでは自動入力に任せて手動ボタンを出さない", async ({
+test("パスワード未設定でパスキーだけを持つユーザーはパスキーで本人確認できる", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await enableVirtualAuthenticator(page, context);
+
+  const user = createUser();
+  await login(page, user);
+
+  await page.goto("/settings/security");
+  await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
+  // パスキー未登録なので、パスキーでの確認は出さない。
+  await expect(page.locator('input[name="password"]')).toBeVisible();
+  await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();
+
+  await confirmPassword(page, user.password);
+  await registerPasskey(page, "パスキーだけの本人確認");
+  await expect(page.getByText("パスキーだけの本人確認", { exact: true })).toBeVisible();
+
+  setUserPassword(user.email, null);
+  expirePasswordConfirmation();
+
+  await page.goto("/settings/security");
+  await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
+
+  const passkeyButton = page.getByRole("button", { name: "パスキーで確認" });
+  await expect(passkeyButton).toBeVisible();
+  // 入力しても通らないパスワード欄は出さない。
+  await expect(page.locator('input[name="password"]')).toBeHidden();
+
+  await passkeyButton.click();
+  await expect(page).toHaveURL(SECURITY_URL);
+});
+
+test("Conditional UI 対応ブラウザでも自動入力と並べてパスキーのボタンを出す", async ({
   page,
   context,
   browserName,
@@ -172,17 +513,58 @@ test("Conditional UI 対応ブラウザでは自動入力に任せて手動ボ�
 
   // isConditionalMediationAvailable はヘッドレスでも true を返すので、この分岐には常に入る。
   // 仮想オーセンティケータがないと自動入力の ceremony が NotSupportedError で落ち、
-  // フォールバックのボタンが出てしまう。
+  // 自動入力が待機している状態を再現できない。
   await enableVirtualAuthenticator(page, context);
+
+  let optionsRequests = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith("/passkeys/login/options")) {
+      optionsRequests += 1;
+    }
+  });
 
   const loginOptions = page.waitForResponse("**/passkeys/login/options");
   await page.goto("/login");
   await loginOptions;
 
-  // Conditional UI は autocomplete の末尾が webauthn の入力欄を要求する。無いと ceremony が
-  // 例外になり、ボタンも隠れたままログイン導線が消える。
+  // Conditional UI は autocomplete の末尾が webauthn の入力欄を要求する。
   await expect(page.locator('input[autocomplete$="webauthn"]')).toBeVisible();
-  // 非表示の検証にアクセシブル名を使わない。ボタン名は label / loadingLabel props で変わり、
-  // 変わった瞬間に 0 件マッチとなって toBeHidden が素通りする。
-  await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();
+  await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeEnabled();
+  // 開発ビルドの StrictMode で effect が再実行されても、自動入力は 1 本だけ。
+  expect(optionsRequests).toBe(1);
+});
+
+test("自動入力が環境の都合で使えなくても、開いただけのログイン画面にエラーを出さない", async ({
+  page,
+}) => {
+  // 実ブラウザでは実行モードで挙動が変わる（ヘッドレス Chromium は即座に落ち、headed は待ち続ける）。
+  // 失敗が画面へ反映されてから判定するため、2 フレーム後に印を付ける。
+  await page.addInitScript(() => {
+    const get = navigator.credentials.get.bind(navigator.credentials);
+    const markSettled = () =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          document.documentElement.setAttribute("data-conditional-settled", ""),
+        ),
+      );
+
+    PublicKeyCredential.isConditionalMediationAvailable = async () => true;
+    navigator.credentials.get = (options) => {
+      if (options?.mediation !== "conditional") {
+        return get(options);
+      }
+
+      markSettled();
+
+      return Promise.reject(
+        new DOMException("Conditional UI is unavailable.", "NotSupportedError"),
+      );
+    };
+  });
+
+  await page.goto("/login");
+  await expect(page.locator("html[data-conditional-settled]")).toBeAttached();
+
+  await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeEnabled();
+  await expect(page.getByText("このブラウザはパスキーに対応していません。")).toBeHidden();
 });

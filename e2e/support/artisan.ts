@@ -62,3 +62,42 @@ export const expirePasswordConfirmation = (): void => {
       "->update(['payload' => base64_encode(json_encode($data))]); }",
   ]);
 };
+
+const phpString = (value: string): string =>
+  `'${value.replaceAll("\\", "\\\\").replaceAll("'", "\\'")}'`;
+
+export type UserCredentials = {
+  email: string;
+  password: string;
+};
+
+/** 共有のシードユーザーを汚さない、使い捨ての確認済みユーザーを作る。 */
+export const createUser = (): UserCredentials => {
+  const credentials = {
+    email: `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
+    password: "Test1234",
+  };
+
+  runArtisan([
+    "tinker",
+    "--execute",
+    "App\\Models\\User::query()->forceCreate([" +
+      "'name' => 'E2E User'," +
+      ` 'email' => ${phpString(credentials.email)},` +
+      ` 'password' => ${phpString(credentials.password)},` +
+      " 'email_verified_at' => now()]);",
+  ]);
+
+  return credentials;
+};
+
+/** null でパスワード未設定の状態を再現する。 */
+export const setUserPassword = (email: string, password: string | null): void => {
+  const hashed = password === null ? "null" : `Hash::make(${phpString(password)})`;
+
+  runArtisan([
+    "tinker",
+    "--execute",
+    `App\\Models\\User::query()->where('email', ${phpString(email)})->update(['password' => ${hashed}]);`,
+  ]);
+};

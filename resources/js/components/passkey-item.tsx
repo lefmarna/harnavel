@@ -72,8 +72,13 @@ export default function PasskeyItem({ passkey, onDelete }: Props) {
         <DialogContent>
           <DialogTitle>パスキーを削除しますか</DialogTitle>
 
-          <DialogDescription>
-            「{passkey.name}」を削除すると、このパスキーではログインできなくなります。
+          <DialogDescription asChild>
+            <div className="space-y-2">
+              <p>「{passkey.name}」を削除すると、このパスキーではログインできなくなります。</p>
+              <p>
+                端末やパスワードマネージャーに保存されたパスキーは残るため、不要になったら端末側の設定からも削除してください。
+              </p>
+            </div>
           </DialogDescription>
 
           <DialogFooter className="gap-2">

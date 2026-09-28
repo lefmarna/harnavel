@@ -1,7 +1,9 @@
 name: quality
 
 on:
+  workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - develop
       - main
@@ -15,6 +17,8 @@ permissions:
 
 jobs:
   quality:
+    # Draft PR は push し放題にする。develop からのリリース PR は同じツリーを delivery が検証済みのため省く。
+    if: ${{ !github.event.pull_request.draft && github.head_ref != 'develop' }}
     runs-on: ubuntu-latest
 
     steps:

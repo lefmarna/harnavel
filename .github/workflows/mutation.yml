@@ -3,7 +3,20 @@ name: mutation
 on:
   workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [develop, main]
+    # PHP のミュータントの生死に影響しない変更だけの PR では実行しない。
+    paths-ignore:
+      - "**/*.md"
+      - ".agents/**"
+      - ".claude/**"
+      - ".codex/**"
+      - ".gemini/**"
+      - ".kiro/**"
+      - "docs/**"
+      - "e2e/**"
+      - "resources/css/**"
+      - "resources/js/**"
 
 concurrency:
   group: mutation-${{ github.ref }}
@@ -14,6 +27,8 @@ permissions:
 
 jobs:
   mutation:
+    # delivery はミューテーションを実行しないため、統合結果を確かめるリリース PR でも実行する。
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

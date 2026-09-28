@@ -390,7 +390,7 @@ describe('SEO メタ契約', function () {
         expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
     });
 
-    it('パスワード確認ページはseo.titleとdescriptionを持つ', function () {
+    it('本人確認ページはseo.titleとdescriptionを持つ', function () {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get(route('password.confirm'));
@@ -399,7 +399,7 @@ describe('SEO メタ契約', function () {
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->has('seo')
-            ->where('seo.title', 'パスワード確認')
+            ->where('seo.title', '本人確認')
             ->where('seo.description', '続行するには現在のパスワードを入力してください。')
             ->where('seo.robots', 'noindex, nofollow')
         );

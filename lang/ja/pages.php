@@ -47,7 +47,7 @@ return [
             'description' => 'メールアドレスの認証を完了してください。',
         ],
         'confirm_password' => [
-            'title' => 'パスワード確認',
+            'title' => '本人確認',
             'description' => '続行するには現在のパスワードを入力してください。',
         ],
         'google_link' => [

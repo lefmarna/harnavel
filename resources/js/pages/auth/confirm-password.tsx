@@ -26,10 +26,7 @@ export default function ConfirmPassword({ hasPasskeys }: Props) {
 
   if (!auth.hasPassword && hasPasskeys) {
     return (
-      <AuthLayout
-        title="本人確認"
-        description="セキュリティ保護のため、パスキーで本人確認をしてください。"
-      >
+      <AuthLayout description="セキュリティ保護のため、パスキーで本人確認をしてください。">
         {canUsePasskey ? (
           <PasskeyConfirm />
         ) : (
@@ -45,7 +42,6 @@ export default function ConfirmPassword({ hasPasskeys }: Props) {
 
   return (
     <AuthLayout
-      title={showPasskey ? "本人確認" : undefined}
       description={
         showPasskey
           ? "セキュリティ保護のため、パスキーかパスワードで本人確認をしてください。"

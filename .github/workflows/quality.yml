@@ -1,7 +1,9 @@
 name: quality
 
 on:
+  workflow_dispatch:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - develop
       - main
@@ -14,7 +16,33 @@ permissions:
   contents: read
 
 jobs:
+  release:
+    # リリース PR のマージ結果が develop と同じツリーなら、delivery が検証済みの内容と一致する。
+    if: >-
+      github.event_name == 'pull_request' && !github.event.pull_request.draft &&
+      github.base_ref == 'main' && github.head_ref == 'develop' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      verified: ${{ steps.tree.outputs.verified }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - id: tree
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --quiet "$HEAD_SHA" HEAD; then
+            echo "verified=true" >> "$GITHUB_OUTPUT"
+          fi
+
   quality:
+    needs: release
+    # Draft PR は push し放題にする。判定ジョブが失敗したときは検証する側に倒す。
+    if: ${{ !cancelled() && !github.event.pull_request.draft && needs.release.outputs.verified != 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -24,4 +52,6 @@ jobs:
 
   test:
     needs: quality
+    # 上流の release がスキップされると既定の success() では実行されないため、直接の結果で判定する。
+    if: ${{ !cancelled() && needs.quality.result == 'success' }}
     uses: ./.github/workflows/reusable-test.yml

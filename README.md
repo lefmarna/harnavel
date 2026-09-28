@@ -82,6 +82,7 @@ pnpm test:e2e --project=chromium
 - [TADR-0009](docs/adr/template/0009-frontend-quality-harness.md): フロントエンド品質ゲートの責務分担
 - [docs/infrastructure.md](docs/infrastructure.md): XServerの運用前提（Composer、OPcache）
 - [docs/worktree-development.md](docs/worktree-development.md): 共有開発環境・Orca・Worktree の作成と削除
+- [docs/branches-and-ci.md](docs/branches-and-ci.md): ブランチの役割と、各イベントで実行される CI
 - [docs/adr/README.md](docs/adr/README.md): 設計判断の記録（ADR / Template ADR）
 
 プロジェクト固有ルールは `AGENTS.md`、参照情報は `docs/` を確認してください。

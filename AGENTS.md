@@ -13,4 +13,4 @@ A Laravel + Inertia React starter template.
 - Run local Playwright serially within each worktree; runs share its E2E database.
 - Delegate read-heavy exploration to `explorer`.
 
-References: `CONTEXT.md`, `docs/adr/`, `docs/logging-guidelines.md`, `docs/generated/boost.md`.
+References: `CONTEXT.md`, `docs/adr/`, `docs/branches-and-ci.md`, `docs/logging-guidelines.md`, `docs/generated/boost.md`.

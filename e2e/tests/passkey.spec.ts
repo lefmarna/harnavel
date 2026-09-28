@@ -187,6 +187,8 @@ const prepareAutofillRace = async (
  */
 const holdAutofillOptions = async (page: Page, released: Promise<void>) => {
   let clicked = false;
+  let markAutofillHeld = () => {};
+  const autofillHeld = new Promise<void>((resolve) => (markAutofillHeld = resolve));
   let markManualFetched = () => {};
   const manualFetched = new Promise<void>((resolve) => (markManualFetched = resolve));
   const autofillResponses: Promise<unknown>[] = [];
@@ -196,6 +198,7 @@ const holdAutofillOptions = async (page: Page, released: Promise<void>) => {
     if (!clicked) {
       const request = route.request();
       autofillResponses.push(page.waitForResponse((response) => response.request() === request));
+      markAutofillHeld();
       await Promise.race([manualFetched, released]);
       await route.continue();
       return;
@@ -209,7 +212,9 @@ const holdAutofillOptions = async (page: Page, released: Promise<void>) => {
   });
 
   return {
-    markClicked: () => {
+    // 自動入力の取得は描画の後に始まるので、止めたのを見届けてから手動側として扱い始める。
+    markClicked: async () => {
+      await autofillHeld;
       clicked = true;
     },
     autofillResponded: () => Promise.all(autofillResponses),
@@ -233,7 +238,7 @@ test("自動入力の options 取得中にボタンを押しても、パスキ�
   );
 
   await page.goto("/login");
-  options.markClicked();
+  await options.markClicked();
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
   // 手動側が待つなら手動の取得は来ないので、時間で流す。
   await page.waitForTimeout(1_000);
@@ -279,7 +284,7 @@ test("自動入力を待っている間に画面を離れたら、パスキー�
   );
 
   await page.goto("/login");
-  options.markClicked();
+  await options.markClicked();
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
   await page.getByRole("link", { name: "新規登録" }).click();
   await expect(page).toHaveURL(/\/register$/);

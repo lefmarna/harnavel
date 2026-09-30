@@ -6,14 +6,15 @@ request. Apps without `develop` open pull requests against `main`.
 
 ## What runs
 
-| Event                                              | Workflows                                           |
-| -------------------------------------------------- | --------------------------------------------------- |
-| Push to a feature or fix branch                    | None                                                |
-| Draft pull request                                 | `quality` and `mutation` start, but skip every job  |
-| Ready pull request into `develop` or `main`        | `quality` (lint, Pest, E2E) and `mutation`          |
-| Ready release pull request (`develop` into `main`) | `mutation`; `quality` only if merging changes files |
-| Push to `develop` or `main`                        | `delivery` (lint, Pest, E2E, then deploy)           |
-| Manual dispatch                                    | `quality` or `mutation` on the chosen branch        |
+| Event                                              | Workflows                                                                |
+| -------------------------------------------------- | ------------------------------------------------------------------------ |
+| Push to a feature or fix branch                    | None                                                                     |
+| Draft pull request                                 | The workflows below start, but skip every job                            |
+| Ready pull request into `develop`                  | `quality` (lint, Pest, E2E)                                              |
+| Ready pull request into `main`                     | `quality` and `mutation`                                                 |
+| Ready release pull request (`develop` into `main`) | `mutation`; `quality` only if merging changes files                      |
+| Push to `develop` or `main`                        | `delivery`: lint, Pest, and E2E unless the tree is verified, then deploy |
+| Manual dispatch                                    | `quality` or `mutation` on the chosen branch                             |
 
 Skipped jobs use no minutes. `mutation` does not start for pull requests that change only
 documentation, agent configuration, E2E specs, or frontend sources.
@@ -22,17 +23,43 @@ Pushing a branch is a backup, so push freely and open a draft pull request early
 it is marked ready and rerun on each later push; lefthook covers the gap locally. Run
 `gh workflow run quality --ref <branch>` to check a branch without a pull request.
 
-## Why checks repeat
+## How delivery avoids retesting
 
 GitHub Free cannot enforce required checks on private repositories, so pull request checks are
-advisory and `delivery` is the only gate before a deployment. It retests the pushed commit because
-parallel Worktrees move `develop` between a pull request's run and its merge.
+advisory and `delivery` is the only gate before a deployment. A passing pull request therefore
+proves nothing about the pushed commit by itself: parallel Worktrees move `develop` between a
+pull request's run and its merge, and every merge method rewrites the SHA.
+
+What carries over is the tree. A successful `quality` or `delivery` run uploads the assets it
+tested as `build-<tree>`, where the tree is that of the commit it checked out; for a pull request,
+that is GitHub's merge of the head into the base. When the pushed commit has the same tree, the
+repository content is identical, so `delivery` deploys that build and skips lint and tests.
+Otherwise, including after another pull request merged first, it runs them itself.
+
+The artifact name comes from the workflow that ran, so any branch can upload one under any name.
+`delivery` therefore reuses only a push or manual run of a commit with the deployed tree, or a pull
+request run of the final head of the pull request this push merged, unless its base was ever
+changed. A release reuses `develop`'s build only if `delivery` itself verified it on `develop`, or
+if `quality` ran on the release pull request.
+
+This guards against mistakes, not against collaborators: another pull request with the same head
+and a modified workflow can still forge the artifact. Anyone who can do that can also push to
+`develop` directly.
+
+The build is kept for 3 days. A later merge or release reruns the checks in `delivery`. Artifacts
+count toward the account's Actions storage.
 
 A release pull request whose merge result has the same tree as `develop` would retest exactly what
-`delivery` tested on `develop`; that run appears in the pull request's checks, so `quality` skips.
-When `main` holds changes `develop` lacks, such as an unmerged hotfix, `quality` tests the merge
-result before it reaches `main`. `mutation` always runs once against the integrated result because
-no deployment runs it.
+`delivery` verified before deploying `develop`, so `quality` skips. When `main` holds changes
+`develop` lacks, such as an unmerged hotfix, `quality` tests the merge result before it reaches
+`main`.
+
+## Mutation testing
+
+Mutation testing never gates a deployment, and a full run grows with the codebase. It runs on pull
+requests into `main`: release pull requests, or every pull request in apps without `develop`. Pull
+requests into `develop` rely on `mise run mutate --min=100` locally; dispatch `mutation` on the
+branch when an independent run is worth it.
 
 ## Releases
 

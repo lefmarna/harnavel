@@ -2,9 +2,10 @@ name: mutation
 
 on:
   workflow_dispatch:
+  # 配備を止めず所要時間がコード量とともに伸びるため、main へ入る PR に限る。
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [develop, main]
+    branches: [main]
     # PHP のミュータントの生死に影響しない変更だけの PR では実行しない。
     paths-ignore:
       - "**/*.md"
@@ -27,7 +28,6 @@ permissions:
 
 jobs:
   mutation:
-    # delivery はミューテーションを実行しないため、統合結果を確かめるリリース PR でも実行する。
     if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     timeout-minutes: 30

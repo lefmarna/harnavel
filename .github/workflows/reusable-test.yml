@@ -2,11 +2,6 @@ name: Reusable / Test
 
 on:
   workflow_call:
-    inputs:
-      upload-artifacts:
-        description: "Upload build artifacts after tests (required for deployment)"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -121,10 +116,14 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      # delivery が同じツリーの検証済みビルドとして再利用する。
+      - name: Resolve tested tree
+        id: tree
+        run: echo "sha=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+
       - name: Upload build artifacts
-        if: inputs.upload-artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: build
+          name: build-${{ steps.tree.outputs.sha }}
           path: public/build/
-          retention-days: 1
+          retention-days: 3

@@ -7,8 +7,12 @@ import { beforeEach, describe, it } from "node:test";
 
 const SCRIPT = path.join(import.meta.dirname, "prepare-merge.sh");
 
-// 開発者の署名設定などに左右されないよう、git の設定ファイルを読ませない。
-const GIT_ENV = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+// コミットフックが渡す GIT_INDEX_FILE などを引き継がず、開発者の git 設定も読ませない。
+const GIT_ENV = {
+  ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))),
+  GIT_CONFIG_GLOBAL: "/dev/null",
+  GIT_CONFIG_NOSYSTEM: "1",
+};
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync("git", ["-c", "user.name=Test", "-c", "user.email=test@invalid", ...args], {

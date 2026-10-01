@@ -11,7 +11,12 @@ const WORKFLOW =
   process.env.DEPLOY_LIFECYCLE_WORKFLOW ?? path.join(ROOT, ".github/workflows/delivery.yml");
 
 type Step = { name?: string; run?: string; uses?: string };
-type Job = { needs?: string | string[]; uses?: string; steps?: Step[] };
+type Job = {
+  needs?: string | string[];
+  uses?: string;
+  with?: Record<string, unknown>;
+  steps?: Step[];
+};
 type Workflow = {
   concurrency?: { "cancel-in-progress"?: boolean };
   jobs?: Record<string, Job>;
@@ -92,6 +97,15 @@ if (!(jobs.lint?.steps ?? []).some((step) => step.uses === GATE_ACTION)) {
 
 if (jobs.test?.uses !== TEST_WORKFLOW) {
   fail(`the delivery test job must run ${TEST_WORKFLOW}, not merely carry the name`);
+}
+
+// PR の E2E を CircleCI に任せていても、その結果を確認できない配備前の E2E はこのジョブが担う。
+const e2e = jobs.test?.with?.e2e;
+
+if (e2e !== undefined && e2e !== true) {
+  fail(
+    "the delivery test job must run E2E itself; only pull request checks may leave it to CircleCI",
+  );
 }
 
 if (workflow.concurrency?.["cancel-in-progress"] !== false) {

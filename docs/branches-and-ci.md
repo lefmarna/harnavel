@@ -19,6 +19,9 @@ request. Apps without `develop` open pull requests against `main`.
 Skipped jobs use no minutes. `mutation` does not start for pull requests that change only
 documentation, agent configuration, E2E specs, or frontend sources.
 
+Repositories connected to [CircleCI](circleci.md) run pull request E2E and `mutation` there
+instead; `delivery` and manual dispatches are unchanged.
+
 Pushing a branch is a backup, so push freely and open a draft pull request early. Checks start when
 it is marked ready and rerun on each later push; lefthook covers the gap locally. Run
 `gh workflow run quality --ref <branch>` to check a branch without a pull request.
@@ -35,6 +38,9 @@ tested as `build-<tree>`, where the tree is that of the commit it checked out; f
 that is GitHub's merge of the head into the base. When the pushed commit has the same tree, the
 repository content is identical, so `delivery` deploys that build and skips lint and tests.
 Otherwise, including after another pull request merged first, it runs them itself.
+
+A pull request build whose E2E ran on CircleCI is named `build-<tree>-needs-e2e`, and `delivery`
+reuses it only together with CircleCI's record of E2E passing on the same tree.
 
 The artifact name comes from the workflow that ran, so any branch can upload one under any name.
 `delivery` therefore reuses only a push or manual run of a commit with the deployed tree, or a pull

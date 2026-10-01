@@ -96,3 +96,6 @@ storage/framework/cache/phpstan/*
 storage/framework/sessions/*
 storage/framework/testing/*
 storage/framework/views/*
+
+# CircleCI（PR の E2E・ミューテーション用。配備物には含めない）
+.circleci

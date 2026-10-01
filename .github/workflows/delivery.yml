@@ -19,16 +19,27 @@ jobs:
     permissions:
       actions: read
       contents: read
+      id-token: write
       pull-requests: read
     outputs:
       tree: ${{ steps.lookup.outputs.tree }}
+      artifact: ${{ steps.lookup.outputs.artifact }}
       verified-run: ${{ steps.lookup.outputs.verified-run }}
 
     steps:
+      # 認証できなくても CircleCI の E2E を確認できないだけなので、未検証として扱う。
+      - name: Authenticate to Google Cloud
+        if: vars.E2E_RECORD_BUCKET != ''
+        continue-on-error: true
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+
       - name: Find a verified build of this tree
         id: lookup
         env:
           GH_TOKEN: ${{ github.token }}
+          E2E_RECORD_BUCKET: ${{ vars.E2E_RECORD_BUCKET }}
         run: |
           tree=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$GITHUB_SHA" --jq .tree.sha)
           echo "tree=$tree" >> "$GITHUB_OUTPUT"
@@ -45,33 +56,60 @@ jobs:
               merged_head=$head
             fi
           fi
-          runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=build-$tree&per_page=100" \
-            --jq '.artifacts[] | select(.expired | not) | .workflow_run.id') || runs=
 
-          for run in $runs; do
-            meta=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '
-              select(
-                .status == "completed" and .conclusion == "success" and
-                .head_repository.id == .repository.id and
-                (.path == ".github/workflows/quality.yml" or .path == ".github/workflows/delivery.yml")
-              ) | "\(.event) \(.head_sha) \(.html_url)"') || meta=
-            [ -n "$meta" ] || continue
-            read -r event head_sha url <<< "$meta"
+          find_run() {
+            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=$1&per_page=100" \
+              --jq '.artifacts[] | select(.expired | not) | .workflow_run.id') || return 0
 
-            # 成果物名は実行したワークフローが自由に決められるため、run の実行元でも照合する。
-            if [ "$event" = pull_request ]; then
-              [ -n "$merged_head" ] && [ "$head_sha" = "$merged_head" ] || continue
+            for run in $runs; do
+              meta=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '
+                select(
+                  .status == "completed" and .conclusion == "success" and
+                  .head_repository.id == .repository.id and
+                  (.path == ".github/workflows/quality.yml" or .path == ".github/workflows/delivery.yml")
+                ) | "\(.event) \(.head_sha) \(.html_url)"') || meta=
+              [ -n "$meta" ] || continue
+              read -r event head_sha url <<< "$meta"
+
+              # 成果物名は実行したワークフローが自由に決められるため、run の実行元でも照合する。
+              if [ "$event" = pull_request ]; then
+                [ -n "$merged_head" ] && [ "$head_sha" = "$merged_head" ] || continue
+              else
+                run_tree=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$head_sha" --jq .tree.sha) || continue
+                [ "$run_tree" = "$tree" ] || continue
+              fi
+
+              echo "$run $url"
+              return 0
+            done
+          }
+
+          artifact=build-$tree
+          found=$(find_run "$artifact")
+
+          # E2E を CircleCI に任せたビルドは、同じツリーの E2E 成功記録を読めたときだけ検証済みとする。
+          if [ -z "$found" ] && [ -n "$E2E_RECORD_BUCKET" ]; then
+            found=$(find_run "build-$tree-needs-e2e")
+            if [ -n "$found" ] &&
+              proof=$(gcloud storage cat "gs://$E2E_RECORD_BUCKET/$GITHUB_REPOSITORY/e2e/$tree.json") &&
+              [ "$(jq -r .tree <<< "$proof")" = "$tree" ] &&
+              [ "$(jq -r .repository <<< "$proof")" = "$GITHUB_REPOSITORY" ]; then
+              artifact=build-$tree-needs-e2e
+              e2e=" and E2E in $(jq -r .build <<< "$proof")"
             else
-              run_tree=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$head_sha" --jq .tree.sha) || continue
-              [ "$run_tree" = "$tree" ] || continue
+              found=
             fi
+          fi
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
 
-            echo "verified-run=$run" >> "$GITHUB_OUTPUT"
-            echo "Tree $tree passed lint and tests in $url; deploying its build." >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$found" ]; then
+            echo "No verified build of tree $tree; running lint and tests." >> "$GITHUB_STEP_SUMMARY"
             exit 0
-          done
+          fi
 
-          echo "No verified build of tree $tree; running lint and tests." >> "$GITHUB_STEP_SUMMARY"
+          read -r run url <<< "$found"
+          echo "verified-run=$run" >> "$GITHUB_OUTPUT"
+          echo "Tree $tree passed lint and tests in $url${e2e:-}; deploying its build." >> "$GITHUB_STEP_SUMMARY"
 
   lint:
     needs: provenance
@@ -133,7 +171,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v7
         with:
-          name: build-${{ needs.provenance.outputs.tree }}
+          name: ${{ needs.provenance.outputs.artifact }}
           path: public/build/
           github-token: ${{ needs.provenance.outputs.verified-run && github.token || '' }}
           run-id: ${{ needs.provenance.outputs.verified-run || github.run_id }}

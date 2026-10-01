@@ -6,10 +6,11 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import laravel from "laravel-vite-plugin";
 import { defineConfig, lazyPlugins, loadEnv } from "vite-plus";
 
-const isGitHubActions = process.env.GITHUB_ACTIONS === "true";
+// CI は Docker を使わずホストの PHP で動く（Playwright の設定と同じ判定）。
+const isCI = !!process.env.CI;
 
 // formVariants は Vite プラグイン経由の --with-form を指定する。
-const wayfinderGenerateCommand = isGitHubActions
+const wayfinderGenerateCommand = isCI
   ? "php artisan wayfinder:generate"
   : "docker compose exec -T app php artisan wayfinder:generate";
 

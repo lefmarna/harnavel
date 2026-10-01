@@ -2,6 +2,11 @@ name: Reusable / Test
 
 on:
   workflow_call:
+    inputs:
+      e2e:
+        description: Run E2E here; false leaves it to CircleCI (docs/circleci.md)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -89,15 +94,18 @@ jobs:
           GOOGLE_REDIRECT_URI: http://localhost/auth/google/callback
 
       - name: Create E2E Database
+        if: inputs.e2e
         run: php artisan tinker --execute='DB::statement("CREATE DATABASE IF NOT EXISTS app_e2e");'
         env:
           DB_HOST: 127.0.0.1
           DB_DATABASE: app_testing
 
       - name: Install Playwright Browsers
+        if: inputs.e2e
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E Tests
+        if: inputs.e2e
         run: pnpm test:e2e
         env:
           DB_HOST: 127.0.0.1
@@ -106,7 +114,7 @@ jobs:
           MAIL_MAILER: array
 
       - name: Upload E2E failure report
-        if: failure()
+        if: failure() && inputs.e2e
         uses: actions/upload-artifact@v7
         with:
           name: e2e-failure-report
@@ -116,7 +124,7 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-      # delivery が同じツリーの検証済みビルドとして再利用する。
+      # delivery が同じツリーの検証済みビルドとして再利用する。E2E を省いたビルドは名前で区別する。
       - name: Resolve tested tree
         id: tree
         run: echo "sha=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
@@ -124,6 +132,6 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: build-${{ steps.tree.outputs.sha }}
+          name: build-${{ steps.tree.outputs.sha }}${{ !inputs.e2e && '-needs-e2e' || '' }}
           path: public/build/
           retention-days: 3

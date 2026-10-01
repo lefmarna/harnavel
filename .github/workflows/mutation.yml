@@ -28,7 +28,8 @@ permissions:
 
 jobs:
   mutation:
-    if: ${{ !github.event.pull_request.draft }}
+    # CircleCI が PR のミューテーションを担うリポジトリでは、手動実行だけを受け持つ。
+    if: ${{ !github.event.pull_request.draft && (github.event_name != 'pull_request' || vars.E2E_RECORD_BUCKET == '') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

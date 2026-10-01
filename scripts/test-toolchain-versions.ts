@@ -10,6 +10,7 @@ const DOCKERFILE_PATH =
   process.env.TOOLCHAIN_DOCKERFILE ?? path.join(ROOT, ".docker/php/Dockerfile");
 const WORKFLOW_PATH =
   process.env.TOOLCHAIN_WORKFLOW ?? path.join(ROOT, ".github/workflows/delivery.yml");
+const CIRCLECI_PATH = process.env.TOOLCHAIN_CIRCLECI ?? path.join(ROOT, ".circleci/config.yml");
 
 function matchOne(content: string, re: RegExp, subject: string): string {
   const match = content.match(re);
@@ -32,7 +33,7 @@ function matchAll(content: string, re: RegExp, subject: string): string[] {
   return values;
 }
 
-function assertAllEqual(values: string[], expected: string, subject: string): void {
+function assertAllEqual(values: string[], expected: string, subject: string, file: string): void {
   const mismatches = values.filter((value) => value !== expected);
 
   if (mismatches.length === 0) {
@@ -42,7 +43,7 @@ function assertAllEqual(values: string[], expected: string, subject: string): vo
   throw new Error(
     [
       `${subject} mismatch: expected ${expected}, found ${mismatches.join(", ")}.`,
-      "Update .docker/php/Dockerfile and .github/workflows/delivery.yml together,",
+      `Update .docker/php/Dockerfile and ${file} together,`,
       "(docs/infrastructure.md, XServer toolchain).",
     ].join("\n"),
   );
@@ -63,8 +64,17 @@ function main(): void {
     /\/usr\/bin\/php(\d+\.\d+)/g,
     "usr/bin/php<major.minor> references in delivery.yml",
   );
-  assertAllEqual(workflowPhpSeries, phpSeries, "PHP series");
+  assertAllEqual(workflowPhpSeries, phpSeries, "PHP series", ".github/workflows/delivery.yml");
   console.log(`OK: delivery.yml uses the tested PHP series (${phpSeries}).`);
+
+  // CircleCI の E2E とミューテーションテストも、配備先と同じ系列の PHP で検証する。
+  const circleciPhpSeries = matchAll(
+    fs.readFileSync(CIRCLECI_PATH, "utf8"),
+    /image: cimg\/php:(\d+\.\d+)\./g,
+    "cimg/php images in .circleci/config.yml",
+  );
+  assertAllEqual(circleciPhpSeries, phpSeries, "PHP series", ".circleci/config.yml");
+  console.log(`OK: CircleCI tests the deployed PHP series (${phpSeries}).`);
 }
 
 main();

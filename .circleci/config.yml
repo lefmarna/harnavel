@@ -1,0 +1,107 @@
+version: 2.1
+
+# PR を現在の base へマージした内容で、E2E とミューテーションテストを実行する（docs/circleci.md）。
+# プロジェクトのトリガーは、Draft 以外の PR の作成と push、Ready への変更だけにする。
+
+# PHP はローカルの .docker/php/Dockerfile と同じ版にする（scripts/test-toolchain-versions.ts）。
+executors:
+  browsers:
+    resource_class: medium
+    docker:
+      - image: cimg/php:8.5.9-browsers
+      - &mariadb
+        image: mariadb:10.11
+        environment:
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: app_testing
+  php:
+    resource_class: medium
+    docker:
+      - image: cimg/php:8.5.9
+      - *mariadb
+
+commands:
+  merge-pull-request:
+    steps:
+      - checkout:
+          method: full
+      - run:
+          name: Merge the pull request into its current base
+          command: scripts/ci/prepare-merge.sh
+          environment:
+            BASE_BRANCH: << pipeline.event.github.pull_request.base.ref >>
+
+jobs:
+  e2e:
+    executor: browsers
+    steps:
+      - merge-pull-request
+      - restore_cache:
+          keys:
+            - composer-v1-{{ checksum "composer.lock" }}
+            - composer-v1-
+      - restore_cache:
+          keys:
+            - pnpm-v1-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-v1-
+      - run:
+          name: Run E2E tests
+          command: scripts/ci/e2e.sh
+          no_output_timeout: 30m
+      - save_cache:
+          key: composer-v1-{{ checksum "composer.lock" }}
+          paths: [~/.cache/composer]
+      - save_cache:
+          key: pnpm-v1-{{ checksum "pnpm-lock.yaml" }}
+          paths: [~/.pnpm-store]
+      # 成功したときだけ記録する。delivery は記録のないツリーの E2E を GitHub Actions でやり直す。
+      - run:
+          name: Record the tested tree
+          command: scripts/ci/record-e2e.sh
+          environment:
+            REPOSITORY: << pipeline.event.github.repository.owner.login >>/<< pipeline.event.github.repository.name >>
+      # レポートは失敗の調査にだけ残し、成功時はストレージを使わない。
+      - run:
+          name: Discard reports of a passing run
+          command: rm -rf playwright-report test-results
+      - store_artifacts:
+          path: playwright-report
+      - store_artifacts:
+          path: test-results
+
+  mutation:
+    executor: php
+    steps:
+      - merge-pull-request
+      - restore_cache:
+          keys:
+            - composer-v1-{{ checksum "composer.lock" }}
+            - composer-v1-
+      - run:
+          name: Run mutation testing
+          command: scripts/ci/mutation.sh
+          no_output_timeout: 45m
+          environment:
+            BASE_BRANCH: << pipeline.event.github.pull_request.base.ref >>
+
+workflows:
+  e2e:
+    when:
+      and:
+        - equal: [pull_request, << pipeline.event.name >>]
+        - or:
+            - equal: [develop, << pipeline.event.github.pull_request.base.ref >>]
+            - equal: [main, << pipeline.event.github.pull_request.base.ref >>]
+    jobs:
+      # E2E_RECORD_BUCKET と GCP_WORKLOAD_IDENTITY_AUDIENCE を渡す組織共通のコンテキスト。
+      - e2e:
+          context: e2e-record
+
+  # 配備を止めず所要時間がコード量とともに伸びるため、main へ入る PR に限る。
+  mutation:
+    when:
+      and:
+        - equal: [pull_request, << pipeline.event.name >>]
+        - equal: [main, << pipeline.event.github.pull_request.base.ref >>]
+    jobs:
+      - mutation

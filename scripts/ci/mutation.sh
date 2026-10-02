@@ -31,8 +31,5 @@ php artisan key:generate
 mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations
 
 scripts/ci/wait-for-database.sh
-DB_HOST=127.0.0.1 \
-  GOOGLE_CLIENT_ID=test-client-id \
-  GOOGLE_CLIENT_SECRET=test-client-secret \
-  GOOGLE_REDIRECT_URI=http://localhost/auth/google/callback \
-  vendor/bin/pest --mutate --covered-only --no-progress --min=100
+env=$(php scripts/ci/workflow-env.php .github/workflows/mutation.yml "Run mutation testing")
+(eval "$env" && vendor/bin/pest --mutate --covered-only --no-progress --min=100)

@@ -12,10 +12,14 @@ cp .env.example .env
 composer install --no-interaction --prefer-dist --optimize-autoloader
 php artisan key:generate
 
+step_env() { php scripts/ci/workflow-env.php .github/workflows/reusable-quality.yml "$1"; }
+
 scripts/ci/wait-for-database.sh
-DB_HOST=127.0.0.1 DB_DATABASE=app_testing pnpm run build
-DB_HOST=127.0.0.1 DB_DATABASE=app_testing \
-  php artisan tinker --execute='DB::statement("CREATE DATABASE IF NOT EXISTS app_e2e");'
+env=$(step_env "Build Assets")
+(eval "$env" && pnpm run build)
+env=$(step_env "Create E2E Database")
+(eval "$env" && php artisan tinker --execute='DB::statement("CREATE DATABASE IF NOT EXISTS app_e2e");')
 
 pnpm exec playwright install --with-deps chromium
-DB_HOST=127.0.0.1 DB_DATABASE=app_e2e APP_URL=http://localhost:8000 MAIL_MAILER=array pnpm test:e2e
+env=$(step_env "Run E2E Tests")
+(eval "$env" && pnpm test:e2e)

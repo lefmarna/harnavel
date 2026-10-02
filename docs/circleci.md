@@ -32,7 +32,8 @@ merge commit that `pull_request` workflows check out. Mutation testing reads and
 With CircleCI enabled, `quality` skips E2E and uploads its build as `build-<tree>-needs-e2e`. When
 E2E passes, CircleCI checks that the tracked files still match the merge it tested and creates
 `gs://<bucket>/<owner>/<repo>/e2e/<tree>.json`, a record of about 150 bytes. It authenticates with
-its OIDC token through Workload Identity Federation and can only create objects.
+its OIDC token through Workload Identity Federation and can read and create records but not
+overwrite them. A job whose merge result already has a record skips E2E.
 
 `delivery` reuses such a build only if the usual provenance checks accept its run and it can read a
 record for the same tree. Otherwise, including when CircleCI is out of credits or still running, it
@@ -79,8 +80,10 @@ gcloud iam workload-identity-pools providers create-oidc circleci --location=glo
   --allowed-audiences="$CIRCLECI_ORG" \
   --attribute-mapping="google.subject=assertion['oidc.circleci.com/project-id'],attribute.vcs_origin=assertion['oidc.circleci.com/vcs-origin']" \
   --attribute-condition="assertion['oidc.circleci.com/vcs-origin'].startsWith('github.com/$OWNER/')"
-gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --role=roles/storage.objectCreator \
-  --member="principalSet://iam.googleapis.com/$POOLS/circleci/*"
+for role in roles/storage.objectCreator roles/storage.objectViewer; do
+  gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --role="$role" \
+    --member="principalSet://iam.googleapis.com/$POOLS/circleci/*"
+done
 
 gcloud iam workload-identity-pools create github --location=global
 gcloud iam workload-identity-pools providers create-oidc github --location=global \

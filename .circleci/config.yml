@@ -34,8 +34,14 @@ commands:
 jobs:
   e2e:
     executor: browsers
+    environment:
+      REPOSITORY: << pipeline.event.github.repository.owner.login >>/<< pipeline.event.github.repository.name >>
     steps:
       - merge-pull-request
+      # 同じツリーの E2E が既に通っていれば、検証をやり直さずに成功とする。
+      - run:
+          name: Skip a tree that already passed E2E
+          command: if scripts/ci/e2e-record.sh check; then circleci-agent step halt; fi
       - restore_cache:
           keys:
             - composer-v1-{{ checksum "composer.lock" }}
@@ -57,9 +63,7 @@ jobs:
       # 成功したときだけ記録する。delivery は記録のないツリーの E2E を GitHub Actions でやり直す。
       - run:
           name: Record the tested tree
-          command: scripts/ci/record-e2e.sh
-          environment:
-            REPOSITORY: << pipeline.event.github.repository.owner.login >>/<< pipeline.event.github.repository.name >>
+          command: scripts/ci/e2e-record.sh create
       # レポートは失敗の調査にだけ残し、成功時はストレージを使わない。
       - run:
           name: Discard reports of a passing run

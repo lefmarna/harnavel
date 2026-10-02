@@ -176,6 +176,15 @@ jobs:
           github-token: ${{ needs.provenance.outputs.verified-run && github.token || '' }}
           run-id: ${{ needs.provenance.outputs.verified-run || github.run_id }}
 
+      # 再利用したビルドも E2E まで検証済みの名前で残し、同じツリーのリリースで再検証しない。
+      - name: Keep the reused build for releases
+        if: needs.provenance.outputs.verified-run != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ needs.provenance.outputs.tree }}
+          path: public/build/
+          retention-days: 3
+
       - name: Check release-critical files
         run: |
           test -f public/build/manifest.json

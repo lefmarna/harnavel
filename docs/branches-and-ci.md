@@ -45,8 +45,8 @@ reuses it only together with CircleCI's record of E2E passing on the same tree.
 The artifact name comes from the workflow that ran, so any branch can upload one under any name.
 `delivery` therefore reuses only a push or manual run of a commit with the deployed tree, or a pull
 request run of the final head of the pull request this push merged, unless its base was ever
-changed. A release reuses `develop`'s build only if `delivery` itself verified it on `develop`, or
-if `quality` ran on the release pull request.
+changed. A `delivery` run that reuses a build uploads it again as `build-<tree>`, so a release
+whose merge result matches `develop` reuses the build deployed to `develop`.
 
 This guards against mistakes, not against collaborators: another pull request with the same head
 and a modified workflow can still forge the artifact. Anyone who can do that can also push to

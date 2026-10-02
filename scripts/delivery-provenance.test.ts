@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, it } from "node:test";
+import { runInNewContext } from "node:vm";
 
 import { parse } from "yaml";
 
@@ -16,12 +17,53 @@ const TREE = "tree-sha";
 const BUCKET = "ci-bucket";
 const PROOF = `gs://${BUCKET}/${REPO}/e2e/${TREE}.json`;
 
-type Workflow = { jobs: { provenance: { steps: { id?: string; run?: string }[] } } };
+type Workflow = {
+  jobs: {
+    provenance: { steps: { id?: string; run?: string }[] };
+    deploy: { if: string };
+  };
+};
 
 const workflow = parse(
   fs.readFileSync(path.join(ROOT, ".github/workflows/delivery.yml"), "utf8"),
 ) as Workflow;
 const lookup = workflow.jobs.provenance.steps.find((step) => step.id === "lookup")?.run ?? "";
+
+const deployCondition = workflow.jobs.deploy.if.replaceAll(".verified-run", '["verified-run"]');
+
+describe("delivery の配備ゲート", function () {
+  for (const [title, quality, verifiedRun, provenanceResult, cancelled, expected] of [
+    ["品質検証が通れば配備する", "success", "", "success", false, true],
+    ["検証済みビルドがあり品質検証を省いた場合は配備する", "skipped", "12", "success", false, true],
+    ["品質検証も検証済みビルドもなければ配備しない", "skipped", "", "success", false, false],
+    ["品質検証が失敗したら配備しない", "failure", "", "success", false, false],
+    [
+      "検証済みビルドがあっても品質検証の失敗を無視しない",
+      "failure",
+      "12",
+      "success",
+      false,
+      false,
+    ],
+    ["品質検証がキャンセルされたら配備しない", "cancelled", "12", "success", false, false],
+    ["出所の確認が失敗したら配備しない", "success", "12", "failure", false, false],
+    ["出所の確認が省かれたら配備しない", "success", "12", "skipped", false, false],
+    ["実行全体がキャンセルされたら配備しない", "success", "12", "success", true, false],
+  ] as const) {
+    it(title, function () {
+      assert.equal(
+        runInNewContext(deployCondition, {
+          cancelled: () => cancelled,
+          needs: {
+            provenance: { result: provenanceResult, outputs: { "verified-run": verifiedRun } },
+            quality: { result: quality },
+          },
+        }),
+        expected,
+      );
+    });
+  }
+});
 
 // gh と gcloud の応答だけを差し替え、--jq は本物の jq で評価する。
 const GH_STUB = `#!/bin/bash

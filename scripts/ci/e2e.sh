@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# reusable-test.yml の E2E と同じ手順を、CircleCI の cimg/php とサイドカーの MariaDB で実行する。
 set -euo pipefail
 
 export COMPOSER_CACHE_DIR="$HOME/.cache/composer"

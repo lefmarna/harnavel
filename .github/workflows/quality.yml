@@ -43,18 +43,7 @@ jobs:
     needs: release
     # Draft PR は push し放題にする。判定ジョブが失敗したときは検証する側に倒す。
     if: ${{ !cancelled() && !github.event.pull_request.draft && needs.release.outputs.verified != 'true' }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: ./.github/actions/ci-lint
-
-  test:
-    needs: quality
-    # 上流の release がスキップされると既定の success() では実行されないため、直接の結果で判定する。
-    if: ${{ !cancelled() && needs.quality.result == 'success' }}
-    uses: ./.github/workflows/reusable-test.yml
+    uses: ./.github/workflows/reusable-quality.yml
     with:
       # CircleCI が PR の E2E を担うリポジトリでも、手動実行は CircleCI が動かないためここで実行する。
       e2e: ${{ vars.E2E_RECORD_BUCKET == '' || github.event_name != 'pull_request' }}

@@ -111,29 +111,19 @@ jobs:
           echo "verified-run=$run" >> "$GITHUB_OUTPUT"
           echo "Tree $tree passed lint and tests in $url${e2e:-}; deploying its build." >> "$GITHUB_STEP_SUMMARY"
 
-  lint:
+  quality:
     needs: provenance
     if: needs.provenance.outputs.verified-run == ''
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: ./.github/actions/ci-lint
-
-  test:
-    needs: lint
-    uses: ./.github/workflows/reusable-test.yml
+    uses: ./.github/workflows/reusable-quality.yml
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [provenance, lint, test]
+    needs: [provenance, quality]
     # 検証済みのツリーでも、この run のゲートが失敗したら配備しない。
     if: >-
       !cancelled() && needs.provenance.result == 'success' &&
-      ((needs.lint.result == 'success' && needs.test.result == 'success') ||
-      (needs.provenance.outputs.verified-run != '' &&
-      needs.lint.result == 'skipped' && needs.test.result == 'skipped'))
+      (needs.quality.result == 'success' ||
+      (needs.provenance.outputs.verified-run != '' && needs.quality.result == 'skipped'))
     permissions:
       actions: read
       contents: read

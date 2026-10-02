@@ -1,4 +1,4 @@
-name: Reusable / Test
+name: Reusable / Quality
 
 on:
   workflow_call:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
 
     services:
@@ -78,6 +78,55 @@ jobs:
 
       - name: Generate Application Key
         run: php artisan key:generate
+
+      - name: Run Pint
+        run: vendor/bin/pint --test
+
+      - name: Cache PHPStan result cache
+        uses: actions/cache@v5
+        with:
+          path: /tmp/phpstan
+          key: ${{ runner.os }}-phpstan-php-8.5-${{ hashFiles('composer.lock', 'phpstan.neon.dist') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-phpstan-php-8.5-${{ hashFiles('composer.lock', 'phpstan.neon.dist') }}-
+            ${{ runner.os }}-phpstan-php-8.5-
+            ${{ runner.os }}-phpstan-
+
+      - name: Run Static Analysis
+        run: composer analyse
+
+      - name: Check Frontend Formatting
+        run: pnpm run format:check
+
+      - name: Generate Wayfinder Files
+        run: php artisan wayfinder:generate --with-form
+
+      - name: Lint Frontend
+        run: pnpm run lint:check
+
+      - name: Type Check Frontend
+        run: pnpm run types:check
+
+      # rhysd/actionlint は action.yml を提供しないため、バージョン固定の公式 Docker イメージを使う。
+      - name: Lint GitHub Actions Workflows
+        uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color
+
+      - name: Lint Markdown Links
+        run: pnpm run lint:docs
+
+      - name: Test Deploy Lifecycle
+        run: pnpm run test:deploy-lifecycle
+
+      - name: Test Deploy Rsync Excludes
+        run: pnpm run test:deploy-rsync-excludes
+
+      - name: Test Toolchain Version Consistency
+        run: pnpm run test:toolchain-versions
+
+      - name: Run Frontend Unit Tests
+        run: pnpm run test:unit
 
       - name: Build Assets
         run: pnpm run build

@@ -130,14 +130,7 @@ docker compose exec app scripts/run-pest-locked.sh php artisan test --compact --
 
 [tasks."verify:backend:full"]
 description = "Run backend quality checks plus mutation testing and Chromium E2E"
-run = """
-docker compose exec app vendor/bin/pint --dirty --format=agent && \
-docker compose exec app composer analyse && \
-docker compose exec app scripts/run-pest-locked.sh php artisan test --compact --coverage --min=90 && \
-docker compose exec app mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations && \
-docker compose exec app scripts/run-pest-locked.sh vendor/bin/pest --mutate --covered-only --min=100 && \
-pnpm test:e2e
-"""
+run = ["mise run verify:backend", "mise run mutate --min=100", "pnpm test:e2e"]
 
 [tasks."composer:install"]
 description = "Composer install"

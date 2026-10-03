@@ -33,8 +33,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function getPasskeyUserHandle(): string
     {
-        // Eloquent::getKey() の戻り値は mixed だが、このモデルの主キーは整数。
-        /** @var int $key */
+        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
         $key = $this->getKey();
 
         return hash_hmac(

@@ -65,6 +65,17 @@ describe('パスキー', function () {
         '異なる秘密鍵' => [1, 'other-passkey-secret', '95e5cb13d9d91579762dde0ee40a78495db0b628a7786c3d9b1ec5962422c23f'],
     ]);
 
+    it('UUID 主キーは文字列全体を使って hex ハンドルを導出する', function () {
+        config(['passkeys.user_handle_secret' => 'test-passkey-secret']);
+        $user = (new User)
+            ->setKeyType('string')
+            ->setIncrementing(false)
+            ->forceFill(['id' => '550e8400-e29b-41d4-a716-446655440000']);
+
+        expect($user->getPasskeyUserHandle())
+            ->toBe('0f1664ac77b67f341a8570bba45f5fec66cc9e6044528e33ff4426905ed9c03c');
+    });
+
     it('ルートビューは csrf-token meta を出さない', function () {
         // @laravel/passkeys は meta があれば XSRF-TOKEN cookie より優先するが、ログイン時の
         // トークン再生成後も meta は古いままで、CSRF 検証が cookie を見に行かなくなる。

@@ -18,13 +18,17 @@ secret again.
 New registrations use the 64-byte ASCII hex HMAC proposed in
 [upstream PR #42](https://github.com/laravel/passkeys-server/pull/42), because iOS Safari can corrupt
 raw binary handles ([issue #41](https://github.com/laravel/passkeys-server/issues/41)). The template
-overrides only `User::getPasskeyUserHandle()` while `laravel/passkeys` v0.2.1 lacks the fix. Once a
-stable upstream version implements the same derivation, update the dependency and remove that
-override, retaining the registration and legacy-login tests.
+overrides only `User::getPasskeyUserHandle()` while the PHP implementation lacks the fix. It is
+maintained in the [`laravel/passkeys-server` repository](https://github.com/laravel/passkeys-server)
+and distributed as the Composer package `laravel/passkeys` (currently v0.2.1), separately from the
+frontend npm package `@laravel/passkeys`. Once a stable release of that PHP Composer package
+implements the same hex HMAC derivation for the same table, primary key, and secret, update that
+dependency and remove the override after the registration and legacy-login tests pass. Updating
+the frontend package alone does not satisfy this removal condition.
 
 Existing credential records must keep their original handles: intact binary credentials still verify
 against their stored values, and binary and hex credentials can coexist on one account. Do not rewrite
 credential JSON or rotate the handle secret when adopting this change. Handles already corrupted on
 an authenticator cannot be repaired server-side; affected users must sign in with another credential,
 register a replacement passkey, and then remove the affected one. This override does not change
-v0.2.1's exception handling for those already-corrupted credentials.
+the PHP package's v0.2.1 exception handling for those already-corrupted credentials.

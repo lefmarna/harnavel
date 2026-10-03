@@ -3,7 +3,6 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, extname, join } from "node:path";
 
-// Pest のバインドは単独の Larastan 解析では解決できないため、テストは Pint と Pest で検証する。
 const PHPSTAN_EXCLUDED_DIRS = ["tests/"];
 const isExcludedFromPhpStan = (file) => PHPSTAN_EXCLUDED_DIRS.some((dir) => file.startsWith(dir));
 
@@ -223,7 +222,9 @@ function changedFiles(cwd) {
   const tracked = run(["git", "diff", "--name-only", "-z", "HEAD"], cwd);
   const untracked = run(["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd);
   const merged = [...tracked.stdout.split("\0"), ...untracked.stdout.split("\0")];
-  const changed = [...new Set(merged)].filter(Boolean).toSorted();
+  const changed = [...new Set(merged)]
+    .filter(Boolean)
+    .toSorted((left, right) => left.localeCompare(right));
   const present = changed.filter((file) => existsSync(join(cwd, file)));
 
   return { all: changed, existing: present };

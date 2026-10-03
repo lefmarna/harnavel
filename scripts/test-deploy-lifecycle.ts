@@ -10,7 +10,13 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WORKFLOW =
   process.env.DEPLOY_LIFECYCLE_WORKFLOW ?? path.join(ROOT, ".github/workflows/delivery.yml");
 
-type Step = { name?: string; run?: string; uses?: string };
+type Step = {
+  name?: string;
+  run?: string;
+  uses?: string;
+  if?: string;
+  "continue-on-error"?: boolean | string;
+};
 type Job = {
   needs?: string | string[];
   uses?: string;
@@ -81,31 +87,55 @@ function upstreamOf(job: string, seen = new Set<string>()): Set<string> {
 
 const upstream = upstreamOf("deploy");
 
-for (const gate of ["lint", "test"]) {
-  if (!upstream.has(gate)) {
-    fail(`the deploy job must wait for "${gate}"`);
-  }
+if (!upstream.has("quality")) {
+  fail('the deploy job must wait for "quality"');
 }
 
-// 名前だけのゲートを通過扱いにしないよう、共通の action と workflow を実行していることも確認する。
-const GATE_ACTION = "./.github/actions/ci-lint";
-const TEST_WORKFLOW = "./.github/workflows/reusable-test.yml";
+const QUALITY_WORKFLOW = "./.github/workflows/reusable-quality.yml";
 
-if (!(jobs.lint?.steps ?? []).some((step) => step.uses === GATE_ACTION)) {
-  fail(`the delivery lint job must run ${GATE_ACTION}`);
+if (jobs.quality?.uses !== QUALITY_WORKFLOW) {
+  fail(`the delivery quality job must run ${QUALITY_WORKFLOW}`);
 }
 
-if (jobs.test?.uses !== TEST_WORKFLOW) {
-  fail(`the delivery test job must run ${TEST_WORKFLOW}, not merely carry the name`);
-}
-
-// PR の E2E を CircleCI に任せていても、その結果を確認できない配備前の E2E はこのジョブが担う。
-const e2e = jobs.test?.with?.e2e;
+const e2e = jobs.quality?.with?.e2e;
 
 if (e2e !== undefined && e2e !== true) {
-  fail(
-    "the delivery test job must run E2E itself; only pull request checks may leave it to CircleCI",
+  fail("the delivery quality job must run E2E itself when no verified build exists");
+}
+
+const quality = parse(fs.readFileSync(path.join(ROOT, QUALITY_WORKFLOW), "utf8")) as Workflow;
+const qualitySteps = quality.jobs?.quality?.steps ?? [];
+const uploadAt = qualitySteps.findIndex(
+  (step) =>
+    step.uses?.startsWith("actions/upload-artifact@") && step.name === "Upload build artifacts",
+);
+
+if (uploadAt === -1 || qualitySteps[uploadAt]?.if !== undefined) {
+  fail("the verified build must only be uploaded after successful quality checks");
+}
+
+for (const command of [
+  "vendor/bin/pint --test",
+  "composer analyse",
+  "pnpm run format:check",
+  "pnpm run lint:check",
+  "pnpm run types:check",
+  "pnpm run test:unit",
+  "./vendor/bin/pest --coverage",
+  "pnpm test:e2e",
+]) {
+  const at = qualitySteps.findIndex(
+    (step) => step.run === command || step.run?.startsWith(`${command} `),
   );
+  const step = qualitySteps[at];
+  if (
+    at === -1 ||
+    at >= uploadAt ||
+    (step?.["continue-on-error"] !== undefined && step["continue-on-error"] !== false) ||
+    (step?.if !== undefined && !(command === "pnpm test:e2e" && step.if === "inputs.e2e"))
+  ) {
+    fail(`the verified build must follow a required quality check: ${command}`);
+  }
 }
 
 if (workflow.concurrency?.["cancel-in-progress"] !== false) {

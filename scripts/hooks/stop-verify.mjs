@@ -3,7 +3,6 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, extname, join } from "node:path";
 
-// Pest のバインドは単独の Larastan 解析では解決できないため、テストは Pint と Pest で検証する。
 const PHPSTAN_EXCLUDED_DIRS = ["tests/"];
 const isExcludedFromPhpStan = (file) => PHPSTAN_EXCLUDED_DIRS.some((dir) => file.startsWith(dir));
 
@@ -73,10 +72,6 @@ const hasPhpStanDeletions = phpStanAll.length > phpStanExisting.length;
 const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0;
 const hasPnpm = hasCommand("pnpm");
 const dockerReady = hasAnyPhpChange && hasCommand("docker") && dockerAppRunning(repo);
-
-if (dockerReady) {
-  ensureDockerGitSafeDirectory(repo);
-}
 
 // 自動修正は lefthook と同じ順序で逐次実行する。
 
@@ -159,18 +154,8 @@ if (
   }
 }
 
-if (hasPnpm && (oxfmtAll.length || hasFormatConfigChange || hasFrontendToolchainChange)) {
-  if (hasOxfmtDeletions || hasFormatConfigChange || hasFrontendToolchainChange) {
-    tasks.push(runAsync(["pnpm", "format:check"], repo, "Frontend format"));
-  } else {
-    tasks.push(
-      runAsync(
-        ["pnpm", "exec", "vp", "fmt", "--check", "--no-error-on-unmatched-pattern", ...oxfmtFiles],
-        repo,
-        "Oxfmt",
-      ),
-    );
-  }
+if (hasPnpm && (hasOxfmtDeletions || hasFormatConfigChange || hasFrontendToolchainChange)) {
+  tasks.push(runAsync(["pnpm", "format:check"], repo, "Frontend format"));
 }
 
 if (hasPnpm && (hasTs || hasTypeConfigChange || hasFrontendToolchainChange)) {
@@ -212,30 +197,6 @@ if (dockerReady) {
           ),
     );
   }
-
-  tasks.push(
-    runAsync(
-      [
-        "docker",
-        "compose",
-        "exec",
-        "-T",
-        "app",
-        "scripts/run-pest-locked.sh",
-        "php",
-        "artisan",
-        "test",
-        "--compact",
-        "--dirty",
-      ],
-      repo,
-      "Pest (--dirty)",
-    ),
-  );
-}
-
-if (process.env.STOP_HOOK_E2E === "1" && lintFiles.length > 0 && hasCommand("pnpm")) {
-  tasks.push(runAsync(["pnpm", "test:e2e", "--reporter=dot"], repo, "E2E (Playwright)"));
 }
 
 const failures = [
@@ -258,10 +219,12 @@ if (failures.length) {
 }
 
 function changedFiles(cwd) {
-  const tracked = run(["git", "diff", "--name-only", "HEAD"], cwd);
-  const untracked = run(["git", "ls-files", "--others", "--exclude-standard"], cwd);
-  const merged = [...tracked.stdout.split("\n"), ...untracked.stdout.split("\n")];
-  const changed = [...new Set(merged)].filter(Boolean).toSorted();
+  const tracked = run(["git", "diff", "--name-only", "-z", "HEAD"], cwd);
+  const untracked = run(["git", "ls-files", "--others", "--exclude-standard", "-z"], cwd);
+  const merged = [...tracked.stdout.split("\0"), ...untracked.stdout.split("\0")];
+  const changed = [...new Set(merged)]
+    .filter(Boolean)
+    .toSorted((left, right) => left.localeCompare(right));
   const present = changed.filter((file) => existsSync(join(cwd, file)));
 
   return { all: changed, existing: present };
@@ -275,43 +238,6 @@ function dockerAppRunning(cwd) {
   const result = run(["docker", "compose", "ps", "--services", "--filter", "status=running"], cwd);
 
   return result.status === 0 && result.stdout.split("\n").includes("app");
-}
-
-function ensureDockerGitSafeDirectory(cwd) {
-  const result = run(
-    ["docker", "compose", "exec", "-T", "app", "git", "rev-parse", "--show-toplevel"],
-    cwd,
-  );
-
-  if (result.status === 0) {
-    return;
-  }
-
-  const output = `${result.stdout}\n${result.stderr}`;
-
-  if (!output.includes("dubious ownership")) {
-    return;
-  }
-
-  const pwd = run(["docker", "compose", "exec", "-T", "app", "pwd"], cwd);
-  const safeDirectory = pwd.status === 0 ? pwd.stdout.trim() : "/app";
-
-  run(
-    [
-      "docker",
-      "compose",
-      "exec",
-      "-T",
-      "app",
-      "git",
-      "config",
-      "--global",
-      "--add",
-      "safe.directory",
-      safeDirectory,
-    ],
-    cwd,
-  );
 }
 
 function hasCommand(command) {

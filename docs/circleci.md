@@ -25,7 +25,7 @@ Manual `quality` and `mutation` dispatches still run everything on GitHub Action
 The triggers start pipelines only for ready pull requests.
 [`prepare-merge.sh`](../scripts/ci/prepare-merge.sh) merges the head into the current base, like the
 merge commit that `pull_request` workflows check out. Jobs take environment variables from the
-matching steps of `reusable-test.yml` and `mutation.yml`, so app-specific test values live only
+matching steps of `reusable-quality.yml` and `mutation.yml`, so app-specific test values live only
 there, and mutation testing honors the `paths-ignore` of `mutation.yml`.
 
 ## How delivery trusts CircleCI

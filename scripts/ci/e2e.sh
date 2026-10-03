@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# reusable-test.yml の E2E と同じ手順を、CircleCI の cimg/php とサイドカーの MariaDB で実行する。
 set -euo pipefail
 
 export COMPOSER_CACHE_DIR="$HOME/.cache/composer"
@@ -13,7 +12,7 @@ cp .env.example .env
 composer install --no-interaction --prefer-dist --optimize-autoloader
 php artisan key:generate
 
-step_env() { php scripts/ci/workflow-env.php .github/workflows/reusable-test.yml "$1"; }
+step_env() { php scripts/ci/workflow-env.php .github/workflows/reusable-quality.yml "$1"; }
 
 scripts/ci/wait-for-database.sh
 env=$(step_env "Build Assets")

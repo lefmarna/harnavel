@@ -51,7 +51,7 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * 秘密鍵が APP_KEY へ黙って倒れたままだと、鍵のローテーションで全パスキーが失効する（TADR-0013）。
+     * APP_KEY のローテーションで新規登録時のユーザーハンドルが変わらないよう、秘密鍵を分離する（TADR-0013）。
      */
     private function configurePasskeySecret(): void
     {

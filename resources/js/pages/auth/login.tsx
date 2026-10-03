@@ -1,4 +1,5 @@
 import { Form } from "@inertiajs/react";
+import { useCallback, useRef } from "react";
 
 import InputError from "@/components/input-error";
 import PasskeyVerify from "@/components/passkey-verify";
@@ -32,6 +33,8 @@ export default function Login({
   canGoogleLogin,
 }: Props) {
   const canUsePasskey = usePasskeyAvailable();
+  const remember = useRef(false);
+  const getRemember = useCallback(() => remember.current, []);
 
   return (
     <AuthLayout>
@@ -76,7 +79,14 @@ export default function Login({
               </div>
 
               <div className="flex items-center space-x-3">
-                <Checkbox id="remember" name="remember" tabIndex={3} />
+                <Checkbox
+                  id="remember"
+                  name="remember"
+                  tabIndex={3}
+                  onCheckedChange={(checked) => {
+                    remember.current = checked === true;
+                  }}
+                />
                 <Label htmlFor="remember">ログイン状態を保持する</Label>
               </div>
 
@@ -114,7 +124,7 @@ export default function Login({
 
                 <div className="grid gap-3">
                   {/* パスキーはこのアカウント自身の資格情報なので、外部の Google より先に置く。 */}
-                  <PasskeyVerify autofill />
+                  <PasskeyVerify autofill remember={getRemember} />
 
                   {canGoogleLogin && (
                     <Button

@@ -5,9 +5,7 @@ set -euo pipefail
 : "${BASE_BRANCH:?PR の base がありません}"
 
 head=$(git rev-parse HEAD)
-if ! git fetch -q --no-tags origin "+refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH"; then
-  echo "最新の $BASE_BRANCH を取得できないため、クローン時点の $BASE_BRANCH を使います。" >&2
-fi
+git fetch -q --no-tags origin "+refs/heads/$BASE_BRANCH:refs/remotes/origin/$BASE_BRANCH"
 base=$(git rev-parse "refs/remotes/origin/$BASE_BRANCH")
 
 git checkout -q --detach "$base"

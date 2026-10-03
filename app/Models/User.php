@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Config;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 
@@ -25,6 +26,22 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable;
+
+    /**
+     * iOS Safari が生バイナリを破損するため、64バイトの ASCII hex を使う。
+     * https://github.com/laravel/passkeys-server/pull/42 が正式版へ入ったら削除する（TADR-0013）。
+     */
+    public function getPasskeyUserHandle(): string
+    {
+        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+        $key = $this->getKey();
+
+        return hash_hmac(
+            'sha256',
+            $this->getTable().'|'.$key,
+            Config::string('passkeys.user_handle_secret'),
+        );
+    }
 
     /**
      * Get the attributes that should be cast.

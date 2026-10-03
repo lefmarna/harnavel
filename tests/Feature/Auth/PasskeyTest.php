@@ -50,6 +50,32 @@ describe('パスキー', function () {
             ->assertStatus(423);
     });
 
+    it('登録候補はユーザーと秘密鍵から導出した64文字の hex ハンドルを返す', function (int $id, string $secret, string $handle) {
+        config(['passkeys.user_handle_secret' => $secret]);
+        $user = User::factory()->create(['id' => $id]);
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->getJson(route('passkey.registration-options'))
+            ->assertOk()
+            ->assertJsonPath('options.user.id', Base64UrlSafe::encodeUnpadded($handle));
+    })->with([
+        'ユーザー1' => [1, 'test-passkey-secret', '4d577e59603ff8b43b36af5f1155eb0967e4390bdde64d75f16c118710484bf2'],
+        'ユーザー2' => [2, 'test-passkey-secret', '4a900c2e4a2232079e8f8e6b12c597fe64b15ee8203b965863dfdb820427ccfd'],
+        '異なる秘密鍵' => [1, 'other-passkey-secret', '95e5cb13d9d91579762dde0ee40a78495db0b628a7786c3d9b1ec5962422c23f'],
+    ]);
+
+    it('UUID 主キーは文字列全体を使って hex ハンドルを導出する', function () {
+        config(['passkeys.user_handle_secret' => 'test-passkey-secret']);
+        $user = (new User)
+            ->setKeyType('string')
+            ->setIncrementing(false)
+            ->forceFill(['id' => '550e8400-e29b-41d4-a716-446655440000']);
+
+        expect($user->getPasskeyUserHandle())
+            ->toBe('0f1664ac77b67f341a8570bba45f5fec66cc9e6044528e33ff4426905ed9c03c');
+    });
+
     it('ルートビューは csrf-token meta を出さない', function () {
         // @laravel/passkeys は meta があれば XSRF-TOKEN cookie より優先するが、ログイン時の
         // トークン再生成後も meta は古いままで、CSRF 検証が cookie を見に行かなくなる。

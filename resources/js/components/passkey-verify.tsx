@@ -25,6 +25,7 @@ type Routes = {
 type Props = {
   /** Conditional UI。候補が出ない環境もあるので、ボタンは併せて常に出す。 */
   autofill?: boolean;
+  remember?: boolean | (() => boolean);
   routes?: Routes;
   label?: string;
   loadingLabel?: string;
@@ -47,12 +48,19 @@ export default function PasskeyVerify(props: Props) {
   return <AvailablePasskeyVerify {...props} />;
 }
 
-function AvailablePasskeyVerify({ autofill = false, routes, label, loadingLabel }: Props) {
+function AvailablePasskeyVerify({
+  autofill = false,
+  remember,
+  routes,
+  label,
+  loadingLabel,
+}: Props) {
   const [autofillError, setAutofillError] = useState<PasskeyError | null>(null);
   const [isStoppingAutofill, setIsStoppingAutofill] = useState(false);
 
   const stopAutofill = usePasskeyAutofill({
     enabled: autofill,
+    remember,
     routes,
     onError: (error) => {
       // 環境起因の失敗は利用者が操作する前に起きるので黙る。理由はボタンから試せば出る。
@@ -67,6 +75,7 @@ function AvailablePasskeyVerify({ autofill = false, routes, label, loadingLabel 
 
   const { verify, isLoading, errorInstance } = usePasskeyVerify({
     ...toVerifyOptions(routes),
+    remember,
     onSuccess: visitRedirect,
   });
 
@@ -118,10 +127,12 @@ const runningAutofills = new Set<Promise<void>>();
  */
 function usePasskeyAutofill({
   enabled,
+  remember,
   routes,
   onError,
 }: {
   enabled: boolean;
+  remember?: boolean | (() => boolean);
   routes?: Routes;
   onError: (error: PasskeyError) => void;
 }): () => Promise<boolean> {
@@ -148,9 +159,12 @@ function usePasskeyAutofill({
       }
 
       try {
-        const response = await Passkeys.autofill(
-          optionsUrl && submitUrl ? { routes: { options: optionsUrl, submit: submitUrl } } : {},
-        );
+        const response = await Passkeys.autofill({
+          ...(optionsUrl && submitUrl
+            ? { routes: { options: optionsUrl, submit: submitUrl } }
+            : {}),
+          remember,
+        });
 
         if (response && !disposed) {
           loggedIn.current = true;
@@ -169,7 +183,7 @@ function usePasskeyAutofill({
       disposed = true;
       Passkeys.cancel();
     };
-  }, [enabled, optionsUrl, submitUrl]);
+  }, [enabled, optionsUrl, submitUrl, remember]);
 
   return async () => {
     while (runningAutofills.size > 0) {

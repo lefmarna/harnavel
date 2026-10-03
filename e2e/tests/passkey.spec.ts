@@ -3,6 +3,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 import {
   createUser,
   expirePasswordConfirmation,
+  runArtisan,
   setUserPassword,
   type UserCredentials,
 } from "../support/artisan";
@@ -109,9 +110,147 @@ test("パスキーを登録してパスキーだけでログインできる", as
   await expect(page).toHaveURL(HOME_URL);
 });
 
+test("hex ハンドルへの変更後も旧バイナリ形式のパスキーでログインと本人確認ができる", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await enableVirtualAuthenticator(page, context);
+  const user = createUser();
+  await openSecuritySettings(page, user);
+
+  const legacyHandle = Buffer.from(
+    "4d577e59603ff8b43b36af5f1155eb0967e4390bdde64d75f16c118710484bf2",
+    "hex",
+  ).toString("base64url");
+  await page.route("**/user/passkeys/options", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { options: { user: { id: string } } };
+    body.options.user.id = legacyHandle;
+    await route.fulfill({ response, json: body });
+  });
+  await registerPasskey(page, "旧バイナリ形式");
+  await expect(page.getByText("旧バイナリ形式", { exact: true })).toBeVisible();
+  await page.unroute("**/user/passkeys/options");
+
+  runArtisan([
+    "tinker",
+    "--execute",
+    " $user = App\\Models\\User::query()" +
+      `->where('email', base64_decode('${Buffer.from(user.email).toString("base64")}'))->firstOrFail();` +
+      " $passkey = $user->passkeys()->sole();" +
+      " $credential = $passkey->credential;" +
+      ` $credential['userHandle'] = '${legacyHandle}';` +
+      " $passkey->forceFill(['credential' => $credential])->save();",
+  ]);
+  await context.clearCookies();
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+  });
+
+  await page.goto("/login");
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
+  await expect(page).toHaveURL(HOME_URL);
+
+  await page.goto("/settings/security");
+  await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
+  await page.getByRole("button", { name: "パスキーで確認" }).click();
+  await expect(page).toHaveURL(SECURITY_URL);
+});
+
 type AutofillStage = "options" | "support-check";
 
 type AutofillRaceWindow = Window & { releaseAutofill: () => void };
+
+for (const remember of [false, true]) {
+  test(`ボタンでパスキーログインするとログイン状態の保持が${remember ? "有効" : "無効"}になる`, async ({
+    page,
+    context,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+    await enableVirtualAuthenticator(page, context);
+    await openSecuritySettings(page, createUser());
+    await registerPasskey(page, "ログイン状態の保持");
+    await expect(page.getByText("ログイン状態の保持", { exact: true })).toBeVisible();
+    await context.clearCookies();
+
+    await page.addInitScript(() => {
+      PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+    });
+    await page.goto("/login");
+    await page.getByLabel("ログイン状態を保持する").setChecked(remember);
+    await page.getByRole("button", { name: "パスキーでログイン" }).click();
+
+    await expect(page).toHaveURL(HOME_URL);
+    const cookies = await context.cookies();
+    expect(cookies.some((cookie) => cookie.name.startsWith("remember_web_"))).toBe(remember);
+  });
+}
+
+for (const { name, checkedStates, remember } of [
+  {
+    name: "チェックを入れるとログイン状態の保持が有効になる",
+    checkedStates: [true],
+    remember: true,
+  },
+  {
+    name: "チェックを入れなければログイン状態の保持が無効になる",
+    checkedStates: [],
+    remember: false,
+  },
+  {
+    name: "チェックを入れてから外すとログイン状態の保持が無効になる",
+    checkedStates: [true, false],
+    remember: false,
+  },
+]) {
+  test(`自動入力を待っている間に${name}`, async ({ page, context, browserName }) => {
+    test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+    await enableVirtualAuthenticator(page, context);
+    await openSecuritySettings(page, createUser());
+    await registerPasskey(page, "自動入力のログイン状態の保持");
+    await expect(page.getByText("自動入力のログイン状態の保持", { exact: true })).toBeVisible();
+    await context.clearCookies();
+
+    await page.addInitScript(() => {
+      let release = () => {};
+      const released = new Promise<void>((resolve) => (release = resolve));
+      (window as unknown as AutofillRaceWindow).releaseAutofill = release;
+
+      PublicKeyCredential.isConditionalMediationAvailable = async () => true;
+      const get = navigator.credentials.get.bind(navigator.credentials);
+      navigator.credentials.get = async (options) => {
+        if (options?.mediation !== "conditional") {
+          return get(options);
+        }
+
+        document.documentElement.setAttribute("data-conditional-ready", "");
+        await released;
+
+        // 仮想オーセンティケータでも候補を選んだ状態を確実に再現する。
+        const requestOptions = { ...options };
+        delete requestOptions.mediation;
+        return get(requestOptions);
+      };
+    });
+
+    await page.goto("/login");
+    await expect(page.locator("html[data-conditional-ready]")).toBeAttached();
+    for (const checked of checkedStates) {
+      await page.getByLabel("ログイン状態を保持する").setChecked(checked);
+    }
+    await page.evaluate(() => (window as unknown as AutofillRaceWindow).releaseAutofill());
+
+    await expect(page).toHaveURL(HOME_URL);
+    const cookies = await context.cookies();
+    expect(cookies.some((cookie) => cookie.name.startsWith("remember_web_"))).toBe(remember);
+  });
+}
 
 /**
  * 自動入力を stage で止める。自動入力の ceremony は中断されるまで待ち、手動の ceremony は

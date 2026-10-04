@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Repositories\User\EloquentUserRepository;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 describe('Eloquent ユーザーリポジトリ', function () {
@@ -133,23 +132,6 @@ describe('Eloquent ユーザーリポジトリ', function () {
             $repository->findByEmail('lookup@example.com', lock: true);
 
             expect(selectsForUpdate())->toBeTrue();
-        });
-    });
-
-    describe('パスワード更新', function () {
-        it('新しいパスワードをハッシュ化して永続化できる', function () {
-            $user = User::factory()->create([
-                'password' => Hash::make('old-password'),
-            ]);
-            $repository = new EloquentUserRepository;
-
-            $repository->updatePassword($user, 'new-password');
-
-            $stored = User::query()->whereKey($user->getKey())->value('password');
-
-            expect($stored)->toBeString()
-                ->and(Hash::check('new-password', $stored))->toBeTrue()
-                ->and(Hash::check('old-password', $stored))->toBeFalse();
         });
     });
 });

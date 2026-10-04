@@ -3,13 +3,11 @@
 declare(strict_types=1);
 
 use App\Providers\AppServiceProvider;
-use App\Providers\DomainServiceProvider;
+use App\Providers\ContractServiceProvider;
 use App\Providers\FortifyServiceProvider;
-use App\Providers\RepositoryServiceProvider;
 
 return [
     AppServiceProvider::class,
     FortifyServiceProvider::class,
-    DomainServiceProvider::class,
-    RepositoryServiceProvider::class,
+    ContractServiceProvider::class,
 ];

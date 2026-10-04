@@ -2,7 +2,7 @@
   RewriteEngine On
 
   # 想定外のHost経由でアクセスさせないため
-  RewriteCond %{HTTP_HOST} !^(?:(?:www|dev)\.)?laravel-app-template\.com$ [NC]
+  RewriteCond %{HTTP_HOST} !^(?:(?:www|dev)\.)?example\.com$ [NC]
   RewriteRule ^ - [F]
 
   # SSL証明書のHTTP-01検証を妨げないため
@@ -12,15 +12,15 @@
   RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F]
 
   # www → non-www リダイレクト（メインドメインのみ）
-  RewriteCond %{HTTP_HOST} ^www\.laravel-app-template\.com$ [NC]
-  RewriteRule ^ https://laravel-app-template.com%{REQUEST_URI} [R=301,L]
+  RewriteCond %{HTTP_HOST} ^www\.example\.com$ [NC]
+  RewriteRule ^ https://example.com%{REQUEST_URI} [R=301,L]
 
   # HTTPS強制（ACMEを除く全ホスト共通）
   RewriteCond %{HTTPS} off
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
   # サブドメインは各自のディレクトリで処理（public/転送をスキップ）
-  RewriteCond %{HTTP_HOST} !^(?:www\.)?laravel-app-template\.com$ [NC]
+  RewriteCond %{HTTP_HOST} !^(?:www\.)?example\.com$ [NC]
   RewriteRule ^ - [L]
 
   # public/への再転送ループを防ぐため

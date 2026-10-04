@@ -2,7 +2,7 @@
   RewriteEngine On
 
   # 想定外のHost経由でアクセスさせないため
-  RewriteCond %{HTTP_HOST} !^dev\.laravel-app-template\.com$ [NC]
+  RewriteCond %{HTTP_HOST} !^dev\.example\.com$ [NC]
   RewriteRule ^ - [F]
 
   # SSL証明書のHTTP-01検証を妨げないため
@@ -12,7 +12,7 @@
   RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F]
 
   RewriteCond %{HTTPS} off
-  RewriteRule ^ https://dev.laravel-app-template.com%{REQUEST_URI} [R=301,L]
+  RewriteRule ^ https://dev.example.com%{REQUEST_URI} [R=301,L]
 
   # public/への再転送ループを防ぐため
   RewriteCond %{REQUEST_URI} !^/public/
@@ -31,7 +31,7 @@
 
 # SSL証明書のHTTP-01検証をBasic認証で妨げないため
 <IfModule mod_rewrite.c>
-  AuthUserFile "/home/{XSERVER_USER}/laravel-app-template.com/htpasswd/dev.laravel-app-template.com/.htpasswd"
+  AuthUserFile "/home/{XSERVER_USER}/example.com/htpasswd/dev.example.com/.htpasswd"
   AuthName "Member Site"
   AuthType Basic
 

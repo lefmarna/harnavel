@@ -42,6 +42,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $status = $request->session()->get('status');
 
         $analyticsTrackingId = config('services.google.analytics_tracking_id');
         $adsensePublisherId = config('services.google.adsense_publisher_id');
@@ -95,7 +96,11 @@ class HandleInertiaRequests extends Middleware
             'tracking' => $tracking,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [
-                'status' => $request->session()->get('status'),
+                'status' => match ($status) {
+                    'passkey-registered' => 'パスキーを追加しました。',
+                    'passkey-deleted' => 'パスキーを削除しました。',
+                    default => $status,
+                },
                 'error' => $request->session()->get('error'),
             ],
         ];

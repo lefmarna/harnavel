@@ -10,6 +10,13 @@ use Symfony\Component\Process\Process;
 use Tests\Support\AppSubprocess;
 
 describe('パスキー', function () {
+    it('パスキー登録の完了通知は識別子ではなく日本語で画面へ渡す', function () {
+        $this->withSession(['status' => 'passkey-registered'])
+            ->get(route('login'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('flash.status', 'パスキーを追加しました。'));
+    });
+
     it('画面へ渡す許可 origin はサーバーの照合と同じ表記に正規化する', function () {
         config(['passkeys.allowed_origins' => ['https://example.test/', 'example.test:8443']]);
 

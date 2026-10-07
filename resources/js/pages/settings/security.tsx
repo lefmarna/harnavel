@@ -137,12 +137,6 @@ export default function Security({ canManagePasskeys, passkeys }: Props) {
           <div className="space-y-6">
             <ManagePasskeys canManagePasskeys={canManagePasskeys} passkeys={passkeys} />
 
-            {flash.status === "passkey-registered" && (
-              <p role="status" className="text-sm font-medium text-green-600 dark:text-green-400">
-                パスキーを追加しました。
-              </p>
-            )}
-
             {flash.status === "passkey-deleted" && (
               <p role="status" className="text-sm font-medium text-green-600 dark:text-green-400">
                 パスキーを削除しました。

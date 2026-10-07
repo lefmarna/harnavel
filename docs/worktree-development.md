@@ -11,8 +11,8 @@ seeds an empty database, and builds assets; rerunning retries an interrupted see
 `mise run dev:info` shows this Worktree's URLs and names.
 
 `DEV_PORT_BASE` in `.env.example` reserves a 100-port block per application: 20000
-template, 20100 app-one, 20200 app-four, 20300 app-two, 20400
-app-three. The primary checkout uses slot 0; additional Worktrees get slots 1-9.
+for the template, and an unused block such as 20100 for each derived app. The primary
+checkout uses slot 0; additional Worktrees get slots 1-9.
 
 | Offset | Service        | Scope                  |
 | ------ | -------------- | ---------------------- |

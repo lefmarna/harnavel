@@ -1,7 +1,15 @@
-# Laravel App Template
+# Harnavel
 
-Laravel 13 + Inertia React + MariaDB を Docker で開発するためのテンプレートです。
+Harnavel（ハーナベル）は、Laravel 13 + Inertia React + MariaDB を Docker で開発するためのテンプレートです。
 複数案件へ横展開しやすいように、認証・基本画面・開発コマンド・運用ルールを初期状態で揃えています。
+作者個人の開発基盤として随時更新しており、互換性や安定性は保証しません。
+
+## 特徴
+
+- **XServer 共有ホスティング前提**: 常駐プロセスや SSR を使わずに動かし、サーバー上で直接リリースを置き換えます（[docs/infrastructure.md](docs/infrastructure.md)、[TADR-0006](docs/adr/template/0006-in-place-deployment.md)）。
+- **テストを仕様として扱う**: 振る舞いの変更は失敗するテストから始め、ミューテーションテストでテストの強さを確かめます（[docs/testing-as-spec.md](docs/testing-as-spec.md)）。
+- **AI エージェント用のハーネス**: `AGENTS.md`、スキル、設計判断の記録（ADR）を同梱し、エージェントが同じ規約で作業できるようにしています（[AGENTS.md](AGENTS.md)、[docs/adr/README.md](docs/adr/README.md)）。
+- **派生アプリとの共有**: 派生アプリはこのテンプレートを取り込み続け、汎用的な改善はテンプレートへ戻します（[TADR-0003](docs/adr/template/0003-template-ownership.md)）。
 
 ## 技術構成
 
@@ -87,3 +95,19 @@ pnpm test:e2e --project=chromium
 - [docs/adr/README.md](docs/adr/README.md): 設計判断の記録（ADR / Template ADR）
 
 プロジェクト固有ルールは `AGENTS.md`、参照情報は `docs/` を確認してください。
+
+## ライセンス
+
+このリポジトリ独自のコードは [MIT License](LICENSE) です。次の第三者由来のコードと文書は、それぞれのライセンスに従います。MIT の許諾文は [LICENSE](LICENSE) と同じです。
+
+| 対象                                                                    | 出典                                                                                    | ライセンス | 著作権表示                      |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------- | ------------------------------- |
+| アプリの骨格                                                            | [laravel/react-starter-kit](https://github.com/laravel/react-starter-kit)               | MIT        | 記載なし                        |
+| `resources/js/components/ui/`                                           | [shadcn/ui](https://github.com/shadcn-ui/ui)                                            | MIT        | Copyright (c) 2023 shadcn       |
+| `resources/js/hooks/use-clipboard.ts`                                   | [usehooks-ts](https://github.com/juliencrn/usehooks-ts)                                 | MIT        | Copyright (c) 2020 Julien CARON |
+| `boost.json` の `skills` に挙げたスキル                                 | [Laravel Boost](https://github.com/laravel/boost)                                       | MIT        | Copyright (c) Taylor Otwell     |
+| `kiro-*` スキル、`.kiro/settings/templates/`、`docs/generated/specs.md` | [cc-sdd](https://github.com/gotalab/cc-sdd)                                             | MIT        | Copyright (c) 2025 gotalab      |
+| `frontend-design` スキル                                                | [anthropics/skills](https://github.com/anthropics/skills)                               | Apache-2.0 | スキル内の `LICENSE.txt`        |
+| `modern-web-guidance` スキル                                            | [GoogleChrome/modern-web-guidance](https://github.com/GoogleChrome/modern-web-guidance) | Apache-2.0 | スキル内の `LICENSE`            |
+
+スキルは `.agents/skills/` と `.claude/skills/` の両方に置いています。`modern-web-guidance` のうち、このリポジトリで修正したファイルは冒頭にその旨を記載しています。上流から更新するときも、修正を引き継いだファイルにはこの記載を残してください。また、上流の説明によると、その文書の一部は [MDN Web Docs](https://developer.mozilla.org/)（Mozilla Contributors）と [W3C](https://www.w3.org/)、[WHATWG](https://whatwg.org)、[IETF](https://www.ietf.org) の仕様に由来します。

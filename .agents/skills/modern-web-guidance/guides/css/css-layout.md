@@ -1,5 +1,7 @@
 # CSS Layouts and Responsive Design
 
+<!-- Modified by lefmarna from GoogleChrome/modern-web-guidance (Apache-2.0). -->
+
 1. [1 Fundamentals](#1-fundamentals)
    1. [Which layout mode to use?](#11-which-layout-mode-to-use)
    2. [Working principles](#12-working-principles)

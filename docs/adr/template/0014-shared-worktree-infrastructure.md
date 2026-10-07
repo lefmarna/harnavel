@@ -9,9 +9,6 @@ and Nginx and gets separate development, PHPUnit, and E2E databases with restric
 accounts, so tests cannot touch the development database. No application or test
 process uses the administrator account.
 
-An application reserves 100 ports and each Worktree ten. Vite does not run by
-default: setup builds assets, and `pnpm dev` runs only for frontend work.
-
 The tradeoff is a shared failure domain: a database restart affects every Worktree of
 the application, Mailpit mixes their mail, and browsers need separate profiles
 because ports do not isolate cookies.

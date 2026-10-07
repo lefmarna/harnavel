@@ -1,5 +1,7 @@
 # Optimize image priority
 
+<!-- Modified by lefmarna from GoogleChrome/modern-web-guidance (Apache-2.0). -->
+
 Browsers use heuristics to assign loading priorities to images, but these defaults may not always align with your page's Largest Contentful Paint (LCP).
 
 Using `fetchpriority` on an `<img>` element allows you to explicitly signal an image's importance to the browser, ensuring critical images load faster while non-essential ones don't compete for bandwidth.

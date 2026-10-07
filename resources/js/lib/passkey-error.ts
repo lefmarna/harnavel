@@ -27,5 +27,14 @@ export const passkeyErrorMessage = (error: PasskeyError | null): string | null =
     return "このドメインではパスキーを利用できません。";
   }
 
-  return error.message;
+  if (error.message === "Too Many Attempts.") {
+    return "試行回数が多すぎます。しばらく待ってからもう一度お試しください。";
+  }
+
+  // @laravel/passkeys はエラーの出どころを保持しないため、日本語を翻訳済み文言の目印にする。
+  if (/[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u.test(error.message)) {
+    return error.message;
+  }
+
+  return "パスキーの操作に失敗しました。もう一度お試しください。";
 };

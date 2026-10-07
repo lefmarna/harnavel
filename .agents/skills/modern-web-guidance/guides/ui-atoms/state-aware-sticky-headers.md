@@ -1,5 +1,7 @@
 # State-Aware Sticky Headers
 
+<!-- Modified by lefmarna from GoogleChrome/modern-web-guidance (Apache-2.0). -->
+
 Sticky headers are a common UI pattern, but they often need to change their appearance when they become "stuck" to maintain readability or save space. Traditional solutions required JavaScript scroll listeners, which can cause performance issues. Modern CSS allows you to handle this natively using **Scroll State Queries**.
 
 ## Implementation Steps

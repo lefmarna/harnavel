@@ -1,5 +1,7 @@
 # Progress ring
 
+<!-- Modified by lefmarna from GoogleChrome/modern-web-guidance (Apache-2.0). -->
+
 A progress ring (or circular progress bar) provides visual feedback on the status of a task. Unlike a linear progress bar, its circular shape is ideal for dashboards, card components, or anywhere space is constrained.
 
 This guide implements a progress ring by:

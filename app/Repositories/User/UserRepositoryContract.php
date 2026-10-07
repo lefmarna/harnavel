@@ -9,11 +9,6 @@ use Illuminate\Support\Collection;
 
 interface UserRepositoryContract
 {
-    /**
-     * @param  array{name: string, email: string, password: string}  $attributes
-     */
-    public function create(array $attributes): User;
-
     public function find(string|int $id, bool $lock = false): ?User;
 
     /**
@@ -35,6 +30,4 @@ interface UserRepositoryContract
     public function findByEmail(string $email, bool $lock = false): ?User;
 
     public function save(User $user): void;
-
-    public function updatePassword(User $user, string $newPassword): void;
 }

@@ -35,9 +35,9 @@ arch('フォームリクエストは Request サフィックスを持ち FormReq
     ->toHaveSuffix('Request')
     ->toExtend('Illuminate\Foundation\Http\FormRequest');
 
-arch('ドメイン層はコントローラに依存しない')
+arch('Actions・Services・Repositories・Models・Params・ViewModels はコントローラに依存しない')
     ->expect('App\Http\Controllers')
-    ->not->toBeUsedIn(['App\Services', 'App\Repositories', 'App\Models', 'App\Params', 'App\ViewModels']);
+    ->not->toBeUsedIn(['App\Actions', 'App\Services', 'App\Repositories', 'App\Models', 'App\Params', 'App\ViewModels']);
 
 arch('Params は final readonly class で Params サフィックスを持つ')
     ->expect('App\Params')

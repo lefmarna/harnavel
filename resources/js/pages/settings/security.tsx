@@ -27,7 +27,7 @@ type Props = {
 };
 
 export default function Security({ canManagePasskeys, passkeys }: Props) {
-  const { auth } = usePage<SharedData>().props;
+  const { auth, flash } = usePage<SharedData>().props;
   const hasPassword = auth.hasPassword;
   const passwordInput = useRef<HTMLInputElement>(null);
   const currentPasswordInput = useRef<HTMLInputElement>(null);
@@ -134,7 +134,15 @@ export default function Security({ canManagePasskeys, passkeys }: Props) {
             </Form>
           </div>
 
-          <ManagePasskeys canManagePasskeys={canManagePasskeys} passkeys={passkeys} />
+          <div className="space-y-6">
+            <ManagePasskeys canManagePasskeys={canManagePasskeys} passkeys={passkeys} />
+
+            {flash.status === "passkey-deleted" && (
+              <p role="status" className="text-sm font-medium text-green-600 dark:text-green-400">
+                パスキーを削除しました。
+              </p>
+            )}
+          </div>
         </div>
       </SettingsLayout>
     </AppLayout>

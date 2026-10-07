@@ -1,5 +1,7 @@
 # IME-safe enter-to-submit
 
+<!-- Modified by lefmarna from GoogleChrome/modern-web-guidance (Apache-2.0). -->
+
 Many chat interfaces submit their message when the user presses `Enter` in a `<textarea>`.
 
 This works for users typing with direct Latin keyboard input (e.g. English), but breaks for users typing with an Input Method Editor (IME) to compose text in languages like Japanese, Chinese, or Korean.

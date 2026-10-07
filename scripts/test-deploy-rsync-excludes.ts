@@ -57,7 +57,7 @@ const PROTECTED_PATHS: ProtectedPath[] = [
     reason: "runtime compiled views",
   },
   {
-    path: "dev.laravel-app-template.com/index.html",
+    path: "dev.example.com/index.html",
     reason: "XServer sibling subdomain directory",
   },
 ];

@@ -110,6 +110,37 @@ test("パスキーを登録してパスキーだけでログインできる", as
   await expect(page).toHaveURL(HOME_URL);
 });
 
+test("パスキー削除の完了通知と端末に残った資格情報の認証エラーを日本語で表示する", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await enableVirtualAuthenticator(page, context);
+  await openSecuritySettings(page, createUser());
+  await registerPasskey(page, "削除するパスキー");
+  await expect(page.getByText("削除するパスキー", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "「削除するパスキー」を削除" }).click();
+  await page.getByRole("button", { name: "削除する", exact: true }).click();
+  await expect(page.getByRole("status")).toHaveText("パスキーを削除しました。");
+  await expect(page.getByRole("status")).toBeVisible();
+  await expect(page.getByText("削除するパスキー", { exact: true })).toBeHidden();
+
+  await context.clearCookies();
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+  });
+  await page.goto("/login");
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
+
+  await expect(
+    page.getByText("パスキーが見つかりません。アカウントから削除されている可能性があります。"),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
 test("hex ハンドルへの変更後も旧バイナリ形式のパスキーでログインと本人確認ができる", async ({
   page,
   context,
@@ -601,7 +632,9 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
   });
 
   await page.goto("/login");
-  await expect(page.getByText("Too Many Attempts.")).toBeVisible();
+  await expect(
+    page.getByText("試行回数が多すぎます。しばらく待ってからもう一度お試しください。"),
+  ).toBeVisible();
 
   // 自動入力は再試行しないので、ボタンから再試行する。
   await page.unroute("**/passkeys/login/options");

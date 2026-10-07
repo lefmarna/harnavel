@@ -110,7 +110,7 @@ test("パスキーを登録してパスキーだけでログインできる", as
   await expect(page).toHaveURL(HOME_URL);
 });
 
-test("パスキー削除の完了文言を共有し、端末に残った資格情報の認証エラーを日本語で表示する", async ({
+test("パスキー削除の完了通知と端末に残った資格情報の認証エラーを日本語で表示する", async ({
   page,
   context,
   browserName,
@@ -123,15 +123,9 @@ test("パスキー削除の完了文言を共有し、端末に残った資格�
   await expect(page.getByText("削除するパスキー", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "「削除するパスキー」を削除" }).click();
-  const deletionResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "GET" && response.url().endsWith("/settings/security"),
-  );
   await page.getByRole("button", { name: "削除する", exact: true }).click();
-  const deleted = (await (await deletionResponse).json()) as {
-    props: { flash: { status: string } };
-  };
-  expect(deleted.props.flash.status).toBe("パスキーを削除しました。");
+  await expect(page.getByRole("status")).toHaveText("パスキーを削除しました。");
+  await expect(page.getByRole("status")).toBeVisible();
   await expect(page.getByText("削除するパスキー", { exact: true })).toBeHidden();
 
   await context.clearCookies();

@@ -16,7 +16,12 @@ deletion sit behind password confirmation alongside the security page, at the co
 opening settings. Accounts without a password confirm with a passkey or by signing in again with
 the linked Google account. That sign-in returns to the existing OAuth callback URI, so apps do not
 register a second redirect URI with Google, and the callback treats an authenticated request as a
-reconfirmation only when the session started one.
+reconfirmation only when the session started one. Any confirmation regenerates the session ID, so a
+copied session cookie never inherits the owner's confirmation.
+
+Trusted hosts are limited to the `APP_URL` host without its subdomains. Password reset links are
+built from the request host, and a subdomain the app does not serve may be unresolved or taken
+over; an app serving more hosts through Laravel lists them itself.
 
 URLs carrying a reset token, an email-verification hash, or a signature are kept out of analytics,
 advertising scripts, logs, and Discord notifications, because each of those copies is a usable

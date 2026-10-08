@@ -213,18 +213,25 @@ describe('セキュリティ設定', function () {
             ->assertRedirect(route('password.confirm'));
     });
 
-    it('資格情報を持たないユーザーはパスワード確認なしで到達できる', function (bool $googleConfigured, ?string $googleId) {
-        configureGoogleOAuth($googleConfigured);
-        $user = User::factory()->create(['password' => null, 'google_id' => $googleId]);
+    it('資格情報を持たないユーザーはパスワード確認なしで到達できる', function () {
+        $user = User::factory()->create(['password' => null, 'google_id' => null]);
 
         $this
             ->actingAs($user)
             ->get(route('security.edit'))
             ->assertOk();
-    })->with([
-        'Google 未連携' => [true, null],
-        'Google ログインが使えない' => [false, 'google-123'],
-    ]);
+    });
+
+    // 設定の不備で確認手段が消えても、セッションを奪った第三者を素通りさせない。
+    it('Google ログインが使えなくても Google 連携済みのユーザーには確認を求める', function () {
+        configureGoogleOAuth(false);
+        $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
+
+        $this
+            ->actingAs($user)
+            ->get(route('security.edit'))
+            ->assertRedirect(route('password.confirm'));
+    });
 
     // セッションを奪っただけの第三者が、最初の資格情報を登録して居座れないようにする。
     it('Google 連携済みのパスワード未設定ユーザーは Google での確認を求められる', function () {

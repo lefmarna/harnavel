@@ -40,7 +40,9 @@ export default function ConfirmPassword({ hasPasskeys, canConfirmWithGoogle, err
 
           {!showPasskey && !canConfirmWithGoogle && (
             <p className="text-center text-sm text-muted-foreground">
-              このブラウザではパスキーを使えないため、本人確認を続けられません。パスキーに対応したブラウザで開き直してください。
+              {hasPasskeys
+                ? "このブラウザではパスキーを使えないため、本人確認を続けられません。パスキーに対応したブラウザで開き直してください。"
+                : "Googleでの本人確認は現在利用できません。時間をおいてもう一度お試しください。"}
             </p>
           )}
         </div>

@@ -449,13 +449,18 @@ describe('Google OAuth コントローラ', function () {
             mock(GoogleAuthServiceContract::class)->shouldNotReceive('findOrCreate');
             Log::spy();
 
+            $sessionId = str_repeat('a', 40);
+
             $this->actingAs($user)
+                ->withCookie(config('session.cookie'), $sessionId)
                 ->withSession(['google_reauthentication' => true, 'url.intended' => route('security.edit')])
                 ->get(route('auth.google.callback'))
                 ->assertRedirect(route('security.edit'))
                 ->assertSessionHas('auth.password_confirmed_at')
                 ->assertSessionMissing('google_reauthentication');
 
+            // セッションを盗んだ第三者に、Google での本人確認を共有させない。
+            expect(app('session.store')->getId())->not->toBe($sessionId);
             $this->assertAuthenticatedAs($user);
             Log::shouldHaveReceived('info')->with('User confirmed identity with Google.', ['user_id' => $user->getKey()])->once();
         });

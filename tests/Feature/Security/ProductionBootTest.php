@@ -45,11 +45,12 @@ describe('本番環境の起動時検査', function () {
     });
 
     // 偽の Host から再設定メールのリンクを作らせない。.htaccess が効かない配置でも防ぐ。
-    it('APP_URL とそのサブドメイン以外の Host へのリクエストを拒否する', function (string $host, int $expectedStatus) {
+    // サブドメインも拒否する。DNS が向いていない名前や乗っ取られた名前へ、再設定トークンを送らせない。
+    it('APP_URL のホスト以外へのリクエストを拒否する', function (string $host, int $expectedStatus) {
         expect(productionStatusForHost($host))->toBe($expectedStatus);
     })->with([
         'APP_URL のホスト' => ['example.com', 200],
-        'APP_URL のサブドメイン' => ['dev.example.com', 200],
+        'APP_URL のサブドメイン' => ['dev.example.com', 400],
         '無関係なホスト' => ['attacker.example', 400],
     ]);
 });

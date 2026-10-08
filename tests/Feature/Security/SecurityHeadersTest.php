@@ -31,6 +31,35 @@ it('通常の応答に基本のセキュリティヘッダーを付与する', f
     assertBaselineSecurityHeaders($response);
 });
 
+it('HTTPSの応答に1年間のHSTSを付与する', function () {
+    Route::middleware('web')->get('/_testing/security-headers-https', fn () => response('hello'));
+
+    $response = $this->get('https://localhost/_testing/security-headers-https');
+
+    $response->assertOk()
+        ->assertHeader('Strict-Transport-Security', 'max-age=31536000');
+});
+
+it('local環境ではHTTPSの応答にもHSTSを付与しない', function () {
+    app()->detectEnvironment(fn (): string => 'local');
+    Route::middleware('web')->get('/_testing/security-headers-local', fn () => response('hello'));
+
+    $response = $this->get('https://localhost/_testing/security-headers-local');
+
+    $response->assertOk()
+        ->assertHeaderMissing('Strict-Transport-Security');
+});
+
+it('HTTPSの応答でもアプリが指定したHSTSを上書きしない', function () {
+    Route::middleware('web')->get('/_testing/security-headers-hsts', fn () => response('hello')
+        ->header('Strict-Transport-Security', 'max-age=86400; includeSubDomains'));
+
+    $response = $this->get('https://localhost/_testing/security-headers-hsts');
+
+    $response->assertOk()
+        ->assertHeader('Strict-Transport-Security', 'max-age=86400; includeSubDomains');
+});
+
 it('パスの文字コードが不正な400応答にも基本のヘッダーを付与する', function () {
     $response = $this->get('/%FF');
 

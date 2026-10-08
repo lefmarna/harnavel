@@ -306,8 +306,13 @@ jobs:
         env:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
         run: |
+          # 途中で失敗した migration の再実行で部分変更や後続エラーを増やさないよう、サーバ上の失敗は再試行しない。
+          # PHP は致命的エラーでも 255 を返すため、サーバ上の失敗は || exit 1 で 1 にそろえる。
+          # 再試行するのは SSH が終了コード 255 を返した場合だけ。実行途中の通信切断も含むため、
+          # コマンドが再実行される可能性は残る。
           for attempt in 1 2 3; do
-            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            status=0
+            ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
               ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
               "cd -- \"$DEPLOY_DIRECTORY\" && \
               /usr/bin/php8.5 ~/opt/bin/composer-2.10.2 install --no-dev --no-interaction --optimize-autoloader && \
@@ -320,8 +325,13 @@ jobs:
               /usr/bin/php8.5 artisan config:cache && \
               /usr/bin/php8.5 artisan route:cache && \
               /usr/bin/php8.5 artisan view:cache && \
-              /usr/bin/php8.5 artisan migrate --force"; then
+              /usr/bin/php8.5 artisan migrate --force || exit 1" || status=$?
+            if [ "$status" -eq 0 ]; then
               exit 0
+            fi
+            if [ "$status" -ne 255 ]; then
+              echo "::error title=Post-deploy commands failed::A command failed on the server; this attempt was not retried. Maintenance mode was not automatically disabled. Inspect the error above and repair any partial database changes before redeploying." >&2
+              exit 1
             fi
             if [ "$attempt" -lt 3 ]; then
               sleep "$((attempt * 30))"

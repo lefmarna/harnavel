@@ -4,6 +4,7 @@ import {
   index as confirmOptions,
   store as confirmStore,
 } from "@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController";
+import GoogleIcon from "@/components/google-icon";
 import InputError from "@/components/input-error";
 import PasskeyVerify from "@/components/passkey-verify";
 import { Button } from "@/components/ui/button";
@@ -13,27 +14,38 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { usePasskeyAvailable } from "@/hooks/use-passkey-available";
 import AuthLayout from "@/layouts/auth-layout";
+import { reauthenticate } from "@/routes/auth/google";
 import { store } from "@/routes/password/confirm";
 import type { SharedData } from "@/types";
 
 type Props = {
   hasPasskeys: boolean;
+  canConfirmWithGoogle: boolean;
+  error: string | null;
 };
 
-export default function ConfirmPassword({ hasPasskeys }: Props) {
+export default function ConfirmPassword({ hasPasskeys, canConfirmWithGoogle, error }: Props) {
   const { auth } = usePage<SharedData>().props;
   const canUsePasskey = usePasskeyAvailable();
 
-  if (!auth.hasPassword && hasPasskeys) {
+  if (!auth.hasPassword) {
+    const showPasskey = hasPasskeys && canUsePasskey;
+
     return (
-      <AuthLayout description="セキュリティ保護のため、パスキーで本人確認をしてください。">
-        {canUsePasskey ? (
-          <PasskeyConfirm />
-        ) : (
-          <p className="text-center text-sm text-muted-foreground">
-            このブラウザではパスキーを使えないため、本人確認を続けられません。パスキーに対応したブラウザで開き直してください。
-          </p>
-        )}
+      <AuthLayout description="セキュリティ保護のため、本人確認をしてください。">
+        <div className="grid gap-3">
+          {showPasskey && <PasskeyConfirm />}
+
+          {canConfirmWithGoogle && <GoogleConfirm />}
+
+          {!showPasskey && !canConfirmWithGoogle && (
+            <p className="text-center text-sm text-muted-foreground">
+              このブラウザではパスキーを使えないため、本人確認を続けられません。パスキーに対応したブラウザで開き直してください。
+            </p>
+          )}
+        </div>
+
+        <ConfirmError message={error} />
       </AuthLayout>
     );
   }
@@ -92,8 +104,32 @@ export default function ConfirmPassword({ hasPasskeys }: Props) {
           </div>
         )}
       </Form>
+
+      <ConfirmError message={error} />
     </AuthLayout>
   );
+}
+
+function GoogleConfirm() {
+  return (
+    <Button
+      variant="outline"
+      type="button"
+      className="w-full"
+      onClick={() => (window.location.href = reauthenticate.url())}
+    >
+      <GoogleIcon />
+      Googleで確認
+    </Button>
+  );
+}
+
+function ConfirmError({ message }: { message: string | null }) {
+  if (!message) {
+    return null;
+  }
+
+  return <div className="text-center text-sm font-medium text-red-600">{message}</div>;
 }
 
 function PasskeyConfirm() {

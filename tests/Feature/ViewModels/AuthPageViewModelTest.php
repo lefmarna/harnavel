@@ -92,8 +92,21 @@ describe('Auth 専用 PageViewModel', function () {
                 title: 'カスタムタイトル',
                 description: 'カスタム説明。',
                 hasPasskeys: true,
+                canConfirmWithGoogle: false,
+                error: 'カスタムエラー',
             ),
-            ['hasPasskeys' => true],
+            ['hasPasskeys' => true, 'canConfirmWithGoogle' => false, 'error' => 'カスタムエラー'],
+        ],
+        'Google で確認できるパスワード確認' => [
+            'auth/confirm-password',
+            new ConfirmPasswordPageViewModel(
+                title: 'カスタムタイトル',
+                description: 'カスタム説明。',
+                hasPasskeys: false,
+                canConfirmWithGoogle: true,
+                error: null,
+            ),
+            ['hasPasskeys' => false, 'canConfirmWithGoogle' => true, 'error' => null],
         ],
     ]);
 });

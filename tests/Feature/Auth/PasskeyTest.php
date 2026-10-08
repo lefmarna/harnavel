@@ -127,7 +127,7 @@ describe('パスキーの credential_id', function () {
 
 describe('パスキーのユーザーハンドル秘密鍵', function () {
     it('本番環境では PASSKEYS_USER_HANDLE_SECRET が未設定だと起動しない', function () {
-        $process = bootWithEnvironment(['APP_ENV' => 'production', 'PASSKEYS_USER_HANDLE_SECRET' => '']);
+        $process = bootWithEnvironment(AppSubprocess::productionEnvironment(['PASSKEYS_USER_HANDLE_SECRET' => '']));
 
         expect($process->isSuccessful())->toBeFalse()
             ->and($process->getOutput().$process->getErrorOutput())->toContain('PASSKEYS_USER_HANDLE_SECRET');
@@ -153,7 +153,7 @@ describe('パスキーのユーザーハンドル秘密鍵', function () {
     it('Artisan の --env で本番を指定した場合も秘密鍵の未設定を検出する', function () {
         $process = AppSubprocess::artisan(
             ['env', '--env=production'],
-            ['APP_ENV' => 'local', 'PASSKEYS_USER_HANDLE_SECRET' => ''],
+            ['APP_ENV' => 'local', 'APP_DEBUG' => 'false', 'PASSKEYS_USER_HANDLE_SECRET' => ''],
         );
 
         expect($process->isSuccessful())->toBeFalse()

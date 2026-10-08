@@ -11,12 +11,19 @@ use Inertia\Inertia;
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', '/settings/profile');
 
-    Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+    // メールアドレスを書き換えられると、再設定メール経由でアカウントを奪われるため本人確認を求める。
+    Route::get('settings/profile', [ProfileController::class, 'edit'])
+        ->middleware('password.confirm')
+        ->name('profile.edit');
+    Route::patch('settings/profile', [ProfileController::class, 'update'])
+        ->middleware('password.confirm')
+        ->name('profile.update');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::delete('settings/profile', [ProfileController::class, 'destroy'])
+        ->middleware('password.confirm')
+        ->name('profile.destroy');
 
     Route::get('settings/security', [SecurityController::class, 'edit'])
         ->middleware('password.confirm')

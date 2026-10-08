@@ -44,6 +44,28 @@ describe('パスワード確認', function () {
                 ->where('hasPasskeys', true));
     });
 
+    it('Google 連携済みのユーザーに Google での確認を案内する', function (bool $configured, ?string $googleId, bool $expected) {
+        configureGoogleOAuth($configured);
+        $user = User::factory()->create(['password' => null, 'google_id' => $googleId]);
+
+        $this->actingAs($user)
+            ->get(route('password.confirm'))
+            ->assertInertia(fn (Assert $page) => $page->where('canConfirmWithGoogle', $expected));
+    })->with([
+        'Google 連携済み' => [true, 'google-123', true],
+        'Google 未連携' => [true, null, false],
+        'Google ログイン未設定' => [false, 'google-123', false],
+    ]);
+
+    it('Google での確認に失敗した理由を表示する', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession(['error' => '確認に失敗しました。'])
+            ->get(route('password.confirm'))
+            ->assertInertia(fn (Assert $page) => $page->where('error', '確認に失敗しました。'));
+    });
+
     it('パスワード確認には認証が必要', function () {
         $response = $this->get(route('password.confirm'));
 

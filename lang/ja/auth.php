@@ -20,5 +20,7 @@ return [
         'profile_failed' => 'Googleアカウント情報の取得に失敗しました。もう一度お試しください。',
         'account_conflict' => 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。',
         'email_taken' => 'このメールアドレスは別のGoogleアカウントに連携済みです。',
+        'reauthentication_unavailable' => 'Googleでの本人確認は現在利用できません。',
+        'reauthentication_mismatch' => '連携済みのGoogleアカウントで本人確認してください。',
     ],
 ];

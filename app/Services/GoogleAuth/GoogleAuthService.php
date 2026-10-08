@@ -105,12 +105,22 @@ class GoogleAuthService implements GoogleAuthServiceContract
                 }
 
                 $user->google_id = $googleId;
+                $revokesExistingCredentials = $user->email_verified_at === null;
 
-                if ($user->email_verified_at === null) {
-                    $user->forceFill(['email_verified_at' => now()]);
+                if ($revokesExistingCredentials) {
+                    // メール未確認のアカウントは、メールの持ち主でない第三者が先に作った可能性がある。
+                    // 持ち主が Google で所有を示した時点で、その第三者が用意した資格情報とセッションを消す。
+                    $user->forceFill(['email_verified_at' => now(), 'password' => null]);
+                    $user->passkeys()->delete();
+                    $user->revokeSessions();
                 }
 
                 $this->userRepository->save($user);
+
+                Log::info('Google account was linked.', [
+                    'user_id' => $user->getKey(),
+                    'existing_credentials_revoked' => $revokesExistingCredentials,
+                ]);
 
                 return true;
             });

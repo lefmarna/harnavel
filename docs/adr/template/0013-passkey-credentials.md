@@ -2,9 +2,9 @@
 
 Passkeys sit beside passwords and Google sign-in as an alternative credential, so losing one
 provider never locks an account out. Password confirmation therefore guards the security page only
-where it can succeed: an account holding neither a password nor a passkey reaches it unguarded,
-because the alternative strands Google-only users outside the one screen that issues their first
-credential.
+where it can succeed: a password, a passkey, or a fresh Google sign-in to the linked account
+([TADR-0016](0016-account-takeover-defenses.md)). An account with none of them reaches it unguarded,
+because the alternative strands it outside the one screen that issues its first credential.
 
 Passkey user handles derive from `PASSKEYS_USER_HANDLE_SECRET`, which stays independent of
 `APP_KEY` so rotating the application key does not change the handle used for new registrations.

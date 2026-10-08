@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
@@ -78,4 +80,37 @@ function testingUniqueConstraintViolation(): UniqueConstraintViolationException
         [],
         new PDOException('Integrity constraint violation')
     );
+}
+
+/**
+ * 他端末のログインを再現するため、DB セッションの行を直接作る。
+ */
+function insertDatabaseSession(string $id, ?User $user): void
+{
+    DB::table('sessions')->insert([
+        'id' => $id,
+        'user_id' => $user?->getKey(),
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'Pest',
+        'payload' => '',
+        'last_activity' => time(),
+    ]);
+}
+
+/**
+ * @return list<string>
+ */
+function databaseSessionIds(): array
+{
+    /** @var list<string> */
+    return DB::table('sessions')->orderBy('id')->pluck('id')->all();
+}
+
+function configureGoogleOAuth(bool $configured): void
+{
+    config([
+        'services.google.client_id' => $configured ? 'google-client-id' : null,
+        'services.google.client_secret' => 'google-client-secret',
+        'services.google.redirect' => 'https://example.com/auth/google/callback',
+    ]);
 }

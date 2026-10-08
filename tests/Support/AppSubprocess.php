@@ -11,6 +11,7 @@ final class AppSubprocess
     /** 本番の boot が要求する env。起動時検証を増やしたらここにも足す。 */
     private const PRODUCTION_ENVIRONMENT = [
         'APP_ENV' => 'production',
+        'APP_DEBUG' => 'false',
         'PASSKEYS_USER_HANDLE_SECRET' => 'testing-passkey-user-handle-secret',
     ];
 

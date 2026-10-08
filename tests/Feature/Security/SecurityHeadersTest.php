@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\AddSecurityHeaders;
 use Illuminate\Contracts\Foundation\MaintenanceMode;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Testing\TestResponse;
 
 mutates(AddSecurityHeaders::class);
@@ -58,6 +59,20 @@ it('HTTPSの応答でもアプリが指定したHSTSを上書きしない', func
 
     $response->assertOk()
         ->assertHeader('Strict-Transport-Security', 'max-age=86400; includeSubDomains');
+});
+
+// 秘密を含む画面から移った先の document.referrer 経由で、トークンを計測へ渡さない。
+it('秘密を含むURLの画面ではリファラーを送らせない', function (Closure $url) {
+    $this->get($url())->assertHeader('Referrer-Policy', 'no-referrer');
+})->with([
+    'パスワード再設定画面' => [fn (): string => route('password.reset', ['token' => 'secret-token', 'email' => 'user@example.com'])],
+    '署名付きのGoogle連携確認画面' => [fn (): string => URL::temporarySignedRoute('auth.google.link.verify', now()->addHour(), ['userId' => '1', 'payload' => 'secret-payload'])],
+]);
+
+it('アプリが指定したリファラーポリシーは秘密を含むURLの画面でも上書きしない', function () {
+    Route::middleware('web')->get('/_testing/reset/{token}', fn () => response('hello')->header('Referrer-Policy', 'same-origin'));
+
+    $this->get('/_testing/reset/secret-token')->assertHeader('Referrer-Policy', 'same-origin');
 });
 
 it('パスの文字コードが不正な400応答にも基本のヘッダーを付与する', function () {

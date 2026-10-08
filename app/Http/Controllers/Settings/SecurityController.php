@@ -11,6 +11,7 @@ use App\ViewModels\Settings\SecurityPageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Fortify\Features;
@@ -40,9 +41,14 @@ class SecurityController extends Controller
         /** @var array{password: string} $validated */
         $validated = $request->validated();
 
-        $user->update([
-            'password' => Hash::make($validated['password']),
-        ]);
+        $user->password = Hash::make($validated['password']);
+        $user->revokeSessions(exceptSessionId: $request->session()->getId());
+        $user->save();
+
+        // 本人の Cookie を盗んだ第三者も同じセッション ID を持つため、ログインを保ったまま ID を作り直す。
+        $request->session()->migrate(destroy: true);
+
+        Log::info('User password was changed.', ['user_id' => $user->getKey()]);
 
         return back();
     }

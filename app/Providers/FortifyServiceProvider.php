@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
+use App\Support\AccountLoginThrottle;
 use App\Support\GoogleOAuth;
 use App\ViewModels\Auth\ConfirmPasswordPageViewModel;
 use App\ViewModels\Auth\LoginPageViewModel;
@@ -15,12 +16,16 @@ use App\ViewModels\Auth\StatusPageViewModel;
 use App\ViewModels\StaticPageViewModel;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Fortify\Http\Responses\SuccessfulPasswordResetLinkRequestResponse;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -41,6 +46,12 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // 未登録や再送待ちを伝えると、登録済みのメールアドレスを判別できてしまう。
+        $this->app->bind(
+            FailedPasswordResetLinkRequestResponse::class,
+            fn (): SuccessfulPasswordResetLinkRequestResponse => new SuccessfulPasswordResetLinkRequestResponse(Password::RESET_LINK_SENT),
+        );
     }
 
     /**
@@ -104,6 +115,8 @@ class FortifyServiceProvider extends ServiceProvider
                 title: __('pages.auth.confirm_password.title'),
                 description: __('pages.auth.confirm_password.description'),
                 hasPasskeys: ($user = $request->user()) instanceof User && $user->passkeys()->exists(),
+                canConfirmWithGoogle: $user instanceof User && $user->canConfirmWithGoogle(),
+                error: $this->sessionString($request, 'error'),
             ),
         ));
     }
@@ -131,11 +144,34 @@ class FortifyServiceProvider extends ServiceProvider
 
         RateLimiter::for('login', function (Request $request) {
             $usernameInput = $request->input(Fortify::username(), '');
-            $username = is_string($usernameInput) ? $usernameInput : '';
+            $username = Str::transliterate(Str::lower(is_string($usernameInput) ? $usernameInput : ''));
             $ip = $request->ip() ?? '';
-            $throttleKey = Str::transliterate(Str::lower($username).'|'.$ip);
 
-            return Limit::perMinute(5)->by($throttleKey);
+            return [
+                Limit::perMinute(5)->by($username.'|'.$ip),
+                // IP を分散させた同じアカウントへの総当たりを抑える。本人を締め出しにくいよう失敗だけを数える。
+                Limit::perHour(20)->by(AccountLoginThrottle::key($username))->after(fn (): bool => ! Auth::check()),
+            ];
         });
+
+        // Fortify のルートには個別にミドルウェアを付けられないため、ルート名で上限を選ぶ。
+        RateLimiter::for('fortify', function (Request $request) {
+            $ip = $request->ip() ?? '';
+
+            return match ($request->route()?->getName()) {
+                'register.store' => Limit::perHour(10)->by('register|'.$ip),
+                'password.email' => Limit::perHour(10)->by('password-email|'.$ip),
+                'password.update' => Limit::perMinute(10)->by('password-update|'.$ip),
+                'password.confirm.store' => Limit::perMinute(5)->by('password-confirm|'.$this->userKey($request)),
+                default => Limit::none(),
+            };
+        });
+    }
+
+    private function userKey(Request $request): string
+    {
+        $id = $request->user()?->getAuthIdentifier();
+
+        return is_int($id) || is_string($id) ? (string) $id : ($request->ip() ?? '');
     }
 }

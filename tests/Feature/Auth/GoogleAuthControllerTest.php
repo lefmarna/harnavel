@@ -400,6 +400,7 @@ describe('Google OAuth コントローラ', function () {
         ]);
 
         $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
             ->get(route('profile.edit'))
             ->assertInertia(fn ($page) => $page
                 ->has('auth.user')
@@ -408,5 +409,91 @@ describe('Google OAuth コントローラ', function () {
                 ->missing('auth.user.remember_token')
                 ->where('auth.hasPassword', true)
             );
+    });
+
+    describe('Google での本人確認', function () {
+        it('Google 連携済みのユーザーを Google のアカウント選択へリダイレクトする', function () {
+            $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
+            $driver = Mockery::mock(GoogleProvider::class);
+            $driver->expects('with')->with(['prompt' => 'select_account'])->andReturnSelf();
+            $driver->allows('redirect')->andReturn(new RedirectResponse('https://accounts.google.com/auth'));
+            Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+            $this->actingAs($user)
+                ->get(route('auth.google.reauthenticate'))
+                ->assertRedirect('https://accounts.google.com/auth')
+                ->assertSessionHas('google_reauthentication', true);
+        });
+
+        it('Google で確認できないユーザーは確認画面へ戻す', function (bool $configured, ?string $googleId) {
+            configureGoogleOAuth($configured);
+            $user = User::factory()->create(['google_id' => $googleId]);
+
+            $this->actingAs($user)
+                ->get(route('auth.google.reauthenticate'))
+                ->assertRedirect(route('password.confirm'))
+                ->assertSessionHas('error', 'Googleでの本人確認は現在利用できません。')
+                ->assertSessionMissing('google_reauthentication');
+        })->with([
+            'Google 未連携' => [true, null],
+            'Google ログイン未設定' => [false, 'google-123'],
+        ]);
+
+        it('ゲストは Google での本人確認を始められない', function () {
+            $this->get(route('auth.google.reauthenticate'))->assertRedirect(route('login'));
+        });
+
+        it('連携済みの Google アカウントで戻ると本人確認済みにして元の画面へ戻す', function () {
+            $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
+            fakeGoogleUser(['getId' => 'google-123']);
+            mock(GoogleAuthServiceContract::class)->shouldNotReceive('findOrCreate');
+            Log::spy();
+
+            $this->actingAs($user)
+                ->withSession(['google_reauthentication' => true, 'url.intended' => route('security.edit')])
+                ->get(route('auth.google.callback'))
+                ->assertRedirect(route('security.edit'))
+                ->assertSessionHas('auth.password_confirmed_at')
+                ->assertSessionMissing('google_reauthentication');
+
+            $this->assertAuthenticatedAs($user);
+            Log::shouldHaveReceived('info')->with('User confirmed identity with Google.', ['user_id' => $user->getKey()])->once();
+        });
+
+        it('別の Google アカウントで戻ると本人確認済みにしない', function () {
+            $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
+            fakeGoogleUser(['getId' => 'google-other']);
+
+            $this->actingAs($user)
+                ->withSession(['google_reauthentication' => true])
+                ->get(route('auth.google.callback'))
+                ->assertRedirect(route('password.confirm'))
+                ->assertSessionHas('error', '連携済みのGoogleアカウントで本人確認してください。')
+                ->assertSessionMissing('auth.password_confirmed_at');
+        });
+
+        it('Google からの応答を取得できなければ本人確認済みにしない', function () {
+            $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
+            $driver = Mockery::mock(GoogleProvider::class);
+            $driver->allows('user')->andThrow(new RuntimeException('invalid state'));
+            Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
+
+            $this->actingAs($user)
+                ->withSession(['google_reauthentication' => true])
+                ->get(route('auth.google.callback'))
+                ->assertRedirect(route('password.confirm'))
+                ->assertSessionHas('error', 'Google認証に失敗しました。もう一度お試しください。')
+                ->assertSessionMissing('auth.password_confirmed_at');
+        });
+
+        it('本人確認を始めていないログイン済みユーザーのコールバックはホームへ戻す', function () {
+            $user = User::factory()->create(['google_id' => 'google-123']);
+            Socialite::shouldReceive('driver')->never();
+
+            $this->actingAs($user)
+                ->get(route('auth.google.callback'))
+                ->assertRedirect(config('fortify.home'))
+                ->assertSessionMissing('auth.password_confirmed_at');
+        });
     });
 });

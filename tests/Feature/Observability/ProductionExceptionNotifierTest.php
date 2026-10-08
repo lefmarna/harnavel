@@ -449,6 +449,23 @@ describe('本番例外通知', function () {
         });
     });
 
+    it('パス中の再設定トークンを伏せて url を送れる', function () {
+        $request = Request::create('https://example.test/reset-password/secret-token', 'GET');
+        $route = (new RoutingRoute(['GET'], 'reset-password/{token}', []))->bind($request);
+        $request->setRouteResolver(fn (): RoutingRoute => $route);
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), $request);
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $sent): bool {
+            $byName = collect($sent->data()['embeds'][0]['fields'])->pluck('value', 'name');
+
+            expect($byName->get('url'))->toBe('https://example.test/reset-password/{token}');
+
+            return true;
+        });
+    });
+
     it('ルートが解決できないリクエストは route を省き method と url は残す', function () {
         $request = Request::create('https://example.test/orders/123', 'POST');
         $request->attributes->set('request_id', '01JZ0000000000000000000000');

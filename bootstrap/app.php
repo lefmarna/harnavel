@@ -11,8 +11,10 @@ use App\Services\Observability\ProductionExceptionNotifier;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -28,6 +30,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // 最外側へ置く。末尾に置くとメンテナンスの 503、POST サイズ超過、パス検査が
         // 先に応答を返し、エラー応答にだけヘッダーが付かない（TADR-0012）。
         $middleware->prepend(AddSecurityHeaders::class);
+
+        // 偽の Host からパスワード再設定リンクなどの URL を作らせない。local とテストでは Laravel が無効にする。
+        $middleware->trustHosts();
 
         $middleware->alias(['password.confirm' => RequirePasswordWhenSet::class]);
 
@@ -48,8 +53,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontReportDuplicates();
         $exceptions->stopIgnoring(HttpException::class);
         $exceptions->dontReportWhen(
-            fn (Throwable $e): bool => $e instanceof HttpExceptionInterface && $e->getStatusCode() < 500,
+            fn (Throwable $e): bool => $e instanceof HttpExceptionInterface
+                && $e->getStatusCode() < 500
+                && ! $e instanceof ThrottleRequestsException,
         );
+
+        // 総当たりや大量登録の兆候として残す。スタックトレースは要らないので既定の記録は止める。
+        $exceptions->report(function (ThrottleRequestsException $e): bool {
+            Log::warning('Request was rate limited.');
+
+            return false;
+        });
 
         $exceptions->report(function (Throwable $e): void {
             app(ProductionExceptionNotifier::class)->report(

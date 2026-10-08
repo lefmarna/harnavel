@@ -3,10 +3,14 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Support\SensitiveUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\URL;
+
+mutates(SensitiveUrl::class);
 
 beforeEach(function () {
     Route::middleware('web')->get('/_testing/request-id', function (Request $request) {
@@ -127,4 +131,38 @@ describe('問い合わせID', function () {
             ->toBe($response->json('request_id'))
             ->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/');
     });
+
+    it('パス中の秘密を伏せてログコンテキストへ共有できる', function (Closure $url, string $expected, string $route) {
+        Log::shouldReceive('shareContext')
+            ->once()
+            ->withArgs(function (array $context) use ($expected, $route): bool {
+                expect($context['url'])->toBe(url($expected))
+                    ->and($context['route'])->toBe($route);
+
+                return true;
+            });
+
+        $this->get($url());
+    })->with([
+        'パスワード再設定トークン' => [
+            fn (): string => route('password.reset', ['token' => 'secret-token', 'email' => 'user@example.com']),
+            'reset-password/{token}',
+            'password.reset',
+        ],
+        '秘密を含まないトップページ' => [
+            fn (): string => route('home'),
+            '/',
+            'home',
+        ],
+        'パーセントエンコードされた再設定トークン' => [
+            fn (): string => url('reset-password/%73ecret-token'),
+            'reset-password/{token}',
+            'password.reset',
+        ],
+        'メール確認リンクのハッシュ' => [
+            fn (): string => URL::temporarySignedRoute('verification.verify', now()->addHour(), ['id' => '1', 'hash' => 'secret-hash']),
+            'email/verify/1/{hash}',
+            'verification.verify',
+        ],
+    ]);
 });

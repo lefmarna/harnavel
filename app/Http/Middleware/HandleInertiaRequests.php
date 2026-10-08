@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Support\PasskeyBrowserOrigins;
+use App\Support\SensitiveUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use Inertia\Middleware;
@@ -29,7 +30,15 @@ class HandleInertiaRequests extends Middleware
      */
     public function version(Request $request): ?string
     {
-        return parent::version($request);
+        $version = parent::version($request);
+
+        // 秘密を含む画面は計測スクリプトなしで描画される。版を分けておけば、そこからの Inertia 遷移は
+        // 版の不一致で全体を読み込み直し、通常画面でスクリプトを読み込める。
+        if ($this->trackingScriptsConfigured() && SensitiveUrl::carriesSecret($request)) {
+            return $version.'|untracked';
+        }
+
+        return $version;
     }
 
     /**
@@ -43,15 +52,16 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
-        $analyticsTrackingId = config('services.google.analytics_tracking_id');
-        $adsensePublisherId = config('services.google.adsense_publisher_id');
-        $trackingAllowed = app()->environment(['production', 'develop']);
+        $analyticsTrackingId = $this->configuredString('services.google.analytics_tracking_id');
+        $adsensePublisherId = $this->configuredString('services.google.adsense_publisher_id');
+        // 秘密を含む URL は計測スクリプトが location ごと外部へ送るため、その画面では読み込まない。
+        $trackingAllowed = $this->trackingEnvironment() && ! SensitiveUrl::carriesSecret($request);
         $adsTestMode = app()->environment('develop');
 
         $tracking = [
-            'trackingEnabled' => $trackingAllowed && is_string($analyticsTrackingId) && $analyticsTrackingId !== '',
-            'adsEnabled' => $trackingAllowed && is_string($adsensePublisherId) && $adsensePublisherId !== '',
-            'adsensePublisherId' => is_string($adsensePublisherId) && $adsensePublisherId !== '' ? $adsensePublisherId : null,
+            'trackingEnabled' => $trackingAllowed && $analyticsTrackingId !== null,
+            'adsEnabled' => $trackingAllowed && $adsensePublisherId !== null,
+            'adsensePublisherId' => $adsensePublisherId,
             'adsTestMode' => $adsTestMode,
         ];
         $defaultRobots = app()->environment('production')
@@ -99,5 +109,24 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
             ],
         ];
+    }
+
+    private function trackingEnvironment(): bool
+    {
+        return app()->environment(['production', 'develop']);
+    }
+
+    private function trackingScriptsConfigured(): bool
+    {
+        return $this->trackingEnvironment()
+            && ($this->configuredString('services.google.analytics_tracking_id') !== null
+                || $this->configuredString('services.google.adsense_publisher_id') !== null);
+    }
+
+    private function configuredString(string $key): ?string
+    {
+        $value = config($key);
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }

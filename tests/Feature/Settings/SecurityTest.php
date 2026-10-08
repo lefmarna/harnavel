@@ -56,6 +56,36 @@ describe('セキュリティ設定', function () {
         expect(Hash::check('new-password1', $user->refresh()->password))->toBeTrue();
     });
 
+    // 乗っ取りに気づいて変更しても、攻撃者の端末がログインしたまま残らないようにする。
+    it('パスワードを更新すると他の端末のセッションとログイン保持を失効させる', function () {
+        $user = User::factory()->create(['remember_token' => 'old-remember-token']);
+        $otherUser = User::factory()->create();
+        $currentSessionId = str_repeat('a', 40);
+
+        insertDatabaseSession($currentSessionId, $user);
+        insertDatabaseSession(str_repeat('b', 40), $user);
+        insertDatabaseSession(str_repeat('c', 40), $otherUser);
+
+        $this
+            ->actingAs($user)
+            ->withCookie(config('session.cookie'), $currentSessionId)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->from(route('security.edit'))
+            ->put(route('user-password.update'), [
+                'current_password' => UserFactory::DEFAULT_PASSWORD,
+                'password' => 'new-password1',
+                'password_confirmation' => 'new-password1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        // 本人の Cookie を盗んだ第三者も同じ ID を持つため、本人のログインは保ったまま ID を作り直す。
+        expect(databaseSessionIds())->not->toContain(str_repeat('b', 40))
+            ->toContain(str_repeat('c', 40))
+            ->and(app('session.store')->getId())->not->toBe($currentSessionId)
+            ->and($user->refresh()->remember_token)->not->toBe('old-remember-token');
+        $this->assertAuthenticatedAs($user);
+    });
+
     it('bcrypt形式の文字列でパスワード更新しても平文としてハッシュ化される', function () {
         $user = User::factory()->create();
         $password = Hash::make('known-plain');
@@ -183,13 +213,38 @@ describe('セキュリティ設定', function () {
             ->assertRedirect(route('password.confirm'));
     });
 
-    it('パスワード未設定のユーザーはパスワード確認なしで到達できる', function () {
-        $user = User::factory()->create(['password' => null]);
+    it('資格情報を持たないユーザーはパスワード確認なしで到達できる', function (bool $googleConfigured, ?string $googleId) {
+        configureGoogleOAuth($googleConfigured);
+        $user = User::factory()->create(['password' => null, 'google_id' => $googleId]);
 
         $this
             ->actingAs($user)
             ->get(route('security.edit'))
             ->assertOk();
+    })->with([
+        'Google 未連携' => [true, null],
+        'Google ログインが使えない' => [false, 'google-123'],
+    ]);
+
+    // セッションを奪っただけの第三者が、最初の資格情報を登録して居座れないようにする。
+    it('Google 連携済みのパスワード未設定ユーザーは Google での確認を求められる', function () {
+        configureGoogleOAuth(true);
+        $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
+
+        $this
+            ->actingAs($user)
+            ->get(route('security.edit'))
+            ->assertRedirect(route('password.confirm'));
+
+        $this
+            ->actingAs($user)
+            ->put(route('user-password.update'), [
+                'password' => 'attacker-password1',
+                'password_confirmation' => 'attacker-password1',
+            ])
+            ->assertRedirect(route('password.confirm'));
+
+        expect($user->refresh()->password)->toBeNull();
     });
 
     it('ゲストがパスワード確認付きルートに到達した場合は確認画面へ誘導する', function () {

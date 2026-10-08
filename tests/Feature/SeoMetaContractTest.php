@@ -303,7 +303,9 @@ describe('SEO メタ契約', function () {
     it('ページ固有のdescriptionはWebPage構造化データにだけ反映される', function () {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->get(route('profile.edit'));
+        $response = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('profile.edit'));
         $schemas = extractStructuredDataItems($response->getContent());
 
         $websiteSchema = findStructuredDataByType($schemas, 'WebSite');

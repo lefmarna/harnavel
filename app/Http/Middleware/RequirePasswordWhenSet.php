@@ -9,10 +9,9 @@ use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Http\Request;
 
 /**
- * Google だけで登録したユーザーは password が null で、パスキーも持たないうちは
- * Fortify のパスワード確認もパスキー確認も通過できない。素の RequirePassword では
- * そのユーザーが最初の資格情報を登録する画面そのものに到達できなくなる。
- * パスキーを1つでも持てば確認できるので、省略の対象から外す。
+ * password が null でパスキーも持たないユーザーは、Fortify のパスワード確認もパスキー確認も
+ * 通過できない。素の RequirePassword ではそのユーザーが最初の資格情報を登録する画面そのものに
+ * 到達できなくなる。パスキーか Google での再ログインで確認できるユーザーは、省略の対象から外す。
  */
 final class RequirePasswordWhenSet extends RequirePassword
 {
@@ -27,7 +26,7 @@ final class RequirePasswordWhenSet extends RequirePassword
     {
         $user = $request->user();
 
-        if ($user instanceof User && $user->password === null && $user->passkeys()->doesntExist()) {
+        if ($user instanceof User && $user->password === null && ! $user->canConfirmWithGoogle() && $user->passkeys()->doesntExist()) {
             return false;
         }
 

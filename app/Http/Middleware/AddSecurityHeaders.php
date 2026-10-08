@@ -20,6 +20,11 @@ class AddSecurityHeaders
         /** @var array<string, string> $headers */
         $headers = require __DIR__.'/../../../bootstrap/security-headers.php';
 
+        // HSTS はポートを区別しないため、local では同じホストの HTTP 開発サービスを使えるようにする。
+        if (! app()->environment('local') && $request->isSecure()) {
+            $headers['Strict-Transport-Security'] = 'max-age=31536000';
+        }
+
         foreach ($headers as $name => $value) {
             if (! $response->headers->has($name)) {
                 $response->headers->set($name, $value);

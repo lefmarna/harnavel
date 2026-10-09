@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', '/settings/profile');
+    // 転送が要るのは画面を開くときだけ。Route::redirect は全メソッドを受け、Wayfinder の型にない QUERY まで生成されてしまう。
+    Route::get('settings', fn () => redirect()->route('profile.edit'));
 
     // メールアドレスを書き換えられると、再設定メール経由でアカウントを奪われるため本人確認を求める。
     Route::get('settings/profile', [ProfileController::class, 'edit'])

@@ -244,3 +244,17 @@ describe('プロフィール設定の本人確認', function () {
         expect($user->fresh())->not->toBeNull();
     });
 });
+
+describe('設定トップ', function () {
+    it('開くとプロフィール設定へ転送する', function () {
+        $this->actingAs(User::factory()->create())
+            ->get('/settings')
+            ->assertRedirect(route('profile.edit'));
+    });
+
+    it('画面を開く以外のメソッドは受け付けない', function (string $method) {
+        $this->actingAs(User::factory()->create())
+            ->call($method, '/settings')
+            ->assertMethodNotAllowed();
+    })->with(['POST', 'PUT', 'PATCH', 'DELETE']);
+});

@@ -19,6 +19,12 @@ register a second redirect URI with Google, and the callback treats an authentic
 reconfirmation only when the session started one. Any confirmation regenerates the session ID, so a
 copied session cookie never inherits the owner's confirmation.
 
+Account deletion relies on that confirmation and does not ask for the password again. A second
+password prompt would stop owners who confirmed with a passkey or Google from deleting with the
+credential they chose, and it would not stop a session thief inside the confirmation window, who
+can change the email address and take over the account instead. The dialog that shows what will be
+deleted remains, to catch accidental deletion.
+
 Trusted hosts are limited to the `APP_URL` host without its subdomains. Password reset links are
 built from the request host, and a subdomain the app does not serve may be unresolved or taken
 over; an app serving more hosts through Laravel lists them itself.

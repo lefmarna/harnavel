@@ -31,12 +31,6 @@ return [
         'password_confirmed' => 'パスワード確認が一致しません。',
     ],
 
-    'profile_delete' => [
-        'password_required' => 'アカウント削除にはパスワードを入力してください。',
-        'password_string' => 'パスワードは文字列で入力してください。',
-        'password_invalid' => '入力されたパスワードが正しくありません。',
-    ],
-
     'profile_update' => [
         'name' => '名前',
         'email' => 'メールアドレス',

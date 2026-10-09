@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\ViewModels\Settings\ProfilePageViewModel;
-use Database\Factories\UserFactory;
 use Inertia\Testing\AssertableInertia as Assert;
 
 mutates(ProfilePageViewModel::class);
@@ -198,14 +197,14 @@ describe('プロフィール設定', function () {
         ]);
     });
 
-    it('アカウントを削除できる', function () {
+    // 本人確認はパスワード・パスキー・Google のどれでも済む。退会でパスワードを重ねて求めると、
+    // パスキーや Google で確認した利用者が選んだ手段では退会できなくなる。
+    it('本人確認済みならパスワードを入力せずにアカウントを削除できる', function () {
         $user = User::factory()->create();
 
         $response = $this
             ->actingAs($user)
-            ->delete(route('profile.destroy'), [
-                'password' => UserFactory::DEFAULT_PASSWORD,
-            ]);
+            ->delete(route('profile.destroy'));
 
         $response
             ->assertSessionHasNoErrors()
@@ -213,38 +212,6 @@ describe('プロフィール設定', function () {
 
         $this->assertGuest();
         expect($user->fresh())->toBeNull();
-    });
-
-    it('アカウント削除の検証文言を表示する', function (array $payload, string $expectedMessage) {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->from(route('profile.edit'))
-            ->delete(route('profile.destroy'), $payload);
-
-        $response->assertSessionHasErrors(['password' => $expectedMessage]);
-    })->with([
-        'パスワード未入力' => [[], 'アカウント削除にはパスワードを入力してください。'],
-        'パスワードが文字列でない' => [['password' => 12345678], 'パスワードは文字列で入力してください。'],
-        'パスワードが不一致' => [['password' => 'wrong-password'], '入力されたパスワードが正しくありません。'],
-    ]);
-
-    it('アカウント削除には正しいパスワードが必要', function () {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->from(route('profile.edit'))
-            ->delete(route('profile.destroy'), [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrors('password')
-            ->assertRedirect(route('profile.edit'));
-
-        expect($user->fresh())->not->toBeNull();
     });
 });
 
@@ -263,7 +230,7 @@ describe('プロフィール設定の本人確認', function () {
     })->with([
         '表示' => ['GET', 'profile.edit', []],
         'メールアドレスの変更' => ['PATCH', 'profile.update', ['name' => 'Attacker', 'email' => 'attacker@example.com']],
-        'アカウント削除' => ['DELETE', 'profile.destroy', ['password' => UserFactory::DEFAULT_PASSWORD]],
+        'アカウント削除' => ['DELETE', 'profile.destroy', []],
     ]);
 
     it('Google 連携済みのパスワード未設定ユーザーも確認なしにアカウントを削除できない', function () {

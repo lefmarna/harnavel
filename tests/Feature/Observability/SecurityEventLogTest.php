@@ -96,7 +96,7 @@ describe('セキュリティイベントのログ', function () {
 
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->delete(route('profile.destroy'), ['password' => UserFactory::DEFAULT_PASSWORD])
+            ->delete(route('profile.destroy'))
             ->assertSessionHasNoErrors();
 
         Log::shouldHaveReceived('info')->with('User account was deleted.', ['user_id' => $user->getKey()])->once();

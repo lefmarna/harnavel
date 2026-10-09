@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Http\RedirectResponse;
@@ -65,8 +64,10 @@ class ProfileController extends Controller
 
     /**
      * Delete the user's profile.
+     *
+     * 本人確認は password.confirm に任せ、パスワードを重ねて求めない（TADR-0016）。
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(Request $request): RedirectResponse
     {
         $user = $this->currentUser($request);
 

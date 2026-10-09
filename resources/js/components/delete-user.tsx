@@ -1,9 +1,7 @@
-import { Form, usePage } from "@inertiajs/react";
-import { useRef } from "react";
+import { Form } from "@inertiajs/react";
 
 import { destroy } from "@/actions/App/Http/Controllers/Settings/ProfileController";
 import Heading from "@/components/heading";
-import InputError from "@/components/input-error";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,15 +12,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import type { SharedData } from "@/types";
 
 export default function DeleteUser() {
-  const { auth } = usePage<SharedData>().props;
-  const hasPassword = auth.hasPassword;
-  const passwordInput = useRef<HTMLInputElement>(null);
-
   return (
     <div className="space-y-6">
       <Heading
@@ -45,8 +36,7 @@ export default function DeleteUser() {
           <DialogContent>
             <DialogTitle>本当にアカウントを削除しますか？</DialogTitle>
             <DialogDescription>
-              アカウントを削除すると、関連するすべてのデータも完全に削除されます。{" "}
-              {hasPassword && "削除を確定するには現在のパスワードを入力してください。"}
+              アカウントを削除すると、関連するすべてのデータも完全に削除されます。
             </DialogDescription>
 
             <Form
@@ -54,36 +44,13 @@ export default function DeleteUser() {
               options={{
                 preserveScroll: true,
               }}
-              onError={() => passwordInput.current?.focus()}
-              resetOnSuccess
               className="space-y-6"
             >
-              {({ resetAndClearErrors, processing, errors }) => (
+              {({ processing }) => (
                 <>
-                  {hasPassword && (
-                    <div className="grid gap-2">
-                      <Label htmlFor="password" className="sr-only">
-                        パスワード
-                      </Label>
-
-                      <Input
-                        id="password"
-                        type="password"
-                        name="password"
-                        ref={passwordInput}
-                        placeholder="現在のパスワード"
-                        autoComplete="current-password"
-                      />
-
-                      <InputError message={errors.password} />
-                    </div>
-                  )}
-
                   <DialogFooter className="gap-2">
                     <DialogClose asChild>
-                      <Button variant="secondary" onClick={() => resetAndClearErrors()}>
-                        キャンセル
-                      </Button>
+                      <Button variant="secondary">キャンセル</Button>
                     </DialogClose>
 
                     <Button variant="destructive" disabled={processing} asChild>

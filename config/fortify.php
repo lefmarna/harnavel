@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\RequireVerifiedEmailForPasskeyRegistration;
 use Laravel\Fortify\Features;
 
 return [
@@ -103,7 +104,7 @@ return [
     |
     */
 
-    'middleware' => ['web', 'throttle:fortify'],
+    'middleware' => ['web', 'throttle:fortify', RequireVerifiedEmailForPasskeyRegistration::class],
 
     /*
     |--------------------------------------------------------------------------

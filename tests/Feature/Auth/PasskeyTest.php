@@ -2,12 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\RequireVerifiedEmailForPasskeyRegistration;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Passkeys\Passkey;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Symfony\Component\Process\Process;
 use Tests\Support\AppSubprocess;
+
+mutates(RequireVerifiedEmailForPasskeyRegistration::class);
 
 describe('パスキー', function () {
     it('画面へ渡す許可 origin はサーバーの照合と同じ表記に正規化する', function () {
@@ -40,6 +43,25 @@ describe('パスキー', function () {
                 'enroll' => route('security.edit'),
                 'manage' => route('security.edit'),
             ]);
+    });
+
+    // 他人のメールで登録した第三者が、持ち主の回復後も使えるパスキーを残せないようにする（TADR-0016）。
+    it('メール未確認のユーザーはパスキーを登録できない', function (string $method, string $route) {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->json($method, route($route))
+            ->assertForbidden();
+    })->with([
+        '登録候補' => ['GET', 'passkey.registration-options'],
+        '登録' => ['POST', 'passkey.store'],
+    ]);
+
+    it('パスキー登録以外の Fortify の画面はメール未確認でも開ける', function () {
+        $this->actingAs(User::factory()->unverified()->create())
+            ->get(route('verification.notice'))
+            ->assertOk();
     });
 
     it('パスワード確認が切れているとき登録候補は 423 を返す', function () {

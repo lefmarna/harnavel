@@ -55,6 +55,21 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
+     * メール未確認のアカウントは、メールの持ち主でない第三者が先に作った可能性がある。
+     * 持ち主がメールの所有を示した時点で、その第三者が用意した資格情報を消して確認済みにする（TADR-0016）。
+     * 持ち主の資格情報とセッションの失効は呼び出し側で扱い、保存も呼び出し側で行う。
+     */
+    public function reclaimForEmailOwner(): void
+    {
+        $this->forceFill([
+            'email_verified_at' => now(),
+            'password' => null,
+            'google_id' => null,
+        ]);
+        $this->passkeys()->delete();
+    }
+
+    /**
      * 窃取されたセッションとログイン保持 Cookie を使えなくする。remember_token は呼び出し側で保存する。
      * 端末ごとのセッションを列挙できるのは DB セッションドライバーだけなので、それを前提にする。
      */

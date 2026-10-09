@@ -624,6 +624,43 @@ describe('Google 認証サービス', function () {
                 ->and($existing->fresh()->email)->toBe('mixed.user@example.com');
         });
 
+        // Google ID の一致はログインの根拠になるが、アカウントのメールの所有を示すのは同じアドレスのときだけ。
+        it('既存 google_id ユーザーのメールが Google と異なる場合は書き換えず確認済みにもしない', function (bool $lowercaseUsernames) {
+            config(['fortify.lowercase_usernames' => $lowercaseUsernames]);
+
+            $existing = User::factory()->unverified()->create([
+                'email' => 'changed@example.com',
+                'google_id' => 'changed-google',
+            ]);
+
+            $user = app(GoogleAuthService::class)->findOrCreate('changed-google', 'original@example.com', 'Google User');
+
+            $existing->refresh();
+
+            expect($user->is($existing))->toBeTrue()
+                ->and($existing->email)->toBe('changed@example.com')
+                ->and($existing->email_verified_at)->toBeNull();
+        })->with([
+            '小文字化あり' => [true],
+            '小文字化なし' => [false],
+        ]);
+
+        it('lowercase usernames が無効でも大文字小文字だけ異なる未確認メールは確認済みにする', function () {
+            config(['fortify.lowercase_usernames' => false]);
+
+            $existing = User::factory()->unverified()->create([
+                'email' => 'Mixed.User@Example.COM',
+                'google_id' => 'mixed-google',
+            ]);
+
+            app(GoogleAuthService::class)->findOrCreate('mixed-google', 'mixed.user@example.com', 'Google User');
+
+            $existing->refresh();
+
+            expect($existing->email)->toBe('Mixed.User@Example.COM')
+                ->and($existing->email_verified_at)->not->toBeNull();
+        });
+
         it('既存 google_id ユーザーに同期差分がない場合保存しない', function () {
             $existing = User::factory()->create([
                 'email' => 'stable@example.com',

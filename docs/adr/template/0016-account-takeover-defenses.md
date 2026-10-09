@@ -8,8 +8,12 @@ session. Deleting rows only works with the database session driver; an app that 
 must replace this revocation.
 
 An unverified account may have been registered by someone other than the email's owner. When the
-owner proves the address through a Google link, the link clears the account's password, passkeys,
-and sessions instead of merging into whatever the registrant set up.
+owner proves the address through a Google link or a password reset, the account becomes verified
+and loses the password, passkeys, Google link, and sessions the registrant may have set up, instead
+of merging into them. Passkey registration requires a verified email so the registrant cannot add
+one beforehand. Because changing the email address unverifies the account, an owner who resets
+before verifying a new address also loses their own passkeys and Google link; the reset cannot tell
+that owner from a registrant.
 
 Changing the email address hands over password reset, so the profile page, its update, and account
 deletion sit behind password confirmation alongside the security page, at the cost of a prompt when

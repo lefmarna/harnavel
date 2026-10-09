@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Database\Events\TransactionCommitted;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -159,6 +162,108 @@ describe('パスワード再設定', function () {
         ])->assertSessionHasNoErrors();
 
         expect(databaseSessionIds())->toBe([str_repeat('b', 40)]);
+    });
+
+    // 他人のメールで先に登録した第三者の資格情報を、持ち主が再設定で取り戻した後に残さない（TADR-0016）。
+    it('メール未確認のアカウントを再設定するとパスキーと Google 連携を外して確認済みにする', function () {
+        $user = User::factory()->unverified()->create(['google_id' => 'registrant-google']);
+        $user->passkeys()->create([
+            'name' => '先に登録した第三者のパスキー',
+            'credential_id' => 'registrant-credential',
+            'credential' => [],
+        ]);
+
+        $this->post(route('password.update'), [
+            'token' => Password::createToken($user),
+            'email' => $user->email,
+            'password' => 'owner-password1',
+            'password_confirmation' => 'owner-password1',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+
+        $user->refresh();
+
+        expect(Hash::check('owner-password1', $user->password))->toBeTrue()
+            ->and($user->email_verified_at)->not->toBeNull()
+            ->and($user->google_id)->toBeNull()
+            ->and($user->passkeys()->count())->toBe(0);
+    });
+
+    // 旧アドレス宛てのトークンで、変更後のアドレスまで所有を示したことにさせない。
+    it('トークンを確かめた後にメールアドレスが変わっていたら再設定しない', function () {
+        $user = User::factory()->unverified()->create(['email' => 'owner@example.com']);
+        $password = $user->password;
+        $token = Password::createToken($user);
+
+        // Fortify がトークンの照合用にユーザーを読み込んだ直後に、別のリクエストがメールを変えたことにする。
+        $changed = false;
+        User::retrieved(function (User $retrieved) use (&$changed): void {
+            if ($changed) {
+                return;
+            }
+
+            $changed = true;
+            DB::table('users')->where('id', $retrieved->getKey())->update(['email' => 'victim@example.com']);
+        });
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => 'owner@example.com',
+            'password' => 'owner-password1',
+            'password_confirmation' => 'owner-password1',
+        ])->assertSessionHasErrors('email');
+
+        $user->refresh();
+
+        expect($user->email)->toBe('victim@example.com')
+            ->and($user->email_verified_at)->toBeNull()
+            ->and($user->password)->toBe($password);
+    });
+
+    // 使ったトークンが残ると、メールを旧アドレスへ戻したときに再利用できてしまう。
+    it('再設定の直後にメールアドレスが変わっても使ったトークンを消す', function () {
+        $user = User::factory()->unverified()->create(['email' => 'owner@example.com']);
+        $token = Password::createToken($user);
+
+        // 再設定を保存した直後に、別のリクエストがメールを変えたことにする。
+        $changed = false;
+        Event::listen(TransactionCommitted::class, function () use (&$changed, $user): void {
+            if ($changed) {
+                return;
+            }
+
+            $changed = true;
+            DB::table('users')->where('id', $user->getKey())->update(['email' => 'changed@example.com']);
+        });
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => 'owner@example.com',
+            'password' => 'owner-password1',
+            'password_confirmation' => 'owner-password1',
+        ])->assertSessionHasNoErrors();
+
+        expect(DB::table('password_reset_tokens')->where('email', 'owner@example.com')->exists())->toBeFalse();
+    });
+
+    it('メール確認済みのアカウントを再設定してもパスキーと Google 連携を残す', function () {
+        $user = User::factory()->create(['google_id' => 'owner-google']);
+        $user->passkeys()->create([
+            'name' => '本人のパスキー',
+            'credential_id' => 'owner-credential',
+            'credential' => [],
+        ]);
+
+        $this->post(route('password.update'), [
+            'token' => Password::createToken($user),
+            'email' => $user->email,
+            'password' => 'owner-password1',
+            'password_confirmation' => 'owner-password1',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+
+        $user->refresh();
+
+        expect($user->google_id)->toBe('owner-google')
+            ->and($user->passkeys()->count())->toBe(1);
     });
 
     it('長いメールアドレスでも DB キャッシュへ書き込んで再設定できる', function () {

@@ -104,17 +104,14 @@ class GoogleAuthService implements GoogleAuthServiceContract
                     return false;
                 }
 
-                $user->google_id = $googleId;
                 $revokesExistingCredentials = $user->email_verified_at === null;
 
                 if ($revokesExistingCredentials) {
-                    // メール未確認のアカウントは、メールの持ち主でない第三者が先に作った可能性がある。
-                    // 持ち主が Google で所有を示した時点で、その第三者が用意した資格情報とセッションを消す。
-                    $user->forceFill(['email_verified_at' => now(), 'password' => null]);
-                    $user->passkeys()->delete();
+                    $user->reclaimForEmailOwner();
                     $user->revokeSessions();
                 }
 
+                $user->google_id = $googleId;
                 $this->userRepository->save($user);
 
                 Log::info('Google account was linked.', [
@@ -194,12 +191,16 @@ class GoogleAuthService implements GoogleAuthServiceContract
             throw new GoogleAuthException(__('auth.google.email_taken'));
         }
 
-        if ($user->email_verified_at === null) {
-            $user->forceFill(['email_verified_at' => now()]);
-        }
+        // Google ID の一致はログインの根拠になるが、メールの所有を示すのは同じアドレスのときだけ。
+        // 違うアドレスを確認済みにしたり、本人が設定画面で変えたアドレスを書き戻したりしない。
+        if ($this->emailsMatch($user->email, $email)) {
+            if ($user->email_verified_at === null) {
+                $user->forceFill(['email_verified_at' => now()]);
+            }
 
-        if ($lowercaseUsernames && $user->email !== $email) {
-            $user->email = $email;
+            if ($lowercaseUsernames && $user->email !== $email) {
+                $user->email = $email;
+            }
         }
 
         if ($user->isDirty()) {

@@ -77,9 +77,10 @@ jobs:
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
       # 既知の脆弱性を持つ依存を、本番・開発用を問わず取り込んだまま進めない。
+      # 作者が開発を終えただけの廃止済みパッケージは、脆弱性ではないので表示だけにとどめる。
       - name: Audit Dependencies
         run: |
-          composer audit --locked
+          composer audit --locked --abandoned=report
           pnpm audit
 
       - name: Generate Application Key

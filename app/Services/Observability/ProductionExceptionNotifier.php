@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Observability;
 
+use App\Support\SensitiveUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -118,7 +119,7 @@ class ProductionExceptionNotifier
                         'exception' => $exception::class,
                         'message' => $this->exceptionMessage($exception),
                         'method' => $request?->method(),
-                        'url' => $request?->url(),
+                        'url' => $request !== null ? SensitiveUrl::redact($request) : null,
                         'route' => $request?->route()?->getName(),
                         'ip' => $request?->ip(),
                         'user_agent' => $this->userAgent($request),

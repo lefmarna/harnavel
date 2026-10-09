@@ -371,6 +371,54 @@ describe('Google 認証サービス', function () {
             ->email_verified_at->not->toBeNull();
     });
 
+    // 第三者が他人のメールで先に登録したアカウントを、持ち主の連携後も使い続けられないようにする。
+    it('confirmLink はメール未確認のアカウントへ連携するとき既存のパスワード・パスキー・セッションを無効にする', function () {
+        $existing = User::factory()->unverified()->create([
+            'email' => 'confirm@example.com',
+            'google_id' => null,
+            'remember_token' => 'old-remember-token',
+        ]);
+        $existing->passkeys()->create([
+            'name' => 'Attacker key',
+            'credential_id' => 'credential-1',
+            'credential' => ['id' => 'credential-1'],
+        ]);
+        insertDatabaseSession(str_repeat('a', 40), $existing);
+
+        expect(app(GoogleAuthService::class)->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com'))->toBeTrue();
+
+        $existing->refresh();
+
+        expect($existing->password)->toBeNull()
+            ->and($existing->remember_token)->not->toBe('old-remember-token')
+            ->and($existing->passkeys()->count())->toBe(0)
+            ->and(databaseSessionIds())->toBe([]);
+    });
+
+    it('confirmLink はメール確認済みのアカウントへ連携しても既存のパスワード・パスキー・セッションを維持する', function () {
+        $existing = User::factory()->create([
+            'email' => 'confirm@example.com',
+            'google_id' => null,
+            'remember_token' => 'old-remember-token',
+        ]);
+        $existing->passkeys()->create([
+            'name' => 'MacBook Pro',
+            'credential_id' => 'credential-1',
+            'credential' => ['id' => 'credential-1'],
+        ]);
+        insertDatabaseSession(str_repeat('a', 40), $existing);
+        $password = $existing->password;
+
+        expect(app(GoogleAuthService::class)->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com'))->toBeTrue();
+
+        $existing->refresh();
+
+        expect($existing->password)->toBe($password)
+            ->and($existing->remember_token)->toBe('old-remember-token')
+            ->and($existing->passkeys()->count())->toBe(1)
+            ->and(databaseSessionIds())->toBe([str_repeat('a', 40)]);
+    });
+
     it('confirmLink は payload email の casing が異なっても署名メールの対象ユーザーへ連携する', function () {
         $existing = User::factory()->unverified()->create([
             'email' => 'Confirm.User@Example.COM',

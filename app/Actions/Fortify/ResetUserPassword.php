@@ -6,6 +6,7 @@ namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
+use App\Support\AccountLoginThrottle;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
@@ -28,6 +29,10 @@ class ResetUserPassword implements ResetsUserPasswords
 
         $user->forceFill([
             'password' => Hash::make($validated['password']),
-        ])->save();
+        ]);
+        $user->revokeSessions();
+        $user->save();
+
+        AccountLoginThrottle::reset($user->email);
     }
 }

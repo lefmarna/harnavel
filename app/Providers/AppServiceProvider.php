@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Http\Middleware\RequirePasswordWhenSet;
+use App\Listeners\LogSecurityEvents;
 use App\Listeners\ShareAuthenticatedUserLogContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Authenticated;
@@ -45,9 +46,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->ensureDebugDisabledInProduction();
         $this->configurePasskeySecret();
         $this->configureDefaults();
         $this->registerEventListeners();
+    }
+
+    /**
+     * 例外画面から環境変数やスタックトレースを公開したまま運用しない。
+     */
+    private function ensureDebugDisabledInProduction(): void
+    {
+        if ($this->app->isProduction() && config('app.debug')) {
+            // HTTP では起動中の例外も例外ハンドラーが描画するため、先に詳細表示を止めてから拒否する。
+            Config::set('app.debug', false);
+
+            throw new RuntimeException('APP_DEBUG must be disabled in production.');
+        }
     }
 
     /**
@@ -98,5 +113,6 @@ class AppServiceProvider extends ServiceProvider
     protected function registerEventListeners(): void
     {
         Event::listen(Authenticated::class, ShareAuthenticatedUserLogContext::class);
+        Event::subscribe(LogSecurityEvents::class);
     }
 }

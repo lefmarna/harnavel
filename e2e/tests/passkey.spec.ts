@@ -13,6 +13,7 @@ import { enableVirtualAuthenticator } from "../support/passkey";
 // ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
 const HOME_URL = /\/dashboard$/;
 const SECURITY_URL = /\/settings\/security$/;
+const PROFILE_URL = /\/settings\/profile$/;
 const CONFIRM_PASSWORD_URL = /\/user\/confirm-password$/;
 
 const SEEDED_USER: UserCredentials = { email: "test@example.com", password: "Test1234" };
@@ -566,14 +567,14 @@ test("ログイン画面の自動入力が残っていても、パスキーで�
 
   // 再読み込みすると残っている自動入力が消えるので、画面内の導線で移動する。
   await page.locator('[data-test="sidebar-menu-button"]').click();
+  // プロフィール設定も本人確認を求めるため、設定を開いた時点で確認画面へ移る。
   await page.getByRole("menuitem", { name: "Settings" }).click();
-  await page.getByRole("link", { name: "セキュリティ", exact: true }).click();
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
 
   await page.getByRole("button", { name: "パスキーで確認" }).click();
   releaseAutofill();
 
-  await expect(page).toHaveURL(SECURITY_URL);
+  await expect(page).toHaveURL(PROFILE_URL);
 });
 
 test("パスワード確認の期限が切れても再確認してパスキーを登録できる", async ({

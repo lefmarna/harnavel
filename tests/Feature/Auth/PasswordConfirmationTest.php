@@ -2,8 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\RotateSessionOnConfirmation;
 use App\Models\User;
+use Database\Factories\UserFactory;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
+
+mutates(RotateSessionOnConfirmation::class);
 
 describe('パスワード確認', function () {
     it('パスワード確認画面を表示できる', function () {
@@ -44,9 +50,91 @@ describe('パスワード確認', function () {
                 ->where('hasPasskeys', true));
     });
 
+    it('Google 連携済みのユーザーに Google での確認を案内する', function (bool $configured, ?string $googleId, bool $expected) {
+        configureGoogleOAuth($configured);
+        $user = User::factory()->create(['password' => null, 'google_id' => $googleId]);
+
+        $this->actingAs($user)
+            ->get(route('password.confirm'))
+            ->assertInertia(fn (Assert $page) => $page->where('canConfirmWithGoogle', $expected));
+    })->with([
+        'Google 連携済み' => [true, 'google-123', true],
+        'Google 未連携' => [true, null, false],
+        'Google ログイン未設定' => [false, 'google-123', false],
+    ]);
+
+    it('Google での確認に失敗した理由を表示する', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession(['error' => '確認に失敗しました。'])
+            ->get(route('password.confirm'))
+            ->assertInertia(fn (Assert $page) => $page->where('error', '確認に失敗しました。'));
+    });
+
     it('パスワード確認には認証が必要', function () {
         $response = $this->get(route('password.confirm'));
 
         $response->assertRedirect(route('login'));
+    });
+
+    // セッションを盗んだ第三者に、本人が済ませた本人確認を共有させない。
+    it('パスワードで本人確認するとログインを保ったままセッション ID を作り直す', function () {
+        config(['session.driver' => 'database']);
+        $user = User::factory()->create();
+        $sessionId = str_repeat('a', 40);
+        insertDatabaseSession($sessionId, $user);
+
+        $this->actingAs($user)
+            ->withCookie(config('session.cookie'), $sessionId)
+            ->post(route('password.confirm.store'), ['password' => UserFactory::DEFAULT_PASSWORD])
+            ->assertSessionHas('auth.password_confirmed_at');
+
+        // 古い ID の行を消さないと、コピーされた Cookie がそのまま使える。
+        expect(app('session.store')->getId())->not->toBe($sessionId)
+            ->and(databaseSessionIds())->not->toContain($sessionId);
+        $this->assertAuthenticatedAs($user);
+    });
+
+    it('本人確認に失敗したときはセッション ID を変えない', function () {
+        $user = User::factory()->create();
+        $sessionId = str_repeat('a', 40);
+
+        $this->actingAs($user)
+            ->withCookie(config('session.cookie'), $sessionId)
+            ->post(route('password.confirm.store'), ['password' => 'wrong-password'])
+            ->assertSessionMissing('auth.password_confirmed_at');
+
+        expect(app('session.store')->getId())->toBe($sessionId);
+    });
+
+    // パスキーや Google など、確認済みを記録する経路すべてが対象になる。
+    it('確認済みを記録した経路を問わずセッション ID を作り直す', function () {
+        Route::middleware('web')->post('/_testing/confirm', function (Request $request) {
+            $request->session()->passwordConfirmed();
+
+            return response('ok');
+        });
+        $sessionId = str_repeat('a', 40);
+
+        $this->actingAs(User::factory()->create())
+            ->withCookie(config('session.cookie'), $sessionId)
+            ->post('/_testing/confirm')
+            ->assertOk();
+
+        expect(app('session.store')->getId())->not->toBe($sessionId);
+    });
+
+    it('確認済みの記録が変わらないリクエストではセッション ID を変えない', function () {
+        Route::middleware('web')->post('/_testing/no-confirm', fn () => response('ok'));
+        $sessionId = str_repeat('a', 40);
+
+        $this->actingAs(User::factory()->create())
+            ->withCookie(config('session.cookie'), $sessionId)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->post('/_testing/no-confirm')
+            ->assertOk();
+
+        expect(app('session.store')->getId())->toBe($sessionId);
     });
 });

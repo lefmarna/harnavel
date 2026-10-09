@@ -11,6 +11,7 @@ use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -55,6 +56,10 @@ class ProfileController extends Controller
 
         $user->save();
 
+        if ($emailChanged) {
+            Log::info('User email was changed.', ['user_id' => $user->getKey()]);
+        }
+
         return to_route('profile.edit');
     }
 
@@ -68,6 +73,8 @@ class ProfileController extends Controller
         Auth::logout();
 
         $user->delete();
+
+        Log::info('User account was deleted.', ['user_id' => $user->getKey()]);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

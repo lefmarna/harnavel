@@ -7,12 +7,16 @@ use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequirePasswordWhenSet;
+use App\Http\Middleware\RotateSessionOnConfirmation;
 use App\Services\Observability\ProductionExceptionNotifier;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -29,6 +33,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // 先に応答を返し、エラー応答にだけヘッダーが付かない（TADR-0012）。
         $middleware->prepend(AddSecurityHeaders::class);
 
+        // 偽の Host からパスワード再設定リンクなどの URL を作らせない。local とテストでは Laravel が無効にする。
+        // サブドメインも受け付けない。DNS が向いていない名前や乗っ取られた名前へリンクを向けさせないため。
+        // at を渡さないと Laravel は subdomains を無視してサブドメインを許可する。
+        $middleware->trustHosts(
+            at: fn (): array => ['^'.preg_quote((string) parse_url(Config::string('app.url'), PHP_URL_HOST)).'$'],
+            subdomains: false,
+        );
+
         $middleware->alias(['password.confirm' => RequirePasswordWhenSet::class]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
@@ -38,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 AssignRequestId::class,
             ],
             append: [
+                RotateSessionOnConfirmation::class,
                 HandleAppearance::class,
                 HandleInertiaRequests::class,
                 AddLinkHeadersForPreloadedAssets::class,
@@ -48,8 +61,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontReportDuplicates();
         $exceptions->stopIgnoring(HttpException::class);
         $exceptions->dontReportWhen(
-            fn (Throwable $e): bool => $e instanceof HttpExceptionInterface && $e->getStatusCode() < 500,
+            fn (Throwable $e): bool => $e instanceof HttpExceptionInterface
+                && $e->getStatusCode() < 500
+                && ! $e instanceof ThrottleRequestsException,
         );
+
+        // 総当たりや大量登録の兆候として残す。スタックトレースは要らないので既定の記録は止める。
+        $exceptions->report(function (ThrottleRequestsException $e): bool {
+            Log::warning('Request was rate limited.');
+
+            return false;
+        });
 
         $exceptions->report(function (Throwable $e): void {
             app(ProductionExceptionNotifier::class)->report(

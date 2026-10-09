@@ -13,11 +13,15 @@ final readonly class ConfirmPasswordPageViewModel extends PageViewModel
         private string $title,
         private string $description,
         private bool $hasPasskeys,
+        private bool $canConfirmWithGoogle,
+        private ?string $error,
     ) {}
 
     /**
      * @return array{
      *     hasPasskeys: bool,
+     *     canConfirmWithGoogle: bool,
+     *     error: string|null,
      *     seo: array{title: string, description: string, robots: string}
      * }
      */
@@ -25,6 +29,8 @@ final readonly class ConfirmPasswordPageViewModel extends PageViewModel
     {
         return [
             'hasPasskeys' => $this->hasPasskeys,
+            'canConfirmWithGoogle' => $this->canConfirmWithGoogle,
+            'error' => $this->error,
             'seo' => $this->noIndexSeo($this->title, $this->description),
         ];
     }

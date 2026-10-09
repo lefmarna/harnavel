@@ -21,7 +21,9 @@ application code does not log them again.
 Three kinds of event qualify as that business event: authentication (login, logout, password reset
 completion, passkey registration and removal, Google account link and unlink), irreversible or high-impact data
 changes (registration, account deletion, email address change), and the outcome of an external
-service call. Routine CRUD and individual HTTP requests are not logged.
+service call. Routine CRUD and individual HTTP requests are not logged; requests rejected by a rate
+limiter are the exception, at `warning`, because a burst of them is the visible trace of credential
+stuffing or mass registration.
 
 ## Message conventions
 

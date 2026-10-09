@@ -15,6 +15,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -27,6 +28,8 @@ use Throwable;
 
 class GoogleAuthController extends Controller
 {
+    private const REAUTHENTICATION_SESSION_KEY = 'google_reauthentication';
+
     public function __construct(private readonly GoogleAuthServiceContract $googleAuthService) {}
 
     public function redirect(): RedirectResponse
@@ -42,8 +45,28 @@ class GoogleAuthController extends Controller
         return $driver->redirect();
     }
 
+    public function reauthenticate(Request $request): RedirectResponse
+    {
+        if (! $this->currentUser($request)->canConfirmWithGoogle()) {
+            return redirect()->route('password.confirm')
+                ->with('error', __('auth.google.reauthentication_unavailable'));
+        }
+
+        $request->session()->put(self::REAUTHENTICATION_SESSION_KEY, true);
+
+        /** @var GoogleProvider $driver */
+        $driver = Socialite::driver('google');
+
+        // 既存の Google セッションで黙って通過させず、どのアカウントで確認するかを選ばせる。
+        return $driver->with(['prompt' => 'select_account'])->redirect();
+    }
+
     public function callback(Request $request): RedirectResponse
     {
+        if ($request->user() !== null) {
+            return $this->completeReauthentication($request);
+        }
+
         if (! GoogleOAuth::isConfigured()) {
             return redirect()->route('login')
                 ->with('error', __('auth.google.unavailable'));
@@ -108,6 +131,41 @@ class GoogleAuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+
+        return redirect()->intended(config('fortify.home'));
+    }
+
+    private function completeReauthentication(Request $request): RedirectResponse
+    {
+        // 以前の guest ミドルウェアと同じく、ログイン済みユーザーをホームへ戻す。
+        if ($request->session()->pull(self::REAUTHENTICATION_SESSION_KEY) !== true) {
+            return redirect()->to(Config::string('fortify.home'));
+        }
+
+        $user = $this->currentUser($request);
+
+        try {
+            /** @var GoogleProvider $driver */
+            $driver = Socialite::driver('google');
+            /** @var User $googleUser */
+            $googleUser = $driver->user();
+        } catch (Throwable $e) {
+            Log::warning('Google reauthentication callback failed.', ['exception_class' => $e::class]);
+
+            return redirect()->route('password.confirm')
+                ->with('error', __('auth.google.failed'));
+        }
+
+        if ($user->google_id === null || $googleUser->getId() !== $user->google_id) {
+            Log::warning('Google reauthentication used a different Google account.');
+
+            return redirect()->route('password.confirm')
+                ->with('error', __('auth.google.reauthentication_mismatch'));
+        }
+
+        $request->session()->passwordConfirmed();
+
+        Log::info('User confirmed identity with Google.', ['user_id' => $user->getKey()]);
 
         return redirect()->intended(config('fortify.home'));
     }

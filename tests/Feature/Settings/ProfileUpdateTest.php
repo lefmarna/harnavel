@@ -10,6 +10,10 @@ use Inertia\Testing\AssertableInertia as Assert;
 mutates(ProfilePageViewModel::class);
 
 describe('プロフィール設定', function () {
+    beforeEach(function () {
+        $this->withSession(['auth.password_confirmed_at' => time()]);
+    });
+
     it('プロフィール設定画面を表示できる', function () {
         $user = User::factory()->create();
 
@@ -239,6 +243,36 @@ describe('プロフィール設定', function () {
         $response
             ->assertSessionHasErrors('password')
             ->assertRedirect(route('profile.edit'));
+
+        expect($user->fresh())->not->toBeNull();
+    });
+});
+
+// セッションを奪っただけの第三者に、メールアドレスを書き換えて再設定メールを受け取らせない。
+describe('プロフィール設定の本人確認', function () {
+    it('直近の本人確認がなければ確認画面へ誘導する', function (string $method, string $route, array $payload) {
+        $user = User::factory()->create(['email' => 'owner@example.com']);
+
+        $this->actingAs($user)
+            ->call($method, route($route), $payload)
+            ->assertRedirect(route('password.confirm'));
+
+        expect($user->fresh())
+            ->not->toBeNull()
+            ->email->toBe('owner@example.com');
+    })->with([
+        '表示' => ['GET', 'profile.edit', []],
+        'メールアドレスの変更' => ['PATCH', 'profile.update', ['name' => 'Attacker', 'email' => 'attacker@example.com']],
+        'アカウント削除' => ['DELETE', 'profile.destroy', ['password' => UserFactory::DEFAULT_PASSWORD]],
+    ]);
+
+    it('Google 連携済みのパスワード未設定ユーザーも確認なしにアカウントを削除できない', function () {
+        configureGoogleOAuth(true);
+        $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
+
+        $this->actingAs($user)
+            ->delete(route('profile.destroy'))
+            ->assertRedirect(route('password.confirm'));
 
         expect($user->fresh())->not->toBeNull();
     });

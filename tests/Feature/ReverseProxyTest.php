@@ -60,6 +60,7 @@ function proxyRequestMetadata(string $environment): array
 
     $process = AppSubprocess::php($script, AppSubprocess::productionEnvironment([
         'APP_ENV' => $environment,
+        'APP_URL' => 'https://dev-machine.example.ts.net',
     ]));
 
     expect($process->isSuccessful())

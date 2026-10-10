@@ -105,7 +105,7 @@ return [
         ],
         'security' => [
             'title' => 'セキュリティ設定',
-            'description' => 'パスワードとパスキーを管理します。',
+            'description' => 'パスワード、パスキー、Googleログイン連携を管理します。',
         ],
         'appearance' => [
             'title' => '表示設定',

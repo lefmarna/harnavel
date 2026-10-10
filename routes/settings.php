@@ -40,6 +40,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('password.confirm')
         ->name('security.edit');
 
+    Route::delete('settings/google', [SecurityController::class, 'destroyGoogle'])
+        ->middleware('password.confirm')
+        ->name('security.google.destroy');
+
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware(['password.confirm', 'throttle:6,1'])
         ->name('user-password.update');

@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Actions\Passkeys\DeletePasskey;
 use App\Actions\Passkeys\StorePasskey;
 use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Listeners\LogSecurityEvents;
 use App\Listeners\ShareAuthenticatedUserLogContext;
 use App\Models\User;
+use App\Services\Account\SecurityNotifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
@@ -25,7 +27,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Passkeys\Actions\DeletePasskey as BaseDeletePasskey;
 use Laravel\Passkeys\Actions\StorePasskey as BaseStorePasskey;
+use Laravel\Passkeys\Events\PasskeyRegistered;
 use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
@@ -35,8 +39,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // パッケージの登録処理を、失効と競合しない版に差し替える（TADR-0016）。
+        // パッケージの登録と削除を、セッションの失効と整合する版に差し替える（TADR-0016）。
         $this->app->bind(BaseStorePasskey::class, StorePasskey::class);
+        $this->app->bind(BaseDeletePasskey::class, DeletePasskey::class);
 
         $this->app->bind(RequirePasswordWhenSet::class, function (Application $app): RequirePasswordWhenSet {
             $timeout = Config::get('auth.password_timeout');
@@ -128,6 +133,13 @@ class AppServiceProvider extends ServiceProvider
             /** @var User $user 認証するのは users テーブルだけ。 */
             $user = $event->user;
             $user->recordSessionGeneration(app(Session::class));
+        });
+
+        // 登録は StorePasskey の行ロックの中で確定してから通知される。
+        Event::listen(function (PasskeyRegistered $event): void {
+            /** @var User $user 認証するのは users テーブルだけ。 */
+            $user = $event->user;
+            app(SecurityNotifier::class)->notify($user, 'passkey_added');
         });
     }
 }

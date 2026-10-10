@@ -127,7 +127,7 @@ describe('セキュリティイベントのログ', function () {
             'email' => 'link@example.com',
         ]);
 
-        app(GoogleAuthService::class)->confirmLink((string) $user->getKey(), 'google-123', 'link@example.com');
+        app(GoogleAuthService::class)->confirmLink((string) $user->getKey(), 'google-123', 'link@example.com', '0');
 
         Log::shouldHaveReceived('info')->with('Google account was linked.', [
             'user_id' => $user->getKey(),

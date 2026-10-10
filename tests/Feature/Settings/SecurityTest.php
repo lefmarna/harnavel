@@ -6,6 +6,8 @@ use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Models\User;
 use App\ViewModels\Settings\SecurityPageViewModel;
 use Database\Factories\UserFactory;
+use Illuminate\Routing\Events\RouteMatched;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
@@ -26,13 +28,15 @@ describe('セキュリティ設定', function () {
                 fn ($page) => assertInertiaShape($page, 'settings/security', [
                     'canManagePasskeys',
                     'passkeys',
+                    'googleLinked',
+                    'canUnlinkGoogle',
                     'seo.title',
                     'seo.description',
                 ])
                     ->where('canManagePasskeys', true)
                     ->where('passkeys', [])
                     ->where('seo.title', 'セキュリティ設定')
-                    ->where('seo.description', 'パスワードとパスキーを管理します。')
+                    ->where('seo.description', 'パスワード、パスキー、Googleログイン連携を管理します。')
             );
     });
 
@@ -277,6 +281,53 @@ describe('セキュリティ設定', function () {
             ->assertRedirect();
 
         expect($user->passkeys()->count())->toBe(0);
+    });
+
+    // そのパスキーで先にログインした第三者のセッションを、削除した後に残さない（TADR-0016）。
+    it('パスキーを削除すると他の端末のセッションを失効させ、今の端末はログインを保つ', function () {
+        config(['session.driver' => 'database']);
+        $user = User::factory()->create();
+        $passkey = $user->passkeys()->create([
+            'name' => 'Attacker key',
+            'credential_id' => 'credential-2',
+            'credential' => ['id' => 'credential-2'],
+        ]);
+        $otherDeviceSessionId = loginFromNewDevice($user);
+        $currentSessionId = loginFromNewDevice($user);
+
+        forgetRequestState();
+        $this->withCookie(config('session.cookie'), $currentSessionId)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete(route('passkey.destroy', $passkey))
+            ->assertRedirect();
+        $renewedSessionId = lastSessionId();
+
+        expect($renewedSessionId)->not->toBe($currentSessionId);
+        visitDashboardFrom($renewedSessionId)->assertOk();
+        visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
+    });
+
+    // 削除の途中で失効させたなら、失効した第三者のセッションに新しい世代を記録させない。
+    it('パスキー削除の途中でセッションが失効したら、その削除を拒否する', function () {
+        $user = User::factory()->create();
+        $passkey = $user->passkeys()->create([
+            'name' => 'iPhone',
+            'credential_id' => 'credential-2',
+            'credential' => ['id' => 'credential-2'],
+        ]);
+        Event::listen(RouteMatched::class, function () use ($user): void {
+            $fresh = User::findOrFail($user->getKey());
+            $fresh->revokeSessions();
+            $fresh->save();
+        });
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete(route('passkey.destroy', $passkey))
+            ->assertConflict();
+
+        expect($user->passkeys()->count())->toBe(1)
+            ->and($user->refresh()->session_generation)->toBe(1);
     });
 
     it('他人のパスキーは削除できない', function () {

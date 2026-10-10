@@ -17,8 +17,13 @@ the one the request started with, and refuse with 409 when it moved; otherwise a
 from a stolen session would land after the owner's reset or restore. Passkey registration does the
 same: the package's store action is replaced with one that takes the lock and compares the
 generation before inserting, because a passkey removed only after it is stored could already be used
-to sign in by another request. Changing the password keeps the current session by
-recording the new generation in it. This works with any session driver.
+to sign in by another request. Deleting a passkey or unlinking Google from the
+security settings also revokes the other sessions, because a thief may already have signed in with
+it; unlinking is refused while Google is the only credential, so the owner is not locked out. The
+mailed link that confirms a Google link records the session generation, so a link sent before an
+unlink or another revocation cannot restore the link afterwards.
+Changing the password, deleting a passkey, or unlinking Google keeps the current session by
+regenerating its ID and recording the new generation in it. This works with any session driver.
 
 Laravel's `AuthenticateSession` is not used: it skips users without a password, so Google-only and
 passkey-only accounts would keep every stolen session, and it adopts the current password hash for a
@@ -67,6 +72,14 @@ after the owner resets the password or restores the address. Both links are conf
 mail scanners that prefetch links do not act on them, and only the signed query is read, so a POST
 body cannot substitute the payload of another link. The mail to the previous address is sent after
 the switch commits; a delivery failure is reported but does not undo the switch.
+
+Changing the password, adding a passkey, and linking a Google account mail the account's address
+once the change has committed, so the owner learns of a credential a session thief added. The mail
+links to the security settings for a reader who is still signed in, since password reset opens only
+for guests, and to password reset otherwise, telling a reader who cannot pass the settings'
+confirmation, such as one who lost the only passkey, to sign out first. It carries no signed action, so a copy of it grants
+nothing, and a delivery failure is reported without undoing the change. Password reset and restoring an email
+address are not announced, because both are started from the mailbox that would receive the notice.
 
 Account deletion relies on that confirmation and does not ask for the password again. A second
 password prompt would stop owners who confirmed with a passkey or Google from deleting with the

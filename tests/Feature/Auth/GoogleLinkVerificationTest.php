@@ -22,6 +22,7 @@ describe('Google 連携リンク検証', function () {
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
             'email' => 'existing@example.com',
+            'session_generation' => '0',
         ]);
 
         $this->get($url)
@@ -43,6 +44,7 @@ describe('Google 連携リンク検証', function () {
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
             'email' => 'existing@example.com',
+            'session_generation' => '0',
         ]).'&utm_source=test';
 
         $this->get($url)
@@ -56,13 +58,14 @@ describe('Google 連携リンク検証', function () {
         $service = Mockery::mock(GoogleAuthServiceContract::class);
         $service->shouldReceive('confirmLink')
             ->once()
-            ->with('1', 'google-123', 'existing@example.com')
+            ->with('1', 'google-123', 'existing@example.com', '0')
             ->andReturnTrue();
         app()->instance(GoogleAuthServiceContract::class, $service);
 
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
             'email' => 'existing@example.com',
+            'session_generation' => '0',
         ]);
 
         $this->post($url)
@@ -82,6 +85,7 @@ describe('Google 連携リンク検証', function () {
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
             'email' => 'existing@example.com',
+            'session_generation' => '0',
         ], now()->subMinute());
 
         $this->get($url)
@@ -99,6 +103,7 @@ describe('Google 連携リンク検証', function () {
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
             'email' => 'existing@example.com',
+            'session_generation' => '0',
         ]);
 
         $invalidUrl = preg_replace('/signature=[^&]+/', 'signature=invalid', $url);
@@ -157,10 +162,12 @@ describe('Google 連携リンク検証', function () {
                 ->component('auth/google-link/verify')
                 ->where('status', 'error'));
     })->with([
-        'google_id が無い' => [['email' => 'existing@example.com']],
-        'google_id が空文字' => [['google_id' => '', 'email' => 'existing@example.com']],
-        'email が無い' => [['google_id' => 'google-123']],
-        'email が空文字' => [['google_id' => 'google-123', 'email' => '']],
+        'google_id が無い' => [['email' => 'existing@example.com', 'session_generation' => '0']],
+        'google_id が空文字' => [['google_id' => '', 'email' => 'existing@example.com', 'session_generation' => '0']],
+        'email が無い' => [['google_id' => 'google-123', 'session_generation' => '0']],
+        'email が空文字' => [['google_id' => 'google-123', 'email' => '', 'session_generation' => '0']],
+        // 世代を持たないリンクは、送った後の失効を確かめられないので使わせない。
+        'session_generation が無い' => [['google_id' => 'google-123', 'email' => 'existing@example.com']],
     ]);
 
     it('Google 連携確定が失敗したときはエラーページを表示する', function () {
@@ -169,13 +176,14 @@ describe('Google 連携リンク検証', function () {
         $service = Mockery::mock(GoogleAuthServiceContract::class);
         $service->shouldReceive('confirmLink')
             ->once()
-            ->with('1', 'google-123', 'existing@example.com')
+            ->with('1', 'google-123', 'existing@example.com', '0')
             ->andReturnFalse();
         app()->instance(GoogleAuthServiceContract::class, $service);
 
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
             'email' => 'existing@example.com',
+            'session_generation' => '0',
         ]);
 
         $this->post($url)
@@ -211,6 +219,7 @@ describe('Google 連携リンク検証', function () {
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
             'email' => 'existing@example.com',
+            'session_generation' => '0',
         ]);
 
         $this->post($url)

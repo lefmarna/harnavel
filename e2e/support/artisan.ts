@@ -127,3 +127,12 @@ export const emailChangeRevertLink = (currentEmail: string, previousEmail: strin
         `App\\Models\\User::query()->where('email', ${phpString(currentEmail)})->firstOrFail(), ${phpString(previousEmail)}), PHP_EOL;`,
     ]),
   );
+
+/** Google ログイン連携済みの状態を再現する。 */
+export const setUserGoogleId = (email: string, googleId: string): void => {
+  runArtisan([
+    "tinker",
+    "--execute",
+    `App\\Models\\User::query()->where('email', ${phpString(email)})->update(['google_id' => ${phpString(googleId)}]);`,
+  ]);
+};

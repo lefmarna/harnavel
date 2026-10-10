@@ -6,17 +6,21 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Services\Account\EmailChangeService;
 use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class ProfileController extends Controller
 {
+    public function __construct(private readonly EmailChangeService $emailChangeService) {}
+
     /**
      * Show the user's profile settings page.
      */
@@ -35,31 +39,47 @@ class ProfileController extends Controller
 
     /**
      * Update the user's profile information.
+     *
+     * 名前はすぐに変える。メールアドレスは新しいアドレスの確認を待って切り替える（TADR-0016）。
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $this->currentUser($request);
         /** @var array{name: string, email: string} $validated */
         $validated = $request->validated();
-        $originalEmail = $user->email;
 
-        $user->fill($validated);
-
-        $emailChanged = config('fortify.lowercase_usernames')
-            ? $user->isDirty('email')
-            : Str::lower($originalEmail) !== Str::lower($user->email);
-
-        if ($emailChanged) {
-            $user->email_verified_at = null;
+        if (! $this->emailChangeService->sameAddress($user->email, $validated['email'])
+            && ! $this->emailChangeService->canChangeEmail($user)) {
+            return to_route('profile.edit')->withErrors(['email' => __('form.profile_update.email_change_too_soon')]);
         }
 
-        $user->save();
+        DB::transaction(function () use ($user, $validated): void {
+            $lockedUser = $this->lockCurrentUser($user);
+            $lockedUser->name = $validated['name'];
 
-        if ($emailChanged) {
-            Log::info('User email was changed.', ['user_id' => $user->getKey()]);
+            // 大文字小文字だけの違いは同じアドレスなので、確認を待たずに反映する。判定はロックした行で行い、
+            // 途中で切り替わったアドレスを書き戻さない。
+            if ($this->emailChangeService->sameAddress($lockedUser->email, $validated['email'])) {
+                $lockedUser->email = $validated['email'];
+            }
+
+            $lockedUser->save();
+            $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
+        });
+
+        if ($this->emailChangeService->sameAddress($user->email, $validated['email'])) {
+            return to_route('profile.edit');
         }
 
-        return to_route('profile.edit');
+        try {
+            $this->emailChangeService->request($user, $validated['email']);
+        } catch (Throwable $e) {
+            report($e);
+
+            return to_route('profile.edit')->withErrors(['email' => __('form.profile_update.email_change_failed')]);
+        }
+
+        return to_route('profile.edit')->with('status', 'email-change-link-sent');
     }
 
     /**

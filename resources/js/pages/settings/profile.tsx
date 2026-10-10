@@ -1,5 +1,7 @@
 import { Transition } from "@headlessui/react";
+import type { FormComponentRef } from "@inertiajs/core";
 import { Form, Link, usePage } from "@inertiajs/react";
+import { useRef } from "react";
 
 import { update } from "@/actions/App/Http/Controllers/Settings/ProfileController";
 import DeleteUser from "@/components/delete-user";
@@ -29,6 +31,7 @@ export default function Profile({
   status?: string;
 }) {
   const { auth } = usePage<SharedData>().props;
+  const form = useRef<FormComponentRef>(null);
   const user = auth.user;
 
   if (!user) {
@@ -47,10 +50,19 @@ export default function Profile({
             description="名前とメールアドレスを更新します"
           />
 
+          {/* 確認メールを送ったときはまだ切り替わっていないので、現在のアドレスに戻す。
+              大文字小文字だけの変更はすぐ保存されるので、key で作り直して保存した値を初期値にする。 */}
           <Form
+            key={user.email}
+            ref={form}
             {...update.form()}
             options={{
               preserveScroll: true,
+            }}
+            onSuccess={(page) => {
+              if (page.props.status === "email-change-link-sent") {
+                form.current?.reset("email");
+              }
             }}
             className="space-y-6"
           >
@@ -87,6 +99,12 @@ export default function Profile({
                   />
 
                   <InputError className="mt-2" message={errors.email} />
+
+                  {status === "email-change-link-sent" && (
+                    <p className="text-sm font-medium text-green-600">
+                      新しいメールアドレスに確認メールを送信しました。メール内のリンクを開くと変更が完了します。
+                    </p>
+                  )}
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (

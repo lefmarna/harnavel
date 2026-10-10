@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
@@ -117,6 +118,9 @@ function forgetRequestState(): void
     app('auth')->forgetGuards();
     app('session')->forgetDrivers();
     app()->forgetInstance('session.store');
+    // Redirector は作られたときのセッションへ withErrors() などを書くので、作り直す。
+    app()->forgetInstance('redirect');
+    Facade::clearResolvedInstance('redirect');
 }
 
 /**

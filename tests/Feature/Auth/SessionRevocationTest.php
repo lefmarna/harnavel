@@ -12,7 +12,14 @@ use Illuminate\Auth\Events\Validated;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Passkeys\Actions\StorePasskey;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\Uid\Uuid;
+use Webauthn\CredentialRecord;
+use Webauthn\TrustPath\EmptyTrustPath;
 
 mutates(RejectRevokedSessions::class);
 
@@ -114,6 +121,22 @@ describe('セッションの失効', function () {
         visitDashboardFrom($sessionId)->assertRedirect(route('login'));
     });
 
+    // ログインが要らない画面は、失効したセッションをゲストとして表示する。
+    it('失効させたセッションでログインの要らない画面を開くと、ゲストとして表示する', function () {
+        $user = User::factory()->create();
+        $sessionId = loginFromNewDevice($user);
+        resetPasswordElsewhere($user);
+
+        forgetRequestState();
+        $this->withCookie(config('session.cookie'), $sessionId)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('auth.user', null));
+        $this->assertGuest();
+        expect(app('session')->driver()->token())->toBeString()
+            ->and(app('session')->driver()->getId())->not->toBe($sessionId);
+    });
+
     it('失効させたセッションを拒否したことを記録する', function () {
         $user = User::factory()->create();
         $sessionId = loginFromNewDevice($user);
@@ -151,8 +174,8 @@ describe('セッションの失効', function () {
         expect($user->refresh()->remember_token)->toBe($rememberToken);
     });
 
-    // リクエストの最初に読んだ世代から進めると、途中の再設定で進んだ世代を巻き戻し、失効させたセッションを戻してしまう。
-    it('設定画面でのパスワード変更と同時に再設定されても、世代を巻き戻さない', function () {
+    // 失効より前に始まった変更を、失効の後に書き込ませない。巻き戻しも、失効させたセッションへの新しい世代の記録も起きない。
+    it('設定画面でのパスワード変更の途中で再設定されたら、その変更を拒否する', function () {
         $user = User::factory()->create();
         $sessionId = loginFromNewDevice($user);
 
@@ -176,10 +199,43 @@ describe('セッションの失効', function () {
                 'password' => 'new-password3',
                 'password_confirmation' => 'new-password3',
             ])
-            ->assertSessionHasNoErrors();
+            ->assertConflict();
 
         expect($resetDone)->toBeTrue()
-            ->and($user->refresh()->session_generation)->toBe(3);
-        visitDashboardFrom(lastSessionId())->assertOk();
+            ->and($user->refresh()->session_generation)->toBe(2)
+            ->and(Hash::check('new-password1', $user->password))->toBeTrue();
     });
+
+    // 失効より前に始まった登録が、失効の後にパスキーを保存させない。保存してから消すと、その間に別のリクエストがログインに使える。
+    it('失効したセッションでのパスキー登録は、保存の前に拒否する', function (bool $revoked) {
+        $user = User::factory()->create();
+
+        if ($revoked) {
+            resetPasswordElsewhere($user);
+        }
+
+        $source = CredentialRecord::create(
+            publicKeyCredentialId: 'credential-1',
+            type: 'public-key',
+            transports: [],
+            attestationType: 'none',
+            trustPath: EmptyTrustPath::create(),
+            aaguid: Uuid::fromString('00000000-0000-0000-0000-000000000000'),
+            credentialPublicKey: 'public-key',
+            userHandle: $user->getPasskeyUserHandle(),
+            counter: 0,
+        );
+        $store = fn () => app(StorePasskey::class)->createPasskey($user, 'New key', $source);
+
+        if ($revoked) {
+            expect($store)->toThrow(HttpException::class);
+        } else {
+            $store();
+        }
+
+        expect($user->passkeys()->count())->toBe($revoked ? 0 : 1);
+    })->with([
+        '失効していれば拒否する' => [true],
+        '失効していなければ保存する' => [false],
+    ]);
 });

@@ -9,7 +9,6 @@ use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\ViewModels\Settings\SecurityPageViewModel;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,13 +45,9 @@ class SecurityController extends Controller
         /** @var array{password: string} $validated */
         $validated = $request->validated();
 
-        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
-        $key = $user->getKey();
-
-        DB::transaction(function () use ($user, $key, $validated): void {
+        DB::transaction(function () use ($user, $validated): void {
             // リクエストの最初に読んだ世代から進めると、途中の再設定で進んだ世代を巻き戻すため、ロックした行から進める。
-            $lockedUser = $this->userRepository->find($key, lock: true)
-                ?? throw (new ModelNotFoundException)->setModel(User::class, [$key]);
+            $lockedUser = $this->lockCurrentUser($user);
 
             $lockedUser->password = Hash::make($validated['password']);
             $lockedUser->revokeSessions();

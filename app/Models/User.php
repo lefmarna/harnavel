@@ -42,6 +42,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     protected $attributes = [
         'session_generation' => 0,
+        'email_changed_at' => null,
     ];
 
     /**
@@ -124,6 +125,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'session_generation' => 'integer',
+            'email_changed_at' => 'datetime',
         ];
     }
 }

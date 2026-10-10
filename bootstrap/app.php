@@ -10,6 +10,7 @@ use App\Http\Middleware\RejectRevokedSessions;
 use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Http\Middleware\RotateSessionOnConfirmation;
 use App\Services\Observability\ProductionExceptionNotifier;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -46,6 +47,9 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->alias(['password.confirm' => RequirePasswordWhenSet::class]);
+
+        // 失効したセッションを、ログインの要否を判定する auth より先にゲストへ戻す（TADR-0016）。
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, RejectRevokedSessions::class);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 

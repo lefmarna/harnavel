@@ -34,6 +34,31 @@ describe('濫用対策のレート制限', function () {
             ->not->toBe(429);
     });
 
+    // 資格情報 ID は送る側が決められ、セッションも Cookie を捨てれば作り直せるので、接続元でも数える。
+    it('パスキーの上限は資格情報 ID を変えても接続元ごとに数える', function () {
+        $loginWithPasskey = fn (string $ip, string $credentialId) => $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson(route('passkey.login'), ['credential' => ['id' => $credentialId]]);
+
+        for ($attempt = 0; $attempt < 300; $attempt++) {
+            expect($loginWithPasskey('192.0.2.1', "credential-{$attempt}")->getStatusCode())->not->toBe(429);
+        }
+
+        $loginWithPasskey('192.0.2.1', 'credential-next')->assertTooManyRequests();
+        expect($loginWithPasskey('192.0.2.2', 'credential-next')->getStatusCode())->not->toBe(429);
+    });
+
+    // 資格情報 ID を接続元の集計キーと同じ形にしても、別のカウンタへ逃がさない。
+    it('パスキーの接続元ごとの上限は資格情報 ID でキーを重ねても回避できない', function () {
+        $loginWithPasskey = fn (string $credentialId) => $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.1'])
+            ->postJson(route('passkey.login'), ['credential' => ['id' => $credentialId]]);
+
+        for ($attempt = 0; $attempt < 300; $attempt++) {
+            $loginWithPasskey("credential-{$attempt}");
+        }
+
+        $loginWithPasskey('ip')->assertTooManyRequests();
+    });
+
     it('パスワード確認の上限は利用者ごとに数える', function () {
         $this->actingAs(User::factory()->create());
 

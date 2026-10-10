@@ -138,8 +138,17 @@ class FortifyServiceProvider extends ServiceProvider
             $key = is_string($credentialId) && $credentialId !== ''
                 ? $credentialId
                 : $request->session()->getId();
+            $ip = $request->ip() ?? '';
 
-            return Limit::perMinute(10)->by($key.'|'.($request->ip() ?? ''));
+            // 資格情報 ID は送る側が決めるので、接頭辞を分けて接続元のキーと重ならないようにする。
+            return [
+                Limit::perMinute(10)->by('credential|'.$key.'|'.$ip),
+                // 資格情報 ID は送る側が決められ、セッションも Cookie を捨てれば作り直せる。
+                // 署名を総当たりされるわけではないが、チャレンジの生成と資格情報の照合を際限なく繰り返させない。
+                // セッションは制限より前に始まるので、セッション行の増加はここでは抑えない。
+                // 同じ回線の利用者をまとめて止めないよう、1分に100回ほどのログインを通せる幅にする。
+                Limit::perMinute(300)->by('ip|'.$ip),
+            ];
         });
 
         RateLimiter::for('login', function (Request $request) {

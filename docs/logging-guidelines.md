@@ -69,8 +69,16 @@ Exception messages are the usual back door into that list: a mail transport fail
 server response, which quotes the recipient (`550 5.1.1 <user@example.com> User unknown`), so a
 `catch` around `Mail::to(...)->send(...)` needs the same scrutiny as one around a query.
 
+Unhandled exceptions reach the log with their message, which the developer needs to diagnose them.
+Every database connection masks query bindings in exception messages, and the application drops
+function arguments from stack traces. What the database or SMTP server writes into its own error
+stays: a unique-constraint violation quotes the duplicate value, and a rejected delivery quotes the
+recipient. These lines stay in the server's log files and are never forwarded.
+
 ## Discord notifications
 
 Alerting is a separate system. `ProductionExceptionNotifier` reacts to unhandled 500s and builds its
 payload from the request, not from anything logged, so no log call triggers a notification. The two
-share only `request_id`, which is what makes a notification searchable here.
+share only `request_id`, which is what makes a notification searchable here. The payload names the
+exception class but never carries its message, since Discord is a third party and messages can quote
+the values above.

@@ -32,10 +32,13 @@ return [
     |
     */
 
+    // 処理されない例外はメッセージごとログへ残るため、メールアドレスなどの値を SQL に埋め込ませない。
+    // DB 自身のメッセージ（一意制約違反の値など）は残る（docs/logging-guidelines.md）。
     'connections' => [
 
         'sqlite' => [
             'driver' => 'sqlite',
+            'mask_bindings_in_exception_messages' => true,
             'url' => env('DB_URL'),
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
@@ -48,6 +51,7 @@ return [
 
         'mysql' => [
             'driver' => 'mysql',
+            'mask_bindings_in_exception_messages' => true,
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
@@ -68,6 +72,7 @@ return [
 
         'mariadb' => [
             'driver' => 'mariadb',
+            'mask_bindings_in_exception_messages' => true,
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
@@ -88,6 +93,7 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
+            'mask_bindings_in_exception_messages' => true,
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
@@ -103,6 +109,7 @@ return [
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',
+            'mask_bindings_in_exception_messages' => true,
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', 'localhost'),
             'port' => env('DB_PORT', '1433'),

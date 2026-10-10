@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Mailer\Exception\TransportException;
 
 mutates(ProductionExceptionNotifier::class);
 
@@ -405,14 +406,13 @@ describe('本番例外通知', function () {
                 ->and($embed['color'])->toBe(15_141_160)
                 ->and($fields->pluck('name')->all())->toBe([
                     'app', 'request_id', 'environment', 'status', 'exception',
-                    'message', 'method', 'url', 'route', 'ip', 'user_agent', 'file',
+                    'method', 'url', 'route', 'ip', 'user_agent', 'file',
                 ])
                 ->and($byName->get('app'))->toBe('app')
                 ->and($byName->get('request_id'))->toBe('01JZ0000000000000000000000')
                 ->and($byName->get('environment'))->toBe('production')
                 ->and($byName->get('status'))->toBe('500')
                 ->and($byName->get('exception'))->toBe(RuntimeException::class)
-                ->and($byName->get('message'))->toBe('database is unavailable')
                 ->and($byName->get('method'))->toBe('POST')
                 ->and($byName->get('url'))->toBe('https://example.test/orders/123')
                 ->and($byName->get('route'))->toBe('orders.store')
@@ -441,7 +441,7 @@ describe('本番例外通知', function () {
 
             expect($payload['content'])->toBe('[app][unavailable] Production exception: RuntimeException')
                 ->and($fields->pluck('name')->all())->toBe([
-                    'app', 'request_id', 'environment', 'status', 'exception', 'message', 'file',
+                    'app', 'request_id', 'environment', 'status', 'exception', 'file',
                 ])
                 ->and($fields->pluck('value', 'name')->get('request_id'))->toBe('unavailable');
 
@@ -503,35 +503,6 @@ describe('本番例外通知', function () {
         });
     });
 
-    it('例外メッセージが空なら message フィールドを省略する', function () {
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException(''), observabilityRequest());
-        app()->terminate();
-
-        Http::assertSent(function (HttpClientRequest $request): bool {
-            $names = collect($request->data()['embeds'][0]['fields'])->pluck('name')->all();
-
-            expect($names)->not->toContain('message');
-
-            return true;
-        });
-    });
-
-    it('例外メッセージを500文字で打ち切る', function () {
-        app(ProductionExceptionNotifier::class)->report(
-            new RuntimeException(str_repeat('m', 600)),
-            observabilityRequest(),
-        );
-        app()->terminate();
-
-        Http::assertSent(function (HttpClientRequest $request): bool {
-            $fields = collect($request->data()['embeds'][0]['fields'])->pluck('value', 'name');
-
-            expect($fields->get('message'))->toBe(str_repeat('m', 500).'...');
-
-            return true;
-        });
-    });
-
     it('フィールド値を省略記号込みで Discord の上限1024文字に収める', function () {
         app(ProductionExceptionNotifier::class)->report(
             new RuntimeException('failure'),
@@ -561,6 +532,23 @@ describe('本番例外通知', function () {
             $fields = collect($request->data()['embeds'][0]['fields'])->pluck('value', 'name');
 
             expect($fields->get('user_agent'))->toBe(str_repeat('u', 200).'...');
+
+            return true;
+        });
+    });
+
+    // Discord は値が空のフィールドを含む payload を受け付けない。
+    it('User-Agent が空ならフィールドを省略する', function () {
+        $request = observabilityRequest();
+        $request->headers->set('User-Agent', '');
+
+        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), $request);
+        app()->terminate();
+
+        Http::assertSent(function (HttpClientRequest $request): bool {
+            $names = collect($request->data()['embeds'][0]['fields'])->pluck('name')->all();
+
+            expect($names)->not->toContain('user_agent');
 
             return true;
         });
@@ -623,22 +611,26 @@ describe('本番例外通知', function () {
         });
     });
 
-    it('実値を含み得るDB例外メッセージをマスクする', function (Throwable $exception, string $secret) {
+    // 例外メッセージには SMTP の応答に含まれる宛先や SQL の値が入りうる。詳細は request_id でログから探す。
+    it('例外メッセージを Discord へ送らない', function (Throwable $exception, string $secret) {
         app(ProductionExceptionNotifier::class)->report($exception, observabilityRequest());
 
         app()->terminate();
 
         Http::assertSent(function (HttpClientRequest $request) use ($secret): bool {
             $payload = $request->data();
-            $fields = collect($payload['embeds'][0]['fields'] ?? [])->pluck('value', 'name');
-            $json = json_encode($payload, JSON_THROW_ON_ERROR);
+            $names = collect($payload['embeds'][0]['fields'])->pluck('name')->all();
 
-            expect($fields->get('message'))->toBe('Database exception message omitted.')
-                ->and($json)->not->toContain($secret);
+            expect($names)->not->toContain('message')
+                ->and(json_encode($payload, JSON_THROW_ON_ERROR))->not->toContain($secret);
 
             return true;
         });
     })->with([
+        'SMTP の応答' => [
+            new TransportException('Expected response code "250" but got code "550", with message "550 5.1.1 <smtp-secret@example.test> User unknown".'),
+            'smtp-secret@example.test',
+        ],
         'QueryException' => [
             new QueryException(
                 'mysql',
@@ -653,6 +645,17 @@ describe('本番例外通知', function () {
             'raw-secret-value',
         ],
     ]);
+
+    // DB の例外は値ごとにメッセージが変わるため、同じ経路の障害としてまとめる。
+    it('DB の例外はメッセージが値ごとに違っても同じ経路なら再通知しない', function () {
+        $notifier = app(ProductionExceptionNotifier::class);
+
+        $notifier->report(new PDOException("Duplicate entry 'first@example.test' for key 'users_email_unique'"), observabilityRequest());
+        $notifier->report(new PDOException("Duplicate entry 'second@example.test' for key 'users_email_unique'"), observabilityRequest());
+        app()->terminate();
+
+        Http::assertSentCount(1);
+    });
 
     it('report 中に未解決のユーザーを解決しない', function () {
         $request = observabilityRequest();

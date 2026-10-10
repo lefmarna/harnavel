@@ -46,22 +46,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->ensureDebugDisabledInProduction();
+        $this->ensureDebugDisabledOnPublicHosts();
         $this->configurePasskeySecret();
         $this->configureDefaults();
         $this->registerEventListeners();
     }
 
     /**
-     * 例外画面から環境変数やスタックトレースを公開したまま運用しない。
+     * 例外画面から環境変数やスタックトレースを公開したまま運用しない。develop も公開ホストに置く。
      */
-    private function ensureDebugDisabledInProduction(): void
+    private function ensureDebugDisabledOnPublicHosts(): void
     {
-        if ($this->app->isProduction() && config('app.debug')) {
+        if ($this->app->environment(['production', 'develop']) && config('app.debug')) {
             // HTTP では起動中の例外も例外ハンドラーが描画するため、先に詳細表示を止めてから拒否する。
             Config::set('app.debug', false);
 
-            throw new RuntimeException('APP_DEBUG must be disabled in production.');
+            throw new RuntimeException('APP_DEBUG must be disabled in production and develop.');
         }
     }
 

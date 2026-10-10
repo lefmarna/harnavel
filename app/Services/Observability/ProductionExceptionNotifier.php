@@ -117,7 +117,6 @@ class ProductionExceptionNotifier
                         'environment' => app()->environment(),
                         'status' => $statusCode,
                         'exception' => $exception::class,
-                        'message' => $this->exceptionMessage($exception),
                         'method' => $request?->method(),
                         'url' => $request !== null ? SensitiveUrl::redact($request) : null,
                         'route' => $request?->route()?->getName(),
@@ -162,7 +161,8 @@ class ProductionExceptionNotifier
         $fingerprint = implode('|', [
             app()->environment(),
             $exception::class,
-            hash('sha256', $this->exceptionMessage($exception)),
+            // DB の例外は値ごとにメッセージが変わるため、同じ経路の障害としてまとめる。
+            $exception instanceof PDOException ? null : hash('sha256', $exception->getMessage()),
             $request?->path(),
             $request?->route()?->getName(),
         ]);
@@ -211,15 +211,6 @@ class ProductionExceptionNotifier
         $userAgent = $request?->userAgent();
 
         return is_string($userAgent) ? Str::limit($userAgent, 200) : null;
-    }
-
-    private function exceptionMessage(Throwable $exception): string
-    {
-        if ($exception instanceof PDOException) {
-            return 'Database exception message omitted.';
-        }
-
-        return Str::limit($exception->getMessage(), 500);
     }
 
     private function userId(): int|string|null

@@ -45,6 +45,24 @@ register a second redirect URI with Google, and the callback treats an authentic
 reconfirmation only when the session started one. Any confirmation regenerates the session ID, so a
 copied session cookie never inherits the owner's confirmation.
 
+Signing in again with Google proves that the browser holds a Google session for the linked account,
+not that the owner has just entered a Google password: `prompt=select_account` only shows the
+account chooser, and Google does not support requests to reauthenticate a Google account. It stops a
+thief who copied only the app's session cookie, which is what confirmation guards against here. It
+does not stop one who also holds the owner's Google session, such as malware that copied the
+browser's cookies or a person at the owner's unlocked computer. A stricter check would keep that
+attacker out of settings but not out of the account, because the same Google session signs in to it
+directly, and when the account's address is that Google account's mailbox it receives password reset
+as well. The template therefore does not request Google's `auth_time` claim: Google returns it only
+to verified apps that enable it, only in the ID token, which Socialite does not verify, and an old
+value could only be refused, leaving the owner to sign out of Google and try again. Google
+confirmation is offered only to accounts without a password, and the server checks this both when
+it starts and when Google returns, so a Google session alone never passes for an account that has
+one, even one whose password was set in another tab mid-confirmation. Against an attacker holding the
+Google session, the template relies on Google's protection of its sessions, the mail sent when a
+credential is added or the address changes, and the owner's ability to revoke sessions by resetting
+the password, deleting a passkey, or unlinking Google.
+
 A new email address takes effect only after a link sent to it is opened, so a session thief cannot
 point password reset at an address they do not control without the owner's old address hearing of
 it. The switch marks the account verified and mails the previous address a link, valid for seven

@@ -63,10 +63,11 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 
     /**
      * Google での再ログインを本人確認として使えるか。
+     * パスワードがあればそちらで確認させ、Google のログイン状態だけでは通さない（TADR-0016）。
      */
     public function canConfirmWithGoogle(): bool
     {
-        return $this->google_id !== null && GoogleOAuth::isConfigured();
+        return $this->password === null && $this->google_id !== null && GoogleOAuth::isConfigured();
     }
 
     /**

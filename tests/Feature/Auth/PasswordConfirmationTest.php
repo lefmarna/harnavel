@@ -50,17 +50,18 @@ describe('パスワード確認', function () {
                 ->where('hasPasskeys', true));
     });
 
-    it('Google 連携済みのユーザーに Google での確認を案内する', function (bool $configured, ?string $googleId, bool $expected) {
+    it('パスワードのない Google 連携済みのユーザーに Google での確認を案内する', function (bool $configured, ?string $googleId, bool $hasPassword, bool $expected) {
         configureGoogleOAuth($configured);
-        $user = User::factory()->create(['password' => null, 'google_id' => $googleId]);
+        $user = User::factory()->create(['google_id' => $googleId, ...($hasPassword ? [] : ['password' => null])]);
 
         $this->actingAs($user)
             ->get(route('password.confirm'))
             ->assertInertia(fn (Assert $page) => $page->where('canConfirmWithGoogle', $expected));
     })->with([
-        'Google 連携済み' => [true, 'google-123', true],
-        'Google 未連携' => [true, null, false],
-        'Google ログイン未設定' => [false, 'google-123', false],
+        'Google 連携済み' => [true, 'google-123', false, true],
+        'Google 未連携' => [true, null, false, false],
+        'Google ログイン未設定' => [false, 'google-123', false, false],
+        'パスワードあり' => [true, 'google-123', true, false],
     ]);
 
     it('Google での確認に失敗した理由を表示する', function () {

@@ -144,6 +144,12 @@ class GoogleAuthController extends Controller
 
         $user = $this->currentUser($request);
 
+        // 確認を始めた後に別のタブでパスワードを設定していれば、そちらで確認させる。
+        if (! $user->canConfirmWithGoogle()) {
+            return redirect()->route('password.confirm')
+                ->with('error', __('auth.google.reauthentication_unavailable'));
+        }
+
         try {
             /** @var GoogleProvider $driver */
             $driver = Socialite::driver('google');
@@ -156,7 +162,7 @@ class GoogleAuthController extends Controller
                 ->with('error', __('auth.google.failed'));
         }
 
-        if ($user->google_id === null || $googleUser->getId() !== $user->google_id) {
+        if ($googleUser->getId() !== $user->google_id) {
             Log::warning('Google reauthentication used a different Google account.');
 
             return redirect()->route('password.confirm')

@@ -6,6 +6,7 @@ use App\Http\Middleware\AddSecurityHeaders;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RejectRevokedSessions;
 use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Http\Middleware\RotateSessionOnConfirmation;
 use App\Services\Observability\ProductionExceptionNotifier;
@@ -53,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 AssignRequestId::class,
             ],
             append: [
+                RejectRevokedSessions::class,
                 RotateSessionOnConfirmation::class,
                 HandleAppearance::class,
                 HandleInertiaRequests::class,

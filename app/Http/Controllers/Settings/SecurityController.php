@@ -7,9 +7,12 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
+use App\Repositories\User\UserRepositoryContract;
 use App\ViewModels\Settings\SecurityPageViewModel;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -19,6 +22,8 @@ use Laravel\Passkeys\Passkey;
 
 class SecurityController extends Controller
 {
+    public function __construct(private readonly UserRepositoryContract $userRepository) {}
+
     public function edit(Request $request): Response
     {
         $user = $this->currentUser($request);
@@ -41,12 +46,24 @@ class SecurityController extends Controller
         /** @var array{password: string} $validated */
         $validated = $request->validated();
 
-        $user->password = Hash::make($validated['password']);
-        $user->revokeSessions(exceptSessionId: $request->session()->getId());
-        $user->save();
+        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+        $key = $user->getKey();
+
+        DB::transaction(function () use ($user, $key, $validated): void {
+            // リクエストの最初に読んだ世代から進めると、途中の再設定で進んだ世代を巻き戻すため、ロックした行から進める。
+            $lockedUser = $this->userRepository->find($key, lock: true)
+                ?? throw (new ModelNotFoundException)->setModel(User::class, [$key]);
+
+            $lockedUser->password = Hash::make($validated['password']);
+            $lockedUser->revokeSessions();
+            $this->userRepository->save($lockedUser);
+
+            $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
+        });
 
         // 本人の Cookie を盗んだ第三者も同じセッション ID を持つため、ログインを保ったまま ID を作り直す。
         $request->session()->migrate(destroy: true);
+        $user->recordSessionGeneration($request->session());
 
         Log::info('User password was changed.', ['user_id' => $user->getKey()]);
 

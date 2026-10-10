@@ -7,13 +7,13 @@ namespace App\Models;
 use App\Support\GoogleOAuth;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
@@ -29,6 +29,20 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable;
+
+    /**
+     * ログインした時点の世代を記録するセッションのキー。
+     */
+    public const SESSION_GENERATION_KEY = 'session_generation';
+
+    /**
+     * DB の既定値と揃え、作成しただけで読み直していないモデルでも世代を比べられるようにする。
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'session_generation' => 0,
+    ];
 
     /**
      * iOS Safari が生バイナリを破損するため、64バイトの ASCII hex を使う。
@@ -70,25 +84,33 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
-     * 窃取されたセッションとログイン保持 Cookie を使えなくする。remember_token は呼び出し側で保存する。
-     * 端末ごとのセッションを列挙できるのは DB セッションドライバーだけなので、それを前提にする。
+     * 窃取されたセッションとログイン保持 Cookie を使えなくする。保存は呼び出し側で行う。
+     * セッションの行は消さず、世代を進めて RejectRevokedSessions に弾かせる。行を消すだけでは、
+     * 失効と同時に照合を終えたログインが、失効の後に新しい行を作って残る（TADR-0016）。
+     * 前に読んだ値から進めると並行する失効で進んだ世代を巻き戻すため、ロックして読み直した行で呼ぶ。
+     * 今のセッションを残すときは、保存の後に recordSessionGeneration() で新しい世代を記録する。
      */
-    public function revokeSessions(?string $exceptSessionId = null): void
+    public function revokeSessions(): void
     {
         $this->setRememberToken(Str::random(60));
+        $this->session_generation++;
+    }
 
-        /** @var string|null $connection */
-        $connection = Config::get('session.connection');
+    /**
+     * このユーザーの今の世代を、ログインしたセッションへ記録する。
+     */
+    public function recordSessionGeneration(Session $session): void
+    {
+        $session->put(self::SESSION_GENERATION_KEY, $this->session_generation);
+    }
 
-        $sessions = DB::connection($connection)
-            ->table(Config::string('session.table'))
-            ->where('user_id', $this->getKey());
-
-        if ($exceptSessionId !== null) {
-            $sessions->where('id', '!=', $exceptSessionId);
-        }
-
-        $sessions->delete();
+    /**
+     * セッションに記録した世代が、このユーザーの今の世代と同じか。
+     * 世代を記録する前からのセッションは、まだ一度も失効させていない世代 0 として扱う。
+     */
+    public function isCurrentSessionGeneration(Session $session): bool
+    {
+        return $session->get(self::SESSION_GENERATION_KEY, 0) === $this->session_generation;
     }
 
     /**
@@ -101,6 +123,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'session_generation' => 'integer',
         ];
     }
 }

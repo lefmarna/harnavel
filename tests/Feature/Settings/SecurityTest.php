@@ -58,16 +58,15 @@ describe('セキュリティ設定', function () {
 
     // 乗っ取りに気づいて変更しても、攻撃者の端末がログインしたまま残らないようにする。
     it('パスワードを更新すると他の端末のセッションとログイン保持を失効させる', function () {
+        config(['session.driver' => 'database']);
         $user = User::factory()->create(['remember_token' => 'old-remember-token']);
         $otherUser = User::factory()->create();
-        $currentSessionId = str_repeat('a', 40);
+        $otherDeviceSessionId = loginFromNewDevice($user);
+        $otherUsersSessionId = loginFromNewDevice($otherUser);
+        $currentSessionId = loginFromNewDevice($user);
 
-        insertDatabaseSession($currentSessionId, $user);
-        insertDatabaseSession(str_repeat('b', 40), $user);
-        insertDatabaseSession(str_repeat('c', 40), $otherUser);
-
+        forgetRequestState();
         $this
-            ->actingAs($user)
             ->withCookie(config('session.cookie'), $currentSessionId)
             ->withSession(['auth.password_confirmed_at' => time()])
             ->from(route('security.edit'))
@@ -77,13 +76,15 @@ describe('セキュリティ設定', function () {
                 'password_confirmation' => 'new-password1',
             ])
             ->assertSessionHasNoErrors();
+        $renewedSessionId = lastSessionId();
 
         // 本人の Cookie を盗んだ第三者も同じ ID を持つため、本人のログインは保ったまま ID を作り直す。
-        expect(databaseSessionIds())->not->toContain(str_repeat('b', 40))
-            ->toContain(str_repeat('c', 40))
-            ->and(app('session.store')->getId())->not->toBe($currentSessionId)
+        expect($renewedSessionId)->not->toBe($currentSessionId)
             ->and($user->refresh()->remember_token)->not->toBe('old-remember-token');
-        $this->assertAuthenticatedAs($user);
+        visitDashboardFrom($renewedSessionId)->assertOk();
+        visitDashboardFrom($currentSessionId)->assertRedirect(route('login'));
+        visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
+        visitDashboardFrom($otherUsersSessionId)->assertOk();
     });
 
     it('bcrypt形式の文字列でパスワード更新しても平文としてハッシュ化される', function () {

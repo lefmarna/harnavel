@@ -1,11 +1,23 @@
 # Account takeover defenses
 
 A stolen session must not outlive the owner's response to it. Changing or resetting a password, and
-confirming a Google link on an account whose email was never verified, delete the user's other rows
-from the `sessions` table and rotate `remember_token`. Laravel's `AuthenticateSession` is not used:
-it skips users without a password, so Google-only and passkey-only accounts would keep every stolen
-session. Deleting rows only works with the database session driver; an app that changes the driver
-must replace this revocation.
+confirming a Google link on an account whose email was never verified, advance the user's
+`session_generation` and rotate `remember_token`. Each login records the generation of the user it
+authenticated in the session, and every web request rejects a session whose recorded generation
+differs from the user's. The value comes from the user loaded when credentials were checked, so a
+login that passed the check just before a reset keeps the old generation and is rejected on its next
+request. Deleting the user's rows from the `sessions` table could not do this: such a login writes
+its row after the deletion. Sessions from before the column existed count as generation 0, so
+introducing it logs no one out. Every revocation advances the generation of the row it has locked,
+because advancing a value read earlier would move it back past a concurrent reset and revive the
+sessions that reset revoked. Changing the password keeps the current session by recording the new
+generation in it. This works with any session driver.
+
+Laravel's `AuthenticateSession` is not used: it skips users without a password, so Google-only and
+passkey-only accounts would keep every stolen session, and it adopts the current password hash for a
+session that has none, so a login racing a reset survives. Rejected sessions are logged out with
+`logoutCurrentDevice()`, which leaves `remember_token` alone; `logout()` would rotate it and sign out
+the owner's devices that logged in after the revocation.
 
 An unverified account may have been registered by someone other than the email's owner. When the
 owner proves the address through a Google link or a password reset, the account becomes verified

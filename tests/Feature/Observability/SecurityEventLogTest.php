@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthService;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Laravel\Passkeys\Events\PasskeyDeleted;
 use Laravel\Passkeys\Events\PasskeyRegistered;
@@ -81,15 +82,17 @@ describe('セキュリティイベントのログ', function () {
         Log::shouldHaveReceived('info')->with('User password was changed.', ['user_id' => $user->getKey()])->once();
     });
 
-    it('メールアドレスの変更を記録し、名前だけの変更は記録しない', function () {
+    // 切り替えの記録は、新しいアドレスを確認したとき（EmailChangeTest）。
+    it('メールアドレスの変更の申請を記録し、名前だけの変更は記録しない', function () {
+        Mail::fake();
         $user = User::factory()->create(['name' => 'Before', 'email' => 'before@example.com']);
         $this->actingAs($user)->withSession(['auth.password_confirmed_at' => time()]);
 
         $this->patch(route('profile.update'), ['name' => 'After', 'email' => 'before@example.com']);
-        Log::shouldNotHaveReceived('info', ['User email was changed.', ['user_id' => $user->getKey()]]);
+        Log::shouldNotHaveReceived('info', ['User email change was requested.', ['user_id' => $user->getKey()]]);
 
         $this->patch(route('profile.update'), ['name' => 'After', 'email' => 'after@example.com']);
-        Log::shouldHaveReceived('info')->with('User email was changed.', ['user_id' => $user->getKey()])->once();
+        Log::shouldHaveReceived('info')->with('User email change was requested.', ['user_id' => $user->getKey()])->once();
     });
 
     it('アカウント削除を記録する', function () {

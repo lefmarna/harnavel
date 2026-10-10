@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Settings\EmailChangeController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\ViewModels\StaticPageViewModel;
@@ -16,9 +17,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/profile', [ProfileController::class, 'edit'])
         ->middleware('password.confirm')
         ->name('profile.edit');
+    // メールアドレスを変えると確認メールを送るため、任意のアドレスへ大量に送らせない。
     Route::patch('settings/profile', [ProfileController::class, 'update'])
-        ->middleware('password.confirm')
+        ->middleware(['password.confirm', 'throttle:6,1'])
         ->name('profile.update');
+});
+
+// メールで届いたリンクから開くため、ログインを求めない（EmailChangeController）。
+Route::prefix('settings/email')->name('email-change.')->controller(EmailChangeController::class)->group(function () {
+    Route::get('verify/{userId}', 'verify')->name('verify');
+    Route::post('verify/{userId}', 'complete')->middleware('throttle:10,1')->name('complete');
+    Route::get('revert/{userId}', 'revert')->name('revert');
+    Route::post('revert/{userId}', 'completeRevert')->middleware('throttle:10,1')->name('revert.complete');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

@@ -101,3 +101,29 @@ export const setUserPassword = (email: string, password: string | null): void =>
     `App\\Models\\User::query()->where('email', ${phpString(email)})->update(['password' => ${hashed}]);`,
   ]);
 };
+
+const lastLine = (output: string): string => output.trim().split("\n").at(-1)?.trim() ?? "";
+
+/** メールで届く確認リンクを、同じ手順で作り直して受け取る。 */
+export const requestEmailChangeLink = (email: string, newEmail: string): string =>
+  lastLine(
+    runArtisan([
+      "tinker",
+      "--execute",
+      "Illuminate\\Support\\Facades\\Mail::fake();" +
+        " app(App\\Services\\Account\\EmailChangeService::class)->request(" +
+        `App\\Models\\User::query()->where('email', ${phpString(email)})->firstOrFail(), ${phpString(newEmail)});` +
+        " echo Illuminate\\Support\\Facades\\Mail::sent(App\\Mail\\VerifyNewEmailMail::class)->first()->url, PHP_EOL;",
+    ]),
+  );
+
+/** 切り替え後に旧アドレスへ届く取り消しリンクを、同じ手順で作り直して受け取る。 */
+export const emailChangeRevertLink = (currentEmail: string, previousEmail: string): string =>
+  lastLine(
+    runArtisan([
+      "tinker",
+      "--execute",
+      "echo app(App\\Services\\Account\\EmailChangeService::class)->revertLink(" +
+        `App\\Models\\User::query()->where('email', ${phpString(currentEmail)})->firstOrFail(), ${phpString(previousEmail)}), PHP_EOL;`,
+    ]),
+  );

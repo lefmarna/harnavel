@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Mail\VerifyNewEmailMail;
 use App\Models\User;
 use App\ViewModels\Settings\ProfilePageViewModel;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 
 mutates(ProfilePageViewModel::class);
@@ -32,65 +34,52 @@ describe('プロフィール設定', function () {
             );
     });
 
-    it('プロフィール情報を更新できる', function () {
+    it('名前を更新できる', function () {
         $user = User::factory()->create();
 
         $response = $this
             ->actingAs($user)
             ->patch(route('profile.update'), [
                 'name' => 'Test User',
-                'email' => 'test@example.com',
+                'email' => $user->email,
             ]);
 
         $response
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('profile.edit'));
 
-        $user->refresh();
-
-        expect($user->name)->toBe('Test User');
-        expect($user->email)->toBe('test@example.com');
-        expect($user->email_verified_at)->toBeNull();
+        expect($user->refresh()->name)->toBe('Test User');
     });
 
-    it('プロフィール更新時のメールアドレスは小文字で保存される', function () {
+    it('プロフィール更新時の新しいメールアドレスは小文字にして確認メールを送る', function () {
+        Mail::fake();
         $user = User::factory()->create();
 
-        $response = $this
+        $this
             ->actingAs($user)
             ->patch(route('profile.update'), [
                 'name' => 'Test User',
                 'email' => 'Test.User@Example.COM',
-            ]);
+            ])
+            ->assertSessionHasNoErrors();
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
-
-        $user->refresh();
-
-        expect($user->email)->toBe('test.user@example.com');
-        expect($user->email_verified_at)->toBeNull();
+        Mail::assertSent(VerifyNewEmailMail::class, fn (VerifyNewEmailMail $mail): bool => $mail->hasTo('test.user@example.com'));
     });
 
-    it('lowercase usernamesが無効ならプロフィール更新時にメールアドレスの大文字小文字を維持する', function () {
+    it('lowercase usernamesが無効なら新しいメールアドレスの大文字小文字を維持して確認メールを送る', function () {
         config(['fortify.lowercase_usernames' => false]);
-
+        Mail::fake();
         $user = User::factory()->create();
 
-        $response = $this
+        $this
             ->actingAs($user)
             ->patch(route('profile.update'), [
                 'name' => 'Test User',
                 'email' => 'Test.User@Example.COM',
-            ]);
+            ])
+            ->assertSessionHasNoErrors();
 
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
-
-        expect($user->refresh()->email)->toBe('Test.User@Example.COM');
-        expect($user->email_verified_at)->toBeNull();
+        Mail::assertSent(VerifyNewEmailMail::class, fn (VerifyNewEmailMail $mail): bool => $mail->hasTo('Test.User@Example.COM'));
     });
 
     it('lowercase usernamesが無効ならメールアドレスの大文字小文字だけの変更ではメール認証状態を維持する', function () {

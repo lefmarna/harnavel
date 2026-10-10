@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Actions\Passkeys\StorePasskey;
 use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Listeners\LogSecurityEvents;
 use App\Listeners\ShareAuthenticatedUserLogContext;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Passkeys\Actions\StorePasskey as BaseStorePasskey;
 use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
@@ -33,6 +35,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // パッケージの登録処理を、失効と競合しない版に差し替える（TADR-0016）。
+        $this->app->bind(BaseStorePasskey::class, StorePasskey::class);
+
         $this->app->bind(RequirePasswordWhenSet::class, function (Application $app): RequirePasswordWhenSet {
             $timeout = Config::get('auth.password_timeout');
 

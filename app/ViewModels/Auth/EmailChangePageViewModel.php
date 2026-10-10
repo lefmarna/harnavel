@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\ViewModels\Auth;
+
+use App\ViewModels\PageViewModel;
+use Inertia\RenderContext;
+
+/**
+ * メールで届いたリンクから開く、メールアドレス変更の確定（verify）と取り消し（revert）の画面。
+ */
+final readonly class EmailChangePageViewModel extends PageViewModel
+{
+    /**
+     * @param  'verify'|'revert'  $action
+     * @param  'confirm'|'success'|'error'  $status
+     */
+    public function __construct(
+        private string $action,
+        private string $status,
+        private ?string $actionUrl = null,
+        private ?string $email = null,
+    ) {}
+
+    /**
+     * @return array{
+     *     status: string,
+     *     actionUrl?: string,
+     *     email?: string,
+     *     seo: array{title: string, description: string, robots: string}
+     * }
+     */
+    public function toInertiaProperties(RenderContext $context): array
+    {
+        $props = ['status' => $this->status];
+
+        if ($this->actionUrl !== null) {
+            $props['actionUrl'] = $this->actionUrl;
+        }
+
+        if ($this->email !== null) {
+            $props['email'] = $this->email;
+        }
+
+        $props['seo'] = $this->noIndexSeo(
+            __("pages.auth.email_change.{$this->action}.{$this->status}.title"),
+            __("pages.auth.email_change.{$this->action}.{$this->status}.description"),
+        );
+
+        return $props;
+    }
+}

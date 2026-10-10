@@ -66,6 +66,36 @@ return [
                 'description' => 'Googleログイン連携に失敗しました。',
             ],
         ],
+        'email_change' => [
+            'verify' => [
+                'confirm' => [
+                    'title' => 'メールアドレス変更の確認',
+                    'description' => '新しいメールアドレスへの変更を確認してください。',
+                ],
+                'success' => [
+                    'title' => 'メールアドレス変更完了',
+                    'description' => 'メールアドレスの変更が完了しました。',
+                ],
+                'error' => [
+                    'title' => 'メールアドレス変更エラー',
+                    'description' => 'メールアドレスを変更できませんでした。',
+                ],
+            ],
+            'revert' => [
+                'confirm' => [
+                    'title' => 'メールアドレス変更の取り消し',
+                    'description' => 'メールアドレスの変更を取り消すか確認してください。',
+                ],
+                'success' => [
+                    'title' => 'メールアドレス変更の取り消し完了',
+                    'description' => 'メールアドレスの変更を取り消しました。',
+                ],
+                'error' => [
+                    'title' => 'メールアドレス変更の取り消しエラー',
+                    'description' => 'メールアドレスの変更を取り消せませんでした。',
+                ],
+            ],
+        ],
     ],
 
     'settings' => [

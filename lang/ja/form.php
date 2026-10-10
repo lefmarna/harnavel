@@ -8,8 +8,8 @@ declare(strict_types=1);
 |--------------------------------------------------------------------------
 |
 | validation.php の 'custom' へは置けない。'custom' は field.rule の単一グローバル
-| マップだが、password は「新しいパスワード」（PasswordUpdate）と「削除確認の
-| パスワード」（ProfileDelete）で意味が違い、同じキーに 2 つの文言を置けない。
+| マップなので、パスワード変更（PasswordUpdate）の「新しいパスワード」という文言が、
+| 登録や再設定など password を使うほかの画面にも出てしまう。
 |
 | 属性名の切り分け:
 | 全画面で同じ意味になる既定は validation.php の 'attributes' に置いたままにする。

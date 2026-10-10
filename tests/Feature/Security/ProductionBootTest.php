@@ -6,15 +6,16 @@ use Tests\Support\AppSubprocess;
 
 describe('本番環境の起動時検査', function () {
     // 例外画面に環境変数やスタックトレースを出したまま公開しない。
-    it('APP_DEBUG が有効だと起動しない', function () {
+    // develop も公開ホストにあるため、本番と同じく詳細表示を許さない。
+    it('APP_DEBUG が有効だと起動しない', function (string $environment) {
         $process = AppSubprocess::php(
             'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();',
-            AppSubprocess::productionEnvironment(['APP_DEBUG' => 'true']),
+            AppSubprocess::productionEnvironment(['APP_ENV' => $environment, 'APP_DEBUG' => 'true']),
         );
 
         expect($process->isSuccessful())->toBeFalse()
             ->and($process->getOutput().$process->getErrorOutput())->toContain('APP_DEBUG');
-    });
+    })->with(['production', 'develop']);
 
     it('APP_DEBUG が有効な HTTP リクエストでも拒否理由と内部情報を返さない', function () {
         $script = <<<'PHP'

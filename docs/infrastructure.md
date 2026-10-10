@@ -15,6 +15,20 @@ A vendor-managed nginx layer fronts an Apache layer that reads `.htaccess`. Prod
 needs a server layer therefore belongs in `.htaccess`; the nginx configuration in this repository is
 local only.
 
+## Client address and HTTPS
+
+Last measured: October 2026, on one production domain.
+
+Without any trusted proxy configured, `$request->ip()` returned each client's public address: logged
+addresses spread across many public ranges, and a request carrying a forged `X-Forwarded-For` was
+logged with the sender's real address. Pages carried the `Strict-Transport-Security` header that the
+app adds only when `$request->isSecure()` holds, while static files served without PHP did not, so
+the vendor layers report HTTPS to PHP. Per-IP rate limits therefore count real clients, and
+production configures no trusted proxies.
+
+Recheck this assumption after changing the hosting provider or adding a CDN or another proxy in
+front of the site, or when logged addresses collapse to one internal range.
+
 ## OPcache
 
 Last measured: September 2026.

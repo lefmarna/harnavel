@@ -45,4 +45,7 @@ return [
         'email_change_failed' => '確認メールを送信できませんでした。時間をおいて再度お試しください。',
         'email_change_too_soon' => 'メールアドレスは、前回の変更から7日間は変更できません。',
     ],
+    'google_unlink' => [
+        'no_other_credential' => 'Googleログイン連携を解除する前に、パスワードを設定するかパスキーを追加してください。',
+    ],
 ];

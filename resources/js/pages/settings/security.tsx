@@ -2,7 +2,7 @@ import { Transition } from "@headlessui/react";
 import { Form, usePage } from "@inertiajs/react";
 import { useRef } from "react";
 
-import { update } from "@/actions/App/Http/Controllers/Settings/SecurityController";
+import { destroyGoogle, update } from "@/actions/App/Http/Controllers/Settings/SecurityController";
 import Heading from "@/components/heading";
 import InputError from "@/components/input-error";
 import ManagePasskeys from "@/components/manage-passkeys";
@@ -24,9 +24,16 @@ const breadcrumbs: BreadcrumbItem[] = [
 type Props = {
   canManagePasskeys: boolean;
   passkeys: Passkey[];
+  googleLinked: boolean;
+  canUnlinkGoogle: boolean;
 };
 
-export default function Security({ canManagePasskeys, passkeys }: Props) {
+export default function Security({
+  canManagePasskeys,
+  passkeys,
+  googleLinked,
+  canUnlinkGoogle,
+}: Props) {
   const { auth, flash } = usePage<SharedData>().props;
   const hasPassword = auth.hasPassword;
   const passwordInput = useRef<HTMLInputElement>(null);
@@ -140,6 +147,56 @@ export default function Security({ canManagePasskeys, passkeys }: Props) {
             {flash.status === "passkey-deleted" && (
               <p role="status" className="text-sm font-medium text-green-600 dark:text-green-400">
                 パスキーを削除しました。
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <Heading
+              variant="small"
+              title="Googleログイン連携"
+              description="心当たりのない連携は解除してください"
+            />
+
+            {googleLinked ? (
+              <Form
+                {...destroyGoogle.form()}
+                options={{ preserveScroll: true }}
+                className="space-y-4"
+              >
+                {({ errors, processing }) => (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Googleアカウントと連携しています。
+                    </p>
+
+                    {!canUnlinkGoogle && (
+                      <p className="text-sm text-muted-foreground">
+                        解除するには、先にパスワードを設定するかパスキーを追加してください。
+                      </p>
+                    )}
+
+                    <Button
+                      variant="destructive"
+                      disabled={processing || !canUnlinkGoogle}
+                      data-test="unlink-google-button"
+                    >
+                      連携を解除
+                    </Button>
+
+                    <InputError message={errors.google} />
+                  </>
+                )}
+              </Form>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Googleアカウントとは連携していません。
+              </p>
+            )}
+
+            {flash.status === "google-unlinked" && (
+              <p role="status" className="text-sm font-medium text-green-600 dark:text-green-400">
+                Googleログイン連携を解除しました。
               </p>
             )}
           </div>

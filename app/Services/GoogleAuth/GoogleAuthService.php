@@ -9,6 +9,7 @@ use App\Exceptions\GoogleLinkConfirmationPendingException;
 use App\Mail\LinkGoogleAccountMail;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
+use App\Services\Account\SecurityNotifier;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
@@ -22,7 +23,10 @@ class GoogleAuthService implements GoogleAuthServiceContract
 {
     private const MAX_CREATE_RETRIES = 5;
 
-    public function __construct(private readonly UserRepositoryContract $userRepository) {}
+    public function __construct(
+        private readonly UserRepositoryContract $userRepository,
+        private readonly SecurityNotifier $securityNotifier,
+    ) {}
 
     public function findOrCreate(string $googleId, string $email, ?string $name): User
     {
@@ -70,10 +74,12 @@ class GoogleAuthService implements GoogleAuthServiceContract
         throw new GoogleAuthException(__('auth.google.failed'));
     }
 
-    public function confirmLink(string $userId, string $googleId, string $email): bool
+    public function confirmLink(string $userId, string $googleId, string $email, string $sessionGeneration): bool
     {
+        $linkedUser = null;
+
         try {
-            return DB::transaction(function () use ($userId, $googleId, $email): bool {
+            $confirmed = DB::transaction(function () use ($userId, $googleId, $email, $sessionGeneration, &$linkedUser): bool {
                 $user = $this->userRepository->find($userId, lock: true);
 
                 if (! $user instanceof User) {
@@ -104,6 +110,15 @@ class GoogleAuthService implements GoogleAuthServiceContract
                     return false;
                 }
 
+                // 送った後にセッションを失効させていれば、解除した連携を古いリンクで戻させない（TADR-0016）。
+                if ((string) $user->session_generation !== $sessionGeneration) {
+                    Log::warning('Google link confirmation failed because the sessions were revoked after the link was sent.', [
+                        'user_id' => $userId,
+                    ]);
+
+                    return false;
+                }
+
                 $revokesExistingCredentials = $user->email_verified_at === null;
 
                 if ($revokesExistingCredentials) {
@@ -119,13 +134,22 @@ class GoogleAuthService implements GoogleAuthServiceContract
                     'existing_credentials_revoked' => $revokesExistingCredentials,
                 ]);
 
+                $linkedUser = $user;
+
                 return true;
             });
         } catch (UniqueConstraintViolationException) {
-            $linkedUser = $this->userRepository->findByGoogleId($googleId);
+            $existingUser = $this->userRepository->findByGoogleId($googleId);
 
-            return $linkedUser instanceof User && $this->userKey($linkedUser) === $userId;
+            return $existingUser instanceof User && $this->userKey($existingUser) === $userId;
         }
+
+        // 新しく連携したときだけ、確定した後に知らせる。
+        if ($linkedUser instanceof User) {
+            $this->securityNotifier->notify($linkedUser, 'google_linked');
+        }
+
+        return $confirmed;
     }
 
     private function findOrCreateWithinTransaction(string $googleId, string $email, string $name, bool $caseInsensitiveEmail, bool $lowercaseUsernames): User
@@ -222,18 +246,19 @@ class GoogleAuthService implements GoogleAuthServiceContract
             now()->addHour(),
             [
                 'userId' => $this->userKey($user),
-                'payload' => $this->encryptLinkPayload($googleId, $email),
+                'payload' => $this->encryptLinkPayload($googleId, $email, (string) $user->session_generation),
             ],
         );
 
         Mail::to($user->email)->send(new LinkGoogleAccountMail($user, $signedUrl));
     }
 
-    private function encryptLinkPayload(string $googleId, string $email): string
+    private function encryptLinkPayload(string $googleId, string $email, string $sessionGeneration): string
     {
         return Crypt::encryptString(json_encode([
             'google_id' => $googleId,
             'email' => $email,
+            'session_generation' => $sessionGeneration,
         ], JSON_THROW_ON_ERROR));
     }
 

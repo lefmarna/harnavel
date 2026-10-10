@@ -371,7 +371,7 @@ describe('SEO メタ契約', function () {
     })->with([
         'dashboard' => ['dashboard', 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。'],
         'profile' => ['profile.edit', 'プロフィール設定', '名前とメールアドレスを管理します。'],
-        'security' => ['security.edit', 'セキュリティ設定', 'パスワードとパスキーを管理します。'],
+        'security' => ['security.edit', 'セキュリティ設定', 'パスワード、パスキー、Googleログイン連携を管理します。'],
         'appearance' => ['appearance.edit', '表示設定', 'アカウントの表示設定を変更します。'],
     ]);
 

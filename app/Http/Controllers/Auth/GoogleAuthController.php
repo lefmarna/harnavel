@@ -210,7 +210,7 @@ class GoogleAuthController extends Controller
         }
 
         try {
-            if (! $this->googleAuthService->confirmLink($userId, $linkPayload['google_id'], $linkPayload['email'])) {
+            if (! $this->googleAuthService->confirmLink($userId, $linkPayload['google_id'], $linkPayload['email'], $linkPayload['session_generation'])) {
                 Log::warning('Google link verification could not be confirmed.', [
                     'user_id' => $userId,
                 ]);
@@ -227,7 +227,7 @@ class GoogleAuthController extends Controller
     }
 
     /**
-     * @return array{google_id: string, email: string}|null
+     * @return array{google_id: string, email: string, session_generation: string}|null
      */
     private function validatedGoogleLinkPayload(Request $request, string $userId): ?array
     {
@@ -274,14 +274,17 @@ class GoogleAuthController extends Controller
 
         $googleId = $decoded['google_id'] ?? null;
         $email = $decoded['email'] ?? null;
+        $sessionGeneration = $decoded['session_generation'] ?? null;
 
-        if (! is_string($googleId) || $googleId === '' || ! is_string($email) || $email === '') {
+        if (! is_string($googleId) || $googleId === '' || ! is_string($email) || $email === ''
+            || ! is_string($sessionGeneration) || $sessionGeneration === '') {
             return null;
         }
 
         return [
             'google_id' => $googleId,
             'email' => $email,
+            'session_generation' => $sessionGeneration,
         ];
     }
 

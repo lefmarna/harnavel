@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
+use App\Services\Account\SecurityNotifier;
 use App\ViewModels\Settings\SecurityPageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,10 @@ use Laravel\Passkeys\Passkey;
 
 class SecurityController extends Controller
 {
-    public function __construct(private readonly UserRepositoryContract $userRepository) {}
+    public function __construct(
+        private readonly UserRepositoryContract $userRepository,
+        private readonly SecurityNotifier $securityNotifier,
+    ) {}
 
     public function edit(Request $request): Response
     {
@@ -34,6 +38,8 @@ class SecurityController extends Controller
             new SecurityPageViewModel(
                 canManagePasskeys: $canManagePasskeys,
                 passkeys: $canManagePasskeys ? $this->passkeysOf($user) : [],
+                googleLinked: $user->google_id !== null,
+                canUnlinkGoogle: $user->google_id !== null && $this->hasOtherCredential($user),
             ),
         );
     }
@@ -61,8 +67,51 @@ class SecurityController extends Controller
         $user->recordSessionGeneration($request->session());
 
         Log::info('User password was changed.', ['user_id' => $user->getKey()]);
+        $this->securityNotifier->notify($user, 'password_changed');
 
         return back();
+    }
+
+    /**
+     * 心当たりのない連携を外せるようにする。第三者がその Google アカウントで先にログインしているかもしれないので、
+     * パスワード変更と同じく他の端末のセッションを失効させ、今の端末は ID を作り直して保つ（TADR-0016）。
+     */
+    public function destroyGoogle(Request $request): RedirectResponse
+    {
+        $user = $this->currentUser($request);
+
+        $unlinked = DB::transaction(function () use ($user): bool {
+            $lockedUser = $this->lockCurrentUser($user);
+
+            // ほかにログインの手段がなければ、解除するとログインできなくなる。
+            if (! $this->hasOtherCredential($lockedUser)) {
+                return false;
+            }
+
+            $lockedUser->google_id = null;
+            $lockedUser->revokeSessions();
+            $this->userRepository->save($lockedUser);
+
+            $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
+
+            return true;
+        });
+
+        if (! $unlinked) {
+            return back()->withErrors(['google' => __('form.google_unlink.no_other_credential')]);
+        }
+
+        $request->session()->migrate(destroy: true);
+        $user->recordSessionGeneration($request->session());
+
+        Log::info('Google account was unlinked.', ['user_id' => $user->getKey()]);
+
+        return back()->with('status', 'google-unlinked');
+    }
+
+    private function hasOtherCredential(User $user): bool
+    {
+        return $user->password !== null || $user->passkeys()->exists();
     }
 
     /**

@@ -95,12 +95,13 @@ describe('Google 認証サービス', function () {
                 ->toHaveKeys(['expires', 'payload', 'signature'])
                 ->and($query['payload'])->toBeString()->not->toBeEmpty();
 
-            /** @var array{google_id?: mixed, email?: mixed} $payload */
+            /** @var array{google_id?: mixed, email?: mixed, session_generation?: mixed} $payload */
             $payload = json_decode(Crypt::decryptString($query['payload']), true, flags: JSON_THROW_ON_ERROR);
 
             expect($payload)->toBe([
                 'google_id' => 'google-456',
                 'email' => 'existing@example.com',
+                'session_generation' => '0',
             ]);
 
             return true;
@@ -364,7 +365,7 @@ describe('Google 認証サービス', function () {
 
         $service = app(GoogleAuthService::class);
 
-        expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com'))->toBeTrue();
+        expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com', '0'))->toBeTrue();
 
         expect($existing->fresh())
             ->google_id->toBe('google-confirm')
@@ -384,7 +385,7 @@ describe('Google 認証サービス', function () {
             'credential' => ['id' => 'credential-1'],
         ]);
 
-        expect(app(GoogleAuthService::class)->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com'))->toBeTrue();
+        expect(app(GoogleAuthService::class)->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com', '0'))->toBeTrue();
 
         $existing->refresh();
 
@@ -407,7 +408,7 @@ describe('Google 認証サービス', function () {
         ]);
         $password = $existing->password;
 
-        expect(app(GoogleAuthService::class)->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com'))->toBeTrue();
+        expect(app(GoogleAuthService::class)->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com', '0'))->toBeTrue();
 
         $existing->refresh();
 
@@ -425,7 +426,7 @@ describe('Google 認証サービス', function () {
 
         $service = app(GoogleAuthService::class);
 
-        expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm.user@example.com'))->toBeTrue();
+        expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm.user@example.com', '0'))->toBeTrue();
 
         expect($existing->fresh())
             ->google_id->toBe('google-confirm')
@@ -441,7 +442,7 @@ describe('Google 認証サービス', function () {
 
         $service = app(GoogleAuthService::class);
 
-        expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'other@example.com'))->toBeFalse();
+        expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'other@example.com', '0'))->toBeFalse();
 
         expect($existing->fresh())
             ->google_id->toBeNull()
@@ -471,7 +472,7 @@ describe('Google 認証サービス', function () {
         app()->instance(UserRepositoryContract::class, $fakeRepo);
         $service = app(GoogleAuthService::class);
 
-        expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com'))->toBeTrue()
+        expect($service->confirmLink((string) $existing->getKey(), 'google-confirm', 'confirm@example.com', '0'))->toBeTrue()
             ->and($foundId)->toBe((string) $existing->getKey())
             ->and($foundWithLock)->toBeTrue();
     });
@@ -484,7 +485,7 @@ describe('Google 認証サービス', function () {
 
         $service = app(GoogleAuthService::class);
 
-        expect($service->confirmLink('999999', 'google-confirm', 'confirm@example.com'))->toBeFalse();
+        expect($service->confirmLink('999999', 'google-confirm', 'confirm@example.com', '0'))->toBeFalse();
     });
 
     describe('リンク確認の未仕様分岐', function () {
@@ -505,7 +506,7 @@ describe('Google 認証サービス', function () {
             app()->instance(UserRepositoryContract::class, $fakeRepo);
             $service = app(GoogleAuthService::class);
 
-            expect($service->confirmLink((string) $existing->getKey(), 'google-confirmed', 'confirmed@example.com'))->toBeTrue()
+            expect($service->confirmLink((string) $existing->getKey(), 'google-confirmed', 'confirmed@example.com', '0'))->toBeTrue()
                 ->and($saveCount)->toBe(0);
         });
 
@@ -517,7 +518,7 @@ describe('Google 認証サービス', function () {
 
             $service = app(GoogleAuthService::class);
 
-            expect($service->confirmLink((string) $existing->getKey(), 'new-google', 'already-linked@example.com'))->toBeFalse();
+            expect($service->confirmLink((string) $existing->getKey(), 'new-google', 'already-linked@example.com', '0'))->toBeFalse();
 
             expect($existing->fresh())
                 ->google_id->toBe('old-google');
@@ -543,7 +544,7 @@ describe('Google 認証サービス', function () {
             app()->instance(UserRepositoryContract::class, $fakeRepo);
             $service = app(GoogleAuthService::class);
 
-            expect($service->confirmLink((string) $existing->getKey(), 'race-google', 'race-confirm@example.com'))->toBeTrue()
+            expect($service->confirmLink((string) $existing->getKey(), 'race-google', 'race-confirm@example.com', '0'))->toBeTrue()
                 ->and($saveCount)->toBe(1);
         });
     });

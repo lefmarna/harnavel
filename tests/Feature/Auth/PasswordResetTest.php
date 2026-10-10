@@ -148,12 +148,13 @@ describe('パスワード再設定', function () {
 
     // 窃取されたセッションは、本人が再設定した時点で使えなくする。
     it('パスワードを再設定すると全端末のセッションを失効させる', function () {
+        config(['session.driver' => 'database']);
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
+        $sessionId = loginFromNewDevice($user);
+        $otherUsersSessionId = loginFromNewDevice($otherUser);
 
-        insertDatabaseSession(str_repeat('a', 40), $user);
-        insertDatabaseSession(str_repeat('b', 40), $otherUser);
-
+        forgetRequestState();
         $this->post(route('password.update'), [
             'token' => Password::createToken($user),
             'email' => $user->email,
@@ -161,7 +162,8 @@ describe('パスワード再設定', function () {
             'password_confirmation' => 'new-password1',
         ])->assertSessionHasNoErrors();
 
-        expect(databaseSessionIds())->toBe([str_repeat('b', 40)]);
+        visitDashboardFrom($sessionId)->assertRedirect(route('login'));
+        visitDashboardFrom($otherUsersSessionId)->assertOk();
     });
 
     // 他人のメールで先に登録した第三者の資格情報を、持ち主が再設定で取り戻した後に残さない（TADR-0016）。

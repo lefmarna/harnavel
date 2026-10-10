@@ -60,21 +60,22 @@ describe('セキュリティイベントのログ', function () {
     it('パスワードの再設定と変更を記録する', function () {
         $user = User::factory()->create();
 
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->put(route('user-password.update'), [
+                'current_password' => UserFactory::DEFAULT_PASSWORD,
+                'password' => 'new-password1',
+                'password_confirmation' => 'new-password1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        forgetRequestState();
         $this->post(route('password.update'), [
             'token' => Password::createToken($user),
             'email' => $user->email,
-            'password' => 'new-password1',
-            'password_confirmation' => 'new-password1',
+            'password' => 'new-password2',
+            'password_confirmation' => 'new-password2',
         ])->assertSessionHasNoErrors();
-
-        $this->actingAs($user->refresh())
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->put(route('user-password.update'), [
-                'current_password' => 'new-password1',
-                'password' => 'new-password2',
-                'password_confirmation' => 'new-password2',
-            ])
-            ->assertSessionHasNoErrors();
 
         Log::shouldHaveReceived('info')->with('User password was reset.', ['user_id' => $user->getKey()])->once();
         Log::shouldHaveReceived('info')->with('User password was changed.', ['user_id' => $user->getKey()])->once();

@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Database\Factories\UserFactory;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -104,6 +106,50 @@ function databaseSessionIds(): array
 {
     /** @var list<string> */
     return DB::table('sessions')->orderBy('id')->pluck('id')->all();
+}
+
+/**
+ * テストでは前のリクエストで読み込んだユーザーとセッションがメモリに残る。
+ * 次のリクエストを、別のプロセスが受けたときと同じ状態から始める。
+ */
+function forgetRequestState(): void
+{
+    app('auth')->forgetGuards();
+    app('session')->forgetDrivers();
+    app()->forgetInstance('session.store');
+}
+
+/**
+ * 直前のリクエストが使ったセッションの ID。
+ */
+function lastSessionId(): string
+{
+    return app('session')->driver()->getId();
+}
+
+/**
+ * パスワードでログインし、その端末のセッション ID を返す。
+ */
+function loginFromNewDevice(User $user): string
+{
+    forgetRequestState();
+
+    test()->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => UserFactory::DEFAULT_PASSWORD,
+    ])->assertRedirect(config('fortify.home'));
+
+    return lastSessionId();
+}
+
+/**
+ * 指定したセッションの端末から、ログインが必要な画面を開く。
+ */
+function visitDashboardFrom(string $sessionId): TestResponse
+{
+    forgetRequestState();
+
+    return test()->withCookie(config('session.cookie'), $sessionId)->get(route('dashboard'));
 }
 
 function configureGoogleOAuth(bool $configured): void

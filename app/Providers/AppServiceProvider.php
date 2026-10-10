@@ -7,11 +7,14 @@ namespace App\Providers;
 use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Listeners\LogSecurityEvents;
 use App\Listeners\ShareAuthenticatedUserLogContext;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Authenticated;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Contracts\Routing\UrlGenerator;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
@@ -114,5 +117,12 @@ class AppServiceProvider extends ServiceProvider
     {
         Event::listen(Authenticated::class, ShareAuthenticatedUserLogContext::class);
         Event::subscribe(LogSecurityEvents::class);
+
+        // 照合に使ったユーザーの世代を残す。照合と失効が重なれば失効前の世代が残り、次のリクエストで弾かれる（TADR-0016）。
+        Event::listen(function (Login $event): void {
+            /** @var User $user 認証するのは users テーブルだけ。 */
+            $user = $event->user;
+            $user->recordSessionGeneration(app(Session::class));
+        });
     }
 }

@@ -2,8 +2,8 @@
 
 Passkeys sit beside passwords and Google sign-in as an alternative credential, so losing one
 provider never locks an account out. Password confirmation therefore guards the security page for
-any account holding a password, a passkey, or a linked Google account, confirmed by a fresh Google
-sign-in ([TADR-0016](0016-account-takeover-defenses.md)). An account with none of them reaches it
+any account holding a password, a passkey, or a linked Google account, confirmed by signing in again
+with Google ([TADR-0016](0016-account-takeover-defenses.md)). An account with none of them reaches it
 unguarded, because the alternative strands it outside the one screen that issues its first
 credential. A linked account stays guarded even when Google sign-in is not configured, so a
 configuration gap never opens settings to a stolen session.

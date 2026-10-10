@@ -425,9 +425,9 @@ describe('Google OAuth コントローラ', function () {
                 ->assertSessionHas('google_reauthentication', true);
         });
 
-        it('Google で確認できないユーザーは確認画面へ戻す', function (bool $configured, ?string $googleId) {
+        it('Google で確認できないユーザーは確認画面へ戻す', function (bool $configured, ?string $googleId, bool $hasPassword) {
             configureGoogleOAuth($configured);
-            $user = User::factory()->create(['google_id' => $googleId]);
+            $user = User::factory()->create(['google_id' => $googleId, ...($hasPassword ? [] : ['password' => null])]);
 
             $this->actingAs($user)
                 ->get(route('auth.google.reauthenticate'))
@@ -435,8 +435,10 @@ describe('Google OAuth コントローラ', function () {
                 ->assertSessionHas('error', 'Googleでの本人確認は現在利用できません。')
                 ->assertSessionMissing('google_reauthentication');
         })->with([
-            'Google 未連携' => [true, null],
-            'Google ログイン未設定' => [false, 'google-123'],
+            'Google 未連携' => [true, null, false],
+            'Google ログイン未設定' => [false, 'google-123', false],
+            // 画面に出さない Google での確認を、経路を直接開いて使わせない（TADR-0016）。
+            'パスワードあり' => [true, 'google-123', true],
         ]);
 
         it('ゲストは Google での本人確認を始められない', function () {
@@ -474,6 +476,19 @@ describe('Google OAuth コントローラ', function () {
                 ->get(route('auth.google.callback'))
                 ->assertRedirect(route('password.confirm'))
                 ->assertSessionHas('error', '連携済みのGoogleアカウントで本人確認してください。')
+                ->assertSessionMissing('auth.password_confirmed_at');
+        });
+
+        // 確認を始めた後に別のタブでパスワードを設定しても、Google のログイン状態だけで通さない（TADR-0016）。
+        it('確認を始めた後にパスワードが設定されていれば本人確認済みにしない', function () {
+            $user = User::factory()->create(['google_id' => 'google-123']);
+            fakeGoogleUser(['getId' => 'google-123']);
+
+            $this->actingAs($user)
+                ->withSession(['google_reauthentication' => true])
+                ->get(route('auth.google.callback'))
+                ->assertRedirect(route('password.confirm'))
+                ->assertSessionHas('error', 'Googleでの本人確認は現在利用できません。')
                 ->assertSessionMissing('auth.password_confirmed_at');
         });
 

@@ -1,8 +1,4 @@
-{{--
-    このビューは 2 通りの経路で出る。実行時の 503 応答と、配備時に
-    `artisan down --render='errors::503'` で焼かれる静的 HTML（.github/workflows/delivery.yml）。
-    後者はリクエストを持たないため、文言は配備時点の既定ロケールで固定される。
---}}
+{{-- 配備時に静的 HTML としても焼かれるため、リクエストを持たない場合がある（lang/ja/errors.php）。 --}}
 @php
     $requestId = request()->attributes->get('request_id');
     $hasRequestId = is_string($requestId) && $requestId !== '';

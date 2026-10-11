@@ -12,9 +12,8 @@ interface UserRepositoryContract
     public function find(string|int $id, bool $lock = false): ?User;
 
     /**
-     * $lock = true のとき id 昇順で SELECT ... FOR UPDATE を行う（デッドロック防止）。
-     * このリポジトリでは、email の大小文字非依存性は MariaDB の
-     * case-insensitive collation 前提で通常比較に委ねる。
+     * $lock = true のとき id 昇順でロックする（デッドロック防止）。email の大小文字の違いは、
+     * このメソッドと findByEmail() のどちらも MariaDB の照合順序に委ねる。
      *
      * @return Collection<int, User>
      */
@@ -24,8 +23,6 @@ interface UserRepositoryContract
 
     /**
      * 一意制約違反のあとで既存ユーザーを再取得するためのもの。
-     * このリポジトリでは、email の大小文字非依存性は MariaDB の
-     * case-insensitive collation 前提で通常比較に委ねる。
      */
     public function findByEmail(string $email, bool $lock = false): ?User;
 

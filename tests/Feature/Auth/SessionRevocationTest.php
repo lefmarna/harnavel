@@ -23,9 +23,6 @@ use Webauthn\TrustPath\EmptyTrustPath;
 
 mutates(RejectRevokedSessions::class);
 
-/**
- * 別の端末で本人がパスワードを再設定したことにする。
- */
 function resetPasswordElsewhere(User $user): void
 {
     app(ResetUserPassword::class)->reset(User::findOrFail($user->getKey()), [
@@ -121,7 +118,6 @@ describe('セッションの失効', function () {
         visitDashboardFrom($sessionId)->assertRedirect(route('login'));
     });
 
-    // ログインが要らない画面は、失効したセッションをゲストとして表示する。
     it('失効させたセッションでログインの要らない画面を開くと、ゲストとして表示する', function () {
         $user = User::factory()->create();
         $sessionId = loginFromNewDevice($user);

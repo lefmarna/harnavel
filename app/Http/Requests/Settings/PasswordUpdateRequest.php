@@ -30,7 +30,6 @@ class PasswordUpdateRequest extends FormRequest
         $user = $this->user();
 
         return [
-            // Google認証のみのユーザーはパスワードがないので current_password をスキップ
             ...($user !== null && $user->password === null ? [] : [
                 'current_password' => $this->currentPasswordRules(),
             ]),

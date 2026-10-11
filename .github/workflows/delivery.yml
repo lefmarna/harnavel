@@ -119,7 +119,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [provenance, quality]
-    # 検証済みのツリーでも、この run のゲートが失敗したら配備しない。
     if: >-
       !cancelled() && needs.provenance.result == 'success' &&
       (needs.quality.result == 'success' ||

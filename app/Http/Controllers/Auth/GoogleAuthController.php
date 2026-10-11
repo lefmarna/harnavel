@@ -137,7 +137,6 @@ class GoogleAuthController extends Controller
 
     private function completeReauthentication(Request $request): RedirectResponse
     {
-        // 以前の guest ミドルウェアと同じく、ログイン済みユーザーをホームへ戻す。
         if ($request->session()->pull(self::REAUTHENTICATION_SESSION_KEY) !== true) {
             return redirect()->to(Config::string('fortify.home'));
         }

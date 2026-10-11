@@ -25,7 +25,7 @@ class StorePasskey extends BaseStorePasskey
     {
         return DB::transaction(function () use ($user, $name, $source): Passkey {
             /** @var User $user 認証するのは users テーブルだけ。 */
-            /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+            /** @var int|string $key */
             $key = $user->getKey();
 
             $lockedUser = $this->userRepository->find($key, lock: true);

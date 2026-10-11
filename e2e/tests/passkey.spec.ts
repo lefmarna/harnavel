@@ -93,7 +93,6 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await expect(page.getByText("パスキーを追加しました")).toBeVisible();
   await expect(page.getByText("E2E オーセンティケータ", { exact: true })).toBeVisible();
-  // 複数のパスキーが並んでも、読み上げで削除対象を取り違えないこと。
   await expect(
     page.getByRole("button", { name: "「E2E オーセンティケータ」を削除" }),
   ).toBeVisible();
@@ -705,7 +704,6 @@ test("Conditional UI 対応ブラウザでも自動入力と並べてパスキ�
   await page.goto("/login");
   await loginOptions;
 
-  // Conditional UI は autocomplete の末尾が webauthn の入力欄を要求する。
   await expect(page.locator('input[autocomplete$="webauthn"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeEnabled();
   // 開発ビルドの StrictMode で effect が再実行されても、自動入力は 1 本だけ。
@@ -770,7 +768,6 @@ test("本人確認済みならパスワードを入力せずにアカウント�
   await page.goto("/settings/profile");
   await expect(page).toHaveURL(/\/login$/);
 
-  // ログアウトだけでは通らないよう、削除したアカウントで再びログインできないことを確かめる。
   await page.getByLabel("メールアドレス").fill(user.email);
   await page.getByLabel("パスワード").fill(user.password);
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

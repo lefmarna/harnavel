@@ -99,7 +99,6 @@ describe('本番例外通知', function () {
         Http::assertSentCount(1);
     });
 
-    // パスの ID を変えるだけで通知を大量に送らせない。
     it('回数制限の拒否は同じルートならパスが違っても再通知しない', function () {
         $throttledRequest = function (string $path): Request {
             $request = Request::create("https://example.test/{$path}");
@@ -651,7 +650,6 @@ describe('本番例外通知', function () {
         ],
     ]);
 
-    // DB の例外は値ごとにメッセージが変わるため、同じ経路の障害としてまとめる。
     it('DB の例外はメッセージが値ごとに違っても同じ経路なら再通知しない', function () {
         $notifier = app(ProductionExceptionNotifier::class);
 

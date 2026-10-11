@@ -26,7 +26,7 @@ abstract class Controller
      */
     protected function lockCurrentUser(User $user): User
     {
-        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+        /** @var int|string $key */
         $key = $user->getKey();
 
         $lockedUser = app(UserRepositoryContract::class)->find($key, lock: true);

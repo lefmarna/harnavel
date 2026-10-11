@@ -9,8 +9,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * 本人確認が済んだらセッション ID を作り直し、盗まれた Cookie に確認済みの状態を共有させない。
- * パスワード（Fortify）、パスキー、Google のどの経路も確認済みの記録だけは共通なので、ここで一括して扱う。
+ * 盗まれた Cookie に確認済みの状態を共有させない。パスワード、パスキー、Google のどの経路も
+ * 確認済みの記録だけは共通なので、ここで一括して扱う。
  */
 final class RotateSessionOnConfirmation
 {

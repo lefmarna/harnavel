@@ -109,7 +109,6 @@ describe('パスワード確認', function () {
         expect(app('session.store')->getId())->toBe($sessionId);
     });
 
-    // パスキーや Google など、確認済みを記録する経路すべてが対象になる。
     it('確認済みを記録した経路を問わずセッション ID を作り直す', function () {
         Route::middleware('web')->post('/_testing/confirm', function (Request $request) {
             $request->session()->passwordConfirmed();

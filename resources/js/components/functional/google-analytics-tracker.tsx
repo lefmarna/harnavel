@@ -9,9 +9,6 @@ declare global {
   }
 }
 
-// page_view はアプリ側で手動管理する。
-// GA4 管理画面の Enhanced Measurement「ブラウザ履歴イベントに基づくページの変更」は
-// 必ず OFF にすること（有効のままだと遷移ごとに二重計測になる）。
 export function GoogleAnalyticsTracker() {
   const page = usePage<SharedData>();
   const { tracking } = page.props;

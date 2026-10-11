@@ -7,7 +7,6 @@ declare module "@inertiajs/core" {
 }
 
 declare module "react" {
-  // style 属性で CSS カスタムプロパティを渡せるようにする。
   interface CSSProperties {
     [customProperty: `--${string}`]: string | number | undefined;
   }

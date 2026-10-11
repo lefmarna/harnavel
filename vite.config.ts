@@ -9,7 +9,6 @@ import { defineConfig, lazyPlugins, loadEnv } from "vite-plus";
 // CI は Docker を使わずホストの PHP で動く（Playwright の設定と同じ判定）。
 const isCI = !!process.env.CI;
 
-// formVariants は Vite プラグイン経由の --with-form を指定する。
 const wayfinderGenerateCommand = isCI
   ? "php artisan wayfinder:generate"
   : "docker compose exec -T app php artisan wayfinder:generate";
@@ -20,7 +19,6 @@ const parsePort = (value: string | undefined, fallback: number): number => {
   return Number.isNaN(port) ? fallback : port;
 };
 
-// Wayfinder がルート変更ごとに再生成する。
 const generatedFrontendPaths = [
   "resources/js/actions/**",
   "resources/js/routes/**",

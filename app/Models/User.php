@@ -30,9 +30,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable;
 
-    /**
-     * ログインした時点の世代を記録するセッションのキー。
-     */
     public const SESSION_GENERATION_KEY = 'session_generation';
 
     /**
@@ -51,7 +48,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     public function getPasskeyUserHandle(): string
     {
-        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+        /** @var int|string $key */
         $key = $this->getKey();
 
         return hash_hmac(
@@ -62,7 +59,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
-     * Google での再ログインを本人確認として使えるか。
      * パスワードがあればそちらで確認させ、Google のログイン状態だけでは通さない（TADR-0016）。
      */
     public function canConfirmWithGoogle(): bool
@@ -71,9 +67,8 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
-     * メール未確認のアカウントは、メールの持ち主でない第三者が先に作った可能性がある。
-     * 持ち主がメールの所有を示した時点で、その第三者が用意した資格情報を消して確認済みにする（TADR-0016）。
-     * 持ち主の資格情報とセッションの失効は呼び出し側で扱い、保存も呼び出し側で行う。
+     * メールの持ち主が所有を示したとき、先に登録した第三者の資格情報を消す（TADR-0016）。
+     * セッションの失効と保存は呼び出し側で行う。
      */
     public function reclaimForEmailOwner(): void
     {
@@ -86,11 +81,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
-     * 窃取されたセッションとログイン保持 Cookie を使えなくする。保存は呼び出し側で行う。
-     * セッションの行は消さず、世代を進めて RejectRevokedSessions に弾かせる。行を消すだけでは、
-     * 失効と同時に照合を終えたログインが、失効の後に新しい行を作って残る（TADR-0016）。
-     * 前に読んだ値から進めると並行する失効で進んだ世代を巻き戻すため、ロックして読み直した行で呼ぶ。
-     * 今のセッションを残すときは、保存の後に recordSessionGeneration() で新しい世代を記録する。
+     * 保存は呼び出し側で行う（TADR-0016）。前に読んだ値から進めると並行する失効で進んだ世代を
+     * 巻き戻すため、ロックして読み直した行で呼ぶ。今のセッションを残すときは、保存の後に
+     * recordSessionGeneration() を呼ぶ。
      */
     public function revokeSessions(): void
     {
@@ -98,16 +91,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         $this->session_generation++;
     }
 
-    /**
-     * このユーザーの今の世代を、ログインしたセッションへ記録する。
-     */
     public function recordSessionGeneration(Session $session): void
     {
         $session->put(self::SESSION_GENERATION_KEY, $this->session_generation);
     }
 
     /**
-     * セッションに記録した世代が、このユーザーの今の世代と同じか。
      * 世代を記録する前からのセッションは、まだ一度も失効させていない世代 0 として扱う。
      */
     public function isCurrentSessionGeneration(Session $session): bool

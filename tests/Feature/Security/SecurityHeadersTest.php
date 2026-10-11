@@ -10,7 +10,6 @@ use Illuminate\Testing\TestResponse;
 
 mutates(AddSecurityHeaders::class);
 
-// 本番の応答を確かめる。デバッグ時の例外画面は末尾のテストで扱う。
 beforeEach(function () {
     config()->set('app.debug', false);
     config()->set('services.google.adsense_publisher_id', null);
@@ -176,7 +175,6 @@ it('ページのスクリプトはリクエストごとの nonce を持つもの
         ->and(scriptSrcNonce($this->get(route('home'))))->not->toBe($nonce);
 });
 
-// AdSense が公式に対応する CSP は eval を許すものだけなので、使うアプリでだけ許す。
 it('AdSense を設定したときだけ eval を許す', function (?string $publisherId, bool $allowsEval) {
     config()->set('services.google.adsense_publisher_id', $publisherId);
 
@@ -191,8 +189,7 @@ it('AdSense を設定したときだけ eval を許す', function (?string $publ
     'AdSense が空' => ['', false],
 ]);
 
-// Laravel のデバッグ画面は nonce のないスクリプトと eval で動き、Inertia はそれを元の画面の CSP を
-// 継承する iframe に表示する。デバッグ時は違反を報告させるだけにして、E2E で検出する。
+// デバッグ時の違反は、報告を拾う E2E で検出する。
 it('デバッグ時は script-src を強制せず報告だけにする', function (?int $abortStatus) {
     config()->set('app.debug', true);
     Route::middleware('web')->get('/_testing/security-headers-debug', function () use ($abortStatus) {

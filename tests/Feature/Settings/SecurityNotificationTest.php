@@ -12,9 +12,6 @@ use Illuminate\Support\Facades\Mail;
 use Laravel\Passkeys\Events\PasskeyRegistered;
 use Symfony\Component\Mailer\Exception\TransportException;
 
-/**
- * 設定画面からパスワードを変更する。
- */
 function changePasswordFromSettings(User $user): void
 {
     test()->actingAs($user)
@@ -83,7 +80,6 @@ describe('セキュリティに関わる変更の通知', function () {
         Mail::assertNotSent(AccountSecurityMail::class);
     });
 
-    // 変更はすでに確定しているので、通知を送れなくても失敗にしない。
     it('通知を送れなくても変更は完了し、例外を報告する', function () {
         Exceptions::fake();
         Mail::shouldReceive('to')->andThrow(new TransportException('Connection refused'));

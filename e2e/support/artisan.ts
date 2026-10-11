@@ -30,7 +30,7 @@ const resolveContainer = (): string => {
   return container;
 };
 
-/** E2E アプリが動く場所で artisan を実行する。ローカルは使い捨てコンテナ、CI はホスト。 */
+/** ローカルは使い捨てコンテナ、CI はホストで実行する。 */
 export const runArtisan = (args: string[]): string => {
   if (process.env.CI) {
     return execFileSync("php", ["artisan", ...args], { encoding: "utf8", stdio: "pipe" });
@@ -44,9 +44,6 @@ export const runArtisan = (args: string[]): string => {
 };
 
 /**
- * ログイン済みセッションからパスワード確認の記録だけを消し、期限切れを再現する。
- * ログイン自体は維持されるため、確認が必要な操作だけが再確認を求められる。
- *
  * payload の形式は config/session.php の serialization に従う。取り出せなければ
  * 黙ってセッションを壊さず落とす。
  */
@@ -71,7 +68,7 @@ export type UserCredentials = {
   password: string;
 };
 
-/** 共有のシードユーザーを汚さない、使い捨ての確認済みユーザーを作る。 */
+/** 共有のシードユーザーを汚さない。 */
 export const createUser = (): UserCredentials => {
   const credentials = {
     email: `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
@@ -91,7 +88,6 @@ export const createUser = (): UserCredentials => {
   return credentials;
 };
 
-/** null でパスワード未設定の状態を再現する。 */
 export const setUserPassword = (email: string, password: string | null): void => {
   const hashed = password === null ? "null" : `Hash::make(${phpString(password)})`;
 
@@ -104,7 +100,6 @@ export const setUserPassword = (email: string, password: string | null): void =>
 
 const lastLine = (output: string): string => output.trim().split("\n").at(-1)?.trim() ?? "";
 
-/** メールで届く確認リンクを、同じ手順で作り直して受け取る。 */
 export const requestEmailChangeLink = (email: string, newEmail: string): string =>
   lastLine(
     runArtisan([
@@ -117,7 +112,6 @@ export const requestEmailChangeLink = (email: string, newEmail: string): string 
     ]),
   );
 
-/** 切り替え後に旧アドレスへ届く取り消しリンクを、同じ手順で作り直して受け取る。 */
 export const emailChangeRevertLink = (currentEmail: string, previousEmail: string): string =>
   lastLine(
     runArtisan([
@@ -128,7 +122,6 @@ export const emailChangeRevertLink = (currentEmail: string, previousEmail: strin
     ]),
   );
 
-/** Google ログイン連携済みの状態を再現する。 */
 export const setUserGoogleId = (email: string, googleId: string): void => {
   runArtisan([
     "tinker",

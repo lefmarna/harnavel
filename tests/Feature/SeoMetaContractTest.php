@@ -228,9 +228,7 @@ describe('SEO メタ契約', function () {
         );
     });
 
-    // JSON-LD は <script> の内側へ文字列として埋まる。タイトルや説明はアプリが自由に
-    // 流し込む枠で、ユーザー入力や生成物が届く経路を持つアプリもある。エスケープが
-    // 無いと `</script>` で script 要素を抜け、後続が HTML として解釈される。
+    // タイトルや説明にユーザー入力が届くアプリもある。
     it('構造化データに script を閉じる文字列が入っても script 要素を抜けない', function () {
         $payload = '</script><script>alert(1)</script>';
         replaceSiteDescription($payload);

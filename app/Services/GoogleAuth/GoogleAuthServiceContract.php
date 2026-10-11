@@ -18,8 +18,5 @@ interface GoogleAuthServiceContract
      */
     public function findOrCreate(string $googleId, string $email, ?string $name): User;
 
-    /**
-     * 確認メールの署名付きリンクをもとに既存ユーザーへ Google アカウントを連携する。
-     */
     public function confirmLink(string $userId, string $googleId, string $email, string $sessionGeneration): bool;
 }

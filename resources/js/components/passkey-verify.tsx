@@ -35,8 +35,7 @@ const toVerifyOptions = (routes?: Routes) =>
   routes && { routes: { options: routes.options.url, submit: routes.submit.url } };
 
 const visitRedirect = (response: VerifyResponse) => {
-  // サーバーは常に redirect を返す（PasskeyLoginResponse）。型が省略可能なので
-  // 既定値だけ置く。vendor 側の config("passkeys.redirect", "/") と同じ値。
+  // サーバーは常に redirect を返すが、型が省略可能なので vendor の既定値 "/" を置く。
   router.visit(response.redirect ?? "/");
 };
 

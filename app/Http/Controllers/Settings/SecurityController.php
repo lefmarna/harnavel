@@ -73,8 +73,7 @@ class SecurityController extends Controller
     }
 
     /**
-     * 心当たりのない連携を外せるようにする。第三者がその Google アカウントで先にログインしているかもしれないので、
-     * パスワード変更と同じく他の端末のセッションを失効させ、今の端末は ID を作り直して保つ（TADR-0016）。
+     * 第三者がその Google アカウントで先にログインしているかもしれないので、他の端末のセッションも失効させる（TADR-0016）。
      */
     public function destroyGoogle(Request $request): RedirectResponse
     {
@@ -83,7 +82,6 @@ class SecurityController extends Controller
         $unlinked = DB::transaction(function () use ($user): bool {
             $lockedUser = $this->lockCurrentUser($user);
 
-            // ほかにログインの手段がなければ、解除するとログインできなくなる。
             if (! $this->hasOtherCredential($lockedUser)) {
                 return false;
             }

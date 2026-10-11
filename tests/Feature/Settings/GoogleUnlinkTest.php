@@ -74,7 +74,6 @@ describe('Google ログイン連携の解除', function () {
         Log::shouldHaveReceived('info')->with('Google account was unlinked.', ['user_id' => $user->getKey()])->once();
     });
 
-    // ほかにログインの手段がなければ、解除するとログインできなくなる。
     it('パスワードもパスキーもなければ解除しない', function () {
         $user = User::factory()->create(['google_id' => 'google-1', 'password' => null]);
 

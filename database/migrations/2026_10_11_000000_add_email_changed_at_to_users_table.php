@@ -11,7 +11,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // 取り消しリンクの期限と同じ間は次の変更を受け付けず、使える取り消しリンクを1つに保つ（TADR-0016）。
+            // 取り消しリンクの期限中は次の変更を受け付けない（TADR-0016）。
             $table->timestamp('email_changed_at')->nullable()->after('email_verified_at');
         });
     }

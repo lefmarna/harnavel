@@ -40,10 +40,6 @@ description = "Stop docker containers"
 run = "docker compose stop"
 
 [tasks.down]
-description = "Remove docker containers"
-run = "docker compose down"
-
-[tasks.destroy]
 description = "Remove this Worktree's containers (shared DB and cache are preserved)"
 run = "docker compose down"
 

@@ -15,7 +15,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
-use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -62,7 +61,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 RotateSessionOnConfirmation::class,
                 HandleAppearance::class,
                 HandleInertiaRequests::class,
-                AddLinkHeadersForPreloadedAssets::class,
             ],
         );
     })

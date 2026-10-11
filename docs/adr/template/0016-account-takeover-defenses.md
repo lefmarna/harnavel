@@ -12,8 +12,8 @@ its row after the deletion. Sessions from before the column existed count as gen
 introducing it logs no one out. Every revocation advances the generation of the row it has locked,
 because advancing a value read earlier would move it back past a concurrent reset and revive the
 sessions that reset revoked. A request that began before a revocation can still be running when it
-commits, so writes to the password or the address lock the user row, compare its generation with
-the one the request started with, and refuse with 409 when it moved; otherwise an in-flight change
+commits, so writes to the password or the address, and account deletion, lock the user row, compare
+its generation with the one the request started with, and refuse with 409 when it moved; otherwise an in-flight change
 from a stolen session would land after the owner's reset or restore. Passkey registration does the
 same: the package's store action is replaced with one that takes the lock and compares the
 generation before inserting, because a passkey removed only after it is stored could already be used
@@ -43,7 +43,10 @@ opening settings. Accounts without a password confirm with a passkey or by signi
 the linked Google account. That sign-in returns to the existing OAuth callback URI, so apps do not
 register a second redirect URI with Google, and the callback treats an authenticated request as a
 reconfirmation only when the session started one. Any confirmation regenerates the session ID, so a
-copied session cookie never inherits the owner's confirmation.
+copied session cookie never inherits the owner's confirmation. A confirmation lasts 15 minutes
+instead of Laravel's three hours, because a cookie stolen after it, or script injected into the
+owner's page, can use the rest of that window to change the address or add a passkey; the cost is
+confirming again during a long visit to settings.
 
 Signing in again with Google proves that the browser holds a Google session for the linked account,
 not that the owner has just entered a Google password: `prompt=select_account` only shows the
@@ -104,6 +107,12 @@ password prompt would stop owners who confirmed with a passkey or Google from de
 credential they chose, and it would not stop a session thief inside the confirmation window, who
 can change the email address and take over the account instead. The dialog that shows what will be
 deleted remains, to catch accidental deletion.
+
+Registration reports an address that is already in use, so anyone can learn whether an address has
+an account. Hiding it would need registration to continue from a mailed link, which turns the form
+into a way to mail any address, and the answer reveals only that the owner uses the app: sign-in and
+password reset give the same response either way, and registration is limited per IP address.
+Changing the address reports the same, for an attacker who registers first.
 
 Trusted hosts are limited to the `APP_URL` host without its subdomains. Password reset links are
 built from the request host, and a subdomain the app does not serve may be unresolved or taken

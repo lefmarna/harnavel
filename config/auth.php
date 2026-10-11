@@ -114,6 +114,7 @@ return [
     |
     */
 
-    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+    // 確認の後に奪われたセッションや XSS がメール変更・パスキー追加へ使える時間を短くする（TADR-0016）。
+    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 900),
 
 ];

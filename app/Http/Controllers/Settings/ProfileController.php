@@ -91,9 +91,10 @@ class ProfileController extends Controller
     {
         $user = $this->currentUser($request);
 
-        Auth::logout();
+        // 失効した後に届いた削除を拒否する。ログアウトは remember_token を作り直すので、拒否より後に行う。
+        DB::transaction(fn () => $this->lockCurrentUser($user)->delete());
 
-        $user->delete();
+        Auth::logout();
 
         Log::info('User account was deleted.', ['user_id' => $user->getKey()]);
 

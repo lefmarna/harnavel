@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Mail\VerifyNewEmailMail;
 use App\Models\User;
 use App\ViewModels\Settings\ProfilePageViewModel;
+use Illuminate\Routing\Events\RouteMatched;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -201,6 +203,26 @@ describe('プロフィール設定', function () {
 
         $this->assertGuest();
         expect($user->fresh())->toBeNull();
+    });
+
+    // 本人がパスワードを再設定した後に、その前から走っていた削除を通さない（TADR-0016）。
+    it('削除の途中でセッションが失効したら、その削除を拒否する', function () {
+        $user = User::factory()->create();
+        $rememberToken = null;
+        Event::listen(RouteMatched::class, function () use ($user, &$rememberToken): void {
+            $fresh = User::findOrFail($user->getKey());
+            $fresh->revokeSessions();
+            $fresh->save();
+            $rememberToken = $fresh->remember_token;
+        });
+
+        $this->actingAs($user)
+            ->delete(route('profile.destroy'))
+            ->assertConflict();
+
+        // 失効の後に本人がログイン保持で入り直していても、そのトークンを無効にしない。
+        expect($user->fresh())->not->toBeNull()
+            ->remember_token->toBe($rememberToken);
     });
 });
 

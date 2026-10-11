@@ -8,6 +8,7 @@ A Laravel + Inertia React starter template.
 - No tests/checks for config/tooling/CI wiring except TADR-0001.
 - Generic improvements belong in the template. Code shared with it keeps its names and structure, so apps stay consistent through it.
 - README and code comments: Japanese; docs: English.
+- Docs and comments hold only what code, tests, and general knowledge cannot reveal.
 - Do not hand-edit generated docs or Boost skills (Kiro exception: TADR-0008).
 - Validation (as relevant): `mise run test`, `mise run mutate --min=100`, `mise run verify:backend:full` (backend + mutation + E2E); `pnpm format:check`, `lint:check`, `types:check`, `test:unit`, `lint:docs`.
 - Run local Playwright serially within each worktree; runs share its E2E database.

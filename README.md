@@ -54,9 +54,7 @@ Vite は負荷を抑えるため常駐させません。起動していない間
 - アプリ: `http://localhost:20000`
 - Mailpit: `http://localhost:20004`
 
-各アプリは `DEV_PORT_BASE` で100ポート分を確保し、追加 Worktree に10番ずつ割り当てます。MariaDB と Mailpit は同じアプリの Worktree 間で共有し、開発・テスト・E2E の DB と接続ユーザーは Worktree ごとに分離します。通常は4コンテナ、追加 Worktree は2コンテナだけ起動します。
-
-Orca は [orca.yaml](orca.yaml) の作成時コマンドでセットアップし、完了を待ってからエージェントを起動します。終了・削除の手順は [Worktree development](docs/worktree-development.md) を参照してください。
+MariaDB と Mailpit は同じアプリの Worktree 間で共有し、DB は Worktree ごとに分けます。ポートの割り当て、Orca、削除の手順は [Worktree development](docs/worktree-development.md) を参照してください。
 
 `pnpm dev` の二重起動は避けてください。ポート衝突で終了した側が `public/hot` を削除するため、先に起動した dev server が生きたままアプリだけビルド済みアセットの配信に切り替わります（E2E はこの状態を検出して中止します）。
 
@@ -78,7 +76,7 @@ pnpm lint:docs          # docs/ + README/AGENTS/CONTEXT のリンク検証
 pnpm test:e2e --project=chromium
 ```
 
-`pnpm install` は `prepare` スクリプト経由で Git hooks を自動インストールします。ローカル hook は pre-commit で staged files に Pint、Oxlint の safe fix、Oxfmt を順に適用してから、lint/typecheck/unit test/docs と Docker 前提の Larastan を実行します。CI は同じ品質ゲートをリポジトリ全体へ適用します。
+`pnpm install` は Git hooks（lefthook）も入れます。pre-commit は staged files を整形してから、lint、型チェック、unit test、docs、Larastan を実行します。
 
 ## ドキュメントの見方
 
@@ -88,7 +86,7 @@ pnpm test:e2e --project=chromium
 - [docs/testing-as-spec.md](docs/testing-as-spec.md): テストの責務分担とミューテーション方針
 - [docs/logging-guidelines.md](docs/logging-guidelines.md): アプリケーションログの運用ルール
 - [TADR-0009](docs/adr/template/0009-frontend-quality-harness.md): フロントエンド品質ゲートの責務分担
-- [docs/infrastructure.md](docs/infrastructure.md): XServerの運用前提（Composer、OPcache）
+- [docs/infrastructure.md](docs/infrastructure.md): XServer の運用前提とサーバー側の設定
 - [docs/worktree-development.md](docs/worktree-development.md): 共有開発環境・Orca・Worktree の作成と削除
 - [docs/branches-and-ci.md](docs/branches-and-ci.md): ブランチの役割と、各イベントで実行される CI
 - [docs/circleci.md](docs/circleci.md): PR の E2E・ミューテーションを CircleCI で実行する設定

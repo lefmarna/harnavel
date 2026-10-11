@@ -1,7 +1,9 @@
 # Template and application ownership
 
 Shared behavior converges on the template; domain, presentation, environment values, and App ADRs
-stay app-owned. Generic improvements return through the template to avoid divergent shared behavior.
+stay app-owned. Generic improvements return through the template to avoid divergent shared behavior:
+when apps solve the same problem differently, the template adopts the best design and every app
+converges on it, so apps differ only where their domain or presentation requires.
 Coverage floors and mutation selections are app-owned; mutation eligibility and blocking score are shared.
 
 Dependency constraints follow the same split: a constraint the template declares is shared and apps

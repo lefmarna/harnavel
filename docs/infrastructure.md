@@ -39,19 +39,15 @@ the server's reload of them instead.
 
 Last measured: October 2026, on one Develop domain.
 
-Laravel's `AddLinkHeadersForPreloadedAssets` put every Vite preload of a page, each with its CSP
-nonce, on one `Link` line of 8 to 9 KB. A page whose line was 8,200 bytes failed every time with a
-500 from the vendor layer, `Premature end of script headers` in the Apache error log and nothing in
-the Laravel log, while the PHP CLI on the same server built the same response normally. Pages with
-8,499- and 8,654-byte lines returned 200, so the outcome depends on more than the length; one
-explanation that fits is a split at 8,192 bytes whose remainder parses as a header only when it holds
-a colon. The handler and its parsing were not confirmed, so treat any header line beyond 8 KB as
-unsafe.
+Laravel's `AddLinkHeadersForPreloadedAssets` put every Vite preload, each with its CSP nonce, on one
+`Link` line of 8 to 9 KB. Some of those pages failed every time with a 500 from the vendor layer
+(`Premature end of script headers` in the Apache log, nothing in the Laravel log), while the PHP CLI
+on the same server built the same response normally. The cause was not confirmed, so treat any
+header line beyond 8 KB as unsafe.
 
-The template therefore does not use that middleware. The `<link rel="modulepreload">` tags that
-`@vite` emits in the document head already cover preloading, and the hosting sends no
-`103 Early Hints` that a `Link` header could feed. Recheck after adding a CDN that turns `Link`
-headers into Early Hints.
+The template therefore does not use that middleware: `@vite` already emits
+`<link rel="modulepreload">` tags, and the hosting sends no `103 Early Hints` that a `Link` header
+could feed. Recheck after adding a CDN that turns `Link` headers into Early Hints.
 
 ## Client address and HTTPS
 

@@ -65,6 +65,19 @@ function observabilityRequest(): Request
     return $request;
 }
 
+function ordersRequest(?string $routeName): Request
+{
+    $request = Request::create('https://example.test/orders/123', 'POST');
+
+    if ($routeName !== null) {
+        $route = new RoutingRoute(['POST'], 'orders/{order}', []);
+        $route->name($routeName);
+        $request->setRouteResolver(fn (): RoutingRoute => $route);
+    }
+
+    return $request;
+}
+
 describe('本番例外通知', function () {
     it('HTTPリクエストの未処理例外を Discord 通知へ接続できる', function () {
         $this->get('/_testing/notify-exception')->assertInternalServerError();
@@ -223,29 +236,77 @@ describe('本番例外通知', function () {
         Http::assertNothingSent();
     });
 
-    it('同一例外キーは5分以内に再通知しない', function () {
-        $exception = new RuntimeException('database is unavailable');
-        $request = observabilityRequest();
-
-        app(ProductionExceptionNotifier::class)->report($exception, $request);
-        app(ProductionExceptionNotifier::class)->report($exception, $request);
+    it('同じ障害とみなす例外は重複制御の期間内に再通知しない', function (Closure $reportTwice) {
+        $reportTwice();
         app()->terminate();
 
         Http::assertSentCount(1);
-    });
+    })->with([
+        '同じ例外と経路' => [function (): void {
+            $exception = new RuntimeException('database is unavailable');
+            $request = observabilityRequest();
+            app(ProductionExceptionNotifier::class)->report($exception, $request);
+            app(ProductionExceptionNotifier::class)->report($exception, $request);
+        }],
+        '重複制御秒数が1秒' => [function (): void {
+            config()->set('observability.discord.deduplication_seconds', 1);
+            $exception = new RuntimeException('database is unavailable');
+            $request = observabilityRequest();
+            app(ProductionExceptionNotifier::class)->report($exception, $request);
+            app(ProductionExceptionNotifier::class)->report($exception, $request);
+        }],
+        // 別の行で作るので、発生行だけが異なる。
+        '発生行だけ違う' => [function (): void {
+            $request = observabilityRequest();
+            app(ProductionExceptionNotifier::class)->report(new RuntimeException('database is unavailable'), $request);
+            app(ProductionExceptionNotifier::class)->report(new RuntimeException('database is unavailable'), $request);
+        }],
+        '名前付きルートが無い' => [function (): void {
+            $exception = new RuntimeException('database is unavailable');
+            $request = ordersRequest(null);
+            app(ProductionExceptionNotifier::class)->report($exception, $request);
+            app(ProductionExceptionNotifier::class)->report($exception, $request);
+        }],
+        'リクエストが無い' => [function (): void {
+            $exception = new RuntimeException('boom');
+            app(ProductionExceptionNotifier::class)->report($exception);
+            app(ProductionExceptionNotifier::class)->report($exception);
+        }],
+    ]);
 
-    it('重複制御秒数が1秒でも同一例外キーは再通知しない', function () {
-        config()->set('observability.discord.deduplication_seconds', 1);
-
-        $exception = new RuntimeException('database is unavailable');
-        $request = observabilityRequest();
-
-        app(ProductionExceptionNotifier::class)->report($exception, $request);
-        app(ProductionExceptionNotifier::class)->report($exception, $request);
+    it('別の障害とみなす例外はそれぞれ通知する', function (Closure $reportTwice) {
+        $reportTwice();
         app()->terminate();
 
-        Http::assertSentCount(1);
-    });
+        Http::assertSentCount(2);
+    })->with([
+        'メッセージが異なる' => [function (): void {
+            $request = observabilityRequest();
+            app(ProductionExceptionNotifier::class)->report(new RuntimeException('database is unavailable'), $request);
+            app(ProductionExceptionNotifier::class)->report(new RuntimeException('cache is unavailable'), $request);
+        }],
+        '例外クラスが異なる' => [function (): void {
+            $request = observabilityRequest();
+            app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), $request);
+            app(ProductionExceptionNotifier::class)->report(new LogicException('shared failure'), $request);
+        }],
+        'リクエストパスが異なる' => [function (): void {
+            $second = observabilityRequest();
+            $second->server->set('REQUEST_URI', '/invoices/987');
+            app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), observabilityRequest());
+            app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), $second);
+        }],
+        'ルート名が異なる' => [function (): void {
+            $exception = new RuntimeException('database is unavailable');
+            app(ProductionExceptionNotifier::class)->report($exception, ordersRequest('orders.store'));
+            app(ProductionExceptionNotifier::class)->report($exception, ordersRequest('orders.update'));
+        }],
+        'ルート名の有無' => [function (): void {
+            $exception = new RuntimeException('database is unavailable');
+            app(ProductionExceptionNotifier::class)->report($exception, ordersRequest('orders.store'));
+            app(ProductionExceptionNotifier::class)->report($exception, ordersRequest(null));
+        }],
+    ]);
 
     it('重複制御秒数が0なら同一例外キーでも毎回通知する', function () {
         config()->set('observability.discord.deduplication_seconds', 0);
@@ -261,110 +322,6 @@ describe('本番例外通知', function () {
 
         Http::assertSentCount(2);
         Cache::shouldNotHaveReceived('add');
-    });
-
-    it('同じ経路とメッセージの例外は発生行が違っても再通知しない', function () {
-        $first = new RuntimeException('database is unavailable');
-        $second = new RuntimeException('database is unavailable');
-        $request = observabilityRequest();
-
-        expect($first->getLine())->not->toBe($second->getLine());
-
-        app(ProductionExceptionNotifier::class)->report($first, $request);
-        app(ProductionExceptionNotifier::class)->report($second, $request);
-        app()->terminate();
-
-        Http::assertSentCount(1);
-    });
-
-    it('同じ経路でもメッセージが異なる例外は別の障害として通知できる', function () {
-        $request = observabilityRequest();
-
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('database is unavailable'), $request);
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('cache is unavailable'), $request);
-        app()->terminate();
-
-        Http::assertSentCount(2);
-    });
-
-    it('同じメッセージでも例外クラスが異なる場合は別の障害として通知できる', function () {
-        $request = observabilityRequest();
-
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), $request);
-        app(ProductionExceptionNotifier::class)->report(new LogicException('shared failure'), $request);
-        app()->terminate();
-
-        Http::assertSentCount(2);
-    });
-
-    it('同じメッセージでもリクエストパスが異なる場合は別の障害として通知できる', function () {
-        $first = observabilityRequest();
-        $second = observabilityRequest();
-        $second->server->set('REQUEST_URI', '/invoices/987');
-
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), $first);
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('shared failure'), $second);
-        app()->terminate();
-
-        Http::assertSentCount(2);
-    });
-
-    it('同じパスでもルート名が異なれば別キーとして通知する', function () {
-        $exception = new RuntimeException('database is unavailable');
-
-        $makeRequest = function (string $routeName): Request {
-            $request = Request::create('https://example.test/orders/123', 'POST');
-            $route = new RoutingRoute(['POST'], 'orders/{order}', []);
-            $route->name($routeName);
-            $request->setRouteResolver(fn (): RoutingRoute => $route);
-
-            return $request;
-        };
-
-        app(ProductionExceptionNotifier::class)->report($exception, $makeRequest('orders.store'));
-        app(ProductionExceptionNotifier::class)->report($exception, $makeRequest('orders.update'));
-        app()->terminate();
-
-        Http::assertSentCount(2);
-    });
-
-    it('同じパスでもルート名の有無で別キーとして通知する', function () {
-        $exception = new RuntimeException('database is unavailable');
-
-        $withRoute = Request::create('https://example.test/orders/123', 'POST');
-        $route = new RoutingRoute(['POST'], 'orders/{order}', []);
-        $route->name('orders.store');
-        $withRoute->setRouteResolver(fn (): RoutingRoute => $route);
-
-        $withoutRoute = Request::create('https://example.test/orders/123', 'POST');
-
-        app(ProductionExceptionNotifier::class)->report($exception, $withRoute);
-        app(ProductionExceptionNotifier::class)->report($exception, $withoutRoute);
-        app()->terminate();
-
-        Http::assertSentCount(2);
-    });
-
-    it('名前付きルートが無い同一例外も重複通知を抑制する', function () {
-        $exception = new RuntimeException('database is unavailable');
-
-        $request = Request::create('https://example.test/orders/123', 'GET');
-
-        app(ProductionExceptionNotifier::class)->report($exception, $request);
-        app(ProductionExceptionNotifier::class)->report($exception, $request);
-        app()->terminate();
-
-        Http::assertSentCount(1);
-    });
-
-    it('リクエストが無い同一例外も重複通知を抑制する', function () {
-        $exception = new RuntimeException('boom');
-
-        app(ProductionExceptionNotifier::class)->report($exception);
-        app(ProductionExceptionNotifier::class)->report($exception);
-        app()->terminate();
-
-        Http::assertSentCount(1);
     });
 
     it('重複判定キャッシュに環境・例外クラス・メッセージ・パス・ルートを含む正規キーを使う', function () {

@@ -40,26 +40,6 @@ describe('セキュリティ設定', function () {
             );
     });
 
-    it('パスワードを更新できる', function () {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->from(route('security.edit'))
-            ->put(route('user-password.update'), [
-                'current_password' => UserFactory::DEFAULT_PASSWORD,
-                'password' => 'new-password1',
-                'password_confirmation' => 'new-password1',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('security.edit'));
-
-        expect(Hash::check('new-password1', $user->refresh()->password))->toBeTrue();
-    });
-
     // 乗っ取りに気づいて変更しても、攻撃者の端末がログインしたまま残らないようにする。
     it('パスワードを更新すると他の端末のセッションとログイン保持を失効させる', function () {
         config(['session.driver' => 'database']);
@@ -167,24 +147,6 @@ describe('セキュリティ設定', function () {
         ],
     ]);
 
-    it('パスワード更新には現在の正しいパスワードが必要', function () {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->from(route('security.edit'))
-            ->put(route('user-password.update'), [
-                'current_password' => 'wrong-password',
-                'password' => 'new-password1',
-                'password_confirmation' => 'new-password1',
-            ]);
-
-        $response
-            ->assertSessionHasErrors('current_password')
-            ->assertRedirect(route('security.edit'));
-    });
-
     it('登録済みのパスキーを一覧で返す', function () {
         $user = User::factory()->create();
 
@@ -265,26 +227,8 @@ describe('セキュリティ設定', function () {
         $this->get('/_spec/password-confirm')->assertRedirect(route('password.confirm'));
     });
 
-    it('パスキーを削除できる', function () {
-        $user = User::factory()->create();
-
-        $passkey = $user->passkeys()->create([
-            'name' => 'iPhone',
-            'credential_id' => 'credential-2',
-            'credential' => ['id' => 'credential-2'],
-        ]);
-
-        $this
-            ->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->delete(route('passkey.destroy', $passkey))
-            ->assertRedirect();
-
-        expect($user->passkeys()->count())->toBe(0);
-    });
-
     // そのパスキーで先にログインした第三者のセッションを、削除した後に残さない（TADR-0016）。
-    it('パスキーを削除すると他の端末のセッションを失効させ、今の端末はログインを保つ', function () {
+    it('パスキーを削除し、他の端末のセッションを失効させ、今の端末はログインを保つ', function () {
         config(['session.driver' => 'database']);
         $user = User::factory()->create();
         $passkey = $user->passkeys()->create([
@@ -302,7 +246,8 @@ describe('セキュリティ設定', function () {
             ->assertRedirect();
         $renewedSessionId = lastSessionId();
 
-        expect($renewedSessionId)->not->toBe($currentSessionId);
+        expect($renewedSessionId)->not->toBe($currentSessionId)
+            ->and($user->passkeys()->count())->toBe(0);
         visitDashboardFrom($renewedSessionId)->assertOk();
         visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
     });

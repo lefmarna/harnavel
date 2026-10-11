@@ -15,6 +15,26 @@ A vendor-managed nginx layer fronts an Apache layer that reads `.htaccess`. Prod
 needs a server layer therefore belongs in `.htaccess`; the nginx configuration in this repository is
 local only.
 
+## Server environment settings
+
+Last confirmed: October 2026, `SESSION_SECURE_COOKIE`, `LOG_LEVEL`, and `display_errors` on Develop
+and Production of every app then derived from the template.
+
+Each environment keeps its `.env` and PHP settings on the server. Delivery excludes `.env` and
+`.user.ini` and never writes them, so an app derived from the template, or a new environment of one,
+needs these set before its first deploy. A later `.env` change takes effect on the next deploy,
+which runs `config:cache`. PHP reads its own settings without a deploy, so `display_errors` follows
+the server's reload of them instead.
+
+| Setting                 | Value                        | Reason                                                                                                                                                                       |
+| ----------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_ENV`               | `production` or `develop`    | Production-only behavior and the debug check below key on these names.                                                                                                       |
+| `APP_DEBUG`             | `false`                      | The app refuses to boot with it on in either environment, because error pages would expose environment values and stack traces.                                              |
+| `APP_URL`               | the canonical HTTPS origin   | Trusted hosts and generated links come from it (TADR-0016); a host serving the app under another name must be added to `trustHosts`.                                         |
+| `SESSION_SECURE_COOKIE` | `true`                       | Left unset, the Secure flag follows the HTTPS detection described in "Client address and HTTPS"; `true` keeps it independent of the layers, and an empty value turns it off. |
+| `LOG_LEVEL`             | `info`                       | `debug` is development-only (`docs/logging-guidelines.md`); `.env.example` uses it for local work.                                                                           |
+| PHP `display_errors`    | `Off`, per domain on XServer | Errors raised before Laravel handles them, such as at startup, reach the response otherwise; `APP_DEBUG` does not cover them.                                                |
+
 ## Response header size
 
 Last measured: October 2026, on one Develop domain.

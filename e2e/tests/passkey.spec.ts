@@ -746,3 +746,34 @@ test("自動入力が環境の都合で使えなくても、開いただけの�
   await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeEnabled();
   await expect(page.getByText("このブラウザはパスキーに対応していません。")).toBeHidden();
 });
+
+test("本人確認済みならパスワードを入力せずにアカウントを削除できる", async ({ page }) => {
+  const user = createUser();
+  await login(page, user);
+  await page.goto("/settings/profile");
+  await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
+  await page.locator('input[name="password"]').fill(user.password);
+  await page.locator('[data-test="confirm-password-button"]').click();
+  await expect(page).toHaveURL(PROFILE_URL);
+
+  await page.locator('[data-test="delete-user-button"]').click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator('input[type="password"]')).toHaveCount(0);
+  await expect(dialog.getByText(/完全に削除されます/)).toBeVisible();
+  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(PROFILE_URL);
+
+  await page.locator('[data-test="delete-user-button"]').click();
+  await page.locator('[data-test="confirm-delete-user-button"]').click();
+  await expect(page).not.toHaveURL(PROFILE_URL);
+  await page.goto("/settings/profile");
+  await expect(page).toHaveURL(/\/login$/);
+
+  // ログアウトだけでは通らないよう、削除したアカウントで再びログインできないことを確かめる。
+  await page.getByLabel("メールアドレス").fill(user.email);
+  await page.getByLabel("パスワード").fill(user.password);
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
+  await expect(page.getByText("認証に失敗しました。")).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+});

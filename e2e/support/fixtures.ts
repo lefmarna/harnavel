@@ -15,6 +15,21 @@ export const test = base.extend<PageErrorFixtures>({
         pageErrors.push(error);
       };
 
+      // CSP に止められたスクリプトは例外にならない。デバッグ時は報告だけのポリシーなので、
+      // 強制と報告の両方で起きる securitypolicyviolation を拾う。
+      const cspViolations: string[] = [];
+      await page.exposeFunction("__recordCspViolation", (violation: string): void => {
+        cspViolations.push(violation);
+      });
+      await page.addInitScript(() => {
+        document.addEventListener("securitypolicyviolation", (event) => {
+          const record = (
+            window as unknown as { __recordCspViolation: (violation: string) => Promise<void> }
+          ).__recordCspViolation;
+          void record(`${event.effectiveDirective} ${event.blockedURI}`);
+        });
+      });
+
       page.on("pageerror", collectPageError);
 
       await use();
@@ -22,6 +37,7 @@ export const test = base.extend<PageErrorFixtures>({
       page.off("pageerror", collectPageError);
 
       expect(pageErrors.map(formatPageError)).toEqual([]);
+      expect(cspViolations).toEqual([]);
     },
     { auto: true },
   ],

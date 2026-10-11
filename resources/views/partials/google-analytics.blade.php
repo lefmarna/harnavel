@@ -3,8 +3,8 @@
 @endphp
 
 @if (is_string($trackingId) && $trackingId !== '')
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ $trackingId }}"></script>
-    <script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ $trackingId }}" nonce="{{ Vite::cspNonce() }}"></script>
+    <script nonce="{{ Vite::cspNonce() }}">
         window.dataLayer = window.dataLayer || [];
 
         function gtag() {

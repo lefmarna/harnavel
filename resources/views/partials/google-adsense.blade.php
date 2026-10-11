@@ -7,5 +7,6 @@
         async
         src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ $publisherId }}"
         crossorigin="anonymous"
+        nonce="{{ Vite::cspNonce() }}"
     ></script>
 @endif

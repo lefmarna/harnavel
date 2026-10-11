@@ -102,6 +102,17 @@ function assertSecurityEntryPointBaseline(ResponseInterface $response): void
     expect($response->getHeader('X-Frame-Options'))->toBe(['DENY']);
 }
 
+// Laravel が付ける CSP は script-src を足した1つだけで、起動前の基本ポリシーと重複しない。
+function assertLaravelEntryPointHeaders(ResponseInterface $response): void
+{
+    expect($response->getHeader('Content-Security-Policy'))->toHaveCount(1)
+        ->and($response->getHeaderLine('Content-Security-Policy'))
+        ->toStartWith("frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; script-src 'nonce-");
+    expect($response->getHeader('X-Content-Type-Options'))->toBe(['nosniff']);
+    expect($response->getHeader('Referrer-Policy'))->toBe(['strict-origin-when-cross-origin']);
+    expect($response->getHeader('X-Frame-Options'))->toBe(['DENY']);
+}
+
 /** @param array<string, string> $policy */
 function bootSecurityEntryPoint(string $directory, array $policy = []): void
 {
@@ -162,7 +173,7 @@ it('Laravelの通常応答への引き継ぎで基本のヘッダーを重複さ
 
     expect($response->getStatusCode())->toBe(200);
     expect((string) $response->getBody())->toBe('{"entry_point":true}');
-    assertSecurityEntryPointBaseline($response);
+    assertLaravelEntryPointHeaders($response);
 });
 
 it('アプリ独自の応答ポリシーに競合するフォールバックを残さない', function (array $ini) {
@@ -205,5 +216,5 @@ it('事前描画メンテナンス中もJSON要求はLaravelの503へ引き継�
     expect(json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR))
         ->toBe(['message' => 'Service Unavailable']);
     expect($response->getHeader('Retry-After'))->toBe(['60']);
-    assertSecurityEntryPointBaseline($response);
+    assertLaravelEntryPointHeaders($response);
 });

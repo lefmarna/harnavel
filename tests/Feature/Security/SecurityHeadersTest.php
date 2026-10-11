@@ -10,10 +10,26 @@ use Illuminate\Testing\TestResponse;
 
 mutates(AddSecurityHeaders::class);
 
+// 本番の応答を確かめる。デバッグ時の例外画面は末尾のテストで扱う。
+beforeEach(function () {
+    config()->set('app.debug', false);
+});
+
+function scriptSrcNonce(TestResponse $response): string
+{
+    $policy = (string) $response->headers->get('Content-Security-Policy');
+    expect($policy)->toMatch(
+        "/^frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'; script-src 'nonce-([A-Za-z0-9]+)' 'strict-dynamic' https: 'unsafe-inline'( 'unsafe-eval')?$/",
+    );
+    preg_match("/'nonce-([A-Za-z0-9]+)'/", $policy, $matches);
+
+    return $matches[1];
+}
+
 function assertBaselineSecurityHeaders(TestResponse $response): void
 {
+    scriptSrcNonce($response);
     $response
-        ->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'")
         ->assertHeader('X-Content-Type-Options', 'nosniff')
         ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
         ->assertHeader('X-Frame-Options', 'DENY');
@@ -171,3 +187,57 @@ it('アプリが明示したポリシーを保持し未指定のヘッダーだ�
         ->assertHeader('Referrer-Policy', 'no-referrer')
         ->assertHeader('X-Content-Type-Options', 'nosniff');
 });
+
+// 注入されたスクリプトは nonce を持たないので、XSS があっても実行されない（TADR-0012）。
+it('ページのスクリプトはリクエストごとの nonce を持つものだけを実行させる', function () {
+    $this->app->instance('env', 'production');
+    config()->set('services.google.analytics_tracking_id', 'G-TEST123456');
+    config()->set('services.google.adsense_publisher_id', 'ca-pub-1234567890123456');
+
+    $first = $this->get(route('home'));
+    $nonce = scriptSrcNonce($first);
+    preg_match_all('/<script\b(?![^>]*type="application\/(?:ld\+)?json")[^>]*>/', (string) $first->getContent(), $scripts);
+
+    expect($scripts[0])->not->toBeEmpty()
+        ->each->toContain('nonce="'.$nonce.'"')
+        ->and(scriptSrcNonce($this->get(route('home'))))->not->toBe($nonce);
+});
+
+// AdSense が公式に対応する CSP は eval を許すものだけなので、使うアプリでだけ許す。
+it('AdSense を設定したときだけ eval を許す', function (?string $publisherId, bool $allowsEval) {
+    config()->set('services.google.adsense_publisher_id', $publisherId);
+
+    $policy = (string) $this->get('/up')->headers->get('Content-Security-Policy');
+
+    $allowsEval
+        ? expect($policy)->toEndWith("'unsafe-inline' 'unsafe-eval'")
+        : expect($policy)->not->toContain('unsafe-eval');
+})->with([
+    'AdSense あり' => ['ca-pub-1234567890123456', true],
+    'AdSense なし' => [null, false],
+    'AdSense が空' => ['', false],
+]);
+
+// Laravel のデバッグ画面は nonce のないインラインスクリプトと eval で動くため、script-src を掛けない。
+// Laravel のデバッグ画面は nonce のないスクリプトと eval で動き、Inertia はそれを元の画面の CSP を
+// 継承する iframe に表示する。デバッグ時は違反を報告させるだけにして、E2E で検出する。
+it('デバッグ時は script-src を強制せず報告だけにする', function (?int $abortStatus) {
+    config()->set('app.debug', true);
+    Route::middleware('web')->get('/_testing/security-headers-debug', function () use ($abortStatus) {
+        return match ($abortStatus) {
+            null => response('page'),
+            500 => throw new RuntimeException('debug page'),
+            default => abort($abortStatus),
+        };
+    });
+
+    $response = $this->get('/_testing/security-headers-debug')
+        ->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'");
+
+    expect($response->headers->get('Content-Security-Policy-Report-Only'))
+        ->toMatch("/^script-src 'nonce-[A-Za-z0-9]+' 'strict-dynamic' https: 'unsafe-inline'$/");
+})->with([
+    '通常の画面' => [null],
+    'HTTP 例外でない例外' => [500],
+    'エラービューのない HTTP 例外' => [400],
+]);

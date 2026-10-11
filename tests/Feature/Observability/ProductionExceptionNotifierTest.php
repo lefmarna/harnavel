@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request as HttpClientRequest;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Auth;
@@ -42,6 +43,8 @@ beforeEach(function () {
     Route::middleware('web')->get('/_testing/ignored-http-exception', function () {
         abort(404);
     });
+
+    Route::middleware(['web', 'throttle:1,1'])->get('/_testing/throttled', fn () => 'ok');
 });
 
 function observabilityRequest(): Request
@@ -71,6 +74,51 @@ describe('本番例外通知', function () {
 
     it('HTTPリクエストの500系HTTP例外を Discord 通知へ接続できる', function () {
         $this->get('/_testing/notify-http-exception')->assertServiceUnavailable();
+
+        Http::assertSentCount(1);
+    });
+
+    // 総当たりや大量登録の兆候に、ログを見に行かなくても気づけるようにする。
+    it('HTTPリクエストが回数制限で拒否されたら Discord 通知へ接続できる', function () {
+        $this->get('/_testing/throttled')->assertOk();
+        $this->get('/_testing/throttled')->assertTooManyRequests();
+
+        Http::assertSentCount(1);
+    });
+
+    // パスの ID を変えるだけで通知を大量に送らせない。
+    it('回数制限の拒否は同じルートならパスが違っても再通知しない', function () {
+        $throttledRequest = function (string $path): Request {
+            $request = Request::create("https://example.test/{$path}");
+            $route = new RoutingRoute(['GET'], 'items/{item}', []);
+            $request->setRouteResolver(fn (): RoutingRoute => $route);
+
+            return $request;
+        };
+
+        app(ProductionExceptionNotifier::class)->report(new ThrottleRequestsException, $throttledRequest('items/1'));
+        app(ProductionExceptionNotifier::class)->report(new ThrottleRequestsException, $throttledRequest('items/2'));
+        app()->terminate();
+
+        Http::assertSentCount(1);
+    });
+
+    it('回数制限の拒否はリクエストやルートが無くても重複を抑えて通知できる', function (bool $withRequest) {
+        $request = $withRequest ? Request::create('https://example.test/items/1') : null;
+
+        app(ProductionExceptionNotifier::class)->report(new ThrottleRequestsException, $request);
+        app(ProductionExceptionNotifier::class)->report(new ThrottleRequestsException, $request);
+        app()->terminate();
+
+        Http::assertSentCount(1);
+    })->with([
+        'リクエストなし' => [false],
+        'ルートなし' => [true],
+    ]);
+
+    it('回数制限の拒否は500系でなくても通知する', function () {
+        app(ProductionExceptionNotifier::class)->report(new ThrottleRequestsException, observabilityRequest());
+        app()->terminate();
 
         Http::assertSentCount(1);
     });

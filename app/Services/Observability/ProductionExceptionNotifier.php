@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Observability;
 
 use App\Support\SensitiveUrl;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -54,7 +55,8 @@ class ProductionExceptionNotifier
             return false;
         }
 
-        return $this->statusCode($exception) >= 500;
+        // 回数制限の拒否は総当たりや大量登録の兆候なので、500系でなくても知らせる。
+        return $exception instanceof ThrottleRequestsException || $this->statusCode($exception) >= 500;
     }
 
     private function reserveNotificationSlot(Throwable $exception, ?Request $request): bool
@@ -163,7 +165,8 @@ class ProductionExceptionNotifier
             $exception::class,
             // DB の例外は値ごとにメッセージが変わるため、同じ経路の障害としてまとめる。
             $exception instanceof PDOException ? null : hash('sha256', $exception->getMessage()),
-            $request?->path(),
+            // 回数制限はパスの ID を変えれば別キーになるので、ルートのテンプレートでまとめる。
+            $exception instanceof ThrottleRequestsException ? $request?->route()?->uri() : $request?->path(),
             $request?->route()?->getName(),
         ]);
 

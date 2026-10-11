@@ -75,9 +75,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 && ! $e instanceof ThrottleRequestsException,
         );
 
-        // 総当たりや大量登録の兆候として残す。スタックトレースは要らないので既定の記録は止める。
+        // 総当たりや大量登録の兆候として残し、Discord にも知らせる。スタックトレースは要らないので既定の記録は止める。
         $exceptions->report(function (ThrottleRequestsException $e): bool {
             Log::warning('Request was rate limited.');
+            app(ProductionExceptionNotifier::class)->report($e, app()->bound('request') ? request() : null);
 
             return false;
         });

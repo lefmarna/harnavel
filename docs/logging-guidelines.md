@@ -77,8 +77,10 @@ recipient. These lines stay in the server's log files and are never forwarded.
 
 ## Discord notifications
 
-Alerting is a separate system. `ProductionExceptionNotifier` reacts to unhandled 500s and builds its
-payload from the request, not from anything logged, so no log call triggers a notification. The two
+Alerting is a separate system. `ProductionExceptionNotifier` reacts to unhandled 500s and to
+rate-limit rejections, so a burst of credential stuffing or mass registration is noticed without
+reading the log; repeats on the same route are deduplicated. It builds its payload from the
+request, not from anything logged, so no log call triggers a notification. The two
 share only `request_id`, which is what makes a notification searchable here. The payload names the
 exception class but never carries its message, since Discord is a third party and messages can quote
 the values above.

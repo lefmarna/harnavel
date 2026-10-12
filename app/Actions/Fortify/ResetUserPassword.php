@@ -26,7 +26,7 @@ class ResetUserPassword implements ResetsUserPasswords
     /**
      * Validate and reset the user's forgotten password.
      *
-     * @param  array<string, string>  $input
+     * @param  array{token: string, ...<string, string>}  $input
      */
     public function reset(User $user, array $input): void
     {
@@ -46,7 +46,7 @@ class ResetUserPassword implements ResetsUserPasswords
                 ?? throw (new ModelNotFoundException)->setModel(User::class, [$key]);
 
             if ($lockedUser->email !== $tokenEmail
-                || ! Password::broker(config()->string('fortify.passwords'))->tokenExists($lockedUser, $input['token'] ?? '')) {
+                || ! Password::broker(config()->string('fortify.passwords'))->tokenExists($lockedUser, $input['token'])) {
                 throw ValidationException::withMessages(['email' => [__('passwords.token')]]);
             }
 

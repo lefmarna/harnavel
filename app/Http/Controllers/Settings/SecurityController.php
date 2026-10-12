@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Fortify\Features;
@@ -59,6 +60,7 @@ class SecurityController extends Controller
             $lockedUser->password = Hash::make($validated['password']);
             $lockedUser->revokeSessions();
             $this->userRepository->save($lockedUser);
+            Password::broker(config()->string('fortify.passwords'))->deleteToken($lockedUser);
 
             $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
         });

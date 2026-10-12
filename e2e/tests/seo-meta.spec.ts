@@ -46,7 +46,7 @@ test("SPA遷移時にSEOメタタグが更新される", async ({ page }) => {
 // 初期 HTML はサーバーが出すので、React が描画した後のタグを確かめる。
 test("パスワードリセットページのcanonicalとog:urlにクエリ文字列が含まれない", async ({ page }) => {
   await page.goto("/reset-password/test-token?email=test%40example.com");
-  await expect(page.getByLabel("新しいパスワード")).toBeVisible();
+  await expect(page.locator('input[name="password"]')).toBeVisible();
 
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
     "href",

@@ -315,6 +315,6 @@ describe('SEO メタ契約', function () {
         'dashboard' => ['dashboard', [], 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。', false],
         'profile' => ['profile.edit', [], 'プロフィール設定', '名前とメールアドレスを管理します。', false],
         'security' => ['security.edit', [], 'セキュリティ設定', 'パスワード、パスキー、Googleログイン連携を管理します。', false],
-        'appearance' => ['appearance.edit', [], '表示設定', 'アカウントの表示設定を変更します。', false],
+        'appearance' => ['appearance.edit', [], '表示設定', 'テーマの表示方法を選択します。', false],
     ]);
 });

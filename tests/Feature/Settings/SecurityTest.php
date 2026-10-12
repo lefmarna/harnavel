@@ -7,8 +7,10 @@ use App\Models\User;
 use App\ViewModels\Settings\SecurityPageViewModel;
 use Database\Factories\UserFactory;
 use Illuminate\Routing\Events\RouteMatched;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 
 mutates(RequirePasswordWhenSet::class, SecurityPageViewModel::class);
@@ -71,6 +73,30 @@ describe('セキュリティ設定', function () {
         visitDashboardFrom($currentSessionId)->assertRedirect(route('login'));
         visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
         visitDashboardFrom($otherUsersSessionId)->assertOk();
+    });
+
+    it('パスワードを更新すると、それ以前に発行した再設定リンクを使えなくする', function () {
+        $user = User::factory()->create();
+        $token = Password::createToken($user);
+
+        $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->put(route('user-password.update'), [
+                'current_password' => UserFactory::DEFAULT_PASSWORD,
+                'password' => 'new-password1',
+                'password_confirmation' => 'new-password1',
+            ])
+            ->assertSessionHasNoErrors();
+        Auth::logout();
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'attacker-password1',
+            'password_confirmation' => 'attacker-password1',
+        ])->assertSessionHasErrors(['email' => trans('passwords.token')]);
+
+        expect(Hash::check('new-password1', $user->refresh()->password))->toBeTrue();
     });
 
     it('bcrypt形式の文字列でパスワード更新しても平文としてハッシュ化される', function () {

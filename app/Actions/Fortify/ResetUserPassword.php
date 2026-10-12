@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
@@ -39,13 +40,13 @@ class ResetUserPassword implements ResetsUserPasswords
 
         $tokenEmail = $user->email;
 
-        DB::transaction(function () use ($user, $key, $tokenEmail, $validated): void {
+        DB::transaction(function () use ($user, $key, $tokenEmail, $validated, $input): void {
             // Fortify はロックを取る前に読み込んだユーザーを渡すため、確認状態はロックした行で判定する。
             $lockedUser = $this->userRepository->find($key, lock: true)
                 ?? throw (new ModelNotFoundException)->setModel(User::class, [$key]);
 
-            // トークンを確かめた後にメールが変わったなら、変更後のアドレスの所有は示されていない。
-            if ($lockedUser->email !== $tokenEmail) {
+            if ($lockedUser->email !== $tokenEmail
+                || ! Password::broker(config()->string('fortify.passwords'))->tokenExists($lockedUser, $input['token'] ?? '')) {
                 throw ValidationException::withMessages(['email' => [__('passwords.token')]]);
             }
 

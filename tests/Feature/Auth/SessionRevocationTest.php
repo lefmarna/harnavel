@@ -10,10 +10,13 @@ use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Validated;
 use Illuminate\Auth\SessionGuard;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Passkeys\Actions\StorePasskey;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -25,7 +28,10 @@ mutates(RejectRevokedSessions::class);
 
 function resetPasswordElsewhere(User $user): void
 {
-    app(ResetUserPassword::class)->reset(User::findOrFail($user->getKey()), [
+    $user = User::findOrFail($user->getKey());
+
+    app(ResetUserPassword::class)->reset($user, [
+        'token' => Password::createToken($user),
         'password' => 'new-password1',
         'password_confirmation' => 'new-password1',
     ]);
@@ -254,5 +260,22 @@ describe('セッションの失効', function () {
         (require database_path('migrations/2026_10_12_000000_fill_empty_remember_tokens.php'))->up();
 
         expect($user->refresh()->getRememberToken())->toBeString()->not->toBeEmpty();
+    });
+
+    it('移行が読んだ後に並行するログインが入れた値を、移行で上書きしない', function () {
+        $user = User::factory()->create();
+        User::query()->whereKey($user->getKey())->update(['remember_token' => null]);
+        $loggedIn = false;
+        DB::listen(function (QueryExecuted $query) use ($user, &$loggedIn): void {
+            if ($loggedIn || ! str_starts_with($query->sql, 'select')) {
+                return;
+            }
+            $loggedIn = true;
+            DB::table('users')->where('id', $user->getKey())->update(['remember_token' => 'concurrent-login-token']);
+        });
+
+        (require database_path('migrations/2026_10_12_000000_fill_empty_remember_tokens.php'))->up();
+
+        expect($user->refresh()->getRememberToken())->toBe('concurrent-login-token');
     });
 });

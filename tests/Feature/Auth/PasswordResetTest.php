@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Events\TransactionCommitted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -218,6 +219,31 @@ describe('パスワード再設定', function () {
         expect($user->email)->toBe('victim@example.com')
             ->and($user->email_verified_at)->toBeNull()
             ->and($user->password)->toBe($password);
+    });
+
+    it('トークンを確かめた後に本人がパスワードを変えていたら再設定しない', function () {
+        $user = User::factory()->create();
+        $token = Password::createToken($user);
+
+        $changed = false;
+        DB::listen(function (QueryExecuted $query) use (&$changed, $user): void {
+            if ($changed || ! str_contains($query->sql, 'password_reset_tokens')) {
+                return;
+            }
+
+            $changed = true;
+            DB::table('users')->where('id', $user->getKey())->update(['password' => Hash::make('owner-password2')]);
+            Password::deleteToken($user);
+        });
+
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'attacker-password1',
+            'password_confirmation' => 'attacker-password1',
+        ])->assertSessionHasErrors(['email' => trans('passwords.token')]);
+
+        expect(Hash::check('owner-password2', $user->refresh()->password))->toBeTrue();
     });
 
     // 使ったトークンが残ると、メールを旧アドレスへ戻したときに再利用できてしまう。

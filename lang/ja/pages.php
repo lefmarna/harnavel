@@ -105,7 +105,7 @@ return [
         ],
         'appearance' => [
             'title' => '表示設定',
-            'description' => 'アカウントの表示設定を変更します。',
+            'description' => 'テーマの表示方法を選択します。',
         ],
     ],
 ];

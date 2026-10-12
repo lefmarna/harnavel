@@ -40,7 +40,7 @@ describe('ログイン', function () {
         $this->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'wrong-password',
-        ]);
+        ])->assertSessionHasErrors(['email' => 'ログイン用の認証情報が正しくありません。再度お試しください。']);
 
         $this->assertGuest();
     });

@@ -742,6 +742,8 @@ test("本人確認済みならパスワードを入力せずにアカウント�
   await page.getByLabel("メールアドレス").fill(user.email);
   await page.getByLabel("パスワード").fill(user.password);
   await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page.getByText("認証に失敗しました。")).toBeVisible();
+  await expect(
+    page.getByText("ログイン用の認証情報が正しくありません。再度お試しください。"),
+  ).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
 });

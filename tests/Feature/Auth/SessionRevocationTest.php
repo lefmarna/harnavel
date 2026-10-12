@@ -234,4 +234,25 @@ describe('セッションの失効', function () {
         '失効していれば拒否する' => [true],
         '失効していなければ保存する' => [false],
     ]);
+
+    it('失効と同時に進んだログインは、ログイン保持の値を書き戻さない', function () {
+        $user = User::factory()->create(['remember_token' => null]);
+        $loadedBeforeRevocation = User::findOrFail($user->getKey());
+        $owner = User::findOrFail($user->getKey());
+        $owner->revokeSessions();
+        $owner->save();
+
+        Auth::login($loadedBeforeRevocation, remember: true);
+
+        expect($user->refresh()->getRememberToken())->toBe($owner->getRememberToken());
+    });
+
+    it('ログイン保持の値が空の既存ユーザーにも、移行で値を入れる', function () {
+        $user = User::factory()->create();
+        User::query()->whereKey($user->getKey())->update(['remember_token' => null]);
+
+        (require database_path('migrations/2026_10_12_000000_fill_empty_remember_tokens.php'))->up();
+
+        expect($user->refresh()->getRememberToken())->toBeString()->not->toBeEmpty();
+    });
 });

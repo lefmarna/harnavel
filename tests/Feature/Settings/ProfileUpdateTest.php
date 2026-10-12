@@ -205,6 +205,16 @@ describe('プロフィール設定', function () {
         expect($user->fresh())->toBeNull();
     });
 
+    it('メール未確認のユーザーもアカウントを削除できる', function () {
+        $user = User::factory()->unverified()->create();
+
+        $this->actingAs($user)
+            ->delete(route('profile.destroy'))
+            ->assertRedirect(route('home'));
+
+        expect($user->fresh())->toBeNull();
+    });
+
     // 本人がパスワードを再設定した後に、その前から走っていた削除を通さない（TADR-0016）。
     it('削除の途中でセッションが失効したら、その削除を拒否する', function () {
         $user = User::factory()->create();

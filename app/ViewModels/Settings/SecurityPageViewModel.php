@@ -14,6 +14,7 @@ final readonly class SecurityPageViewModel extends PageViewModel
      */
     public function __construct(
         private bool $canManagePasskeys,
+        private bool $canRegisterPasskey,
         private array $passkeys,
         private bool $googleLinked,
         private bool $canUnlinkGoogle,
@@ -22,6 +23,7 @@ final readonly class SecurityPageViewModel extends PageViewModel
     /**
      * @return array{
      *     canManagePasskeys: bool,
+     *     canRegisterPasskey: bool,
      *     passkeys: list<array{id: int, name: string, authenticator: string|null, created_at_diff: string, last_used_at_diff: string|null}>,
      *     googleLinked: bool,
      *     canUnlinkGoogle: bool,
@@ -32,6 +34,7 @@ final readonly class SecurityPageViewModel extends PageViewModel
     {
         return [
             'canManagePasskeys' => $this->canManagePasskeys,
+            'canRegisterPasskey' => $this->canRegisterPasskey,
             'passkeys' => $this->passkeys,
             'googleLinked' => $this->googleLinked,
             'canUnlinkGoogle' => $this->canUnlinkGoogle,

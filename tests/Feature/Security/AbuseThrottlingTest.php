@@ -65,4 +65,15 @@ describe('濫用対策のレート制限', function () {
 
         expect($this->post(route('password.confirm.store'))->getStatusCode())->not->toBe(429);
     });
+
+    it('プロフィール更新とパスワード変更の上限は別々に数える', function () {
+        $this->actingAs(User::factory()->create())
+            ->withSession(['auth.password_confirmed_at' => time()]);
+
+        for ($attempt = 0; $attempt < 6; $attempt++) {
+            $this->patch(route('profile.update'));
+        }
+
+        expect($this->put(route('user-password.update'))->getStatusCode())->not->toBe(429);
+    });
 });

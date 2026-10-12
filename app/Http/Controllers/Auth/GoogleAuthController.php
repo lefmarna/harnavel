@@ -129,7 +129,7 @@ class GoogleAuthController extends Controller
                 ->with('error', __('auth.google.failed'));
         }
 
-        Auth::login($user);
+        Auth::login($user, remember: true);
         $request->session()->regenerate();
 
         return redirect()->intended(config('fortify.home'));

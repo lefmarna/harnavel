@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Socialite\Facades\Socialite;
@@ -119,7 +120,7 @@ describe('Google OAuth コントローラ', function () {
         '設定完備' => ['https://example.com/callback', true],
     ]);
 
-    it('callback() でログイン完了して fortify.home へリダイレクトする', function () {
+    it('callback() でログイン状態を保持してログインし fortify.home へリダイレクトする', function () {
         $existingUser = User::factory()->create(['email' => 'test@example.com']);
 
         fakeGoogleUser([
@@ -135,7 +136,8 @@ describe('Google OAuth コントローラ', function () {
             ->andReturn($existingUser);
 
         $this->get(route('auth.google.callback'))
-            ->assertRedirect(config('fortify.home'));
+            ->assertRedirect(config('fortify.home'))
+            ->assertCookie(Auth::guard()->getRecallerName());
 
         $this->assertAuthenticatedAs($existingUser);
     });

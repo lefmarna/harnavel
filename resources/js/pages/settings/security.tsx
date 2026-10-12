@@ -23,6 +23,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 type Props = {
   canManagePasskeys: boolean;
+  canRegisterPasskey: boolean;
   passkeys: Passkey[];
   googleLinked: boolean;
   canUnlinkGoogle: boolean;
@@ -30,6 +31,7 @@ type Props = {
 
 export default function Security({
   canManagePasskeys,
+  canRegisterPasskey,
   passkeys,
   googleLinked,
   canUnlinkGoogle,
@@ -142,7 +144,11 @@ export default function Security({
           </div>
 
           <div className="space-y-6">
-            <ManagePasskeys canManagePasskeys={canManagePasskeys} passkeys={passkeys} />
+            <ManagePasskeys
+              canManagePasskeys={canManagePasskeys}
+              canRegisterPasskey={canRegisterPasskey}
+              passkeys={passkeys}
+            />
 
             {flash.status === "passkey-deleted" && (
               <p role="status" className="text-sm font-medium text-green-600 dark:text-green-400">

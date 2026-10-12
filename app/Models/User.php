@@ -43,6 +43,19 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     ];
 
     /**
+     * Laravel はログイン保持の値が空のときだけ作って保存する。失効の前に読み込んだユーザーでの
+     * ログインに、失効でローテーションした値を上書きさせないよう、作成時から値を持たせる（TADR-0016）。
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (empty($user->getRememberToken())) {
+                $user->setRememberToken(Str::random(60));
+            }
+        });
+    }
+
+    /**
      * iOS Safari が生バイナリを破損するため、64バイトの ASCII hex を使う。
      * https://github.com/laravel/passkeys-server/pull/42 が正式版へ入ったら削除する（TADR-0013）。
      */

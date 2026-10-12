@@ -27,6 +27,7 @@ describe('セキュリティ設定', function () {
             ->assertInertia(
                 fn ($page) => assertInertiaShape($page, 'settings/security', [
                     'canManagePasskeys',
+                    'canRegisterPasskey',
                     'passkeys',
                     'googleLinked',
                     'canUnlinkGoogle',
@@ -34,6 +35,7 @@ describe('セキュリティ設定', function () {
                     'seo.description',
                 ])
                     ->where('canManagePasskeys', true)
+                    ->where('canRegisterPasskey', true)
                     ->where('passkeys', [])
                     ->where('seo.title', 'セキュリティ設定')
                     ->where('seo.description', 'パスワード、パスキー、Googleログイン連携を管理します。')
@@ -354,4 +356,33 @@ describe('セキュリティ設定', function () {
 
         expect($user->refresh()->password)->not->toBeNull();
     });
+
+    it('メール未確認のユーザーにはパスキーの登録を出さない', function () {
+        $this->actingAs(User::factory()->unverified()->create())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('security.edit'))
+            ->assertInertia(fn ($page) => $page->where('canRegisterPasskey', false));
+    });
+
+    it('メール未確認のユーザーもセキュリティ設定を使える', function (string $method, string $routeName, array $payload) {
+        $user = User::factory()->unverified()->create(['google_id' => 'google-1']);
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->from(route('security.edit'))
+            ->call($method, route($routeName), $payload);
+
+        $response->assertSessionHasNoErrors();
+        expect($response->getStatusCode())->toBeIn([200, 302])
+            ->and($response->headers->get('Location'))->not->toBe(route('verification.notice'));
+    })->with([
+        '画面' => ['GET', 'security.edit', []],
+        'パスワード変更' => ['PUT', 'user-password.update', [
+            'current_password' => UserFactory::DEFAULT_PASSWORD,
+            'password' => 'new-password1',
+            'password_confirmation' => 'new-password1',
+        ]],
+        'Google 連携の解除' => ['DELETE', 'security.google.destroy', []],
+    ]);
 });

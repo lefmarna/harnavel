@@ -37,6 +37,7 @@ class SecurityController extends Controller
             'settings/security',
             new SecurityPageViewModel(
                 canManagePasskeys: $canManagePasskeys,
+                canRegisterPasskey: $user->hasVerifiedEmail(),
                 passkeys: $canManagePasskeys ? $this->passkeysOf($user) : [],
                 googleLinked: $user->google_id !== null,
                 canUnlinkGoogle: $user->google_id !== null && $this->hasOtherCredential($user),

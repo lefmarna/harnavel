@@ -5,10 +5,13 @@ import { destroy } from "@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegi
 import Heading from "@/components/heading";
 import PasskeyItem from "@/components/passkey-item";
 import PasskeyRegister from "@/components/passkey-register";
+import TextLink from "@/components/text-link";
+import { notice } from "@/routes/verification";
 import type { Passkey } from "@/types";
 
 type Props = {
   canManagePasskeys: boolean;
+  canRegisterPasskey: boolean;
   passkeys: Passkey[];
 };
 
@@ -28,7 +31,7 @@ function EmptyState() {
   );
 }
 
-export default function ManagePasskeys({ canManagePasskeys, passkeys }: Props) {
+export default function ManagePasskeys({ canManagePasskeys, canRegisterPasskey, passkeys }: Props) {
   if (!canManagePasskeys) {
     return null;
   }
@@ -62,7 +65,14 @@ export default function ManagePasskeys({ canManagePasskeys, passkeys }: Props) {
         )}
       </div>
 
-      <PasskeyRegister onSuccess={() => router.reload()} />
+      {canRegisterPasskey ? (
+        <PasskeyRegister onSuccess={() => router.reload()} />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          パスキーを追加するには、<TextLink href={notice()}>メールアドレスの確認</TextLink>
+          を済ませてください。
+        </p>
+      )}
     </div>
   );
 }

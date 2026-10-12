@@ -25,7 +25,7 @@ type Routes = {
 type Props = {
   /** Conditional UI。候補が出ない環境もあるので、ボタンは併せて常に出す。 */
   autofill?: boolean;
-  remember?: boolean | (() => boolean);
+  remember?: boolean;
   routes?: Routes;
   label?: string;
   loadingLabel?: string;
@@ -131,7 +131,7 @@ function usePasskeyAutofill({
   onError,
 }: {
   enabled: boolean;
-  remember?: boolean | (() => boolean);
+  remember?: boolean;
   routes?: Routes;
   onError: (error: PasskeyError) => void;
 }): () => Promise<boolean> {

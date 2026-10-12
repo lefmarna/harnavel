@@ -1,12 +1,10 @@
 import { Form } from "@inertiajs/react";
-import { useCallback, useRef } from "react";
 
 import GoogleIcon from "@/components/google-icon";
 import InputError from "@/components/input-error";
 import PasskeyVerify from "@/components/passkey-verify";
 import TextLink from "@/components/text-link";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -34,12 +32,15 @@ export default function Login({
   canGoogleLogin,
 }: Props) {
   const canUsePasskey = usePasskeyAvailable();
-  const remember = useRef(false);
-  const getRemember = useCallback(() => remember.current, []);
 
   return (
     <AuthLayout>
-      <Form {...store.form()} resetOnSuccess={["password"]} className="flex flex-col gap-6">
+      <Form
+        {...store.form()}
+        transform={(data) => ({ ...data, remember: true })}
+        resetOnSuccess={["password"]}
+        className="flex flex-col gap-6"
+      >
         {({ processing, errors }) => (
           <>
             <div className="grid gap-6">
@@ -79,22 +80,10 @@ export default function Login({
                 <InputError message={errors.password} />
               </div>
 
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="remember"
-                  name="remember"
-                  tabIndex={3}
-                  onCheckedChange={(checked) => {
-                    remember.current = checked === true;
-                  }}
-                />
-                <Label htmlFor="remember">ログイン状態を保持する</Label>
-              </div>
-
               <Button
                 type="submit"
                 className="mt-4 w-full"
-                tabIndex={4}
+                tabIndex={3}
                 disabled={processing}
                 data-test="login-button"
               >
@@ -125,7 +114,7 @@ export default function Login({
 
                 <div className="grid gap-3">
                   {/* パスキーはこのアカウント自身の資格情報なので、外部の Google より先に置く。 */}
-                  <PasskeyVerify autofill remember={getRemember} />
+                  <PasskeyVerify autofill remember />
 
                   {canGoogleLogin && (
                     <Button

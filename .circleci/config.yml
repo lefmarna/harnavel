@@ -38,7 +38,6 @@ jobs:
       REPOSITORY: << pipeline.event.github.repository.owner.login >>/<< pipeline.event.github.repository.name >>
     steps:
       - merge-pull-request
-      # 同じツリーの E2E が既に通っていれば、検証をやり直さずに成功とする。
       - run:
           name: Skip a tree that already passed E2E
           command: if scripts/ci/e2e-record.sh check; then circleci-agent step halt; fi

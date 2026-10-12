@@ -10,9 +10,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * メール未確認のアカウントは、メールの持ち主でない第三者が先に作った可能性がある。
- * その第三者に、持ち主の回復後も使えるパスキーを登録させない（TADR-0016）。
- * Fortify のルートには個別にミドルウェアを付けられないため、ルート名で対象を選ぶ。
+ * 理由は TADR-0016。Fortify のルートには個別にミドルウェアを付けられないため、ルート名で対象を選ぶ。
  * fortify.middleware は auth より外側で動くので、未ログインなら auth に任せてログイン画面へ送らせる。
  */
 final class RequireVerifiedEmailForPasskeyRegistration

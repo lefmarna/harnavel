@@ -35,31 +35,24 @@ beforeEach(function () {
 });
 
 describe('本番エラーページ', function () {
-    it('500 エラーページに問い合わせIDを表示できる', function () {
-        $response = $this->get('/_testing/errors/500');
+    it('エラーページに定型文言と問い合わせIDを表示する', function (string $uri, int $status, string $heading) {
+        $response = $this->get($uri);
 
-        $response->assertInternalServerError();
-
-        $requestId = $response->headers->get('X-Request-Id');
-
-        expect($requestId)->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/');
-        expect($response->getContent())
-            ->toContain('問い合わせID')
-            ->toContain((string) $requestId);
-    });
-
-    it('503 エラーページに問い合わせIDを表示できる', function () {
-        $response = $this->get('/_testing/errors/503');
-
-        $response->assertServiceUnavailable();
+        $response->assertStatus($status);
 
         $requestId = $response->headers->get('X-Request-Id');
 
         expect($requestId)->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/');
         expect($response->getContent())
-            ->toContain('問い合わせID')
-            ->toContain((string) $requestId);
-    });
+            ->toContain("<title>{$heading} - ")
+            ->toContain("<h1>{$heading}</h1>")
+            ->toContain('時間をおいてもう一度お試しください。お問い合わせの際は、以下の問い合わせIDをお知らせください。')
+            ->toContain((string) $requestId)
+            ->toContain('トップページへ戻る');
+    })->with([
+        '500' => ['/_testing/errors/500', 500, 'エラーが発生しました'],
+        '503' => ['/_testing/errors/503', 503, '現在利用できません'],
+    ]);
 
     it('500 は問い合わせIDが無いときプレースホルダを日本語で示す', function () {
         // AssignRequestId を通らない経路では ID が無い。読み手に見える位置なので、
@@ -75,26 +68,6 @@ describe('本番エラーページ', function () {
         expect($html)
             ->toContain('時間をおいてもう一度お試しください。')
             ->not->toContain('問い合わせID');
-    });
-
-    it('500 エラーページに定型文言を表示する', function () {
-        $response = $this->get('/_testing/errors/500');
-
-        expect($response->getContent())
-            ->toContain('<title>エラーが発生しました - ')
-            ->toContain('<h1>エラーが発生しました</h1>')
-            ->toContain('時間をおいてもう一度お試しください。お問い合わせの際は、以下の問い合わせIDをお知らせください。')
-            ->toContain('トップページへ戻る');
-    });
-
-    it('503 エラーページに定型文言を表示する', function () {
-        $response = $this->get('/_testing/errors/503');
-
-        expect($response->getContent())
-            ->toContain('<title>現在利用できません - ')
-            ->toContain('<h1>現在利用できません</h1>')
-            ->toContain('時間をおいてもう一度お試しください。お問い合わせの際は、以下の問い合わせIDをお知らせください。')
-            ->toContain('トップページへ戻る');
     });
 
     it('本番エラーページにスタックトレースや入力値を表示しない', function () {
@@ -155,12 +128,6 @@ describe('SPA遷移時の500エラーページ', function () {
             ->not->toContain('secret stack message')
             ->not->toContain('secret-password')
             ->not->toContain('Stack trace');
-    });
-
-    it('SPA遷移時のレスポンスがステータスコード500を返す', function () {
-        $response = $this->get('/_testing/errors/500', $this->inertiaHeaders);
-
-        $response->assertInternalServerError();
     });
 
     it('SPA遷移時の419は直前のページへ有効期限切れのエラーを返す', function () {

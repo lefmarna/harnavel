@@ -27,7 +27,7 @@ class DeletePasskey extends BaseDeletePasskey
     public function __invoke(Authenticatable $user, Passkey $passkey): void
     {
         /** @var User $user 認証するのは users テーブルだけ。 */
-        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+        /** @var int|string $key */
         $key = $user->getKey();
 
         $lockedUser = DB::transaction(function () use ($user, $key, $passkey): User {

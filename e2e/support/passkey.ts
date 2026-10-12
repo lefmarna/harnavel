@@ -1,6 +1,6 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
-/** パスキー操作を自動承認する仮想オーセンティケータを有効にする。CDP 依存のため Chromium 専用。 */
+/** CDP 依存のため Chromium 専用。 */
 export const enableVirtualAuthenticator = async (
   page: Page,
   context: BrowserContext,

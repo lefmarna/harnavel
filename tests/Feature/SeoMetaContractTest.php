@@ -188,31 +188,15 @@ describe('SEO メタ契約', function () {
             ->and($robots)->toBe('noindex, nofollow');
     });
 
-    it('機微なルートのog:urlはクエリ文字列を含まない', function () {
-        $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
-        $response = $this->get($url);
+    // SPA 遷移後のタグは currentUrl から作り直すので、初期 HTML と合わせて確かめる。
+    it('機微なルートのcanonicalとog:urlはクエリ文字列を含まない', function () {
+        $response = $this->get(route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']));
         $content = $response->getContent();
+        $expected = route('password.reset', ['token' => 'test-token']);
 
-        preg_match('/property="og:url"\s+content="([^"]*)"/', $content, $matches);
-        $ogUrl = $matches[1] ?? '';
-
-        expect($ogUrl)->not->toBeEmpty()
-            ->and($ogUrl)->not->toContain('email=')
-            ->and($ogUrl)->not->toContain('?')
-            ->and($ogUrl)->toContain('reset-password');
-    });
-
-    it('機微なルートのcanonicalはクエリ文字列を含まない', function () {
-        $url = route('password.reset', ['token' => 'test-token', 'email' => 'test@example.com']);
-        $response = $this->get($url);
-        $content = $response->getContent();
-
-        $canonicalUrl = extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href');
-
-        expect($canonicalUrl)->not->toBeEmpty()
-            ->and($canonicalUrl)->not->toContain('email=')
-            ->and($canonicalUrl)->not->toContain('?')
-            ->and($canonicalUrl)->toContain('reset-password');
+        $response->assertInertia(fn (AssertableInertia $page) => $page->where('currentUrl', $expected));
+        expect(extractHeadAttribute($content, 'link', ['rel' => 'canonical'], 'href'))->toBe($expected)
+            ->and(extractHeadAttribute($content, 'meta', ['property' => 'og:url'], 'content'))->toBe($expected);
     });
 
     it('shared propsにはappDisplayName・appDescription・seo・urls・flashが含まれる', function () {
@@ -244,26 +228,7 @@ describe('SEO メタ契約', function () {
         );
     });
 
-    it('guest authページはnoindex robots metaとseoを使う', function (string $routeName, array $routeParams = []) {
-        $response = $this->get(route($routeName, $routeParams));
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('seo')
-            ->where('seo.robots', 'noindex, nofollow')
-        );
-
-        expect($response->getContent())->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-    })->with([
-        'login' => ['login'],
-        'register' => ['register'],
-        'forgot-password' => ['password.request'],
-        'reset-password' => ['password.reset', ['token' => 'test-token']],
-    ]);
-
-    // JSON-LD は <script> の内側へ文字列として埋まる。タイトルや説明はアプリが自由に
-    // 流し込む枠で、ユーザー入力や生成物が届く経路を持つアプリもある。エスケープが
-    // 無いと `</script>` で script 要素を抜け、後続が HTML として解釈される。
+    // タイトルや説明にユーザー入力が届くアプリもある。
     it('構造化データに script を閉じる文字列が入っても script 要素を抜けない', function () {
         $payload = '</script><script>alert(1)</script>';
         replaceSiteDescription($payload);
@@ -324,89 +289,32 @@ describe('SEO メタ契約', function () {
             ]);
     });
 
-    it('各ページはseo.titleを公開する', function (string $routeName, string $expectedTitle, array $routeParams = []) {
+    // 認証まわりの画面は検索結果に出さない。
+    it('各ページは固有のseo.titleとdescriptionを公開する', function (string $routeName, ?array $user, string $title, string $description, bool $noIndex, array $routeParams = []) {
+        if ($user !== null) {
+            $this->actingAs(User::factory()->create($user))
+                ->withSession(['auth.password_confirmed_at' => time()]);
+        }
+
         $response = $this->get(route($routeName, $routeParams));
 
         $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('seo')
-            ->where('seo.title', $expectedTitle)
+        $response->assertInertia(fn (AssertableInertia $page) => ($noIndex
+            ? $page->where('seo.robots', 'noindex, nofollow')
+            : $page->missing('seo.robots'))
+            ->where('seo.title', $title)
+            ->where('seo.description', $description)
         );
     })->with([
-        'home' => ['home', 'ホーム'],
-        'login' => ['login', 'ログイン'],
-        'register' => ['register', '新規登録'],
-        'forgot-password' => ['password.request', 'パスワードをお忘れの方'],
-        'reset-password' => ['password.reset', 'パスワード再設定', ['token' => 'test-token']],
+        'login' => ['login', null, 'ログイン', 'メールアドレスとパスワードを入力してログインします。', true],
+        'register' => ['register', null, '新規登録', '必要事項を入力して新しいアカウントを作成します。', true],
+        'forgot-password' => ['password.request', null, 'パスワードをお忘れの方', 'メールアドレスを入力してパスワード再設定リンクを受け取ります。', true],
+        'reset-password' => ['password.reset', null, 'パスワード再設定', 'アカウントの新しいパスワードを設定します。', true, ['token' => 'test-token']],
+        'verify-email' => ['verification.notice', ['email_verified_at' => null], 'メール認証', 'メールアドレスの認証を完了してください。', true],
+        'confirm-password' => ['password.confirm', [], '本人確認', '続行するには現在のパスワードを入力してください。', true],
+        'dashboard' => ['dashboard', [], 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。', false],
+        'profile' => ['profile.edit', [], 'プロフィール設定', '名前とメールアドレスを管理します。', false],
+        'security' => ['security.edit', [], 'セキュリティ設定', 'パスワード、パスキー、Googleログイン連携を管理します。', false],
+        'appearance' => ['appearance.edit', [], '表示設定', 'アカウントの表示設定を変更します。', false],
     ]);
-
-    it('ゲスト向け認証ページはseo.descriptionを公開する', function (string $routeName, string $expectedDescription, array $routeParams = []) {
-        $response = $this->get(route($routeName, $routeParams));
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('seo')
-            ->where('seo.description', $expectedDescription)
-        );
-    })->with([
-        'login' => ['login', 'メールアドレスとパスワードを入力してログインします。'],
-        'register' => ['register', '必要事項を入力して新しいアカウントを作成します。'],
-        'forgot-password' => ['password.request', 'メールアドレスを入力してパスワード再設定リンクを受け取ります。'],
-        'reset-password' => ['password.reset', 'アカウントの新しいパスワードを設定します。', ['token' => 'test-token']],
-    ]);
-
-    it('認証済みページはseo.titleとdescriptionを持つ', function (string $routeName, string $expectedTitle, string $expectedDescription) {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route($routeName));
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('seo')
-            ->where('seo.title', $expectedTitle)
-            ->where('seo.description', $expectedDescription)
-        );
-    })->with([
-        'dashboard' => ['dashboard', 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。'],
-        'profile' => ['profile.edit', 'プロフィール設定', '名前とメールアドレスを管理します。'],
-        'security' => ['security.edit', 'セキュリティ設定', 'パスワード、パスキー、Googleログイン連携を管理します。'],
-        'appearance' => ['appearance.edit', '表示設定', 'アカウントの表示設定を変更します。'],
-    ]);
-
-    it('メール認証ページはseo.titleとdescriptionを持つ', function () {
-        $user = User::factory()->create(['email_verified_at' => null]);
-
-        $response = $this->actingAs($user)->get(route('verification.notice'));
-        $content = $response->getContent();
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('seo')
-            ->where('seo.title', 'メール認証')
-            ->where('seo.description', 'メールアドレスの認証を完了してください。')
-            ->where('seo.robots', 'noindex, nofollow')
-        );
-
-        expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-    });
-
-    it('本人確認ページはseo.titleとdescriptionを持つ', function () {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->get(route('password.confirm'));
-        $content = $response->getContent();
-
-        $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('seo')
-            ->where('seo.title', '本人確認')
-            ->where('seo.description', '続行するには現在のパスワードを入力してください。')
-            ->where('seo.robots', 'noindex, nofollow')
-        );
-
-        expect($content)->toContain('<meta data-inertia="robots" name="robots" content="noindex, nofollow">');
-    });
-
 });

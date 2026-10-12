@@ -82,7 +82,6 @@ describe('セキュリティイベントのログ', function () {
         Log::shouldHaveReceived('info')->with('User password was changed.', ['user_id' => $user->getKey()])->once();
     });
 
-    // 切り替えの記録は、新しいアドレスを確認したとき（EmailChangeTest）。
     it('メールアドレスの変更の申請を記録し、名前だけの変更は記録しない', function () {
         Mail::fake();
         $user = User::factory()->create(['name' => 'Before', 'email' => 'before@example.com']);

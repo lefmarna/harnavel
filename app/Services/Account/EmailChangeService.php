@@ -18,8 +18,7 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * メールアドレスは、新しいアドレスの所有を確かめてから切り替える。切り替えたら旧アドレスへ取り消しリンクを送る。
- * セッションを奪った第三者が自分のアドレスへ書き換え、再設定メールで乗っ取るのを防ぐ（TADR-0016）。
+ * 設計の理由は TADR-0016。
  */
 class EmailChangeService
 {
@@ -30,9 +29,7 @@ class EmailChangeService
     public function __construct(private readonly UserRepositoryContract $userRepository) {}
 
     /**
-     * 切り替えてから取り消しリンクの期限が切れるまでは、次の変更を受け付けない。
-     * 使える取り消しリンクを1つに保ち、第三者が自分のアドレスを経由させて、持ち主のリンクと競う
-     * 取り消しリンクを受け取れないようにする（TADR-0016）。
+     * 使える取り消しリンクを1つに保つ（TADR-0016）。
      */
     public function canChangeEmail(User $user): bool
     {
@@ -41,12 +38,9 @@ class EmailChangeService
             || now()->getTimestamp() > $this->revertLinkExpiresAt($user)->getTimestamp();
     }
 
-    /**
-     * 新しいアドレスへ確認リンクを送る。メールアドレスはまだ変えない。
-     */
     public function request(User $user, string $email): void
     {
-        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+        /** @var int|string $key */
         $key = $user->getKey();
 
         $url = SignedPayloadLink::make('email-change.verify', now()->addMinutes(self::VERIFY_LINK_MINUTES), $key, [
@@ -60,10 +54,6 @@ class EmailChangeService
         Log::info('User email change was requested.', ['user_id' => $key]);
     }
 
-    /**
-     * 新しいアドレスへ切り替えて確認済みにし、旧アドレスへ取り消しリンクを送る。
-     * 申請した時点からアカウントの状態が変わっていれば、申請の前提が崩れているので切り替えない。
-     */
     public function confirm(string $userId, string $from, string $to, string $state): bool
     {
         try {
@@ -110,7 +100,6 @@ class EmailChangeService
     }
 
     /**
-     * 旧アドレスへ戻し、変更した第三者が用意したかもしれない資格情報とセッションを無効にする。
      * すでに戻っていれば、その後に持ち主が設定し直した資格情報を消さないよう何もしない。
      */
     public function revert(string $userId, string $email): bool
@@ -161,19 +150,16 @@ class EmailChangeService
     }
 
     /**
-     * 大文字小文字だけの違いは同じアドレスとして扱う。プロフィールの保存もこの判定に従う。
+     * プロフィールの保存もこの判定に従う。
      */
     public function sameAddress(string $current, string $other): bool
     {
         return Str::lower($current) === Str::lower($other);
     }
 
-    /**
-     * 旧アドレスへ送る取り消しリンク。
-     */
     public function revertLink(User $user, string $previousEmail): string
     {
-        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+        /** @var int|string $key */
         $key = $user->getKey();
 
         return SignedPayloadLink::make('email-change.revert', $this->revertLinkExpiresAt($user), $key, [
@@ -181,16 +167,13 @@ class EmailChangeService
         ]);
     }
 
-    /**
-     * 取り消しリンクの期限と次の変更を受け付ける時刻を、保存した切り替え日時から揃えて決める。
-     */
     private function revertLinkExpiresAt(User $user): CarbonInterface
     {
         return ($user->email_changed_at ?? now())->addDays(self::REVERT_LINK_DAYS);
     }
 
     /**
-     * 切り替えはすでに確定しているので、送れなくても失敗にせず報告だけする。
+     * 切り替えは確定済みのため、送信の失敗は報告だけにする。
      */
     private function sendRevertLink(User $user, string $previousEmail): void
     {

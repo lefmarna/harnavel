@@ -17,7 +17,6 @@ class AddSecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Vite のタグとテンプレートのインラインスクリプトに、リクエストごとの nonce を付ける。
         $nonce = Vite::useCspNonce();
 
         $response = $next($request);
@@ -25,9 +24,8 @@ class AddSecurityHeaders
         /** @var array{'Content-Security-Policy': string, 'X-Content-Type-Options': string, 'Referrer-Policy': string, 'X-Frame-Options': string} $headers */
         $headers = require __DIR__.'/../../../bootstrap/security-headers.php';
 
-        // nonce を持つスクリプトと、それが読み込むスクリプトだけを実行させる（TADR-0012）。
         // デバッグ画面は nonce のないスクリプトと eval で動き、Inertia が表示する iframe も元の画面の
-        // CSP を継承するので、デバッグ時は違反を報告するだけにする。
+        // CSP を継承するので、デバッグ時は違反を報告するだけにする（TADR-0012）。
         if (config('app.debug')) {
             $headers['Content-Security-Policy-Report-Only'] = $this->scriptSrc($nonce);
         } else {

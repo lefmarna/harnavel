@@ -129,7 +129,7 @@ class GoogleAuthController extends Controller
                 ->with('error', __('auth.google.failed'));
         }
 
-        Auth::login($user);
+        Auth::login($user, remember: true);
         $request->session()->regenerate();
 
         return redirect()->intended(config('fortify.home'));
@@ -137,7 +137,6 @@ class GoogleAuthController extends Controller
 
     private function completeReauthentication(Request $request): RedirectResponse
     {
-        // 以前の guest ミドルウェアと同じく、ログイン済みユーザーをホームへ戻す。
         if ($request->session()->pull(self::REAUTHENTICATION_SESSION_KEY) !== true) {
             return redirect()->to(Config::string('fortify.home'));
         }

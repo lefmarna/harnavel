@@ -1,123 +1,81 @@
 # Account takeover defenses
 
-A stolen session must not outlive the owner's response to it. Changing or resetting a password, and
-confirming a Google link on an account whose email was never verified, advance the user's
-`session_generation` and rotate `remember_token`. Each login records the generation of the user it
-authenticated in the session, and every web request logs out a session whose recorded generation
-differs from the user's before `auth` runs, then continues as a guest: pages that need a login send
-it to the login page, and links that need none, such as restoring an email address, still open. The value comes from the user loaded when credentials were checked, so a
-login that passed the check just before a reset keeps the old generation and is rejected on its next
-request. Deleting the user's rows from the `sessions` table could not do this: such a login writes
-its row after the deletion. Sessions from before the column existed count as generation 0, so
-introducing it logs no one out. Every revocation advances the generation of the row it has locked,
-because advancing a value read earlier would move it back past a concurrent reset and revive the
-sessions that reset revoked. A request that began before a revocation can still be running when it
-commits, so writes to the password or the address, and account deletion, lock the user row, compare
-its generation with the one the request started with, and refuse with 409 when it moved; otherwise an in-flight change
-from a stolen session would land after the owner's reset or restore. Passkey registration does the
-same: the package's store action is replaced with one that takes the lock and compares the
-generation before inserting, because a passkey removed only after it is stored could already be used
-to sign in by another request. Deleting a passkey or unlinking Google from the
-security settings also revokes the other sessions, because a thief may already have signed in with
-it; unlinking is refused while Google is the only credential, so the owner is not locked out. The
-mailed link that confirms a Google link records the session generation, so a link sent before an
-unlink or another revocation cannot restore the link afterwards.
-Changing the password, deleting a passkey, or unlinking Google keeps the current session by
-regenerating its ID and recording the new generation in it. This works with any session driver.
+A stolen session must not outlive the owner's response to it. Resetting or changing the password,
+and confirming a Google link on an unverified account, advance the user's session generation and
+rotate `remember_token`; every web request logs out a session that recorded an older generation
+before `auth` runs. Deleting the user's `sessions` rows was rejected because a login racing a reset
+writes its row after the deletion. Laravel's `AuthenticateSession` was rejected because it skips
+users without a password and adopts the current hash for a session that has none. Rejected sessions
+use `logoutCurrentDevice()`, so the owner's devices that signed in after the revocation stay signed in.
 
-Laravel's `AuthenticateSession` is not used: it skips users without a password, so Google-only and
-passkey-only accounts would keep every stolen session, and it adopts the current password hash for a
-session that has none, so a login racing a reset survives. Rejected sessions are logged out with
-`logoutCurrentDevice()`, which leaves `remember_token` alone; `logout()` would rotate it and sign out
-the owner's devices that logged in after the revocation.
+Writes a stolen session could race (password and address changes, passkey registration, account
+deletion) lock the user row and refuse with 409 when the generation moved after the request began,
+so an in-flight change cannot land after the owner's reset or restore. Deleting a passkey or
+unlinking Google also revokes the other sessions, because a thief may already have signed in with
+it; unlinking the only credential is refused. The acting session survives by regenerating its ID.
+Revocation covers sessions only: an app that issues API tokens revokes them on the same events.
 
 An unverified account may have been registered by someone other than the email's owner. When the
 owner proves the address through a Google link or a password reset, the account becomes verified
-and loses the password, passkeys, Google link, and sessions the registrant may have set up, instead
-of merging into them. Passkey registration requires a verified email so the registrant cannot add
-one beforehand.
+and loses the registrant's password, passkeys, Google link, and sessions instead of merging into
+them. Passkey registration requires a verified email so the registrant cannot add one beforehand.
 
-Changing the email address hands over password reset, so the profile page, its update, and account
-deletion sit behind password confirmation alongside the security page, at the cost of a prompt when
-opening settings. Accounts without a password confirm with a passkey or by signing in again with
-the linked Google account. That sign-in returns to the existing OAuth callback URI, so apps do not
-register a second redirect URI with Google, and the callback treats an authenticated request as a
-reconfirmation only when the session started one. Any confirmation regenerates the session ID, so a
-copied session cookie never inherits the owner's confirmation. A confirmation lasts 15 minutes
-instead of Laravel's three hours, because a cookie stolen after it, or script injected into the
-owner's page, can use the rest of that window to change the address or add a passkey; the cost is
-confirming again during a long visit to settings.
+Changing the email address hands over password reset, so the profile page, its update, account
+deletion, and the security page require password confirmation. Accounts without a password confirm
+with a passkey or by signing in again with Google through the existing OAuth callback URI.
+Confirmation regenerates the session ID and lasts 15 minutes instead of Laravel's three hours,
+because a cookie stolen afterwards, or script injected into the owner's page, could use the rest of
+the window to change the address or add a passkey.
 
-Signing in again with Google proves that the browser holds a Google session for the linked account,
-not that the owner has just entered a Google password: `prompt=select_account` only shows the
-account chooser, and Google does not support requests to reauthenticate a Google account. It stops a
-thief who copied only the app's session cookie, which is what confirmation guards against here. It
-does not stop one who also holds the owner's Google session, such as malware that copied the
-browser's cookies or a person at the owner's unlocked computer. A stricter check would keep that
-attacker out of settings but not out of the account, because the same Google session signs in to it
-directly, and when the account's address is that Google account's mailbox it receives password reset
-as well. The template therefore does not request Google's `auth_time` claim: Google returns it only
-to verified apps that enable it, only in the ID token, which Socialite does not verify, and an old
-value could only be refused, leaving the owner to sign out of Google and try again. Google
-confirmation is offered only to accounts without a password, and the server checks this both when
-it starts and when Google returns, so a Google session alone never passes for an account that has
-one, even one whose password was set in another tab mid-confirmation. Against an attacker holding the
-Google session, the template relies on Google's protection of its sessions, the mail sent when a
-credential is added or the address changes, and the owner's ability to revoke sessions by resetting
-the password, deleting a passkey, or unlinking Google.
+Signing in again with Google proves only that the browser holds a Google session for the linked
+account; Google offers no forced reauthentication. That stops a thief who copied only the app's
+session cookie, which is what confirmation guards against, but not one who also holds the Google
+session, who could sign in directly anyway and, when the address is that mailbox, also receive
+password reset. The template does not request Google's `auth_time` claim: Google returns it only to
+verified apps, only in the ID token that Socialite does not verify, and a stale value could only be
+refused. Google confirmation is offered only to accounts without a password, checked both when it
+starts and when Google returns. Against an attacker holding the Google session, the template relies
+on Google's own protection, the mail sent when a credential or the address changes, and the owner's
+ability to revoke sessions.
 
-A new email address takes effect only after a link sent to it is opened, so a session thief cannot
-point password reset at an address they do not control without the owner's old address hearing of
-it. The switch marks the account verified and mails the previous address a link, valid for seven
-days, that restores it. Restoring treats the holder of the previous address as the owner reclaiming
-the account: it verifies that address and removes the password, passkeys, Google link, and sessions
-whoever made the change may have set up, then sends the owner to password reset. It does nothing
-when the address is already restored, so a second click cannot erase credentials the owner set
-afterwards. Seven days give the owner time to notice; for that long, someone who controls the
-previous mailbox can also take the account back. Restoring fails when another account has taken the
-previous address in the meantime.
+A new email address takes effect only after a link sent to it is opened. The switch verifies the
+account and mails the previous address a link, valid for seven days, that restores it. Restoring
+treats the holder of the previous address as the owner: it verifies that address, removes the
+credentials and sessions whoever made the change may have set up, and sends the owner to password
+reset; it does nothing when the address is already restored. For those seven days, whoever controls
+the previous mailbox can also take the account back.
 
-After a switch, the address cannot be changed again until the restore link has expired, so at most
-one restore link is usable at a time. The limit is checked when a change is requested and again,
-on the locked row, when it is confirmed, so a switch that commits in between cannot slip past it. Without that limit, a thief who routed the address through a
-mailbox they control, A to B to C, would also hold a link back to B: using it first would leave the
-owner's link to A pointing at an account the thief controls again, and invalidating it on restore
-would let the thief cancel the owner's link. The owner can still change the name, and can restore
-with the link at any time; the cost is that an owner who changes the address twice within a week
-must wait.
+After a switch, the address cannot change again until the restore link has expired, checked when a
+change is requested and again on the locked row when it is confirmed. Without that limit, a thief
+who routed the address A to B to C would hold a link back to B, and using it first would leave the
+owner's link to A pointing at an account the thief controls again. An owner who changes the address
+twice within a week must wait.
 
-A link to the new address records the session generation and the verification time, and stops
-working once either has moved since the request: revoking sessions, switching, restoring, or
-verifying the address all move one of them. A change a thief requested therefore cannot be completed
-after the owner resets the password or restores the address. Both links are confirmed with a POST so
-mail scanners that prefetch links do not act on them, and only the signed query is read, so a POST
-body cannot substitute the payload of another link. The mail to the previous address is sent after
-the switch commits; a delivery failure is reported but does not undo the switch.
+The link sent to a new address, and the mail that confirms a Google link, record the session
+generation, and the new-address link also the verification time; they stop working once either has
+moved, so a change a thief requested cannot complete after the owner resets the password or
+restores the address. The restore link does not, so the owner can still use it after revoking
+sessions. Links are confirmed with a POST so mail scanners that prefetch links do not act on them.
 
-Changing the password, adding a passkey, and linking a Google account mail the account's address
-once the change has committed, so the owner learns of a credential a session thief added. The mail
-links to the security settings for a reader who is still signed in, since password reset opens only
-for guests, and to password reset otherwise, telling a reader who cannot pass the settings'
-confirmation, such as one who lost the only passkey, to sign out first. It carries no signed action, so a copy of it grants
-nothing, and a delivery failure is reported without undoing the change. Password reset and restoring an email
-address are not announced, because both are started from the mailbox that would receive the notice.
+Changing the password, adding a passkey, and linking Google mail the account's address after the
+change commits, so the owner learns of a credential a thief added. The mail carries no signed
+action, and a delivery failure does not undo the change. Password reset and address restore are not
+announced, because both start from the mailbox that would receive the notice.
 
-Account deletion relies on that confirmation and does not ask for the password again. A second
-password prompt would stop owners who confirmed with a passkey or Google from deleting with the
-credential they chose, and it would not stop a session thief inside the confirmation window, who
-can change the email address and take over the account instead. The dialog that shows what will be
-deleted remains, to catch accidental deletion.
+Account deletion relies on password confirmation and does not ask for the password again. A second
+prompt would stop owners who confirmed with a passkey or Google, and would not stop a thief inside
+the confirmation window, who can take over by changing the address instead. The dialog that shows
+what will be deleted remains, to catch accidents.
 
-Registration reports an address that is already in use, so anyone can learn whether an address has
-an account. Hiding it would need registration to continue from a mailed link, which turns the form
-into a way to mail any address, and the answer reveals only that the owner uses the app: sign-in and
-password reset give the same response either way, and registration is limited per IP address.
-Changing the address reports the same, for an attacker who registers first.
+Registration and address changes report an address already in use, so anyone can learn whether an
+address has an account. Hiding it would need registration to continue from a mailed link, turning
+the form into a way to mail any address; the answer reveals only that the owner uses the app,
+sign-in and password reset respond the same either way, and registration is limited per IP address.
 
-Trusted hosts are limited to the `APP_URL` host without its subdomains. Password reset links are
-built from the request host, and a subdomain the app does not serve may be unresolved or taken
-over; an app serving more hosts through Laravel lists them itself.
+Trusted hosts are the `APP_URL` host without its subdomains, because password reset links are built
+from the request host and a subdomain the app does not serve may be taken over. An app serving more
+hosts lists them itself.
 
 URLs carrying a reset token, an email-verification hash, or a signature are kept out of analytics,
-advertising scripts, logs, and Discord notifications, because each of those copies is a usable
-credential held by a third party.
+advertising scripts, logs, and Discord notifications, because each copy is a usable credential held
+by a third party.

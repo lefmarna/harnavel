@@ -10,7 +10,6 @@ use Illuminate\Testing\TestResponse;
 
 mutates(AddSecurityHeaders::class);
 
-// 本番の応答を確かめる。デバッグ時の例外画面は末尾のテストで扱う。
 beforeEach(function () {
     config()->set('app.debug', false);
     config()->set('services.google.adsense_publisher_id', null);
@@ -92,47 +91,31 @@ it('アプリが指定したリファラーポリシーは秘密を含むURLの�
     $this->get('/_testing/reset/secret-token')->assertHeader('Referrer-Policy', 'same-origin');
 });
 
-it('パスの文字コードが不正な400応答にも基本のヘッダーを付与する', function () {
-    $response = $this->get('/%FF');
+// ルーティングの前後や web グループの外で応答が作られる経路でも、素通しにしない。
+it('通常以外の経路の応答にも基本のヘッダーを付与する', function (Closure $send, int $status) {
+    $response = $send($this);
 
-    $response->assertBadRequest();
+    $response->assertStatus($status);
     assertBaselineSecurityHeaders($response);
-});
+})->with([
+    'パスの文字コードが不正な400' => [fn ($test) => $test->get('/%FF'), 400],
+    'JSON応答' => [function ($test) {
+        Route::middleware('web')->get('/_testing/security-headers-json', fn () => response()->json(['ok' => true]));
 
-it('JSON応答にも基本のヘッダーを付与する', function () {
-    Route::middleware('web')->get('/_testing/security-headers-json', fn () => response()->json(['ok' => true]));
+        return $test->getJson('/_testing/security-headers-json');
+    }, 200],
+    'ルート内で発生した500' => [function ($test) {
+        Route::middleware('web')->get('/_testing/security-headers-error', function (): never {
+            abort(500);
+        });
 
-    $response = $this->getJson('/_testing/security-headers-json');
-
-    $response->assertOk();
-    assertBaselineSecurityHeaders($response);
-});
-
-it('ルート内で発生した500にも基本のヘッダーを付与する', function () {
-    Route::middleware('web')->get('/_testing/security-headers-error', function (): never {
-        abort(500);
-    });
-
-    $response = $this->get('/_testing/security-headers-error');
-
-    $response->assertInternalServerError();
-    assertBaselineSecurityHeaders($response);
-});
-
-it('存在しないパスの404にも基本のヘッダーを付与する', function () {
-    $response = $this->get('/_testing/security-headers-missing');
-
-    $response->assertNotFound();
-    assertBaselineSecurityHeaders($response);
-});
-
-// web グループの外にある経路。グローバルに付けていないと、ここだけ素通しになる。
-it('webグループ外のヘルスチェックにも基本のヘッダーを付与する', function () {
-    $response = $this->get('/up');
-
-    $response->assertOk();
-    assertBaselineSecurityHeaders($response);
-});
+        return $test->get('/_testing/security-headers-error');
+    }, 500],
+    '存在しないパスの404' => [fn ($test) => $test->get('/_testing/security-headers-missing'), 404],
+    'webグループ外のヘルスチェック' => [fn ($test) => $test->get('/up'), 200],
+    // 巨大な本文は送らず、CONTENT_LENGTH の申告だけで ValidatePostSize を通す。
+    'POSTサイズ超過の413' => [fn ($test) => $test->call('POST', '/_testing/security-headers-post', server: ['CONTENT_LENGTH' => (string) PHP_INT_MAX]), 413],
+]);
 
 it('実行中のメンテナンスの503にも基本のヘッダーを付与する', function () {
     // artisan down はコンテナ全体を止めるため、中断や並列実行で開発環境を 503 のまま残す。
@@ -157,18 +140,6 @@ it('実行中のメンテナンスの503にも基本のヘッダーを付与す�
     $response = $this->get('/_testing/security-headers-maintenance');
 
     $response->assertServiceUnavailable();
-    assertBaselineSecurityHeaders($response);
-});
-
-it('POSTサイズ超過の413にも基本のヘッダーを付与する', function () {
-    // 巨大な本文は送らず、CONTENT_LENGTH の申告だけで ValidatePostSize を通す。
-    $response = $this->call(
-        'POST',
-        '/_testing/security-headers-post',
-        server: ['CONTENT_LENGTH' => (string) PHP_INT_MAX],
-    );
-
-    $response->assertStatus(413);
     assertBaselineSecurityHeaders($response);
 });
 
@@ -204,7 +175,6 @@ it('ページのスクリプトはリクエストごとの nonce を持つもの
         ->and(scriptSrcNonce($this->get(route('home'))))->not->toBe($nonce);
 });
 
-// AdSense が公式に対応する CSP は eval を許すものだけなので、使うアプリでだけ許す。
 it('AdSense を設定したときだけ eval を許す', function (?string $publisherId, bool $allowsEval) {
     config()->set('services.google.adsense_publisher_id', $publisherId);
 
@@ -219,8 +189,7 @@ it('AdSense を設定したときだけ eval を許す', function (?string $publ
     'AdSense が空' => ['', false],
 ]);
 
-// Laravel のデバッグ画面は nonce のないスクリプトと eval で動き、Inertia はそれを元の画面の CSP を
-// 継承する iframe に表示する。デバッグ時は違反を報告させるだけにして、E2E で検出する。
+// デバッグ時の違反は、報告を拾う E2E で検出する。
 it('デバッグ時は script-src を強制せず報告だけにする', function (?int $abortStatus) {
     config()->set('app.debug', true);
     Route::middleware('web')->get('/_testing/security-headers-debug', function () use ($abortStatus) {

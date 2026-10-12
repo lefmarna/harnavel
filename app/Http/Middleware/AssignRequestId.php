@@ -22,9 +22,7 @@ class AssignRequestId
 
         $request->attributes->set('request_id', $requestId);
 
-        // user_id はこのミドルウェアが StartSession より前に実行されるため
-        // ここでは解決できず、null へのリセットのみ行う。実際の値は
-        // Authenticated イベント経由で共有する（ShareAuthenticatedUserLogContext を参照）
+        // StartSession より前に動くため user_id はここで解決できない。値は ShareAuthenticatedUserLogContext が共有する。
         Log::shareContext([
             'request_id' => $requestId,
             'http_method' => $request->method(),

@@ -122,11 +122,10 @@ function writeEnv(values: Record<string, string>): void {
       lines[current] = line;
       continue;
     }
-    // .env.example と比較しやすいよう、同じ位置に直前のコメントごと追加する。
+    // phpdotenv は ${APP_URL} などの参照を上から展開するため、.env.example と同じ位置に入れる。
     const at = exampleIndex(key);
     let start = at;
     while (start > 0 && example[start - 1]?.startsWith("#")) start--;
-    // 既存の直前行（キーまたはコメント）の後ろに、まだないコメントとキーを入れる。
     let anchor = -1;
     let from = start;
     for (let index = at - 1; index >= 0 && anchor === -1; index--) {
@@ -174,7 +173,6 @@ function assertNoDatabaseUrl(env: Record<string, string>): void {
 async function initialize(): Promise<Record<string, string>> {
   privatePaths();
   if (!fs.existsSync(envFile)) {
-    // API キー等はコピーし、ポート・接続先は下で Worktree 固有に書き換える。
     const source =
       root !== primary && fs.existsSync(path.join(primary, ".env"))
         ? path.join(primary, ".env")
@@ -329,7 +327,7 @@ const startSharedServices = (env: Record<string, string>): void => {
 
 async function up(): Promise<void> {
   const env = await locked(initialize);
-  // Dockerfile の変更を反映する。時間がかかるため共有状態のロックの外で行う。
+  // 時間がかかるため、共有状態のロックの外でビルドする。
   command([...compose(env), "build"]);
   await locked(async () => {
     // ビルド中に worktree:remove されていたら、削除済みの環境を作り直さない。

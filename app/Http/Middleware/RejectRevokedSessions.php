@@ -13,11 +13,8 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * パスワードの変更や再設定で失効させた世代のセッションをログアウトさせる（TADR-0016）。
- * Laravel の AuthenticateSession はパスワードのないユーザーを確かめず、比べる値を持たないセッションでは
- * そのときの値を記録して通すため、失効と同時に作られたセッションを残す。
- * auth の前に並べ、失効したセッションはゲストとして扱う。ログインが要る画面は auth がログイン画面へ送り、
- * メールの取り消しリンクのようにログインが要らない画面は、そのまま開ける。
+ * AuthenticateSession を使わない理由は TADR-0016。auth の前に並べ、失効したセッションはゲストとして
+ * 扱うので、メールの取り消しリンクのようにログインが要らない画面はそのまま開ける。
  */
 final class RejectRevokedSessions
 {

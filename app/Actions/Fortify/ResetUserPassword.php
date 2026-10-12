@@ -34,7 +34,7 @@ class ResetUserPassword implements ResetsUserPasswords
             'password' => $this->passwordRules(),
         ])->validate();
 
-        /** @var int|string $key Eloquent::getKey() は mixed を返す。 */
+        /** @var int|string $key */
         $key = $user->getKey();
 
         $tokenEmail = $user->email;

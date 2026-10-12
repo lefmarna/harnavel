@@ -43,19 +43,17 @@ test("SPA遷移時にSEOメタタグが更新される", async ({ page }) => {
   );
 });
 
+// 初期 HTML はサーバーが出すので、React が描画した後のタグを確かめる。
 test("パスワードリセットページのcanonicalとog:urlにクエリ文字列が含まれない", async ({ page }) => {
   await page.goto("/reset-password/test-token?email=test%40example.com");
+  await expect(page.getByLabel("新しいパスワード")).toBeVisible();
 
-  const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
-  const ogUrl = await page.locator('meta[property="og:url"]').getAttribute("content");
-
-  expect(canonical).not.toBeNull();
-  expect(canonical).not.toContain("?");
-  expect(canonical).not.toContain("email=");
-  expect(canonical).toContain("/reset-password/");
-
-  expect(ogUrl).not.toBeNull();
-  expect(ogUrl).not.toContain("?");
-  expect(ogUrl).not.toContain("email=");
-  expect(ogUrl).toContain("/reset-password/");
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    /\/reset-password\/test-token$/,
+  );
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+    "content",
+    /\/reset-password\/test-token$/,
+  );
 });

@@ -40,7 +40,7 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      *
-     * 名前はすぐに変える。メールアドレスは新しいアドレスの確認を待って切り替える（TADR-0016）。
+     * メールアドレスは新しいアドレスの確認を待って切り替える（TADR-0016）。
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -91,7 +91,7 @@ class ProfileController extends Controller
     {
         $user = $this->currentUser($request);
 
-        // 失効した後に届いた削除を拒否する。ログアウトは remember_token を作り直すので、拒否より後に行う。
+        // ログアウトは remember_token を作り直すので、失効の判定より後に行う。
         DB::transaction(fn () => $this->lockCurrentUser($user)->delete());
 
         Auth::logout();
@@ -101,6 +101,6 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect()->route('home');
     }
 }

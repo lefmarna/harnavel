@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Socialite\Facades\Socialite;
@@ -67,11 +68,11 @@ describe('Google OAuth コントローラ', function () {
             ->assertSessionHas('error', 'Googleログインは現在利用できません。');
     });
 
-    it('callback() は google id が null の場合にログインせずログイン画面へ戻す', function () {
+    it('callback() は google id が空の場合にログインせずログイン画面へ戻す', function (?string $googleId) {
         $existingUser = User::factory()->create(['google_id' => null]);
 
         fakeGoogleUser([
-            'getId' => null,
+            'getId' => $googleId,
             'getEmail' => 'any@example.com',
             'getName' => 'Any User',
             'getRaw' => ['email_verified' => true],
@@ -86,25 +87,10 @@ describe('Google OAuth コントローラ', function () {
 
         $this->assertGuest();
         expect($existingUser->fresh()->google_id)->toBeNull();
-    });
-
-    it('callback() は google id が空文字の場合にログインせずログイン画面へ戻す', function () {
-        fakeGoogleUser([
-            'getId' => '',
-            'getEmail' => 'any@example.com',
-            'getName' => 'Any User',
-            'getRaw' => ['email_verified' => true],
-        ]);
-
-        mock(GoogleAuthServiceContract::class)
-            ->shouldNotReceive('findOrCreate');
-
-        $this->get(route('auth.google.callback'))
-            ->assertRedirect(route('login'))
-            ->assertSessionHas('error', 'Googleアカウント情報の取得に失敗しました。もう一度お試しください。');
-
-        $this->assertGuest();
-    });
+    })->with([
+        'null' => [null],
+        '空文字' => [''],
+    ]);
 
     it('callback() はメールアドレスが取得できない場合にログインせずログイン画面へ戻す', function () {
         fakeGoogleUser([
@@ -122,25 +108,19 @@ describe('Google OAuth コントローラ', function () {
         $this->assertGuest();
     });
 
-    it('login view は Google OAuth 設定不足時に canGoogleLogin=false を返す', function () {
-        config(['services.google.redirect' => null]);
+    it('login view は Google OAuth の設定がそろっているときだけ canGoogleLogin=true を返す', function (?string $redirect, bool $expected) {
+        config(['services.google.redirect' => $redirect]);
 
         $this->get(route('login'))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('auth/login')
-                ->where('canGoogleLogin', false));
-    });
+                ->where('canGoogleLogin', $expected));
+    })->with([
+        '設定不足' => [null, false],
+        '設定完備' => ['https://example.com/callback', true],
+    ]);
 
-    it('login view は Google OAuth 設定完備時に canGoogleLogin=true を返す', function () {
-        config(['services.google.client_id' => 'id', 'services.google.client_secret' => 'secret', 'services.google.redirect' => 'https://example.com/callback']);
-
-        $this->get(route('login'))
-            ->assertInertia(fn (AssertableInertia $page) => $page
-                ->component('auth/login')
-                ->where('canGoogleLogin', true));
-    });
-
-    it('callback() でログイン完了して fortify.home へリダイレクトする', function () {
+    it('callback() でログイン状態を保持してログインし fortify.home へリダイレクトする', function () {
         $existingUser = User::factory()->create(['email' => 'test@example.com']);
 
         fakeGoogleUser([
@@ -156,7 +136,8 @@ describe('Google OAuth コントローラ', function () {
             ->andReturn($existingUser);
 
         $this->get(route('auth.google.callback'))
-            ->assertRedirect(config('fortify.home'));
+            ->assertRedirect(config('fortify.home'))
+            ->assertCookie(Auth::guard()->getRecallerName());
 
         $this->assertAuthenticatedAs($existingUser);
     });
@@ -229,27 +210,38 @@ describe('Google OAuth コントローラ', function () {
             ->assertSessionHas('error', 'Googleアカウントのメールアドレスが未検証です。Googleでメール認証を完了してから再度お試しください。');
     });
 
-    it('callback() で QueryException が発生してもセッションエラーに SQL が露出しない', function () {
-        $secretSql = 'INSERT INTO `users` (`email`, `secret_data`) VALUES (?, ?)';
+    // 例外のメッセージには SQL や入力値が入るので、画面にもログにも出さない。
+    it('callback() で予期しない例外が起きても汎用の文言で戻し、ログには例外クラス名だけを残す', function (Throwable $exception, string $logMessage) {
+        Log::spy();
 
         fakeGoogleUser([
             'getId' => 'google-123',
-            'getEmail' => 'test@example.com',
+            'getEmail' => 'leaked@example.com',
             'getName' => 'Test User',
             'getRaw' => ['email_verified' => true],
         ]);
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
-            ->andThrow(new QueryException('mysql', $secretSql, [], new Exception));
+            ->andThrow($exception);
 
-        $response = $this->get(route('auth.google.callback'));
-
-        $response->assertRedirect(route('login'))
+        $this->get(route('auth.google.callback'))
+            ->assertRedirect(route('login'))
             ->assertSessionHas('error', 'Google認証に失敗しました。もう一度お試しください。');
 
-        expect(session('error'))->not->toContain($secretSql);
-    });
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context): bool => $message === $logMessage
+                && $context === ['exception_class' => $exception::class])
+            ->once();
+    })->with([
+        'DB の例外' => [fn (): QueryException => new QueryException(
+            'mysql',
+            'insert into `users` (`email`, `google_id`) values (?, ?)',
+            ['leaked@example.com', 'google-123'],
+            new Exception('SQLSTATE[23000]: Integrity constraint violation'),
+        ), 'Google OAuth database error.'],
+        '想定外の例外' => [fn (): LogicException => new LogicException('unexpected failure'), 'Google OAuth unexpected error.'],
+    ]);
 
     it('callback() で GoogleAuthException のビジネスメッセージがセッションに設定される', function () {
         $errorMessage = 'このメールアドレスは別のGoogleアカウントに連携済みです。';
@@ -307,23 +299,6 @@ describe('Google OAuth コントローラ', function () {
             ->assertNotFound();
     });
 
-    it('callback() で想定外例外が発生しても安全なメッセージでログイン画面に戻す', function () {
-        fakeGoogleUser([
-            'getId' => 'google-123',
-            'getEmail' => 'test@example.com',
-            'getName' => 'Test User',
-            'getRaw' => ['email_verified' => true],
-        ]);
-
-        mock(GoogleAuthServiceContract::class)
-            ->shouldReceive('findOrCreate')
-            ->andThrow(new LogicException('unexpected failure'));
-
-        $this->get(route('auth.google.callback'))
-            ->assertRedirect(route('login'))
-            ->assertSessionHas('error', 'Google認証に失敗しました。もう一度お試しください。');
-    });
-
     it('callback() で Socialite が例外を投げてもログには例外クラス名だけを残す', function () {
         Log::spy();
 
@@ -337,59 +312,6 @@ describe('Google OAuth コントローラ', function () {
             ->withArgs(function (string $message, array $context): bool {
                 return $message === 'Google OAuth callback failed.'
                     && $context === ['exception_class' => Exception::class];
-            })
-            ->once();
-    });
-
-    it('callback() で QueryException が発生してもログにバインディング値が残らない', function () {
-        Log::spy();
-
-        fakeGoogleUser([
-            'getId' => 'google-123',
-            'getEmail' => 'leaked@example.com',
-            'getName' => 'Test User',
-            'getRaw' => ['email_verified' => true],
-        ]);
-
-        mock(GoogleAuthServiceContract::class)
-            ->shouldReceive('findOrCreate')
-            ->andThrow(new QueryException(
-                'mysql',
-                'insert into `users` (`email`, `google_id`) values (?, ?)',
-                ['leaked@example.com', 'google-123'],
-                new Exception('SQLSTATE[23000]: Integrity constraint violation'),
-            ));
-
-        $this->get(route('auth.google.callback'));
-
-        Log::shouldHaveReceived('warning')
-            ->withArgs(function (string $message, array $context): bool {
-                return $message === 'Google OAuth database error.'
-                    && $context === ['exception_class' => QueryException::class];
-            })
-            ->once();
-    });
-
-    it('callback() で想定外例外が発生してもログには例外クラス名だけを残す', function () {
-        Log::spy();
-
-        fakeGoogleUser([
-            'getId' => 'google-123',
-            'getEmail' => 'test@example.com',
-            'getName' => 'Test User',
-            'getRaw' => ['email_verified' => true],
-        ]);
-
-        mock(GoogleAuthServiceContract::class)
-            ->shouldReceive('findOrCreate')
-            ->andThrow(new LogicException('unexpected failure'));
-
-        $this->get(route('auth.google.callback'));
-
-        Log::shouldHaveReceived('warning')
-            ->withArgs(function (string $message, array $context): bool {
-                return $message === 'Google OAuth unexpected error.'
-                    && $context === ['exception_class' => LogicException::class];
             })
             ->once();
     });

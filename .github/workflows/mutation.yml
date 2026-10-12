@@ -6,7 +6,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
-    # PHP のミュータントの生死に影響しない変更だけの PR では実行しない。
     paths-ignore:
       - "**/*.md"
       - ".agents/**"

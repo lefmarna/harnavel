@@ -11,17 +11,13 @@ declare(strict_types=1);
 | マップなので、パスワード変更（PasswordUpdate）の「新しいパスワード」という文言が、
 | 登録や再設定など password を使うほかの画面にも出てしまう。
 |
-| 属性名の切り分け:
-| 全画面で同じ意味になる既定は validation.php の 'attributes' に置いたままにする。
-| 素の Validator を使う登録（CreateNewUser）とパスワード再設定（ResetUserPassword）は
-| そちらしか見ないため、既定を消すと今回移設しない画面の文言が壊れる。
-| ここに置くのは、画面ごとに意味が変わるか、既定に無い属性名だけ。
+| 登録（CreateNewUser）と再設定（ResetUserPassword）は validation.php の 'attributes' しか
+| 見ないため、既定の属性名はそちらに残し、ここには画面ごとに意味が変わるものと既定に無いものを置く。
 |
 */
 
 return [
     'password_update' => [
-        // 既定の attributes.password は「パスワード」。この画面だけ意味が変わる。
         'new_password' => '新しいパスワード',
         'current_password_required' => '現在のパスワードを入力してください。',
         'current_password_string' => '現在のパスワードは文字列で入力してください。',

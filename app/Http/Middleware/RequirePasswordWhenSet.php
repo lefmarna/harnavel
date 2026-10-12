@@ -9,10 +9,8 @@ use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Http\Request;
 
 /**
- * password が null でパスキーも持たないユーザーは、Fortify のパスワード確認もパスキー確認も
- * 通過できない。素の RequirePassword ではそのユーザーが最初の資格情報を登録する画面そのものに
- * 到達できなくなる。パスキーを持つユーザーと Google 連携済みのユーザーは、省略の対象から外す。
- * Google ログインの設定が欠けていても省略しない。設定の不備でセッションを奪った第三者を素通りさせないため。
+ * 資格情報を1つも持たないユーザーは、素の RequirePassword では最初の資格情報を登録する画面に
+ * 到達できないので確認を省く。Google ログインの設定が欠けていても、Google 連携済みなら省かない（TADR-0013）。
  */
 final class RequirePasswordWhenSet extends RequirePassword
 {

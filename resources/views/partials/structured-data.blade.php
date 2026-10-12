@@ -89,15 +89,8 @@
     $webPageSchema = array_filter($webPageSchema, $schemaFilter);
 
     /**
-     * JSON-LD を <script> 要素の内側へ直接埋め込むため、`<` `>` `&` `\'` `"` を
-     * \uXXXX へ退避する。タイトルと説明はアプリが自由に流し込む枠で、ユーザー入力や
-     * 生成物が届く経路を持つアプリもある。これが無いと `</script>` で script 要素を
-     * 脱出できてしまう。
-     *
-     * `/` の退避（json_encode の既定）も外さない。`<` を退避していれば `</script>` は
-     * 作れないが、二重に塞いでおけば片方を落としたときに穴が開かない。ここは
-     * Laravel が HTML へ JSON を埋めるときの既定（Illuminate\Support\Js）と同じ構成で、
-     * 読み手のために足すのは日本語をそのまま出す UNESCAPED_UNICODE だけ。
+     * タイトルや説明にユーザー入力が届くアプリもあるので、`</script>` で script 要素を抜けないよう
+     * 退避する。`/` の退避（json_encode の既定）も二重の防御として外さない。
      */
     $encodeSchema = fn (array $schema): string => json_encode(
         $schema,

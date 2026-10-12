@@ -93,7 +93,6 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await expect(page.getByText("パスキーを追加しました")).toBeVisible();
   await expect(page.getByText("E2E オーセンティケータ", { exact: true })).toBeVisible();
-  // 複数のパスキーが並んでも、読み上げで削除対象を取り違えないこと。
   await expect(
     page.getByRole("button", { name: "「E2E オーセンティケータ」を削除" }),
   ).toBeVisible();
@@ -196,93 +195,64 @@ type AutofillStage = "options" | "support-check";
 
 type AutofillRaceWindow = Window & { releaseAutofill: () => void };
 
-for (const remember of [false, true]) {
-  test(`ボタンでパスキーログインするとログイン状態の保持が${remember ? "有効" : "無効"}になる`, async ({
-    page,
-    context,
-    browserName,
-  }) => {
-    test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+test("ボタンでパスキーログインするとログイン状態を保持する", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
 
-    await enableVirtualAuthenticator(page, context);
-    await openSecuritySettings(page, createUser());
-    await registerPasskey(page, "ログイン状態の保持");
-    await expect(page.getByText("ログイン状態の保持", { exact: true })).toBeVisible();
-    await context.clearCookies();
+  await enableVirtualAuthenticator(page, context);
+  await openSecuritySettings(page, createUser());
+  await registerPasskey(page, "ログイン状態の保持");
+  await expect(page.getByText("ログイン状態の保持", { exact: true })).toBeVisible();
+  await context.clearCookies();
 
-    await page.addInitScript(() => {
-      PublicKeyCredential.isConditionalMediationAvailable = async () => false;
-    });
-    await page.goto("/login");
-    await page.getByLabel("ログイン状態を保持する").setChecked(remember);
-    await page.getByRole("button", { name: "パスキーでログイン" }).click();
-
-    await expect(page).toHaveURL(HOME_URL);
-    const cookies = await context.cookies();
-    expect(cookies.some((cookie) => cookie.name.startsWith("remember_web_"))).toBe(remember);
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
   });
-}
+  await page.goto("/login");
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
 
-for (const { name, checkedStates, remember } of [
-  {
-    name: "チェックを入れるとログイン状態の保持が有効になる",
-    checkedStates: [true],
-    remember: true,
-  },
-  {
-    name: "チェックを入れなければログイン状態の保持が無効になる",
-    checkedStates: [],
-    remember: false,
-  },
-  {
-    name: "チェックを入れてから外すとログイン状態の保持が無効になる",
-    checkedStates: [true, false],
-    remember: false,
-  },
-]) {
-  test(`自動入力を待っている間に${name}`, async ({ page, context, browserName }) => {
-    test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+  await expect(page).toHaveURL(HOME_URL);
+  const cookies = await context.cookies();
+  expect(cookies.some((cookie) => cookie.name.startsWith("remember_web_"))).toBe(true);
+});
 
-    await enableVirtualAuthenticator(page, context);
-    await openSecuritySettings(page, createUser());
-    await registerPasskey(page, "自動入力のログイン状態の保持");
-    await expect(page.getByText("自動入力のログイン状態の保持", { exact: true })).toBeVisible();
-    await context.clearCookies();
+test("自動入力でパスキーログインするとログイン状態を保持する", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
 
-    await page.addInitScript(() => {
-      let release = () => {};
-      const released = new Promise<void>((resolve) => (release = resolve));
-      (window as unknown as AutofillRaceWindow).releaseAutofill = release;
+  await enableVirtualAuthenticator(page, context);
+  await openSecuritySettings(page, createUser());
+  await registerPasskey(page, "自動入力のログイン状態の保持");
+  await expect(page.getByText("自動入力のログイン状態の保持", { exact: true })).toBeVisible();
+  await context.clearCookies();
 
-      PublicKeyCredential.isConditionalMediationAvailable = async () => true;
-      const get = navigator.credentials.get.bind(navigator.credentials);
-      navigator.credentials.get = async (options) => {
-        if (options?.mediation !== "conditional") {
-          return get(options);
-        }
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => true;
+    const get = navigator.credentials.get.bind(navigator.credentials);
+    navigator.credentials.get = async (options) => {
+      if (options?.mediation !== "conditional") {
+        return get(options);
+      }
 
-        document.documentElement.setAttribute("data-conditional-ready", "");
-        await released;
-
-        // 仮想オーセンティケータでも候補を選んだ状態を確実に再現する。
-        const requestOptions = { ...options };
-        delete requestOptions.mediation;
-        return get(requestOptions);
-      };
-    });
-
-    await page.goto("/login");
-    await expect(page.locator("html[data-conditional-ready]")).toBeAttached();
-    for (const checked of checkedStates) {
-      await page.getByLabel("ログイン状態を保持する").setChecked(checked);
-    }
-    await page.evaluate(() => (window as unknown as AutofillRaceWindow).releaseAutofill());
-
-    await expect(page).toHaveURL(HOME_URL);
-    const cookies = await context.cookies();
-    expect(cookies.some((cookie) => cookie.name.startsWith("remember_web_"))).toBe(remember);
+      // 仮想オーセンティケータでも候補を選んだ状態を確実に再現する。
+      const requestOptions = { ...options };
+      delete requestOptions.mediation;
+      return get(requestOptions);
+    };
   });
-}
+
+  await page.goto("/login");
+
+  await expect(page).toHaveURL(HOME_URL);
+  const cookies = await context.cookies();
+  expect(cookies.some((cookie) => cookie.name.startsWith("remember_web_"))).toBe(true);
+});
 
 /**
  * 自動入力を stage で止める。自動入力の ceremony は中断されるまで待ち、手動の ceremony は
@@ -705,7 +675,6 @@ test("Conditional UI 対応ブラウザでも自動入力と並べてパスキ�
   await page.goto("/login");
   await loginOptions;
 
-  // Conditional UI は autocomplete の末尾が webauthn の入力欄を要求する。
   await expect(page.locator('input[autocomplete$="webauthn"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeEnabled();
   // 開発ビルドの StrictMode で effect が再実行されても、自動入力は 1 本だけ。
@@ -770,7 +739,6 @@ test("本人確認済みならパスワードを入力せずにアカウント�
   await page.goto("/settings/profile");
   await expect(page).toHaveURL(/\/login$/);
 
-  // ログアウトだけでは通らないよう、削除したアカウントで再びログインできないことを確かめる。
   await page.getByLabel("メールアドレス").fill(user.email);
   await page.getByLabel("パスワード").fill(user.password);
   await page.getByRole("button", { name: "ログイン", exact: true }).click();

@@ -8,8 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 
 /**
- * 再設定トークンや署名を持つ URL は、それ自体がアカウントを操作できる鍵になる。
- * 外部の計測、ログ、通知へ流さないための判定と伏せ字をまとめる。
+ * 外部の計測、ログ、通知へ秘密を流さないための判定と伏せ字（TADR-0016）。
  */
 final class SensitiveUrl
 {
@@ -24,7 +23,7 @@ final class SensitiveUrl
     }
 
     /**
-     * Request::url() と同じくクエリ文字列と末尾のスラッシュを除き、パス中の秘密はパラメーター名に置き換える。
+     * Request::url() と同じ形で、パス中の秘密をパラメーター名に置き換える。
      */
     public static function redact(Request $request): string
     {

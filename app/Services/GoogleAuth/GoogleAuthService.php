@@ -144,7 +144,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
             return $existingUser instanceof User && $this->userKey($existingUser) === $userId;
         }
 
-        // 新しく連携したときだけ、確定した後に知らせる。
         if ($linkedUser instanceof User) {
             $this->securityNotifier->notify($linkedUser, 'google_linked');
         }

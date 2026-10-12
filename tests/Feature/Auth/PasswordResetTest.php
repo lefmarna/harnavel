@@ -146,7 +146,6 @@ describe('パスワード再設定', function () {
         $response->assertSessionHasErrors('email');
     });
 
-    // 窃取されたセッションは、本人が再設定した時点で使えなくする。
     it('パスワードを再設定すると全端末のセッションを失効させる', function () {
         config(['session.driver' => 'database']);
         $user = User::factory()->create();

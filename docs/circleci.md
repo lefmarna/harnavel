@@ -10,35 +10,13 @@ Both services run on free plans and stop rather than bill when their quota runs 
 Cloud resource is a bucket of tree records within the Cloud Storage Always Free limits, which apply
 only in `us-central1`, `us-east1`, and `us-west1`.
 
-## Responsibilities
-
-| Check             | Pull request                          | Push to `develop` or `main`                     |
-| ----------------- | ------------------------------------- | ----------------------------------------------- |
-| Lint, Pest, build | Actions `quality`                     | Actions `delivery`, unless the tree is verified |
-| E2E               | CircleCI `e2e`                        | Actions `delivery`, unless the tree is verified |
-| Mutation testing  | CircleCI `mutation`, into `main` only | None                                            |
-
-Manual `quality` and `mutation` dispatches still run everything on GitHub Actions.
-
-## What CircleCI tests
-
-The triggers start pipelines only for ready pull requests.
-[`prepare-merge.sh`](../scripts/ci/prepare-merge.sh) merges the head into the current base, like the
-merge commit that `pull_request` workflows check out. Jobs take environment variables from the
-matching steps of `reusable-quality.yml` and `mutation.yml`, so app-specific test values live only
-there, and mutation testing honors the `paths-ignore` of `mutation.yml`.
-
 ## How delivery trusts CircleCI
 
-With CircleCI enabled, `quality` skips E2E and uploads its build as `build-<tree>-needs-e2e`. When
-E2E passes, CircleCI checks that the tracked files still match the merge it tested and creates
-`gs://<bucket>/<owner>/<repo>/e2e/<tree>.json`, a record of about 150 bytes. It authenticates with
-its OIDC token through Workload Identity Federation and can read and create records but not
-overwrite them, only under its own repository's prefix. A job whose merge result already has a record skips E2E.
-
-`delivery` reuses such a build only if the usual provenance checks accept its run and it can read a
-record for the same tree. Otherwise, including when CircleCI is out of credits or still running, it
-runs lint, Pest, and E2E itself before deploying, so merge after the CircleCI check passes.
+With CircleCI enabled, a pull request build counts as verified only together with CircleCI's record
+of E2E passing on the same tree. CircleCI writes records through Workload Identity Federation and can
+create and read them only under its own repository's prefix, never overwrite them. When no readable
+record exists, including when CircleCI is out of credits or still running, `delivery` runs lint,
+Pest, and E2E itself before deploying, so merge after the CircleCI check passes.
 
 Pull request jobs can create records. As with build artifacts, this guards against mistakes, not
 collaborators. Permissions are granted per repository and limited to its prefix: a pull request

@@ -19,19 +19,9 @@ Route::middleware(['auth'])->group(function () {
         ->name('profile.edit');
     // メールアドレスを変えると確認メールを送るため、任意のアドレスへ大量に送らせない。
     Route::patch('settings/profile', [ProfileController::class, 'update'])
-        ->middleware(['password.confirm', 'throttle:6,1'])
+        ->middleware(['password.confirm', 'throttle:6,1,email-change'])
         ->name('profile.update');
-});
 
-// メールで届いたリンクから開くため、ログインを求めない（EmailChangeController）。
-Route::prefix('settings/email')->name('email-change.')->controller(EmailChangeController::class)->group(function () {
-    Route::get('verify/{userId}', 'verify')->name('verify');
-    Route::post('verify/{userId}', 'complete')->middleware('throttle:10,1')->name('complete');
-    Route::get('revert/{userId}', 'revert')->name('revert');
-    Route::post('revert/{userId}', 'completeRevert')->middleware('throttle:10,1')->name('revert.complete');
-});
-
-Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])
         ->middleware('password.confirm')
         ->name('profile.destroy');
@@ -45,7 +35,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('security.google.destroy');
 
     Route::put('settings/password', [SecurityController::class, 'update'])
-        ->middleware(['password.confirm', 'throttle:6,1'])
+        ->middleware(['password.confirm', 'throttle:6,1,password-update'])
         ->name('user-password.update');
 
     Route::get('settings/appearance', function () {
@@ -57,4 +47,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ),
         );
     })->name('appearance.edit');
+});
+
+// メールで届いたリンクから開くため、ログインを求めない（EmailChangeController）。
+Route::prefix('settings/email')->name('email-change.')->controller(EmailChangeController::class)->group(function () {
+    Route::get('verify/{userId}', 'verify')->name('verify');
+    Route::post('verify/{userId}', 'complete')->middleware('throttle:10,1')->name('complete');
+    Route::get('revert/{userId}', 'revert')->name('revert');
+    Route::post('revert/{userId}', 'completeRevert')->middleware('throttle:10,1')->name('revert.complete');
 });

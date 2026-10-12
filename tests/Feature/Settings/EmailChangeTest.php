@@ -17,9 +17,6 @@ use Symfony\Component\Mailer\Exception\TransportException;
 
 mutates(EmailChangePageViewModel::class);
 
-/**
- * プロフィールから新しいメールアドレスを申請し、そのアドレスへ届いた確認リンクを返す。
- */
 function requestEmailChange(User $user, string $email): string
 {
     Mail::fake();
@@ -41,9 +38,6 @@ function requestEmailChange(User $user, string $email): string
     return (string) $url;
 }
 
-/**
- * 新しいアドレスへの切り替えを確定し、旧アドレスへ届いた取り消しリンクを返す。
- */
 function completeEmailChange(string $verifyUrl, string $previousEmail): string
 {
     Mail::fake();
@@ -137,7 +131,6 @@ describe('メールアドレスの変更', function () {
         requestEmailChange($user->refresh(), 'next@example.com');
     });
 
-    // 次の変更を受け付けるのは、取り消しリンクが使えなくなった後だけにする。
     it('取り消しリンクが使えるうちは次の変更を受け付けず、使えなくなった直後から受け付ける', function (int $seconds, bool $revertUsable) {
         $user = User::factory()->create(['email' => 'old@example.com']);
         $this->travelTo(now()->startOfSecond()->addMilliseconds(900));
@@ -290,7 +283,6 @@ describe('メールアドレスの変更', function () {
         Mail::assertNothingSent();
     });
 
-    // 申請後に別の変更が先に確定したなら、古い申請の前提が崩れている。
     it('申請後にメールアドレスが変わっていたら確認リンクを使えない', function () {
         $user = User::factory()->create(['email' => 'old@example.com']);
         $first = requestEmailChange($user, 'first@example.com');

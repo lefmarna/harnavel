@@ -123,17 +123,11 @@ function forgetRequestState(): void
     Facade::clearResolvedInstance('redirect');
 }
 
-/**
- * 直前のリクエストが使ったセッションの ID。
- */
 function lastSessionId(): string
 {
     return app('session')->driver()->getId();
 }
 
-/**
- * パスワードでログインし、その端末のセッション ID を返す。
- */
 function loginFromNewDevice(User $user): string
 {
     forgetRequestState();
@@ -146,9 +140,6 @@ function loginFromNewDevice(User $user): string
     return lastSessionId();
 }
 
-/**
- * 指定したセッションの端末から、ログインが必要な画面を開く。
- */
 function visitDashboardFrom(string $sessionId): TestResponse
 {
     forgetRequestState();

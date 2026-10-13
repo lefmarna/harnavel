@@ -25,7 +25,6 @@ describe('濫用対策のレート制限', function () {
         'パスワード変更' => ['PUT', fn (): string => route('user-password.update'), 6, true],
         'メールアドレス変更の申請' => ['PATCH', fn (): string => route('profile.update'), 6, true],
         'メールアドレス変更の確定' => ['POST', fn (): string => route('email-change.complete', ['userId' => '1']), 10, false],
-        'メールアドレス変更の取り消し' => ['POST', fn (): string => route('email-change.revert.complete', ['userId' => '1']), 10, false],
         'Google ログインのコールバック' => ['GET', fn (): string => route('auth.google.callback'), 10, false],
         'Google 連携の確定' => ['POST', fn (): string => route('auth.google.link.complete', ['userId' => '1']), 10, false],
     ]);

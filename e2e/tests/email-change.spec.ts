@@ -1,11 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import {
-  createUser,
-  emailChangeRevertLink,
-  requestEmailChangeLink,
-  type UserCredentials,
-} from "../support/artisan";
+import { createUser, requestEmailChangeLink, type UserCredentials } from "../support/artisan";
 import { expect, test } from "../support/fixtures";
 
 // ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
@@ -28,9 +23,7 @@ const openProfileSettings = async (page: Page, user: UserCredentials): Promise<v
   await expect(page).toHaveURL(PROFILE_URL);
 };
 
-test("新しいメールアドレスは確認リンクで確定し、旧アドレスへのリンクで取り消せる", async ({
-  page,
-}) => {
+test("新しいメールアドレスは確認リンクで確定する", async ({ page }) => {
   const user = createUser();
   const newEmail = `changed-${user.email}`;
 
@@ -45,13 +38,4 @@ test("新しいメールアドレスは確認リンクで確定し、旧アド�
   await expect(
     page.getByText("次回からは新しいメールアドレスでログインしてください。", { exact: false }),
   ).toBeVisible();
-
-  await page.goto(emailChangeRevertLink(newEmail, user.email));
-  await page.getByRole("button", { name: "変更を取り消す" }).click();
-  await expect(
-    page.getByText("パスワードを再設定してからログインしてください。", { exact: false }),
-  ).toBeVisible();
-
-  await page.getByRole("link", { name: "パスワードを再設定する" }).click();
-  await expect(page).toHaveURL(/\/forgot-password$/);
 });

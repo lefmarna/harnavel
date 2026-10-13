@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * AuthenticateSession を使わない理由は TADR-0016。auth の前に並べ、失効したセッションはゲストとして
- * 扱うので、メールの取り消しリンクのようにログインが要らない画面はそのまま開ける。
+ * 扱うので、メールの確認リンクのようにログインが要らない画面はそのまま開ける。
  */
 final class RejectRevokedSessions
 {

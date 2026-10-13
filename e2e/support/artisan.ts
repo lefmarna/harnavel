@@ -112,16 +112,6 @@ export const requestEmailChangeLink = (email: string, newEmail: string): string 
     ]),
   );
 
-export const emailChangeRevertLink = (currentEmail: string, previousEmail: string): string =>
-  lastLine(
-    runArtisan([
-      "tinker",
-      "--execute",
-      "echo app(App\\Services\\Account\\EmailChangeService::class)->revertLink(" +
-        `App\\Models\\User::query()->where('email', ${phpString(currentEmail)})->firstOrFail(), ${phpString(previousEmail)}), PHP_EOL;`,
-    ]),
-  );
-
 export const setUserGoogleId = (email: string, googleId: string): void => {
   runArtisan([
     "tinker",

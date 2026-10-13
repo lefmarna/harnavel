@@ -26,8 +26,8 @@ class EmailChangeController extends Controller
         $payload = SignedPayloadLink::read($request, ['from', 'to', 'state']);
 
         return $payload === null
-            ? $this->page('verify', 'error')
-            : $this->page('verify', 'confirm', $request->fullUrl(), $payload['to']);
+            ? $this->page('error')
+            : $this->page('confirm', $request->fullUrl(), $payload['to']);
     }
 
     public function complete(Request $request, string $userId): Response
@@ -38,39 +38,14 @@ class EmailChangeController extends Controller
         $confirmed = $payload !== null
             && $this->emailChangeService->confirm($userId, $payload['from'], $payload['to'], $payload['state']);
 
-        return $this->page('verify', $confirmed ? 'success' : 'error');
-    }
-
-    public function revert(Request $request): Response
-    {
-        /** @var array{email: string}|null $payload */
-        $payload = SignedPayloadLink::read($request, ['email']);
-
-        return $payload === null
-            ? $this->page('revert', 'error')
-            : $this->page('revert', 'confirm', $request->fullUrl(), $payload['email']);
-    }
-
-    public function completeRevert(Request $request, string $userId): Response
-    {
-        /** @var array{email: string}|null $payload */
-        $payload = SignedPayloadLink::read($request, ['email']);
-
-        $reverted = $payload !== null
-            && $this->emailChangeService->revert($userId, $payload['email']);
-
-        return $this->page('revert', $reverted ? 'success' : 'error');
+        return $this->page($confirmed ? 'success' : 'error');
     }
 
     /**
-     * @param  'verify'|'revert'  $action
      * @param  'confirm'|'success'|'error'  $status
      */
-    private function page(string $action, string $status, ?string $actionUrl = null, ?string $email = null): Response
+    private function page(string $status, ?string $actionUrl = null, ?string $email = null): Response
     {
-        return Inertia::render(
-            "auth/email-change/{$action}",
-            new EmailChangePageViewModel($action, $status, $actionUrl, $email),
-        );
+        return Inertia::render('auth/email-change/verify', new EmailChangePageViewModel($status, $actionUrl, $email));
     }
 }

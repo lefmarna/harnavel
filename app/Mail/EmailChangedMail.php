@@ -13,8 +13,6 @@ class EmailChangedMail extends Mailable
     use Queueable;
     use SerializesModels;
 
-    public function __construct(public readonly string $url) {}
-
     public function build(): self
     {
         $fromAddress = config('mail.from.address');
@@ -31,7 +29,7 @@ class EmailChangedMail extends Mailable
             ->view('emails.email_changed')
             ->with([
                 'appName' => $appName,
-                'url' => $this->url,
+                'profileUrl' => route('profile.edit'),
             ]);
     }
 }

@@ -48,11 +48,6 @@ class ProfileController extends Controller
         /** @var array{name: string, email: string} $validated */
         $validated = $request->validated();
 
-        if (! $this->emailChangeService->sameAddress($user->email, $validated['email'])
-            && ! $this->emailChangeService->canChangeEmail($user)) {
-            return to_route('profile.edit')->withErrors(['email' => __('form.profile_update.email_change_too_soon')]);
-        }
-
         DB::transaction(function () use ($user, $validated): void {
             $lockedUser = $this->lockCurrentUser($user);
             $lockedUser->name = $validated['name'];

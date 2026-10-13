@@ -114,7 +114,6 @@ return [
     |
     */
 
-    // 有効時間を短く保つ理由は TADR-0016。
-    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 900),
+    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
 ];

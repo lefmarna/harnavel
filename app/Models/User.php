@@ -70,9 +70,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         );
     }
 
-    /**
-     * パスワードがあればそちらで確認させ、Google のログイン状態だけでは通さない（TADR-0016）。
-     */
     public function markEmailAsVerified(): bool
     {
         $verifiedAt = now()->toImmutable();
@@ -93,6 +90,9 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return true;
     }
 
+    /**
+     * パスワードがあればそちらで確認させ、Google のログイン状態だけでは通さない（TADR-0016）。
+     */
     public function canConfirmWithGoogle(): bool
     {
         return $this->password === null && $this->google_id !== null && GoogleOAuth::isConfigured();

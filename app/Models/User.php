@@ -39,7 +39,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     protected $attributes = [
         'session_generation' => 0,
-        'email_changed_at' => null,
     ];
 
     /**
@@ -69,6 +68,26 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             $this->getTable().'|'.$key,
             Config::string('passkeys.user_handle_secret'),
         );
+    }
+
+    public function markEmailAsVerified(): bool
+    {
+        $verifiedAt = now()->toImmutable();
+
+        $updated = static::query()
+            ->whereKey($this->getKey())
+            ->where('email', $this->email)
+            ->whereNull('email_verified_at')
+            ->update(['email_verified_at' => $verifiedAt]);
+
+        if ($updated === 0) {
+            return false;
+        }
+
+        $this->email_verified_at = $verifiedAt;
+        $this->syncOriginalAttribute('email_verified_at');
+
+        return true;
     }
 
     /**
@@ -128,7 +147,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'session_generation' => 'integer',
-            'email_changed_at' => 'datetime',
         ];
     }
 }

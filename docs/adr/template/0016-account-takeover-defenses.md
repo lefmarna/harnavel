@@ -10,7 +10,7 @@ use `logoutCurrentDevice()`, so the owner's devices that signed in after the rev
 
 Writes a stolen session could race (password and address changes, passkey registration, account
 deletion) lock the user row and refuse with 409 when the generation moved after the request began,
-so an in-flight change cannot land after the owner's reset or restore. Deleting a passkey or
+so an in-flight change cannot land after the owner's reset. Deleting a passkey or
 unlinking Google also revokes the other sessions, because a thief may already have signed in with
 it; unlinking the only credential is refused. The acting session survives by regenerating its ID.
 Revocation covers sessions only: an app that issues API tokens revokes them on the same events.
@@ -23,9 +23,10 @@ them. Passkey registration requires a verified email so the registrant cannot ad
 Changing the email address hands over password reset, so the profile page, its update, account
 deletion, and the security page require password confirmation. Accounts without a password confirm
 with a passkey or by signing in again with Google through the existing OAuth callback URI.
-Confirmation regenerates the session ID and lasts 15 minutes instead of Laravel's three hours,
-because a cookie stolen afterwards, or script injected into the owner's page, could use the rest of
-the window to change the address or add a passkey.
+Confirmation regenerates the session ID and keeps Laravel's three-hour window. A shorter window
+only narrows the time a cookie stolen after confirmation can change the address or add a passkey,
+which does not justify asking for the password on most visits to settings in apps that hold little
+beyond an email address.
 
 Signing in again with Google proves only that the browser holds a Google session for the linked
 account; Google offers no forced reauthentication. That stops a thief who copied only the app's
@@ -39,28 +40,22 @@ on Google's own protection, the mail sent when a credential or the address chang
 ability to revoke sessions.
 
 A new email address takes effect only after a link sent to it is opened. The switch verifies the
-account and mails the previous address a link, valid for seven days, that restores it. Restoring
-treats the holder of the previous address as the owner: it verifies that address, removes the
-credentials and sessions whoever made the change may have set up, and sends the owner to password
-reset; it does nothing when the address is already restored. For those seven days, whoever controls
-the previous mailbox can also take the account back.
-
-After a switch, the address cannot change again until the restore link has expired, checked when a
-change is requested and again on the locked row when it is confirmed. Without that limit, a thief
-who routed the address A to B to C would hold a link back to B, and using it first would leave the
-owner's link to A pointing at an account the thief controls again. An owner who changes the address
-twice within a week must wait.
+account and tells the previous address, without a link to act on. There is no self-service restore:
+after someone else changes the address, the owner can change it back only from a session that is
+still signed in, and may otherwise be unable to recover the account. The apps hold little beyond an
+email address, so that risk is accepted instead of a restore link and the limit on further changes
+it needed; an app holding more should add its own recovery.
 
 The link sent to a new address, and the mail that confirms a Google link, record the session
 generation, and the new-address link also the verification time; they stop working once either has
-moved, so a change a thief requested cannot complete after the owner resets the password or
-restores the address. The restore link does not, so the owner can still use it after revoking
-sessions. Links are confirmed with a POST so mail scanners that prefetch links do not act on them.
+moved, so a change a thief requested cannot complete after the owner resets the password or switches
+the address back. Links are confirmed with a POST so mail scanners that prefetch links do not act on
+them.
 
 Changing the password, adding a passkey, and linking Google mail the account's address after the
 change commits, so the owner learns of a credential a thief added. The mail carries no signed
-action, and a delivery failure does not undo the change. Password reset and address restore are not
-announced, because both start from the mailbox that would receive the notice.
+action, and a delivery failure does not undo the change. Password reset is not announced, because it
+starts from the mailbox that would receive the notice.
 
 Account deletion relies on password confirmation and does not ask for the password again. A second
 prompt would stop owners who confirmed with a passkey or Google, and would not stop a thief inside

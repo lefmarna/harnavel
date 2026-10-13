@@ -53,6 +53,4 @@ Route::middleware(['auth'])->group(function () {
 Route::prefix('settings/email')->name('email-change.')->controller(EmailChangeController::class)->group(function () {
     Route::get('verify/{userId}', 'verify')->name('verify');
     Route::post('verify/{userId}', 'complete')->middleware('throttle:10,1')->name('complete');
-    Route::get('revert/{userId}', 'revert')->name('revert');
-    Route::post('revert/{userId}', 'completeRevert')->middleware('throttle:10,1')->name('revert.complete');
 });

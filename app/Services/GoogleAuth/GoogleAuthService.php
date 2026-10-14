@@ -161,10 +161,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
         $userByGoogleId = $candidates->firstWhere('google_id', $googleId);
         $userByEmail = $this->findCandidateByEmail($candidates, $email, $caseInsensitiveEmail);
 
-        if ($userByGoogleId && $userByEmail && ! $userByGoogleId->is($userByEmail)) {
-            throw new GoogleAuthException(__('auth.google.account_conflict'));
-        }
-
         $user = $userByGoogleId ?? $userByEmail;
 
         if ($user !== null) {
@@ -190,10 +186,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
     {
         $userByGoogleId = $this->userRepository->findByGoogleId($googleId);
         $userByEmail = $this->userRepository->findByEmail($email);
-
-        if ($userByGoogleId && $userByEmail && ! $userByGoogleId->is($userByEmail)) {
-            throw new GoogleAuthException(__('auth.google.account_conflict'));
-        }
 
         if ($userByGoogleId === null && $userByEmail !== null && $userByEmail->google_id === null) {
             throw new GoogleLinkConfirmationPendingException($userByEmail, $googleId, $userByEmail->email);

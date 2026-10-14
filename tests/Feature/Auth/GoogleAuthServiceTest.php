@@ -195,22 +195,6 @@ describe('Google 認証サービス', function () {
         Mail::assertSent(LinkGoogleAccountMail::class);
     });
 
-    it('google_id ユーザーとメールユーザーが別レコードの場合 GoogleAuthException を投げる', function () {
-        User::factory()->create([
-            'google_id' => 'google-aaa',
-            'email' => 'aaa@example.com',
-        ]);
-        User::factory()->create([
-            'google_id' => null,
-            'email' => 'bbb@example.com',
-        ]);
-
-        $service = app(GoogleAuthService::class);
-
-        expect(fn () => $service->findOrCreate('google-aaa', 'bbb@example.com', 'User'))
-            ->toThrow(GoogleAuthException::class);
-    });
-
     it('別の google_id がすでに連携済みの場合 GoogleAuthException を投げる', function () {
         User::factory()->create([
             'email' => 'linked@example.com',
@@ -223,20 +207,21 @@ describe('Google 認証サービス', function () {
             ->toThrow(GoogleAuthException::class, 'このメールアドレスは別のGoogleアカウントに連携済みです。');
     });
 
-    it('交差入力（google_id と email が別ユーザーに対応）で衝突 GoogleAuthException を投げる', function () {
-        User::factory()->create([
+    it('連携済みの Google ID なら、Google のメールアドレスを別のユーザーが使っていてもそのユーザーでログインする', function () {
+        $linked = User::factory()->create([
             'google_id' => 'google-X',
             'email' => 'x@example.com',
         ]);
-        User::factory()->create([
+        $other = User::factory()->create([
             'google_id' => null,
             'email' => 'y@example.com',
         ]);
 
-        $service = app(GoogleAuthService::class);
+        $user = app(GoogleAuthService::class)->findOrCreate('google-X', 'y@example.com', 'User');
 
-        expect(fn () => $service->findOrCreate('google-X', 'y@example.com', 'User'))
-            ->toThrow(GoogleAuthException::class, 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+        expect($user->is($linked))->toBeTrue()
+            ->and($linked->refresh()->email)->toBe('x@example.com')
+            ->and($other->refresh()->google_id)->toBeNull();
     });
 
     it('UniqueConstraintViolationException 発生時にフォールバックで既存ユーザーを返す', function () {
@@ -296,7 +281,7 @@ describe('Google 認証サービス', function () {
         Mail::assertSent(LinkGoogleAccountMail::class);
     });
 
-    it('UniqueConstraintViolationException 後のフォールバックでも別レコード衝突なら GoogleAuthException を投げる', function () {
+    it('UniqueConstraintViolationException 後のフォールバックでも、連携済みの Google ID のユーザーでログインする', function () {
         $userA = User::factory()->create([
             'google_id' => 'google-A',
             'email' => 'a@example.com',
@@ -318,8 +303,7 @@ describe('Google 認証サービス', function () {
         app()->instance(UserRepositoryContract::class, $fakeRepo);
         $service = app(GoogleAuthService::class);
 
-        expect(fn () => $service->findOrCreate('google-A', 'b@example.com', 'User'))
-            ->toThrow(GoogleAuthException::class, 'このGoogleアカウントに紐づく既存ユーザーと、同じメールアドレスの別ユーザーが存在します。');
+        expect($service->findOrCreate('google-A', 'b@example.com', 'User')->is($userA))->toBeTrue();
     });
 
     it('lowercase usernamesが無効なら UniqueConstraintViolationException 後も mixed-case メールの既存ユーザーに確認メールを送信する', function () {

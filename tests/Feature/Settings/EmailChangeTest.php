@@ -151,15 +151,21 @@ describe('メールアドレスの変更', function () {
             ->and($user->email_verified_at)->not->toBeNull();
     });
 
-    it('切り替えたら旧アドレスへ、操作用のリンクを含まない通知を送る', function () {
+    it('切り替えたら旧アドレスへ、操作用のリンクを含まず、取り戻す手順を案内する通知を送る', function () {
         $user = User::factory()->create(['email' => 'old@example.com']);
         $url = requestEmailChange($user, 'new@example.com');
         Mail::fake();
 
         $this->post($url)->assertOk();
 
-        Mail::assertSent(EmailChangedMail::class, fn (EmailChangedMail $mail): bool => $mail->hasTo('old@example.com')
-            && ! str_contains($mail->render(), '/settings/email/'));
+        Mail::assertSent(EmailChangedMail::class, function (EmailChangedMail $mail): bool {
+            $html = $mail->render();
+
+            return $mail->hasTo('old@example.com')
+                && ! str_contains($html, '/settings/email/')
+                && str_contains($html, 'パスワードを変更')
+                && str_contains($html, '覚えのないパスキーやGoogleログイン連携を削除・解除');
+        });
     });
 
     it('メールアドレスの変更を申請・確定の順に記録する', function () {

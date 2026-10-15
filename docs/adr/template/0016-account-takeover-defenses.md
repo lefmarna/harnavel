@@ -12,7 +12,8 @@ Writes a stolen session could race (password and address changes, passkey regist
 deletion) lock the user row and refuse with 409 when the generation moved after the request began,
 so an in-flight change cannot land after the owner's reset. Deleting a passkey or
 unlinking Google also revokes the other sessions, because a thief may already have signed in with
-it; unlinking the only credential is refused. The acting session survives by regenerating its ID.
+it. Unlinking Google requires a password, so every account keeps a password or a Google link and a
+passkey only adds a way to sign in. The acting session survives by regenerating its ID.
 Revocation covers sessions only: an app that issues API tokens revokes them on the same events.
 
 An unverified account may have been registered by someone other than the email's owner. When the

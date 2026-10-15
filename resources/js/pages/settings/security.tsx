@@ -178,7 +178,7 @@ export default function Security({
 
                     {!canUnlinkGoogle && (
                       <p className="text-sm text-muted-foreground">
-                        解除するには、先にパスワードを設定するかパスキーを追加してください。
+                        解除するには、先にパスワードを設定してください。
                       </p>
                     )}
 

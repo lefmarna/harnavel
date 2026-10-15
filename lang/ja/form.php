@@ -41,6 +41,6 @@ return [
         'email_change_failed' => '確認メールを送信できませんでした。時間をおいて再度お試しください。',
     ],
     'google_unlink' => [
-        'no_other_credential' => 'Googleログイン連携を解除する前に、パスワードを設定するかパスキーを追加してください。',
+        'password_required' => 'Googleログイン連携を解除する前に、パスワードを設定してください。',
     ],
 ];

@@ -41,7 +41,7 @@ class SecurityController extends Controller
                 canRegisterPasskey: $user->hasVerifiedEmail(),
                 passkeys: $canManagePasskeys ? $this->passkeysOf($user) : [],
                 googleLinked: $user->google_id !== null,
-                canUnlinkGoogle: $user->google_id !== null && $this->hasOtherCredential($user),
+                canUnlinkGoogle: $user->google_id !== null && $user->password !== null,
             ),
         );
     }
@@ -85,7 +85,7 @@ class SecurityController extends Controller
         $unlinked = DB::transaction(function () use ($user): bool {
             $lockedUser = $this->lockCurrentUser($user);
 
-            if (! $this->hasOtherCredential($lockedUser)) {
+            if ($lockedUser->password === null) {
                 return false;
             }
 
@@ -99,7 +99,7 @@ class SecurityController extends Controller
         });
 
         if (! $unlinked) {
-            return back()->withErrors(['google' => __('form.google_unlink.no_other_credential')]);
+            return back()->withErrors(['google' => __('form.google_unlink.password_required')]);
         }
 
         $request->session()->migrate(destroy: true);
@@ -108,11 +108,6 @@ class SecurityController extends Controller
         Log::info('Google account was unlinked.', ['user_id' => $user->getKey()]);
 
         return back()->with('status', 'google-unlinked');
-    }
-
-    private function hasOtherCredential(User $user): bool
-    {
-        return $user->password !== null || $user->passkeys()->exists();
     }
 
     /**

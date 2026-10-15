@@ -1,0 +1,54 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Asia/Tokyo",
+  "schedule": ["* * 1-2 * *"],
+  "updateNotScheduled": false,
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
+  "platformAutomerge": false,
+  "assignees": ["lefmarna"],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "dependencyDashboardApproval": true
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["npm", "composer"],
+      "rangeStrategy": "update-lockfile"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "matchCurrentVersion": "!/^v?0\\./",
+      "groupName": "non-major dependencies",
+      "automerge": true
+    },
+    {
+      "matchManagers": ["npm", "composer"],
+      "matchCurrentValue": "!/^\\^/",
+      "groupName": "pinned dependencies",
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "/^v?0\\./",
+      "groupName": "0.x dependencies",
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "PHP、MariaDB、Composer は XServer と配備手順の版に合わせて手で更新する。",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["php", "cimg/php", "mariadb", "composer"],
+      "enabled": false
+    }
+  ]
+}

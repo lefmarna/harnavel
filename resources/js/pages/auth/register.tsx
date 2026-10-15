@@ -23,16 +23,16 @@ export default function Register() {
           <>
             <div className="grid gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="name">名前</Label>
+                <Label htmlFor="name">ニックネーム</Label>
                 <Input
                   id="name"
                   type="text"
                   required
                   autoFocus
                   tabIndex={1}
-                  autoComplete="name"
+                  autoComplete="nickname"
                   name="name"
-                  placeholder="山田 太郎"
+                  placeholder="たろう"
                 />
                 <InputError message={errors.name} className="mt-2" />
               </div>

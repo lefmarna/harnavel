@@ -16,9 +16,9 @@ required template changes without coupling the merge to routine package maintena
 - **Shared:** template-origin framework, auth/settings foundations, test infrastructure,
   architecture rules, CI actions, reusable workflows, template ADRs, and testing policy. Prefer the
   template.
-- **Hybrid:** `AGENTS.md`, `delivery.yml`, `mise.toml`, `phpstan.neon.dist`, architecture tests, and
-  files containing both shared scaffolding and app behavior. Take template-origin changes and keep
-  app-specific content.
+- **Hybrid:** `AGENTS.md`, `delivery.yml`, `mise.toml`, `phpstan.neon.dist`, `renovate.json`,
+  architecture tests, and files containing both shared scaffolding and app behavior. Take
+  template-origin changes and keep app-specific content.
 - **App-owned:** domain behavior, presentation, branding, environment values, `CONTEXT.md`, flat App
   ADRs, and app-specific routes or deployment layout. Preserve the app.
 

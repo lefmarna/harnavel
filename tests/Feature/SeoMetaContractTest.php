@@ -284,7 +284,7 @@ describe('SEO メタ契約', function () {
                 '@type' => 'WebPage',
                 '@id' => route('profile.edit').'#webpage',
                 'name' => 'プロフィール設定 - '.config('app.display_name'),
-                'description' => '名前とメールアドレスを管理します。',
+                'description' => 'ニックネームとメールアドレスを管理します。',
                 'url' => route('profile.edit'),
             ]);
     });
@@ -313,7 +313,7 @@ describe('SEO メタ契約', function () {
         'verify-email' => ['verification.notice', ['email_verified_at' => null], 'メール認証', 'メールアドレスの認証を完了してください。', true],
         'confirm-password' => ['password.confirm', [], '本人確認', '続行するには現在のパスワードを入力してください。', true],
         'dashboard' => ['dashboard', [], 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。', false],
-        'profile' => ['profile.edit', [], 'プロフィール設定', '名前とメールアドレスを管理します。', false],
+        'profile' => ['profile.edit', [], 'プロフィール設定', 'ニックネームとメールアドレスを管理します。', false],
         'security' => ['security.edit', [], 'セキュリティ設定', 'パスワード、パスキー、Googleログイン連携を管理します。', false],
         'appearance' => ['appearance.edit', [], '表示設定', 'テーマの表示方法を選択します。', false],
     ]);

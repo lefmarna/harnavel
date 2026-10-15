@@ -47,7 +47,7 @@ export default function Profile({
           <Heading
             variant="small"
             title="プロフィール情報"
-            description="名前とメールアドレスを更新します"
+            description="ニックネームとメールアドレスを更新します"
           />
 
           {/* 確認メールを送ったときはまだ切り替わっていないので、現在のアドレスに戻す。
@@ -69,7 +69,7 @@ export default function Profile({
             {({ processing, recentlySuccessful, errors }) => (
               <>
                 <div className="grid gap-2">
-                  <Label htmlFor="name">名前</Label>
+                  <Label htmlFor="name">ニックネーム</Label>
 
                   <Input
                     id="name"
@@ -77,8 +77,8 @@ export default function Profile({
                     defaultValue={user.name}
                     name="name"
                     required
-                    autoComplete="name"
-                    placeholder="山田 太郎"
+                    autoComplete="nickname"
+                    placeholder="たろう"
                   />
 
                   <InputError className="mt-2" message={errors.name} />

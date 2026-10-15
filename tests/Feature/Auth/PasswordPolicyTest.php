@@ -42,17 +42,15 @@ describe('パスワードポリシー', function () {
         $this->assertGuest();
     });
 
-    it('数字を含まないと拒否される', function () use ($register) {
-        $register('abcdefgh')
-            ->assertSessionHasErrors('password');
-        $this->assertGuest();
-    });
-
-    it('英字を含まないと拒否される', function () use ($register) {
-        $register('12345678')
-            ->assertSessionHasErrors('password');
-        $this->assertGuest();
-    });
+    it('文字種の組み合わせは求めない', function (string $password) use ($register) {
+        $register($password)
+            ->assertSessionHasNoErrors();
+        $this->assertAuthenticated();
+    })->with([
+        '英字のみ' => 'onlyletters',
+        '数字のみ' => '20261015',
+        '記号のみ' => '!#$%&()*',
+    ]);
 
     it('日本語など非ASCII文字を含むと拒否される', function () use ($register) {
         $register('abcd1234あ')

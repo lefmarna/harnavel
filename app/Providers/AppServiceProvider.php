@@ -116,8 +116,6 @@ class AppServiceProvider extends ServiceProvider
         Password::defaults(
             fn (): Password => Password::min(8)
                 ->max(64)
-                ->letters()
-                ->numbers()
                 ->uncompromised()
                 ->rules(['regex:/^[\x21-\x7E]+\z/'])
         );

@@ -227,8 +227,10 @@ shared constraint changes are classified here against a fresh Laravel reference.
 reproduces those strings verbatim and maintains only the constraints of packages the template does
 not declare, so its routine maintenance updates resolutions rather than declarations; see
 [routine app-side maintenance](../merge-template/references/dependency-reconciliation.md#routine-app-side-maintenance).
-Changes to shared requirements return through the template. Dependabot Alerts reports
-default-branch advisories; automated dependency PRs are not used.
+Changes to shared requirements return through the template. Renovate merges only lockfile updates within
+these constraints by itself and holds every declaration change for approval. Its vulnerability pull
+requests are the one standing exception: moving a constraint to the lowest fixed stable version
+needs no further approval, while major and 0.x fixes still wait for review.
 
 ### 5. Resolve and audit
 

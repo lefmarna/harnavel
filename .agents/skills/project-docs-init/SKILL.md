@@ -101,7 +101,8 @@ per-environment GitHub settings the first deployment needs, for Develop and Prod
   it before touching the server, and rejects a path that would not reach PHP).
 - `HEALTHCHECK_BASIC_AUTH`, only for an environment whose document root is protected by Basic
   authentication.
-- Enable the GitHub dependency graph and Dependabot Alerts. Leave dependency update PRs disabled.
+- Enable the GitHub dependency graph and Dependabot Alerts, leave Dependabot update PRs disabled,
+  and install Mend Renovate on the repository ([Dependency updates](../../../docs/branches-and-ci.md#dependency-updates)).
 
 The server-side `.env` of each deployed environment also needs `PASSKEYS_USER_HANDLE_SECRET` set
 explicitly, independent of `APP_KEY` for a new app; production refuses to boot without it

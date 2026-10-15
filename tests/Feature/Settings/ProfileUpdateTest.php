@@ -32,11 +32,11 @@ describe('プロフィール設定', function () {
                     ->where('mustVerifyEmail', true)
                     ->where('status', null)
                     ->where('seo.title', 'プロフィール設定')
-                    ->where('seo.description', '名前とメールアドレスを管理します。')
+                    ->where('seo.description', 'ニックネームとメールアドレスを管理します。')
             );
     });
 
-    it('名前を更新できる', function () {
+    it('ニックネームを更新できる', function () {
         $user = User::factory()->create();
 
         $response = $this
@@ -134,20 +134,20 @@ describe('プロフィール設定', function () {
 
         $response->assertSessionHasErrors([$field => $expectedMessage]);
     })->with([
-        '名前未入力' => [
+        'ニックネーム未入力' => [
             ['email' => 'test@example.com'],
             'name',
-            '名前を入力してください。',
+            'ニックネームを入力してください。',
         ],
-        '名前が文字列でない' => [
+        'ニックネームが文字列でない' => [
             ['name' => ['array'], 'email' => 'test@example.com'],
             'name',
-            '名前は文字列で入力してください。',
+            'ニックネームは文字列で入力してください。',
         ],
-        '名前が長すぎる' => [
+        'ニックネームが長すぎる' => [
             ['name' => str_repeat('a', 256), 'email' => 'test@example.com'],
             'name',
-            '名前は255文字以内で入力してください。',
+            'ニックネームは255文字以内で入力してください。',
         ],
         'メールアドレス未入力' => [
             ['name' => 'Test User'],

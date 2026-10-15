@@ -40,7 +40,7 @@ describe('Google ログイン連携の解除', function () {
     })->with([
         '連携なし' => [['google_id' => null], false, false, false],
         'パスワードあり' => [['google_id' => 'google-1'], false, true, true],
-        'パスキーだけ' => [['google_id' => 'google-1', 'password' => null], true, true, true],
+        'パスキーだけ' => [['google_id' => 'google-1', 'password' => null], true, true, false],
         'Google だけ' => [['google_id' => 'google-1', 'password' => null], false, true, false],
     ]);
 
@@ -74,24 +74,22 @@ describe('Google ログイン連携の解除', function () {
         Log::shouldHaveReceived('info')->with('Google account was unlinked.', ['user_id' => $user->getKey()])->once();
     });
 
-    it('パスワードもパスキーもなければ解除しない', function () {
+    it('パスワードがなければ、パスキーがあっても解除しない', function (bool $withPasskey) {
         $user = User::factory()->create(['google_id' => 'google-1', 'password' => null]);
 
+        if ($withPasskey) {
+            $user->passkeys()->create(['name' => 'Key', 'credential_id' => 'credential-1', 'credential' => []]);
+        }
+
         unlinkGoogle($user)->assertSessionHasErrors([
-            'google' => 'Googleログイン連携を解除する前に、パスワードを設定するかパスキーを追加してください。',
+            'google' => 'Googleログイン連携を解除する前に、パスワードを設定してください。',
         ]);
 
         expect($user->refresh()->google_id)->toBe('google-1');
-    });
-
-    it('パスキーがあればパスワードがなくても解除できる', function () {
-        $user = User::factory()->create(['google_id' => 'google-1', 'password' => null]);
-        $user->passkeys()->create(['name' => 'Key', 'credential_id' => 'credential-1', 'credential' => []]);
-
-        unlinkGoogle($user)->assertSessionHasNoErrors();
-
-        expect($user->refresh()->google_id)->toBeNull();
-    });
+    })->with([
+        'パスキーなし' => false,
+        'パスキーあり' => true,
+    ]);
 
     // 解除の前に送った確認リンクを開き直して、外した連携を戻させない。
     it('セッションを失効させた後は、その前に送った連携の確認リンクで連携できない', function () {

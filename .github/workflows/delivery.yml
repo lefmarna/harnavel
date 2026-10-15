@@ -385,3 +385,20 @@ jobs:
 
           echo "Release health check failed: $HEALTHCHECK_URL returned ${status:-no response}." >&2
           exit 1
+
+  notify-failure:
+    # bot の push で動いた実行は、失敗しても誰にも通知されない。
+    needs: [provenance, quality, deploy]
+    if: failure() && endsWith(github.actor, '[bot]')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Open an issue for the failed delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create --repo "$GITHUB_REPOSITORY" --assignee "$GITHUB_REPOSITORY_OWNER" \
+            --title "delivery failed on $GITHUB_REF_NAME" --body "$RUN_URL"

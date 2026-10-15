@@ -83,7 +83,7 @@ return [
     'settings' => [
         'profile' => [
             'title' => 'プロフィール設定',
-            'description' => '名前とメールアドレスを管理します。',
+            'description' => 'ニックネームとメールアドレスを管理します。',
         ],
         'security' => [
             'title' => 'セキュリティ設定',

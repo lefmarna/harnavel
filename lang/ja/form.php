@@ -28,11 +28,11 @@ return [
     ],
 
     'profile_update' => [
-        'name' => '名前',
+        'name' => 'ニックネーム',
         'email' => 'メールアドレス',
-        'name_required' => '名前を入力してください。',
-        'name_string' => '名前は文字列で入力してください。',
-        'name_max' => '名前は255文字以内で入力してください。',
+        'name_required' => 'ニックネームを入力してください。',
+        'name_string' => 'ニックネームは文字列で入力してください。',
+        'name_max' => 'ニックネームは255文字以内で入力してください。',
         'email_required' => 'メールアドレスを入力してください。',
         'email_string' => 'メールアドレスは文字列で入力してください。',
         'email_email' => '有効なメールアドレスを入力してください。',
@@ -41,6 +41,6 @@ return [
         'email_change_failed' => '確認メールを送信できませんでした。時間をおいて再度お試しください。',
     ],
     'google_unlink' => [
-        'no_other_credential' => 'Googleログイン連携を解除する前に、パスワードを設定するかパスキーを追加してください。',
+        'password_required' => 'Googleログイン連携を解除する前に、パスワードを設定してください。',
     ],
 ];

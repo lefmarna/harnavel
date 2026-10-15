@@ -49,6 +49,18 @@ describe('ユーザー登録', function () {
         ]);
     });
 
+    it('検証文言では画面と同じ項目名を使う', function () {
+        $this->post(route('register.store'), [
+            'name' => '',
+            'email' => 'not-an-email',
+            'password' => 'password1',
+            'password_confirmation' => 'password1',
+        ])->assertSessionHasErrors([
+            'name' => 'ニックネームは必須項目です。',
+            'email' => 'メールアドレスは、有効なメールアドレス形式で指定してください。',
+        ]);
+    });
+
     it('bcrypt形式の文字列をパスワードとして登録しても平文としてハッシュ化される', function () {
         $password = Hash::make('known-plain');
 

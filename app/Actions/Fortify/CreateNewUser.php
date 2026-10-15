@@ -30,7 +30,7 @@ class CreateNewUser implements CreatesNewUsers
         $validated = Validator::make($normalizedInput, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
-        ])->validate();
+        ], attributes: ['name' => __('form.profile_update.name')])->validate();
 
         return User::create([
             ...$validated,

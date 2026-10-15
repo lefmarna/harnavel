@@ -10,6 +10,7 @@ use Illuminate\Auth\SessionGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -35,6 +36,7 @@ final class RejectRevokedSessions
             // 続けて表示する画面からの送信が CSRF で弾かれないよう、トークンも作り直す。
             $request->session()->invalidate();
             $request->session()->regenerateToken();
+            Inertia::clearHistory();
         }
 
         return $next($request);

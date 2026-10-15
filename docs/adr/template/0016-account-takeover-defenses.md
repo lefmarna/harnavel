@@ -13,7 +13,9 @@ deletion) lock the user row and refuse with 409 when the generation moved after 
 so an in-flight change cannot land after the owner's reset. Deleting a passkey or
 unlinking Google also revokes the other sessions, because a thief may already have signed in with
 it. Unlinking Google requires a password, so every account keeps a password or a Google link and a
-passkey only adds a way to sign in. The acting session survives by regenerating its ID.
+passkey only adds a way to sign in. The security page also logs out every other device, so an
+owner who never set a password can still revoke a stolen session or remember cookie. The acting
+session survives by regenerating its ID.
 Revocation covers sessions only: an app that issues API tokens revokes them on the same events.
 
 An unverified account may have been registered by someone other than the email's owner. When the
@@ -71,6 +73,10 @@ sign-in and password reset respond the same either way, and registration is limi
 Trusted hosts are the `APP_URL` host without its subdomains, because password reset links are built
 from the request host and a subdomain the app does not serve may be taken over. An app serving more
 hosts lists them itself.
+
+Inertia encrypts the page data it keeps in browser history and clears that history after logout,
+account deletion, and a revoked session's rejection, so the back button on a shared device does not
+redraw the previous user's pages without asking the server.
 
 URLs carrying a reset token, an email-verification hash, or a signature are kept out of analytics,
 advertising scripts, logs, and Discord notifications, because each copy is a usable credential held

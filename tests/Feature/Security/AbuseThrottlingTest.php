@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 
 describe('濫用対策のレート制限', function () {
     // 大量登録・メール送信・外部 API 呼び出し・パスワード総当たりで、ワーカーと送信枠を使い切らせない。
@@ -74,5 +76,74 @@ describe('濫用対策のレート制限', function () {
         }
 
         expect($this->put(route('user-password.update'))->getStatusCode())->not->toBe(429);
+    });
+
+    describe('確認メールの 1 時間あたりの上限', function () {
+        beforeEach(fn () => Mail::fake());
+
+        $changeEmail = function (User $user, string $email, string $ip = '192.0.2.1') {
+            // 1 分あたりの上限に当たらないよう、1 回ごとに時間を進める。
+            test()->travel(61)->seconds();
+
+            return test()->actingAs($user)
+                ->withSession(['auth.password_confirmed_at' => time()])
+                ->withServerVariables(['REMOTE_ADDR' => $ip])
+                ->from(route('profile.edit'))
+                ->patch(route('profile.update'), ['name' => $user->name, 'email' => $email]);
+        };
+
+        it('メールアドレスの変更は、確認メールを送るものだけを利用者ごとに数える', function () use ($changeEmail) {
+            $user = User::factory()->create();
+
+            for ($attempt = 0; $attempt < 10; $attempt++) {
+                $changeEmail($user, $user->email)->assertSessionHasNoErrors();
+            }
+
+            for ($attempt = 0; $attempt < 5; $attempt++) {
+                $changeEmail($user, "new{$attempt}@example.com")->assertSessionHas('status', 'email-change-link-sent');
+            }
+
+            $changeEmail($user, 'new5@example.com')->assertSessionHasErrors([
+                'email' => '確認メールの送信が続いたため、しばらく時間をおいてから再度お試しください。',
+            ]);
+        });
+
+        it('メールアドレスの変更は、接続元ごとにも数える', function () use ($changeEmail) {
+            for ($attempt = 0; $attempt < 10; $attempt++) {
+                $changeEmail(User::factory()->create(), "new{$attempt}@example.com")->assertSessionHasNoErrors();
+            }
+
+            $changeEmail(User::factory()->create(), 'new10@example.com')->assertSessionHasErrors('email');
+            $changeEmail(User::factory()->create(), 'new11@example.com', '192.0.2.2')->assertSessionHasNoErrors();
+        });
+
+        it('確認メールの再送は、利用者ごとに数える', function () {
+            $user = User::factory()->unverified()->create();
+
+            for ($attempt = 0; $attempt < 5; $attempt++) {
+                $this->travel(61)->seconds();
+                expect($this->actingAs($user)->post(route('verification.send'))->getStatusCode())->not->toBe(429);
+            }
+
+            $this->travel(61)->seconds();
+            $this->actingAs($user)->post(route('verification.send'))->assertTooManyRequests();
+        });
+
+        it('確認メールの再送が上限に達しても、届いたリンクで確認できる', function () {
+            $user = User::factory()->unverified()->create();
+
+            for ($attempt = 0; $attempt < 6; $attempt++) {
+                $this->travel(61)->seconds();
+                $this->actingAs($user)->post(route('verification.send'));
+            }
+
+            $this->actingAs($user)->get(URL::temporarySignedRoute(
+                'verification.verify',
+                now()->addMinutes(60),
+                ['id' => $user->getKey(), 'hash' => sha1($user->email)],
+            ))->assertRedirect();
+
+            expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
+        });
     });
 });

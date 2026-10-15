@@ -23,8 +23,10 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
+use Laravel\Fortify\Contracts\LogoutResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Fortify\Http\Responses\LogoutResponse as FortifyLogoutResponse;
 use Laravel\Fortify\Http\Responses\SuccessfulPasswordResetLinkRequestResponse;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -52,6 +54,13 @@ class FortifyServiceProvider extends ServiceProvider
             FailedPasswordResetLinkRequestResponse::class,
             fn (): SuccessfulPasswordResetLinkRequestResponse => new SuccessfulPasswordResetLinkRequestResponse(Password::RESET_LINK_SENT),
         );
+
+        // Fortify はセッションを作り直してから応答を作るので、履歴を消す指示は次の画面まで残る。
+        $this->app->bind(LogoutResponse::class, function (): FortifyLogoutResponse {
+            Inertia::clearHistory();
+
+            return new FortifyLogoutResponse;
+        });
     }
 
     /**
@@ -162,6 +171,15 @@ class FortifyServiceProvider extends ServiceProvider
                 Limit::perHour(20)->by(AccountLoginThrottle::key($username))->after(fn (): bool => ! Auth::check()),
             ];
         });
+
+        // 1 分あたりの上限だけでは、1 時間に数百通の確認メールを送れてしまう。Fortify は届いたリンクの確認にも
+        // 同じ上限を使うので、時間単位の上限は再送だけにかけ、送ったリンクを使えなくしない。
+        RateLimiter::for('verification', fn (Request $request): array => [
+            Limit::perMinute(6)->by('verification|'.$this->userKey($request)),
+            ...$request->routeIs('verification.send')
+                ? [Limit::perHour(5)->by('verification-send-hour|'.$this->userKey($request))]
+                : [],
+        ]);
 
         // Fortify のルートには個別にミドルウェアを付けられないため、ルート名で上限を選ぶ。
         RateLimiter::for('fortify', function (Request $request) {

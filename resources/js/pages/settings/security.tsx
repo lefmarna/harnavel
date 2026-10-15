@@ -2,7 +2,11 @@ import { Transition } from "@headlessui/react";
 import { Form, usePage } from "@inertiajs/react";
 import { useRef } from "react";
 
-import { destroyGoogle, update } from "@/actions/App/Http/Controllers/Settings/SecurityController";
+import {
+  destroyGoogle,
+  destroyOtherSessions,
+  update,
+} from "@/actions/App/Http/Controllers/Settings/SecurityController";
 import Heading from "@/components/heading";
 import InputError from "@/components/input-error";
 import ManagePasskeys from "@/components/manage-passkeys";
@@ -203,6 +207,32 @@ export default function Security({
             {flash.status === "google-unlinked" && (
               <p role="status" className="text-sm font-medium text-green-600 dark:text-green-400">
                 Googleログイン連携を解除しました。
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <Heading
+              variant="small"
+              title="ログイン中の端末"
+              description="心当たりのない端末があれば、この端末以外をすべてログアウトしてください"
+            />
+
+            <Form {...destroyOtherSessions.form()} options={{ preserveScroll: true }}>
+              {({ processing }) => (
+                <Button
+                  variant="outline"
+                  disabled={processing}
+                  data-test="logout-other-sessions-button"
+                >
+                  他のすべての端末からログアウト
+                </Button>
+              )}
+            </Form>
+
+            {flash.status === "other-sessions-logged-out" && (
+              <p role="status" className="text-sm font-medium text-green-600 dark:text-green-400">
+                他のすべての端末からログアウトしました。
               </p>
             )}
           </div>

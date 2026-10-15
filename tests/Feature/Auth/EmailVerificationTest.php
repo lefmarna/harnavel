@@ -85,7 +85,7 @@ describe('メール認証', function () {
         $verificationUrl = URL::temporarySignedRoute(
             'verification.verify',
             now()->addMinutes(60),
-            ['id' => 123, 'hash' => sha1($user->email)]
+            ['id' => User::factory()->create()->getKey(), 'hash' => sha1($user->email)]
         );
 
         $this->actingAs($user)->get($verificationUrl);

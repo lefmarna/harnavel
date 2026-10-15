@@ -120,6 +120,7 @@ return [
     'limiters' => [
         'login' => 'login',
         'passkeys' => 'passkeys',
+        'verification' => 'verification',
     ],
 
     /*

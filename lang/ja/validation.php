@@ -163,7 +163,6 @@ return [
     ],
 
     'attributes' => [
-        'name' => 'ニックネーム',
         'email' => 'メールアドレス',
         'password' => 'パスワード',
         'current_password' => '現在のパスワード',

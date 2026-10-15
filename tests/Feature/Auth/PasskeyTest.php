@@ -58,6 +58,16 @@ describe('パスキー', function () {
         '登録' => ['POST', 'passkey.store'],
     ]);
 
+    it('パスキーの名前の検証文言に、ユーザーの項目名を使わない', function () {
+        $message = $this->actingAs(User::factory()->create())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->postJson(route('passkey.store'), ['name' => str_repeat('a', 256)])
+            ->assertJsonValidationErrorFor('name')
+            ->json('errors.name.0');
+
+        expect($message)->not->toContain('ニックネーム');
+    });
+
     it('パスキー登録以外の Fortify の画面はメール未確認でも開ける', function () {
         $this->actingAs(User::factory()->unverified()->create())
             ->get(route('verification.notice'))

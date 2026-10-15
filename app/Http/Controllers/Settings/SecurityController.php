@@ -75,6 +75,27 @@ class SecurityController extends Controller
         return back();
     }
 
+    public function destroyOtherSessions(Request $request): RedirectResponse
+    {
+        $user = $this->currentUser($request);
+
+        DB::transaction(function () use ($user): void {
+            $lockedUser = $this->lockCurrentUser($user);
+
+            $lockedUser->revokeSessions();
+            $this->userRepository->save($lockedUser);
+
+            $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
+        });
+
+        $request->session()->migrate(destroy: true);
+        $user->recordSessionGeneration($request->session());
+
+        Log::info('Other sessions were logged out.', ['user_id' => $user->getKey()]);
+
+        return back()->with('status', 'other-sessions-logged-out');
+    }
+
     /**
      * 第三者がその Google アカウントで先にログインしているかもしれないので、他の端末のセッションも失効させる（TADR-0016）。
      */

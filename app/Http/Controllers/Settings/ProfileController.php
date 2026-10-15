@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\User;
 use App\Services\Account\EmailChangeService;
 use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Http\RedirectResponse;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -66,6 +68,10 @@ class ProfileController extends Controller
             return to_route('profile.edit');
         }
 
+        if (! $this->allowsEmailChangeMail($request, $user)) {
+            return to_route('profile.edit')->withErrors(['email' => __('form.profile_update.email_change_throttled')]);
+        }
+
         try {
             $this->emailChangeService->request($user, $validated['email']);
         } catch (Throwable $e) {
@@ -95,7 +101,34 @@ class ProfileController extends Controller
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        Inertia::clearHistory();
 
         return redirect()->route('home');
+    }
+
+    /**
+     * ルートの 1 分あたりの上限は名前だけの更新も数え、1 時間に数百通を送れてしまう。確認メールの送信枠を
+     * 使い切らせないよう、実際に送るものだけを利用者と接続元ごとに 1 時間単位でも数える。
+     */
+    private function allowsEmailChangeMail(Request $request, User $user): bool
+    {
+        /** @var int|string $key */
+        $key = $user->getKey();
+        $limits = [
+            'email-change-mail|user|'.$key => 5,
+            'email-change-mail|ip|'.$request->ip() => 10,
+        ];
+
+        foreach ($limits as $key => $maxAttempts) {
+            if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+                return false;
+            }
+        }
+
+        foreach (array_keys($limits) as $key) {
+            RateLimiter::hit($key, 3600);
+        }
+
+        return true;
     }
 }

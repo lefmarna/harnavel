@@ -39,6 +39,7 @@ return [
         'email_max' => 'メールアドレスは255文字以内で入力してください。',
         'email_unique' => 'このメールアドレスは既に使用されています。',
         'email_change_failed' => '確認メールを送信できませんでした。時間をおいて再度お試しください。',
+        'email_change_throttled' => '確認メールの送信が続いたため、しばらく時間をおいてから再度お試しください。',
     ],
     'google_unlink' => [
         'password_required' => 'Googleログイン連携を解除する前に、パスワードを設定してください。',

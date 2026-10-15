@@ -34,6 +34,10 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('password.confirm')
         ->name('security.google.destroy');
 
+    Route::delete('settings/sessions', [SecurityController::class, 'destroyOtherSessions'])
+        ->middleware('password.confirm')
+        ->name('security.sessions.destroy');
+
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware(['password.confirm', 'throttle:6,1,password-update'])
         ->name('user-password.update');

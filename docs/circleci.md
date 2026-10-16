@@ -1,27 +1,16 @@
 # CircleCI
 
-Pull request E2E and mutation testing can run on CircleCI, leaving GitHub Actions minutes for lint,
-Pest, the build, and delivery. A repository opts in by setting the `E2E_RECORD_BUCKET` Actions
-variable. Without it, every check stays on GitHub Actions as described in
-[Branches and CI](branches-and-ci.md). [TADR-0015](adr/template/0015-circleci-pull-request-checks.md)
-records why.
+A repository opts in to running pull request E2E and mutation testing on CircleCI
+([TADR-0015](adr/template/0015-circleci-pull-request-checks.md)) by setting the `E2E_RECORD_BUCKET`
+Actions variable. The only Google Cloud resource is a bucket of tree records, which stays within the
+Cloud Storage Always Free limits only in `us-central1`, `us-east1`, and `us-west1`.
 
-Both services run on free plans and stop rather than bill when their quota runs out. The only Google
-Cloud resource is a bucket of tree records within the Cloud Storage Always Free limits, which apply
-only in `us-central1`, `us-east1`, and `us-west1`.
+When no readable E2E record exists for the tree, including while CircleCI is out of credits or still
+running, `delivery` runs lint, Pest, and E2E itself, so merge after the CircleCI check passes.
 
-## How delivery trusts CircleCI
-
-With CircleCI enabled, a pull request build counts as verified only together with CircleCI's record
-of E2E passing on the same tree. CircleCI writes records through Workload Identity Federation and can
-create and read them only under its own repository's prefix, never overwrite them. When no readable
-record exists, including when CircleCI is out of credits or still running, `delivery` runs lint,
-Pest, and E2E itself before deploying, so merge after the CircleCI check passes.
-
-Pull request jobs can create records. As with build artifacts, this guards against mistakes, not
-collaborators. Permissions are granted per repository and limited to its prefix: a pull request
-can rewrite the record path in `.circleci/config.yml`, so a bucket-wide grant would let a
-collaborator on one repository forge records for another. Records expire after 3 days, like build artifacts.
+Grants are per repository and limited to its prefix: a pull request can rewrite the record path in
+`.circleci/config.yml`, so a bucket-wide grant would let a collaborator on one repository forge
+records for another. Like build artifacts, records guard against mistakes, not collaborators.
 
 ## One-time setup
 

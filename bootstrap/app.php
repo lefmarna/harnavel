@@ -74,7 +74,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 && ! $e instanceof ThrottleRequestsException,
         );
 
-        // スタックトレースは要らないので、既定の記録は止める。
         $exceptions->report(function (ThrottleRequestsException $e): bool {
             Log::warning('Request was rate limited.');
             app(ProductionExceptionNotifier::class)->report($e, app()->bound('request') ? request() : null);
@@ -93,7 +92,6 @@ return Application::configure(basePath: dirname(__DIR__))
             $status = $response->getStatusCode();
 
             // Laravel 既定の英語の HTML は、SPA 遷移では Inertia が画面の上のモーダルに出してしまう。
-            // fetch など JSON を求める要求には、既定の JSON のまま返す。
             $errorPage = [403 => 'forbidden', 404 => 'not_found', 429 => 'too_many_requests'][$status] ?? null;
 
             // web ミドルウェアの外（セッションがない）では画面に要る共有データを作れないので、既定の応答のまま返す。
@@ -144,11 +142,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     ->setStatusCode(500);
             }
 
-            if (! $request->header('X-Inertia')) {
-                return $response;
-            }
-
-            if ($status === 419) {
+            if ($status === 419 && $request->header('X-Inertia')) {
                 return back()->withErrors([
                     'page_expired' => __('errors.page_expired'),
                 ]);

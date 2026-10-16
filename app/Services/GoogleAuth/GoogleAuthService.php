@@ -10,13 +10,12 @@ use App\Mail\LinkGoogleAccountMail;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Services\Account\SecurityNotifier;
+use App\Support\SignedPayloadLink;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 class GoogleAuthService implements GoogleAuthServiceContract
@@ -39,32 +38,28 @@ class GoogleAuthService implements GoogleAuthServiceContract
             $email = Str::lower($email);
         }
 
-        for ($attempt = 0; $attempt < self::MAX_CREATE_RETRIES; $attempt++) {
-            try {
-                return DB::transaction(fn (): User => $this->findOrCreateWithinTransaction(
-                    googleId: $googleId,
-                    email: $email,
-                    name: $name,
-                    caseInsensitiveEmail: $caseInsensitiveEmail,
-                    lowercaseUsernames: $lowercaseUsernames,
-                ));
-            } catch (GoogleLinkConfirmationPendingException $e) {
-                $this->sendLinkConfirmationEmail($e->user, $e->googleId, $e->email);
-
-                throw $e;
-            } catch (UniqueConstraintViolationException) {
+        try {
+            for ($attempt = 0; $attempt < self::MAX_CREATE_RETRIES; $attempt++) {
                 try {
+                    return DB::transaction(fn (): User => $this->findOrCreateWithinTransaction(
+                        googleId: $googleId,
+                        email: $email,
+                        name: $name,
+                        caseInsensitiveEmail: $caseInsensitiveEmail,
+                        lowercaseUsernames: $lowercaseUsernames,
+                    ));
+                } catch (UniqueConstraintViolationException) {
                     $user = $this->recoverFromUniqueConstraintViolation($googleId, $email, $lowercaseUsernames);
-                } catch (GoogleLinkConfirmationPendingException $e) {
-                    $this->sendLinkConfirmationEmail($e->user, $e->googleId, $e->email);
 
-                    throw $e;
-                }
-
-                if ($user !== null) {
-                    return $user;
+                    if ($user !== null) {
+                        return $user;
+                    }
                 }
             }
+        } catch (GoogleLinkConfirmationPendingException $e) {
+            $this->sendLinkConfirmationEmail($e->user, $e->googleId);
+
+            throw $e;
         }
 
         Log::warning('Google OAuth: UniqueConstraintViolationException but user not found.', [
@@ -165,7 +160,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
         if ($user !== null) {
             if ($userByGoogleId === null && $user->google_id === null) {
-                throw new GoogleLinkConfirmationPendingException($user, $googleId, $user->email);
+                throw new GoogleLinkConfirmationPendingException($user, $googleId);
             }
 
             return $this->syncGoogleAccount($user, $googleId, $lowercaseUsernames, $email);
@@ -188,7 +183,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
         $userByEmail = $this->userRepository->findByEmail($email);
 
         if ($userByGoogleId === null && $userByEmail !== null && $userByEmail->google_id === null) {
-            throw new GoogleLinkConfirmationPendingException($userByEmail, $googleId, $userByEmail->email);
+            throw new GoogleLinkConfirmationPendingException($userByEmail, $googleId);
         }
 
         $user = $userByGoogleId ?? $userByEmail;
@@ -230,27 +225,15 @@ class GoogleAuthService implements GoogleAuthServiceContract
         return Str::lower($storedEmail) === Str::lower($payloadEmail);
     }
 
-    private function sendLinkConfirmationEmail(User $user, string $googleId, string $email): void
+    private function sendLinkConfirmationEmail(User $user, string $googleId): void
     {
-        $signedUrl = URL::temporarySignedRoute(
-            'auth.google.link.verify',
-            now()->addHour(),
-            [
-                'userId' => $this->userKey($user),
-                'payload' => $this->encryptLinkPayload($googleId, $email, (string) $user->session_generation),
-            ],
-        );
+        $signedUrl = SignedPayloadLink::make('auth.google.link.verify', now()->addHour(), $this->userKey($user), [
+            'google_id' => $googleId,
+            'email' => $user->email,
+            'session_generation' => (string) $user->session_generation,
+        ]);
 
         Mail::to($user->email)->send(new LinkGoogleAccountMail($user, $signedUrl));
-    }
-
-    private function encryptLinkPayload(string $googleId, string $email, string $sessionGeneration): string
-    {
-        return Crypt::encryptString(json_encode([
-            'google_id' => $googleId,
-            'email' => $email,
-            'session_generation' => $sessionGeneration,
-        ], JSON_THROW_ON_ERROR));
     }
 
     private function normalizeName(?string $name, string $email): string

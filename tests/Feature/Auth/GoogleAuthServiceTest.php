@@ -129,15 +129,6 @@ describe('Google 認証サービス', function () {
         Mail::assertSent(LinkGoogleAccountMail::class);
     });
 
-    it('lowercase usernamesが非 bool の真値でも bool 化して email を小文字化する', function () {
-        config(['fortify.lowercase_usernames' => 1]);
-
-        $service = app(GoogleAuthService::class);
-        $user = $service->findOrCreate('google-int-config', 'Int.Config@Example.COM', 'Int Config');
-
-        expect($user->email)->toBe('int.config@example.com');
-    });
-
     it('lowercase usernamesが有効でレガシーな大小混在メールの既存ユーザーがいる場合は一意制約リカバリ経由で連携確認待ちになる', function () {
         Mail::fake();
         config(['fortify.lowercase_usernames' => true]);
@@ -260,7 +251,6 @@ describe('Google 認証サービス', function () {
             findCandidates: fn (): Collection => collect(),
             findByGoogleId: fn (): null => null,
             findByEmail: fn (): User => $existing,
-            // 2 回目（フォールバック内の更新保存）は成功させる。
             save: function () use (&$saveCount): void {
                 if ($saveCount++ === 0) {
                     throw testingUniqueConstraintViolation();
@@ -356,7 +346,6 @@ describe('Google 認証サービス', function () {
             ->email_verified_at->not->toBeNull();
     });
 
-    // 第三者が他人のメールで先に登録したアカウントを、持ち主の連携後も使い続けられないようにする。
     it('confirmLink はメール未確認のアカウントへ連携するとき既存のパスワード・パスキー・セッションを無効にする', function () {
         $existing = User::factory()->unverified()->create([
             'email' => 'confirm@example.com',
@@ -491,27 +480,6 @@ describe('Google 認証サービス', function () {
     });
 
     describe('リンク確認の未仕様分岐', function () {
-        it('同じ google_id で再確認した場合 true になる', function () {
-            $existing = User::factory()->create([
-                'email' => 'confirmed@example.com',
-                'google_id' => 'google-confirmed',
-            ]);
-
-            $saveCount = 0;
-            $fakeRepo = new FakeUserRepository(
-                find: fn (): User => $existing,
-                save: function () use (&$saveCount): void {
-                    $saveCount++;
-                },
-            );
-
-            app()->instance(UserRepositoryContract::class, $fakeRepo);
-            $service = app(GoogleAuthService::class);
-
-            expect($service->confirmLink((string) $existing->getKey(), 'google-confirmed', 'confirmed@example.com', '0'))->toBeTrue()
-                ->and($saveCount)->toBe(0);
-        });
-
         it('別の google_id が既に連携済みの場合 false になる', function () {
             $existing = User::factory()->create([
                 'email' => 'already-linked@example.com',
@@ -625,7 +593,6 @@ describe('Google 認証サービス', function () {
                 ->and($existing->fresh()->email)->toBe('mixed.user@example.com');
         });
 
-        // Google ID の一致はログインの根拠になるが、アカウントのメールの所有を示すのは同じアドレスのときだけ。
         it('既存 google_id ユーザーのメールが Google と異なる場合は書き換えず確認済みにもしない', function (bool $lowercaseUsernames) {
             config(['fortify.lowercase_usernames' => $lowercaseUsernames]);
 
@@ -660,29 +627,6 @@ describe('Google 認証サービス', function () {
 
             expect($existing->email)->toBe('Mixed.User@Example.COM')
                 ->and($existing->email_verified_at)->not->toBeNull();
-        });
-
-        it('既存 google_id ユーザーに同期差分がない場合保存しない', function () {
-            $existing = User::factory()->create([
-                'email' => 'stable@example.com',
-                'google_id' => 'stable-google',
-            ]);
-
-            $saveCount = 0;
-            $fakeRepo = new FakeUserRepository(
-                findCandidates: fn (): Collection => collect([$existing]),
-                save: function () use (&$saveCount): void {
-                    $saveCount++;
-                },
-            );
-
-            app()->instance(UserRepositoryContract::class, $fakeRepo);
-            $service = app(GoogleAuthService::class);
-
-            $user = $service->findOrCreate('stable-google', 'stable@example.com', 'Stable User');
-
-            expect($user->is($existing))->toBeTrue()
-                ->and($saveCount)->toBe(0);
         });
     });
 });

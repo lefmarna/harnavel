@@ -9,6 +9,7 @@ use App\Exceptions\GoogleLinkConfirmationPendingException;
 use App\Http\Controllers\Controller;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use App\Support\GoogleOAuth;
+use App\Support\SignedPayloadLink;
 use App\ViewModels\Auth\GoogleLinkVerifyPageViewModel;
 use App\ViewModels\StaticPageViewModel;
 use Illuminate\Database\QueryException;
@@ -16,9 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\URL;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Socialite\Facades\Socialite;
@@ -191,9 +190,9 @@ class GoogleAuthController extends Controller
         );
     }
 
-    public function linkVerify(Request $request, string $userId): Response
+    public function linkVerify(Request $request): Response
     {
-        $linkPayload = $this->validatedGoogleLinkPayload($request, $userId);
+        $linkPayload = $this->validatedGoogleLinkPayload($request);
 
         if ($linkPayload === null) {
             return $this->googleLinkVerifyPage('error');
@@ -208,7 +207,7 @@ class GoogleAuthController extends Controller
 
     public function linkComplete(Request $request, string $userId): Response
     {
-        $linkPayload = $this->validatedGoogleLinkPayload($request, $userId);
+        $linkPayload = $this->validatedGoogleLinkPayload($request);
 
         if ($linkPayload === null) {
             return $this->googleLinkVerifyPage('error');
@@ -234,78 +233,10 @@ class GoogleAuthController extends Controller
     /**
      * @return array{google_id: string, email: string, session_generation: string}|null
      */
-    private function validatedGoogleLinkPayload(Request $request, string $userId): ?array
+    private function validatedGoogleLinkPayload(Request $request): ?array
     {
-        $ignoredQueryParameters = $this->ignoredGoogleLinkSignatureQueryParameters($request);
-
-        if (! URL::hasCorrectSignature($request, ignoreQuery: $ignoredQueryParameters)) {
-            Log::warning('Google link verification signature is invalid.', [
-                'user_id' => $userId,
-                'ignored_query_parameters' => $ignoredQueryParameters,
-                'query_keys' => array_keys($request->query()),
-            ]);
-
-            return null;
-        }
-
-        if (! URL::signatureHasNotExpired($request)) {
-            Log::warning('Google link verification signature has expired.', [
-                'user_id' => $userId,
-                'expires' => $request->query('expires'),
-            ]);
-
-            return null;
-        }
-
-        $payload = $request->query('payload');
-
-        if (! is_string($payload) || $payload === '') {
-            Log::warning('Google link verification payload is missing.', [
-                'user_id' => $userId,
-            ]);
-
-            return null;
-        }
-
-        try {
-            $decryptedPayload = Crypt::decryptString($payload);
-            /** @var array<string, mixed> $decoded */
-            $decoded = json_decode($decryptedPayload, true, flags: JSON_THROW_ON_ERROR);
-        } catch (Throwable $e) {
-            Log::warning('Google link verification payload is invalid.', ['exception_class' => $e::class]);
-
-            return null;
-        }
-
-        $googleId = $decoded['google_id'] ?? null;
-        $email = $decoded['email'] ?? null;
-        $sessionGeneration = $decoded['session_generation'] ?? null;
-
-        if (! is_string($googleId) || $googleId === '' || ! is_string($email) || $email === ''
-            || ! is_string($sessionGeneration) || $sessionGeneration === '') {
-            return null;
-        }
-
-        return [
-            'google_id' => $googleId,
-            'email' => $email,
-            'session_generation' => $sessionGeneration,
-        ];
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function ignoredGoogleLinkSignatureQueryParameters(Request $request): array
-    {
-        /** @var list<string> $ignoredQueryParameters */
-        $ignoredQueryParameters = collect(array_keys($request->query()))
-            ->filter(fn (int|string $key): bool => is_string($key))
-            ->reject(fn (string $key): bool => in_array($key, ['payload', 'expires', 'signature'], true))
-            ->values()
-            ->all();
-
-        return $ignoredQueryParameters;
+        /** @var array{google_id: string, email: string, session_generation: string}|null */
+        return SignedPayloadLink::read($request, ['google_id', 'email', 'session_generation']);
     }
 
     private function googleLinkVerifyPage(string $status, ?string $actionUrl = null, ?string $email = null): Response

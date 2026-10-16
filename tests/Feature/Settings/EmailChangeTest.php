@@ -47,7 +47,6 @@ function completeEmailChange(string $verifyUrl, string $previousEmail): void
 }
 
 describe('メールアドレスの変更', function () {
-    // セッションを奪った第三者が自分のアドレスへ書き換え、再設定メールで乗っ取るのを防ぐ（TADR-0016）。
     it('新しいアドレスを確認するまでメールアドレスを変えない', function () {
         $user = User::factory()->create(['email' => 'old@example.com']);
 
@@ -221,7 +220,6 @@ describe('メールアドレスの変更', function () {
         expect($user->refresh()->email)->toBe('second@example.com');
     });
 
-    // セッションを奪った第三者が申請した変更を、持ち主がセッションを失効させた後に確定させない。
     it('セッションを失効させた後は、それより前の確認リンクを使えない', function () {
         $user = User::factory()->create(['email' => 'old@example.com']);
         $url = requestEmailChange($user, 'attacker@example.com');

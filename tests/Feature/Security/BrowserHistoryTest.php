@@ -7,7 +7,6 @@ use App\Models\User;
 
 mutates(RejectRevokedSessions::class);
 
-// 共有端末で「戻る」を押しても、前の利用者の画面を出さない（TADR-0016）。
 describe('ブラウザの履歴に残る画面データ', function () {
     it('画面のデータを暗号化して履歴に残す', function () {
         $page = $this->actingAs(User::factory()->create())

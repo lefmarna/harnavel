@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 
 describe('濫用対策のレート制限', function () {
-    // 大量登録・メール送信・外部 API 呼び出し・パスワード総当たりで、ワーカーと送信枠を使い切らせない。
     it('認証まわりのエンドポイントは上限を超えると 429 を返す', function (string $method, Closure $url, int $maxAttempts, bool $authenticated) {
         if ($authenticated) {
             $this->actingAs(User::factory()->create())
@@ -41,7 +40,6 @@ describe('濫用対策のレート制限', function () {
             ->not->toBe(429);
     });
 
-    // 資格情報 ID は送る側が決められ、セッションも Cookie を捨てれば作り直せるので、接続元でも数える。
     // 資格情報 ID を接続元の集計キーと同じ形（ip）にしても、別のカウンタへ逃がさない。
     it('パスキーの上限は資格情報 ID を変えても接続元ごとに数える', function () {
         $loginWithPasskey = fn (string $ip, string $credentialId) => $this->withServerVariables(['REMOTE_ADDR' => $ip])

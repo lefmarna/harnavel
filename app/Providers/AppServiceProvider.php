@@ -39,7 +39,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // パッケージの登録と削除を、セッションの失効と整合する版に差し替える（TADR-0016）。
         $this->app->bind(BaseStorePasskey::class, StorePasskey::class);
         $this->app->bind(BaseDeletePasskey::class, DeletePasskey::class);
 
@@ -133,7 +132,6 @@ class AppServiceProvider extends ServiceProvider
             $user->recordSessionGeneration(app(Session::class));
         });
 
-        // 登録は StorePasskey の行ロックの中で確定してから通知される。
         Event::listen(function (PasskeyRegistered $event): void {
             /** @var User $user 認証するのは users テーブルだけ。 */
             $user = $event->user;

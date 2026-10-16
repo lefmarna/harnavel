@@ -103,8 +103,6 @@ describe('本番エラーページ', function () {
 });
 
 describe('SPA遷移時の500エラーページ', function () {
-    // SPA 遷移（X-Inertia あり）では Inertia は HTML ではなく JSON を返すため、
-    // assertInertia（ビューデータ前提）ではなく JSON ペイロードを直接検証する。
     it('SPA遷移時にInertiaコンポーネントを返す', function () {
         $response = $this->get('/_testing/errors/500', $this->inertiaHeaders);
 

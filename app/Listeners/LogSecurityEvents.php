@@ -16,7 +16,6 @@ use Laravel\Passkeys\Events\PasskeyDeleted;
 use Laravel\Passkeys\Events\PasskeyRegistered;
 
 /**
- * 不正ログインや乗っ取りを後から追えるよう、認証の出来事を残す。
  * 入力されたメールアドレスなどの資格情報は記録しない（docs/logging-guidelines.md）。
  */
 class LogSecurityEvents

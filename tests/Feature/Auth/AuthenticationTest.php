@@ -67,7 +67,6 @@ describe('ログイン', function () {
         $response->assertTooManyRequests();
     });
 
-    // IP を変えながら同じアカウントを狙う総当たりを抑える。本人の成功したログインは数えない。
     it('同じアカウントへのログイン失敗は IP が違っても1時間に20回までに制限される', function () {
         $user = User::factory()->create();
 
@@ -103,7 +102,6 @@ describe('ログイン', function () {
             ->getStatusCode())->toBe(429);
     });
 
-    // 第三者に上限まで失敗させられても、メールで本人確認できた利用者はすぐにログインできる。
     it('パスワードを再設定するとアカウント単位のログイン制限を解除する', function () {
         $user = User::factory()->create();
 

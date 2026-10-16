@@ -25,7 +25,6 @@ function changePasswordFromSettings(User $user): void
         ->assertSessionHasNoErrors();
 }
 
-// 盗まれたセッションで資格情報を足されたり変えられたりしたことに、本人が気づけるようにする（TADR-0016）。
 describe('セキュリティに関わる変更の通知', function () {
     it('パスワードを変更したら本人に知らせる', function () {
         Mail::fake();
@@ -91,7 +90,6 @@ describe('セキュリティに関わる変更の通知', function () {
         expect(Hash::check('new-password1', $user->refresh()->password))->toBeTrue();
     });
 
-    // パスワード再設定の画面はログイン中には開けないので、ログインしたまま受け取った人にはセキュリティ設定を案内する。
     // 本人確認の手段を失っていてセキュリティ設定に進めない人には、ログアウトしてから再設定するよう案内する。
     it('通知には変更の内容と、ログインの有無に応じた対応の案内を載せる', function (string $event, string $subject, string $body) {
         config(['app.display_name' => 'テストアプリ']);

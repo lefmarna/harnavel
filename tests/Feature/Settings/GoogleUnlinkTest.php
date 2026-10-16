@@ -22,7 +22,6 @@ function unlinkGoogle(User $user): TestResponse
         ->delete(route('security.google.destroy'));
 }
 
-// 心当たりのない Google 連携を、本人がセキュリティ設定から外せるようにする（TADR-0016）。
 describe('Google ログイン連携の解除', function () {
     it('セキュリティ設定に連携の有無と解除できるかを渡す', function (array $attributes, bool $withPasskey, bool $linked, bool $canUnlink) {
         $user = User::factory()->create($attributes);
@@ -91,7 +90,6 @@ describe('Google ログイン連携の解除', function () {
         'パスキーあり' => true,
     ]);
 
-    // 解除の前に送った確認リンクを開き直して、外した連携を戻させない。
     it('セッションを失効させた後は、その前に送った連携の確認リンクで連携できない', function () {
         $user = User::factory()->create(['google_id' => null]);
         $user->revokeSessions();

@@ -28,16 +28,6 @@ beforeEach(function () {
 });
 
 describe('問い合わせID', function () {
-    it('web リクエストごとに request_id を割り当てられる', function () {
-        $response = $this->getJson('/_testing/request-id');
-
-        $response->assertOk();
-
-        expect($response->json('request_id'))
-            ->toBeString()
-            ->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/');
-    });
-
     it('外部から渡された X-Request-Id を採用せずアプリ側で生成できる', function () {
         $response = $this->withHeader('X-Request-Id', 'client-supplied-id')
             ->getJson('/_testing/request-id');

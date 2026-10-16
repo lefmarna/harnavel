@@ -15,8 +15,7 @@ use Laravel\Passkeys\Events\PasskeyDeleted;
 use Laravel\Passkeys\Passkey;
 
 /**
- * パスキーを削除したら他の端末のセッションも失効させる。削除したパスキーで先にログインした第三者の
- * セッションを残さないため。今の端末は、パスワード変更と同じく ID を作り直して新しい世代で保つ（TADR-0016）。
+ * 削除したパスキーで先にログインした第三者のセッションを残さないため、他の端末のセッションも失効させる（TADR-0016）。
  */
 class DeletePasskey extends BaseDeletePasskey
 {

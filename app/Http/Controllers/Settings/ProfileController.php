@@ -42,8 +42,6 @@ class ProfileController extends Controller
 
     /**
      * Update the user's profile information.
-     *
-     * メールアドレスは新しいアドレスの確認を待って切り替える（TADR-0016）。
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {

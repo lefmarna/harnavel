@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
-// パスキーや Google だけで使う利用者は、パスワードの変更で他の端末を失効させられない（TADR-0016）。
 describe('他のすべての端末からログアウト', function () {
     it('他の端末のセッションを失効させ、今の端末はログインを保つ', function () {
         config(['session.driver' => 'database']);

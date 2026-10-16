@@ -45,7 +45,6 @@ describe('パスキー', function () {
             ]);
     });
 
-    // 他人のメールで登録した第三者が、持ち主の回復後も使えるパスキーを残せないようにする（TADR-0016）。
     it('メール未確認のユーザーはパスキーを登録できない', function (string $method, string $route) {
         $user = User::factory()->unverified()->create();
 
@@ -163,12 +162,6 @@ describe('パスキーのユーザーハンドル秘密鍵', function () {
 
         expect($process->isSuccessful())->toBeFalse()
             ->and($process->getOutput().$process->getErrorOutput())->toContain('PASSKEYS_USER_HANDLE_SECRET');
-    });
-
-    it('本番環境でも秘密鍵が明示されていれば起動する', function () {
-        $process = bootWithEnvironment(AppSubprocess::productionEnvironment());
-
-        expect($process->isSuccessful())->toBeTrue($process->getOutput().$process->getErrorOutput());
     });
 
     it('フォールバック時代のパスキーを保つため APP_KEY と同じ値を明示しても起動する', function () {

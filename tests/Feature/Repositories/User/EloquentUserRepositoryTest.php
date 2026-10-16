@@ -64,74 +64,36 @@ describe('Eloquent ユーザーリポジトリ', function () {
     });
 
     describe('google_id 検索', function () {
-        it('google_id に一致するユーザーを取得できる', function () {
+        it('google_id に一致するユーザーを取得し、lock=true なら FOR UPDATE で実行する', function () {
             $user = User::factory()->create([
                 'google_id' => 'google-lookup',
-            ]);
-            $repository = new EloquentUserRepository;
-
-            $found = $repository->findByGoogleId('google-lookup');
-
-            expect($found?->is($user))->toBeTrue();
-        });
-
-        it('google_id に一致するユーザーがいない場合 null になる', function () {
-            User::factory()->create([
-                'google_id' => 'other-google',
             ]);
             $repository = new EloquentUserRepository;
 
             expect($repository->findByGoogleId('missing-google'))->toBeNull();
-        });
-
-        it('lock=true の場合 google_id 検索を FOR UPDATE で実行できる', function () {
-            User::factory()->create([
-                'google_id' => 'google-lookup',
-            ]);
-            $repository = new EloquentUserRepository;
 
             DB::flushQueryLog();
             DB::enableQueryLog();
 
-            $repository->findByGoogleId('google-lookup', lock: true);
-
-            expect(selectsForUpdate())->toBeTrue();
+            expect($repository->findByGoogleId('google-lookup', lock: true)?->is($user))->toBeTrue()
+                ->and(selectsForUpdate())->toBeTrue();
         });
     });
 
     describe('email 検索', function () {
-        it('email に一致するユーザーを取得できる', function () {
+        it('email に一致するユーザーを取得し、lock=true なら FOR UPDATE で実行する', function () {
             $user = User::factory()->create([
                 'email' => 'lookup@example.com',
             ]);
             $repository = new EloquentUserRepository;
 
-            $found = $repository->findByEmail('lookup@example.com');
-
-            expect($found?->is($user))->toBeTrue();
-        });
-
-        it('email に一致するユーザーがいない場合 null になる', function () {
-            User::factory()->create([
-                'email' => 'other@example.com',
-            ]);
-            $repository = new EloquentUserRepository;
-
             expect($repository->findByEmail('missing@example.com'))->toBeNull();
-        });
-
-        it('lock=true の場合 email 検索を FOR UPDATE で実行できる', function () {
-            User::factory()->create([
-                'email' => 'lookup@example.com',
-            ]);
-            $repository = new EloquentUserRepository;
 
             DB::flushQueryLog();
             DB::enableQueryLog();
 
-            $repository->findByEmail('lookup@example.com', lock: true);
-
-            expect(selectsForUpdate())->toBeTrue();
+            expect($repository->findByEmail('lookup@example.com', lock: true)?->is($user))->toBeTrue()
+                ->and(selectsForUpdate())->toBeTrue();
         });
     });
 });

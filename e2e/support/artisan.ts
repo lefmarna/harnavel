@@ -30,7 +30,6 @@ const resolveContainer = (): string => {
   return container;
 };
 
-/** ローカルは使い捨てコンテナ、CI はホストで実行する。 */
 export const runArtisan = (args: string[]): string => {
   if (process.env.CI) {
     return execFileSync("php", ["artisan", ...args], { encoding: "utf8", stdio: "pipe" });

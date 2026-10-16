@@ -21,8 +21,7 @@ abstract class Controller
     }
 
     /**
-     * リクエストのユーザーをロックして読み直す。トランザクションの中で呼ぶ。
-     * リクエストの途中でセッションを失効させていれば、失効前に始まった変更を書き込ませず 409 を返す（TADR-0016）。
+     * トランザクションの中で呼ぶ。失効より前に始まった変更を、失効の後に書き込ませない（TADR-0016）。
      */
     protected function lockCurrentUser(User $user): User
     {

@@ -1,22 +1,14 @@
-# ========================================
-# デプロイ時に除外するファイル・ディレクトリ
-# ========================================
-
-# 依存関係
 node_modules
 vendor
 
-# バージョン管理
 .git
 .gitattributes
 .gitignore
 
-# Docker関連
 .docker
 compose*.yaml
 docker-compose.yml
 
-# テスト
 tests
 e2e
 phpunit.xml
@@ -27,7 +19,6 @@ playwright.config.ts
 playwright-report
 test-results
 
-# エージェント・IDE設定
 .agent
 .agents
 .ai
@@ -47,7 +38,6 @@ orca.yaml
 .nova
 .zed
 
-# ビルド設定
 vite.config.ts
 lefthook.yml
 mise.toml
@@ -62,10 +52,8 @@ phpstan.neon.dist
 pint.json
 .deployignore
 
-# Vite dev server state
 public/hot
 
-# ドキュメント
 *.md
 docs
 
@@ -75,20 +63,16 @@ docs
 # 開発環境用 .htaccess テンプレート（GitHub Actions でビルド時に .htaccess へ変換）
 .htaccess.develop
 
-# デプロイ出力先
 .deploy
 
-# 開発用スクリプト
 scripts
 
 # フロントエンドのソースコード（CI の pnpm run build 済みであることが前提。本番では public/build を使用）
 resources/css
 resources/js
 
-# 開発用DB・テスト補助
 database/database.sqlite
 
-# ストレージ（開発用/生成物を除外）
 storage/mariadb
 storage/logs/*
 storage/framework/cache/data/*

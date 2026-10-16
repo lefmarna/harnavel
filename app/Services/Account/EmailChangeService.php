@@ -17,9 +17,6 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Throwable;
 
-/**
- * 設計の理由は TADR-0016。
- */
 class EmailChangeService
 {
     private const VERIFY_LINK_MINUTES = 60;
@@ -101,9 +98,6 @@ class EmailChangeService
         return $previous !== null && $previous->greaterThanOrEqualTo($now) ? $previous->addSecond() : $now;
     }
 
-    /**
-     * プロフィールの保存もこの判定に従う。
-     */
     public function sameAddress(string $current, string $other): bool
     {
         return Str::lower($current) === Str::lower($other);

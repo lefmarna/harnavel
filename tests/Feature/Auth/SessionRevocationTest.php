@@ -50,7 +50,6 @@ describe('セッションの失効', function () {
         config(['session.driver' => 'database']);
     });
 
-    // 失効より前に照合を終えたログインが、失効の後にセッションを作ってそのまま残らないようにする。
     it('パスワードの照合と同時に再設定されたログインを、次のリクエストで使えなくする', function () {
         $user = User::factory()->create();
         Event::listen(Validated::class, fn () => resetPasswordElsewhere($user));
@@ -164,7 +163,6 @@ describe('セッションの失効', function () {
         expect(app('session')->driver()->has('auth.password_confirmed_at'))->toBeFalse();
     });
 
-    // 拒否したセッションは、失効の後に本人がログインし直した端末のログイン保持まで外さない。
     it('失効させたセッションを拒否しても、ログイン保持の値を作り直さない', function () {
         $user = User::factory()->create();
         $sessionId = loginFromNewDevice($user);
@@ -176,9 +174,7 @@ describe('セッションの失効', function () {
         expect($user->refresh()->remember_token)->toBe($rememberToken);
     });
 
-    // 失効より前に始まった変更を、失効の後に書き込ませない。巻き戻しも、失効させたセッションへの新しい世代の記録も起きない。
     it('他の端末を失効させる操作の後も、操作した端末はログイン保持で復帰できる', function (Closure $operate) {
-        config(['session.driver' => 'database']);
         $user = User::factory()->create(['google_id' => 'google-1']);
         $recaller = $this->post(route('login.store'), [
             'email' => $user->email,
@@ -296,7 +292,6 @@ describe('セッションの失効', function () {
             ->and(Hash::check('new-password1', $user->password))->toBeTrue();
     });
 
-    // 失効より前に始まった登録が、失効の後にパスキーを保存させない。保存してから消すと、その間に別のリクエストがログインに使える。
     it('失効したセッションでのパスキー登録は、保存の前に拒否する', function (bool $revoked) {
         $user = User::factory()->create();
 

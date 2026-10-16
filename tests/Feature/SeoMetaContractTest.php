@@ -75,8 +75,6 @@ function findStructuredDataByType(array $schemas, string $type): array
 }
 
 /**
- * 構造化データへ載るサイト説明を差し替える。
- *
  * テンプレートは config から引くだけで足りるが、説明文を翻訳ファイルへ移したアプリでは
  * ロケールを添えて訳文を差し替えることになる。注入をこの関数へ閉じ込めておけば、
  * アプリ側は中身だけを置き換えればよく、テスト本体はそのまま使える。
@@ -228,7 +226,6 @@ describe('SEO メタ契約', function () {
         );
     });
 
-    // タイトルや説明にユーザー入力が届くアプリもある。
     it('構造化データに script を閉じる文字列が入っても script 要素を抜けない', function () {
         $payload = '</script><script>alert(1)</script>';
         replaceSiteDescription($payload);
@@ -245,15 +242,11 @@ describe('SEO メタ契約', function () {
         expect($payloads)->not->toBeEmpty()
             ->and($payloads[0])->toContain('\u003C\/script\u003E');
 
-        // 退避しても JSON としては元の値のまま読めること。
         $schemas = extractStructuredDataItems($content);
 
         expect(findStructuredDataByType($schemas, 'WebSite')['description'] ?? null)->toBe($payload);
     });
 
-    // `<` を退避していれば `</script>` は作れないが、`/` の退避（json_encode の既定）も
-    // 残して二重に塞ぐ。片方を落としたときに穴が開かないことを、構成として固定する。
-    //
     // 見るのは JSON-LD の生の中身だけ。ページ全体には Inertia の data-page など別経路の
     // JSON も載っていて、そちらのスラッシュを拾うと何も確かめられない。
     it('構造化データはスラッシュも退避したまま出力する', function () {
@@ -289,7 +282,6 @@ describe('SEO メタ契約', function () {
             ]);
     });
 
-    // 認証まわりの画面は検索結果に出さない。
     it('各ページは固有のseo.titleとdescriptionを公開する', function (string $routeName, ?array $user, string $title, string $description, bool $noIndex, array $routeParams = []) {
         if ($user !== null) {
             $this->actingAs(User::factory()->create($user))

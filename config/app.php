@@ -19,25 +19,7 @@ return [
 
     'display_name' => env('VITE_APP_NAME', 'Laravel App Template'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Application Description
-    |--------------------------------------------------------------------------
-    |
-    | This value is used for SEO meta tags and Open Graph description.
-    |
-    */
-
     'description' => 'Laravel・Inertia・Docker を備えたアプリケーションテンプレートです。',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Application Author
-    |--------------------------------------------------------------------------
-    |
-    | This value is used for SEO meta author tag.
-    |
-    */
 
     'author' => 'lefmarna',
 
@@ -108,8 +90,8 @@ return [
 
     'locale' => env('APP_LOCALE', 'ja'),
 
-    // 原文は日本語なので、訳が無いキーの落とし先も日本語にする。既定の 'en' のままだと
-    // lang/en を持たないこのテンプレートでは、APP_LOCALE を動かした瞬間に画面へキー名が出る。
+    // 原文は日本語なので、訳が無いキーの落とし先も日本語にする。既定の 'en' のままだと、
+    // lang/en にないテンプレートのキーは APP_LOCALE を動かした瞬間に画面へキー名が出る。
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'ja'),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'ja_JP'),

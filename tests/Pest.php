@@ -72,9 +72,6 @@ function assertInertiaShape(AssertableInertia $page, string $component, array $k
     return $page;
 }
 
-/**
- * 一意制約違反を FakeUserRepository の save へ差し込むための例外。
- */
 function testingUniqueConstraintViolation(): UniqueConstraintViolationException
 {
     return new UniqueConstraintViolationException(
@@ -85,9 +82,6 @@ function testingUniqueConstraintViolation(): UniqueConstraintViolationException
     );
 }
 
-/**
- * 他端末のログインを再現するため、DB セッションの行を直接作る。
- */
 function insertDatabaseSession(string $id, ?User $user): void
 {
     DB::table('sessions')->insert([

@@ -7,9 +7,6 @@ namespace App\Support;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 
-/**
- * 外部の計測、ログ、通知へ秘密を流さないための判定と伏せ字（TADR-0016）。
- */
 final class SensitiveUrl
 {
     /**

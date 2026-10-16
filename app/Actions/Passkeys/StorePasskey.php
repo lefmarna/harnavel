@@ -15,7 +15,6 @@ use Webauthn\CredentialRecord;
 /**
  * 失効より前に始まった登録が、失効の後にパスキーを保存しないようにする（TADR-0016）。
  * 保存してから消すと、その間に別のリクエストがそのパスキーでログインできるので、保存の前に止める。
- * 再設定と同じ行ロックの下で、登録を始めたときの世代と照合する。
  */
 class StorePasskey extends BaseStorePasskey
 {

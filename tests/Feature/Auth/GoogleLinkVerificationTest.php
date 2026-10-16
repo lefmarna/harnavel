@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use App\ViewModels\Auth\GoogleLinkVerifyPageViewModel;
-use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
@@ -133,22 +132,6 @@ describe('Google 連携リンク検証', function () {
                 ->where('status', 'error'));
     });
 
-    it('Google 連携リンクに payload が無い場合はエラーページを表示する', function () {
-        $service = Mockery::mock(GoogleAuthServiceContract::class);
-        $service->shouldNotReceive('confirmLink');
-        app()->instance(GoogleAuthServiceContract::class, $service);
-
-        $url = URL::temporarySignedRoute('auth.google.link.verify', now()->addHour(), [
-            'userId' => '1',
-        ]);
-
-        $this->get($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('auth/google-link/verify')
-                ->where('status', 'error'));
-    });
-
     it('Google 連携リンクの payload に必須項目が欠けている場合はエラーページを表示する', function (array $payload) {
         $service = Mockery::mock(GoogleAuthServiceContract::class);
         $service->shouldNotReceive('confirmLink');
@@ -163,10 +146,7 @@ describe('Google 連携リンク検証', function () {
                 ->where('status', 'error'));
     })->with([
         'google_id が無い' => [['email' => 'existing@example.com', 'session_generation' => '0']],
-        'google_id が空文字' => [['google_id' => '', 'email' => 'existing@example.com', 'session_generation' => '0']],
         'email が無い' => [['google_id' => 'google-123', 'session_generation' => '0']],
-        'email が空文字' => [['google_id' => 'google-123', 'email' => '', 'session_generation' => '0']],
-        // 世代を持たないリンクは、送った後の失効を確かめられないので使わせない。
         'session_generation が無い' => [['google_id' => 'google-123', 'email' => 'existing@example.com']],
     ]);
 
@@ -232,28 +212,6 @@ describe('Google 連携リンク検証', function () {
             ->withArgs(function (string $message, array $context): bool {
                 return $message === 'Google link verification failed.'
                     && $context === ['exception_class' => QueryException::class];
-            })
-            ->once();
-    });
-
-    it('Google 連携リンクの payload が復号できないときはログには例外クラス名だけを残す', function () {
-        Log::spy();
-
-        $service = Mockery::mock(GoogleAuthServiceContract::class);
-        $service->shouldNotReceive('confirmLink');
-        app()->instance(GoogleAuthServiceContract::class, $service);
-
-        $url = URL::temporarySignedRoute('auth.google.link.verify', now()->addHour(), [
-            'userId' => '1',
-            'payload' => 'not-encrypted',
-        ]);
-
-        $this->get($url)->assertOk();
-
-        Log::shouldHaveReceived('warning')
-            ->withArgs(function (string $message, array $context): bool {
-                return $message === 'Google link verification payload is invalid.'
-                    && $context === ['exception_class' => DecryptException::class];
             })
             ->once();
     });

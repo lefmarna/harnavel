@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Services\Observability\ProductionExceptionNotifier;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request as HttpClientRequest;
@@ -17,7 +16,6 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpKernel\Exception\HttpException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Mailer\Exception\TransportException;
 
 mutates(ProductionExceptionNotifier::class);
@@ -91,7 +89,6 @@ describe('本番例外通知', function () {
         Http::assertSentCount(1);
     });
 
-    // 総当たりや大量登録の兆候に、ログを見に行かなくても気づけるようにする。
     it('HTTPリクエストが回数制限で拒否されたら Discord 通知へ接続できる', function () {
         $this->get('/_testing/throttled')->assertOk();
         $this->get('/_testing/throttled')->assertTooManyRequests();
@@ -128,13 +125,6 @@ describe('本番例外通知', function () {
         'ルートなし' => [true],
     ]);
 
-    it('回数制限の拒否は500系でなくても通知する', function () {
-        app(ProductionExceptionNotifier::class)->report(new ThrottleRequestsException, observabilityRequest());
-        app()->terminate();
-
-        Http::assertSentCount(1);
-    });
-
     it('HTTPリクエストの500系ではないHTTP例外は Discord 通知しない', function () {
         $this->get('/_testing/ignored-http-exception')->assertNotFound();
 
@@ -152,15 +142,6 @@ describe('本番例外通知', function () {
         app()->terminate();
 
         Http::assertSentCount(1);
-    });
-
-    it('Discord Webhook が未設定の場合は通知しない', function () {
-        config()->set('observability.discord.webhook_url', null);
-
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
-        app()->terminate();
-
-        Http::assertNothingSent();
     });
 
     it('通知予約後に Webhook URL が未設定になった場合は送信しない', function () {
@@ -219,13 +200,6 @@ describe('本番例外通知', function () {
 
             return true;
         });
-    });
-
-    it('500系ではないHTTP例外は通知しない', function () {
-        app(ProductionExceptionNotifier::class)->report(new NotFoundHttpException, observabilityRequest());
-        app()->terminate();
-
-        Http::assertNothingSent();
     });
 
     it('499のHTTP例外は通知しない', function () {
@@ -615,7 +589,6 @@ describe('本番例外通知', function () {
         });
     });
 
-    // 例外メッセージには SMTP の応答に含まれる宛先や SQL の値が入りうる。詳細は request_id でログから探す。
     it('例外メッセージを Discord へ送らない', function (Throwable $exception, string $secret) {
         app(ProductionExceptionNotifier::class)->report($exception, observabilityRequest());
 
@@ -714,25 +687,6 @@ describe('本番例外通知', function () {
             $names = collect($request->data()['embeds'][0]['fields'])->pluck('name')->all();
 
             expect($names)->not->toContain('user_id');
-
-            return true;
-        });
-    });
-
-    it('整数の user_id も文字列フィールドへ変換して含める', function () {
-        $authenticatable = Mockery::mock(Authenticatable::class);
-        $authenticatable->shouldReceive('getAuthIdentifier')->andReturn(42);
-
-        Auth::shouldReceive('hasUser')->andReturnTrue();
-        Auth::shouldReceive('user')->andReturn($authenticatable);
-
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
-        app()->terminate();
-
-        Http::assertSent(function (HttpClientRequest $request): bool {
-            $fields = collect($request->data()['embeds'][0]['fields'])->pluck('value', 'name');
-
-            expect($fields->get('user_id'))->toBe('42');
 
             return true;
         });

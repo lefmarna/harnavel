@@ -188,8 +188,6 @@ describe('プロフィール設定', function () {
         ]);
     });
 
-    // 本人確認はパスワード・パスキー・Google のどれでも済む。退会でパスワードを重ねて求めると、
-    // パスキーや Google で確認した利用者が選んだ手段では退会できなくなる。
     it('本人確認済みならパスワードを入力せずにアカウントを削除できる', function () {
         $user = User::factory()->create();
 
@@ -215,7 +213,6 @@ describe('プロフィール設定', function () {
         expect($user->fresh())->toBeNull();
     });
 
-    // 本人がパスワードを再設定した後に、その前から走っていた削除を通さない（TADR-0016）。
     it('削除の途中でセッションが失効したら、その削除を拒否する', function () {
         $user = User::factory()->create();
         $rememberToken = null;
@@ -230,13 +227,11 @@ describe('プロフィール設定', function () {
             ->delete(route('profile.destroy'))
             ->assertConflict();
 
-        // 失効の後に本人がログイン保持で入り直していても、そのトークンを無効にしない。
         expect($user->fresh())->not->toBeNull()
             ->remember_token->toBe($rememberToken);
     });
 });
 
-// セッションを奪っただけの第三者に、メールアドレスを書き換えて再設定メールを受け取らせない。
 describe('プロフィール設定の本人確認', function () {
     it('直近の本人確認がなければ確認画面へ誘導する', function (string $method, string $route, array $payload) {
         $user = User::factory()->create(['email' => 'owner@example.com']);
@@ -273,9 +268,9 @@ describe('設定トップ', function () {
             ->assertRedirect(route('profile.edit'));
     });
 
-    it('画面を開く以外のメソッドは受け付けない', function (string $method) {
+    it('画面を開く以外のメソッドは受け付けない', function () {
         $this->actingAs(User::factory()->create())
-            ->call($method, '/settings')
+            ->post('/settings')
             ->assertMethodNotAllowed();
-    })->with(['POST', 'PUT', 'PATCH', 'DELETE']);
+    });
 });

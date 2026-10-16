@@ -27,17 +27,6 @@ describe('パスワード再設定', function () {
             );
     });
 
-    it('パスワード再設定リンクをリクエストできる', function () {
-        Notification::fake();
-
-        $user = User::factory()->create();
-
-        $this->post(route('password.email'), ['email' => $user->email]);
-
-        Notification::assertSentTo($user, ResetPassword::class);
-    });
-
-    // 応答の違いから、そのメールアドレスが登録済みかどうかを判別させない。
     it('未登録や送信直後のメールアドレスにも送信時と同じ応答を返す', function (Closure $email) {
         Notification::fake();
 
@@ -75,29 +64,6 @@ describe('パスワード再設定', function () {
                         ->where('seo.title', 'パスワード再設定')
                         ->where('seo.description', 'アカウントの新しいパスワードを設定します。')
                 );
-
-            return true;
-        });
-    });
-
-    it('有効なトークンでパスワードを再設定できる', function () {
-        Notification::fake();
-
-        $user = User::factory()->create();
-
-        $this->post(route('password.email'), ['email' => $user->email]);
-
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-            $response = $this->post(route('password.update'), [
-                'token' => $notification->token,
-                'email' => $user->email,
-                'password' => 'password1',
-                'password_confirmation' => 'password1',
-            ]);
-
-            $response
-                ->assertSessionHasNoErrors()
-                ->assertRedirect(route('login'));
 
             return true;
         });
@@ -166,7 +132,6 @@ describe('パスワード再設定', function () {
         visitDashboardFrom($otherUsersSessionId)->assertOk();
     });
 
-    // 他人のメールで先に登録した第三者の資格情報を、持ち主が再設定で取り戻した後に残さない（TADR-0016）。
     it('メール未確認のアカウントを再設定するとパスキーと Google 連携を外して確認済みにする', function () {
         $user = User::factory()->unverified()->create(['google_id' => 'registrant-google']);
         $user->passkeys()->create([

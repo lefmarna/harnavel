@@ -20,7 +20,6 @@ describe('表示テーマ', function () {
         'システム' => ['system', false],
     ]);
 
-    // Cookie は暗号化していないため、インラインスクリプトへ任意の文字列を渡さない。
     it('想定外の値の Cookie はシステム設定として扱う', function () {
         $content = $this->withUnencryptedCookie('appearance', "dark\\';alert(1)//")->get(route('home'))->getContent();
 

@@ -166,27 +166,6 @@ describe('Google OAuth コントローラ', function () {
         $this->assertAuthenticatedAs($existingUser);
     });
 
-    it('callback() は Google プロフィール名が null の場合もそのままサービスへ渡す', function () {
-        $existingUser = User::factory()->create(['email' => 'test@example.com']);
-
-        fakeGoogleUser([
-            'getId' => 'google-123',
-            'getEmail' => 'test@example.com',
-            'getName' => null,
-            'getRaw' => ['email_verified' => true],
-        ]);
-
-        mock(GoogleAuthServiceContract::class)
-            ->shouldReceive('findOrCreate')
-            ->with('google-123', 'test@example.com', null)
-            ->andReturn($existingUser);
-
-        $this->get(route('auth.google.callback'))
-            ->assertRedirect(config('fortify.home'));
-
-        $this->assertAuthenticatedAs($existingUser);
-    });
-
     it('callback() で Socialite が例外を投げたらログイン画面にリダイレクトする', function () {
         $driver = Mockery::mock(GoogleProvider::class);
         $driver->allows('user')->andThrow(new Exception('OAuth error'));
@@ -210,7 +189,6 @@ describe('Google OAuth コントローラ', function () {
             ->assertSessionHas('error', 'Googleアカウントのメールアドレスが未検証です。Googleでメール認証を完了してから再度お試しください。');
     });
 
-    // 例外のメッセージには SQL や入力値が入るので、画面にもログにも出さない。
     it('callback() で予期しない例外が起きても汎用の文言で戻し、ログには例外クラス名だけを残す', function (Throwable $exception, string $logMessage) {
         Log::spy();
 
@@ -277,7 +255,7 @@ describe('Google OAuth コントローラ', function () {
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
-            ->andThrow(new GoogleLinkConfirmationPendingException($existingUser, 'google-123', 'existing@example.com'));
+            ->andThrow(new GoogleLinkConfirmationPendingException($existingUser, 'google-123'));
 
         $this->get(route('auth.google.callback'))
             ->assertRedirect(route('auth.google.link.confirm'))
@@ -359,7 +337,6 @@ describe('Google OAuth コントローラ', function () {
         })->with([
             'Google 未連携' => [true, null, false],
             'Google ログイン未設定' => [false, 'google-123', false],
-            // 画面に出さない Google での確認を、経路を直接開いて使わせない（TADR-0016）。
             'パスワードあり' => [true, 'google-123', true],
         ]);
 
@@ -383,7 +360,6 @@ describe('Google OAuth コントローラ', function () {
                 ->assertSessionHas('auth.password_confirmed_at')
                 ->assertSessionMissing('google_reauthentication');
 
-            // セッションを盗んだ第三者に、Google での本人確認を共有させない。
             expect(app('session.store')->getId())->not->toBe($sessionId);
             $this->assertAuthenticatedAs($user);
             Log::shouldHaveReceived('info')->with('User confirmed identity with Google.', ['user_id' => $user->getKey()])->once();
@@ -401,7 +377,6 @@ describe('Google OAuth コントローラ', function () {
                 ->assertSessionMissing('auth.password_confirmed_at');
         });
 
-        // 確認を始めた後に別のタブでパスワードを設定しても、Google のログイン状態だけで通さない（TADR-0016）。
         it('確認を始めた後にパスワードが設定されていれば本人確認済みにしない', function () {
             $user = User::factory()->create(['google_id' => 'google-123']);
             fakeGoogleUser(['getId' => 'google-123']);

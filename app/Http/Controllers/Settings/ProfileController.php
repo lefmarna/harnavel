@@ -113,15 +113,15 @@ class ProfileController extends Controller
      */
     private function allowsEmailChangeMail(Request $request, User $user): bool
     {
-        /** @var int|string $key */
-        $key = $user->getKey();
+        /** @var int|string $userKey */
+        $userKey = $user->getKey();
         $limits = [
-            'email-change-mail|user|'.$key => 5,
+            'email-change-mail|user|'.$userKey => 5,
             'email-change-mail|ip|'.$request->ip() => 10,
         ];
 
-        foreach ($limits as $key => $maxAttempts) {
-            if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+        foreach ($limits as $limiterKey => $maxAttempts) {
+            if (RateLimiter::tooManyAttempts($limiterKey, $maxAttempts)) {
                 // 429 ではなく入力欄の誤りとして返すので、記録と通知はほかの回数制限と同じ経路へ流す。
                 report(new ThrottleRequestsException);
 
@@ -129,8 +129,8 @@ class ProfileController extends Controller
             }
         }
 
-        foreach (array_keys($limits) as $key) {
-            RateLimiter::hit($key, 3600);
+        foreach (array_keys($limits) as $limiterKey) {
+            RateLimiter::hit($limiterKey, 3600);
         }
 
         return true;

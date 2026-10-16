@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Password;
 use Laravel\Passkeys\Events\PasskeyDeleted;
 use Laravel\Passkeys\Events\PasskeyRegistered;
 
-// 不正ログインや乗っ取りを後から追えるよう、認証まわりの出来事を個人情報なしで残す（docs/logging-guidelines.md）。
 describe('セキュリティイベントのログ', function () {
     beforeEach(function () {
         Log::spy();

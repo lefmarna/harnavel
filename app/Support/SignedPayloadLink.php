@@ -29,8 +29,6 @@ final class SignedPayloadLink
     }
 
     /**
-     * 署名と期限を確かめ、指定した項目がすべて空でない文字列のときだけ値を返す。
-     *
      * @param  list<string>  $keys
      * @return array<string, string>|null
      */

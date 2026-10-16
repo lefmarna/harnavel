@@ -1,3 +1,4 @@
+// Components
 import { Form } from "@inertiajs/react";
 
 import TextLink from "@/components/text-link";

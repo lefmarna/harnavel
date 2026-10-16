@@ -152,7 +152,7 @@ class FortifyServiceProvider extends ServiceProvider
             // 資格情報 ID は送る側が決めるので、接頭辞を分けて接続元のキーと重ならないようにする。
             return [
                 Limit::perMinute(10)->by('credential|'.$key.'|'.$ip),
-                // 資格情報 ID もセッションも作り直せるので、チャレンジの生成と照合を接続元ごとにも抑える。
+                // 資格情報 ID もセッションも送る側が作り直せるので、接続元でも数える。
                 // 同じ回線の利用者をまとめて止めないよう、1分に100回ほどのログインを通せる幅にする。
                 Limit::perMinute(300)->by('ip|'.$ip),
             ];

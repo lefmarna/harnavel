@@ -54,9 +54,6 @@ registration to continue from a mailed link, turning the form into a way to mail
 answer reveals only that the owner uses the app, sign-in and password reset respond the same either
 way, and registration is limited per IP address.
 
-Trusted hosts are the `APP_URL` host without its subdomains, because reset links are built from the
-request host. An app serving more hosts lists them itself.
-
 Inertia encrypts the page data it keeps in browser history and clears it after logout, account
 deletion, and a revoked session's rejection, so the back button on a shared device does not redraw
 the previous user's pages. A revoked session first rejected on a JSON request can still redraw pages

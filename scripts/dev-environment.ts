@@ -292,7 +292,7 @@ const literal = (value: string): string =>
 const parallelTestDatabases = (testDatabase: string): string =>
   `${validName(testDatabase)}_test_`.replaceAll("_", "\\_") + "%";
 
-// 開発・PHPUnit・E2E の DB とアカウント。compose.yaml も同じ規則でテスト・E2E の接続先を渡す。
+// compose.yaml も同じ規則でテスト・E2E の接続先を渡す。
 const accounts = (database: string, user: string): [string, string][] => [
   [database, user],
   [`${database}_testing`, `${user}_test`],
@@ -305,7 +305,6 @@ function provision(env: Record<string, string>): void {
   const queries: string[] = [];
   for (const [database, user] of accounts(base, baseUser)) {
     validName(database);
-    // GRANT の DB 名では _ がワイルドカードになるため、必ずエスケープする。
     const grant = database.replaceAll("_", "\\_");
     queries.push(
       `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`,

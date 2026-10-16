@@ -63,7 +63,6 @@ jobs:
       - run:
           name: Record the tested tree
           command: scripts/ci/e2e-record.sh create
-      # レポートは失敗の調査にだけ残し、成功時はストレージを使わない。
       - run:
           name: Discard reports of a passing run
           command: rm -rf playwright-report test-results

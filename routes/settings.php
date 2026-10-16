@@ -53,7 +53,6 @@ Route::middleware(['auth'])->group(function () {
     })->name('appearance.edit');
 });
 
-// メールで届いたリンクから開くため、ログインを求めない（EmailChangeController）。
 Route::prefix('settings/email')->name('email-change.')->controller(EmailChangeController::class)->group(function () {
     Route::get('verify/{userId}', 'verify')->name('verify');
     Route::post('verify/{userId}', 'complete')->middleware('throttle:10,1')->name('complete');

@@ -21,9 +21,6 @@ interface UserRepositoryContract
 
     public function findByGoogleId(string $googleId, bool $lock = false): ?User;
 
-    /**
-     * 一意制約違反のあとで既存ユーザーを再取得するためのもの。
-     */
     public function findByEmail(string $email, bool $lock = false): ?User;
 
     public function save(User $user): void;

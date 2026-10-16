@@ -683,7 +683,6 @@ test("パスワード未設定でパスキーだけを持つユーザーはパ�
 
   const passkeyButton = page.getByRole("button", { name: "パスキーで確認" });
   await expect(passkeyButton).toBeVisible();
-  // 入力しても通らないパスワード欄は出さない。
   await expect(page.locator('input[name="password"]')).toBeHidden();
 
   await passkeyButton.click();

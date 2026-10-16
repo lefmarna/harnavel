@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # E2E に成功したツリーを GCS の記録で扱う。delivery は同じツリーの記録があるときだけ、この E2E を配備の根拠にする。
-#   check:  このツリーの記録があれば成功する。確認できなければ E2E を実行させるため失敗する。
-#   create: E2E に成功したこのツリーを記録する。
+# check は記録を確認できなければ失敗し、E2E を実行させる。
 set -euo pipefail
 
 : "${E2E_RECORD_BUCKET:?記録先のバケットがありません}"

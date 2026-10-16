@@ -44,7 +44,6 @@ describe('セキュリティ設定', function () {
             );
     });
 
-    // 乗っ取りに気づいて変更しても、攻撃者の端末がログインしたまま残らないようにする。
     it('パスワードを更新すると他の端末のセッションとログイン保持を失効させる', function () {
         config(['session.driver' => 'database']);
         $user = User::factory()->create(['remember_token' => 'old-remember-token']);
@@ -66,7 +65,6 @@ describe('セキュリティ設定', function () {
             ->assertSessionHasNoErrors();
         $renewedSessionId = lastSessionId();
 
-        // 本人の Cookie を盗んだ第三者も同じ ID を持つため、本人のログインは保ったまま ID を作り直す。
         expect($renewedSessionId)->not->toBe($currentSessionId)
             ->and($user->refresh()->remember_token)->not->toBe('old-remember-token');
         visitDashboardFrom($renewedSessionId)->assertOk();
@@ -217,7 +215,6 @@ describe('セキュリティ設定', function () {
             ->assertOk();
     });
 
-    // 設定の不備で確認手段が消えても、セッションを奪った第三者を素通りさせない。
     it('Google ログインが使えなくても Google 連携済みのユーザーには確認を求める', function () {
         configureGoogleOAuth(false);
         $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
@@ -228,7 +225,6 @@ describe('セキュリティ設定', function () {
             ->assertRedirect(route('password.confirm'));
     });
 
-    // セッションを奪っただけの第三者が、最初の資格情報を登録して居座れないようにする。
     it('Google 連携済みのパスワード未設定ユーザーは Google での確認を求められる', function () {
         configureGoogleOAuth(true);
         $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
@@ -255,7 +251,6 @@ describe('セキュリティ設定', function () {
         $this->get('/_spec/password-confirm')->assertRedirect(route('password.confirm'));
     });
 
-    // そのパスキーで先にログインした第三者のセッションを、削除した後に残さない（TADR-0016）。
     it('パスキーを削除し、他の端末のセッションを失効させ、今の端末はログインを保つ', function () {
         config(['session.driver' => 'database']);
         $user = User::factory()->create();
@@ -280,7 +275,6 @@ describe('セキュリティ設定', function () {
         visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
     });
 
-    // 削除の途中で失効させたなら、失効した第三者のセッションに新しい世代を記録させない。
     it('パスキー削除の途中でセッションが失効したら、その削除を拒否する', function () {
         $user = User::factory()->create();
         $passkey = $user->passkeys()->create([

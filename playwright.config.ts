@@ -7,7 +7,6 @@ const repoRoot = import.meta.dirname;
 const env = readLocalEnv(repoRoot);
 
 const CONTAINER_E2E_PORT = 8001;
-// Worktree のポート枠（NGINX_PORT から10番）のうち +5 を E2E に使う。
 const PORT = isCI ? 8000 : envPort(env, "NGINX_PORT") + 5;
 const VITE_PORT = envPort(env, "VITE_PORT");
 const E2E_APP_URL = `http://localhost:${PORT}`;

@@ -27,7 +27,6 @@ describe('パスワード再設定', function () {
             );
     });
 
-    // 応答の違いから、そのメールアドレスが登録済みかどうかを判別させない。
     it('未登録や送信直後のメールアドレスにも送信時と同じ応答を返す', function (Closure $email) {
         Notification::fake();
 
@@ -133,7 +132,6 @@ describe('パスワード再設定', function () {
         visitDashboardFrom($otherUsersSessionId)->assertOk();
     });
 
-    // 他人のメールで先に登録した第三者の資格情報を、持ち主が再設定で取り戻した後に残さない（TADR-0016）。
     it('メール未確認のアカウントを再設定するとパスキーと Google 連携を外して確認済みにする', function () {
         $user = User::factory()->unverified()->create(['google_id' => 'registrant-google']);
         $user->passkeys()->create([

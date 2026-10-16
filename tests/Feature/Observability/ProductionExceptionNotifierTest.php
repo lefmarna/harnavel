@@ -89,7 +89,6 @@ describe('本番例外通知', function () {
         Http::assertSentCount(1);
     });
 
-    // 総当たりや大量登録の兆候に、ログを見に行かなくても気づけるようにする。
     it('HTTPリクエストが回数制限で拒否されたら Discord 通知へ接続できる', function () {
         $this->get('/_testing/throttled')->assertOk();
         $this->get('/_testing/throttled')->assertTooManyRequests();
@@ -590,7 +589,6 @@ describe('本番例外通知', function () {
         });
     });
 
-    // 例外メッセージには SMTP の応答に含まれる宛先や SQL の値が入りうる。詳細は request_id でログから探す。
     it('例外メッセージを Discord へ送らない', function (Throwable $exception, string $secret) {
         app(ProductionExceptionNotifier::class)->report($exception, observabilityRequest());
 

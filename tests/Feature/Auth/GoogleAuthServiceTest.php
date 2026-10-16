@@ -346,7 +346,6 @@ describe('Google 認証サービス', function () {
             ->email_verified_at->not->toBeNull();
     });
 
-    // 第三者が他人のメールで先に登録したアカウントを、持ち主の連携後も使い続けられないようにする。
     it('confirmLink はメール未確認のアカウントへ連携するとき既存のパスワード・パスキー・セッションを無効にする', function () {
         $existing = User::factory()->unverified()->create([
             'email' => 'confirm@example.com',
@@ -594,7 +593,6 @@ describe('Google 認証サービス', function () {
                 ->and($existing->fresh()->email)->toBe('mixed.user@example.com');
         });
 
-        // Google ID の一致はログインの根拠になるが、アカウントのメールの所有を示すのは同じアドレスのときだけ。
         it('既存 google_id ユーザーのメールが Google と異なる場合は書き換えず確認済みにもしない', function (bool $lowercaseUsernames) {
             config(['fortify.lowercase_usernames' => $lowercaseUsernames]);
 

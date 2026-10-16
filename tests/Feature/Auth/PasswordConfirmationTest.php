@@ -79,7 +79,6 @@ describe('パスワード確認', function () {
         $response->assertRedirect(route('login'));
     });
 
-    // セッションを盗んだ第三者に、本人が済ませた本人確認を共有させない。
     it('パスワードで本人確認するとログインを保ったままセッション ID を作り直す', function () {
         config(['session.driver' => 'database']);
         $user = User::factory()->create();

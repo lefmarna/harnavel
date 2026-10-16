@@ -45,7 +45,6 @@ describe('パスキー', function () {
             ]);
     });
 
-    // 他人のメールで登録した第三者が、持ち主の回復後も使えるパスキーを残せないようにする（TADR-0016）。
     it('メール未確認のユーザーはパスキーを登録できない', function (string $method, string $route) {
         $user = User::factory()->unverified()->create();
 

@@ -119,8 +119,6 @@ if (oxfmtFiles.length && hasPnpm) {
   );
 }
 
-// 検証は対象を絞り、並列実行する。
-
 const tasks = [];
 
 if (

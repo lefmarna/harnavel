@@ -34,13 +34,11 @@ class ProductionExceptionNotifier
 
             app()->terminating(fn () => $this->send($payload));
         } catch (Throwable $notifierException) {
-            // 通知失敗を元の例外処理へ伝播させない。
             try {
                 Log::warning('Discord exception notification was skipped.', [
                     'exception_class' => $notifierException::class,
                 ]);
             } catch (Throwable) {
-                // ログ基盤も利用できない。
             }
         }
     }

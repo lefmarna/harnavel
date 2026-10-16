@@ -11,15 +11,12 @@
   # .envや.gitなどの非公開ファイルを露出させないため
   RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F]
 
-  # www → non-www リダイレクト（メインドメインのみ）
   RewriteCond %{HTTP_HOST} ^www\.example\.com$ [NC]
   RewriteRule ^ https://example.com%{REQUEST_URI} [R=301,L]
 
-  # HTTPS強制（ACMEを除く全ホスト共通）
   RewriteCond %{HTTPS} off
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
-  # サブドメインは各自のディレクトリで処理（public/転送をスキップ）
   RewriteCond %{HTTP_HOST} !^(?:www\.)?example\.com$ [NC]
   RewriteRule ^ - [L]
 

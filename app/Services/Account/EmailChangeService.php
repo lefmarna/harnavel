@@ -17,9 +17,6 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Throwable;
 
-/**
- * 設計の理由は TADR-0016。
- */
 class EmailChangeService
 {
     private const VERIFY_LINK_MINUTES = 60;

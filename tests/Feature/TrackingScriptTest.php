@@ -40,7 +40,6 @@ describe('トラッキングスクリプト', function () {
         'production/develop以外では注入しない' => ['testing', false, false],
     ]);
 
-    // 再設定トークンや署名を GA・AdSense へ渡すと、第三者がアカウントを奪える。
     it('秘密を含むURLの画面ではトラッキングスクリプトを注入しない', function (Closure $url) {
         $this->app->instance('env', 'production');
 
@@ -79,7 +78,6 @@ describe('トラッキングスクリプト', function () {
             ->assertInertia(fn (AssertableInertia $page) => $page->where('tracking.trackingEnabled', false));
     });
 
-    // 秘密を含む画面からの Inertia 遷移ではスクリプトが読み込まれないままになるため、全体を読み込み直させる。
     it('秘密を含むURLの画面から通常画面へ移るときは全体を読み込み直させる', function () {
         $this->app->instance('env', 'production');
         config()->set('services.google.analytics_tracking_id', 'G-TEST123456');

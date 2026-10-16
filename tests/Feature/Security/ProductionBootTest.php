@@ -5,8 +5,6 @@ declare(strict_types=1);
 use Tests\Support\AppSubprocess;
 
 describe('本番環境の起動時検査', function () {
-    // 例外画面に環境変数やスタックトレースを出したまま公開しない。
-    // develop も公開ホストにあるため、本番と同じく詳細表示を許さない。
     it('APP_DEBUG が有効だと起動しない', function (string $environment) {
         $process = AppSubprocess::php(
             'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();',
@@ -45,8 +43,6 @@ describe('本番環境の起動時検査', function () {
             ->not->toContain('trace');
     });
 
-    // 偽の Host から再設定メールのリンクを作らせない。.htaccess が効かない配置でも防ぐ。
-    // サブドメインも拒否する。DNS が向いていない名前や乗っ取られた名前へ、再設定トークンを送らせない。
     it('APP_URL のホスト以外へのリクエストを拒否する', function (string $host, int $expectedStatus) {
         expect(productionStatusForHost($host))->toBe($expectedStatus);
     })->with([

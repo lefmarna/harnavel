@@ -1,11 +1,7 @@
 # Passkey credentials
 
 Passkeys sit beside passwords and Google sign-in as an alternative credential, so losing one
-provider never locks an account out. Password confirmation guards the security page for any account
-holding a password, a passkey, or a linked Google account ([TADR-0016](0016-account-takeover-defenses.md)),
-even when Google sign-in is not configured. An account with none of them reaches it unguarded,
-because that page issues its first credential. Normal use never leaves an account in that state
-(every account keeps a password or a Google link), so the branch only covers data fixed by hand.
+provider never locks an account out.
 
 Passkey user handles derive from `PASSKEYS_USER_HANDLE_SECRET`, independent of `APP_KEY` so that
 rotating the application key does not change new handles. Fortify silently falls back to `APP_KEY`,

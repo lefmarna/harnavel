@@ -77,7 +77,6 @@ it('HTTPSの応答でもアプリが指定したHSTSを上書きしない', func
         ->assertHeader('Strict-Transport-Security', 'max-age=86400; includeSubDomains');
 });
 
-// 秘密を含む画面から移った先の document.referrer 経由で、トークンを計測へ渡さない。
 it('秘密を含むURLの画面ではリファラーを送らせない', function (Closure $url) {
     $this->get($url())->assertHeader('Referrer-Policy', 'no-referrer');
 })->with([
@@ -91,7 +90,6 @@ it('アプリが指定したリファラーポリシーは秘密を含むURLの�
     $this->get('/_testing/reset/secret-token')->assertHeader('Referrer-Policy', 'same-origin');
 });
 
-// ルーティングの前後や web グループの外で応答が作られる経路でも、素通しにしない。
 it('通常以外の経路の応答にも基本のヘッダーを付与する', function (Closure $send, int $status) {
     $response = $send($this);
 
@@ -160,7 +158,6 @@ it('アプリが明示したポリシーを保持し未指定のヘッダーだ�
         ->assertHeader('X-Content-Type-Options', 'nosniff');
 });
 
-// 注入されたスクリプトは nonce を持たないので、XSS があっても実行されない（TADR-0012）。
 it('ページのスクリプトはリクエストごとの nonce を持つものだけを実行させる', function () {
     $this->app->instance('env', 'production');
     config()->set('services.google.analytics_tracking_id', 'G-TEST123456');

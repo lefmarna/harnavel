@@ -44,7 +44,6 @@ jobs:
           tree=$(gh api "repos/$GITHUB_REPOSITORY/git/commits/$GITHUB_SHA" --jq .tree.sha)
           echo "tree=$tree" >> "$GITHUB_OUTPUT"
 
-          # 照会に失敗したら未検証として扱う。
           merged=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
             --jq ".[] | select(.merge_commit_sha == \"$GITHUB_SHA\") | \"\(.number) \(.head.sha)\"") || merged=
           merged_head=

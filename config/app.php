@@ -19,25 +19,7 @@ return [
 
     'display_name' => env('VITE_APP_NAME', 'Laravel App Template'),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Application Description
-    |--------------------------------------------------------------------------
-    |
-    | This value is used for SEO meta tags and Open Graph description.
-    |
-    */
-
     'description' => 'Laravel・Inertia・Docker を備えたアプリケーションテンプレートです。',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Application Author
-    |--------------------------------------------------------------------------
-    |
-    | This value is used for SEO meta author tag.
-    |
-    */
 
     'author' => 'lefmarna',
 

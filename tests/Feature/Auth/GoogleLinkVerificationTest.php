@@ -147,7 +147,6 @@ describe('Google 連携リンク検証', function () {
     })->with([
         'google_id が無い' => [['email' => 'existing@example.com', 'session_generation' => '0']],
         'email が無い' => [['google_id' => 'google-123', 'session_generation' => '0']],
-        // 世代を持たないリンクは、送った後の失効を確かめられないので使わせない。
         'session_generation が無い' => [['google_id' => 'google-123', 'email' => 'existing@example.com']],
     ]);
 

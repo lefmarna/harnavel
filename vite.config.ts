@@ -6,7 +6,7 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import laravel from "laravel-vite-plugin";
 import { defineConfig, lazyPlugins, loadEnv } from "vite-plus";
 
-// CI は Docker を使わずホストの PHP で動く（Playwright の設定と同じ判定）。
+// CI は Docker を使わずホストの PHP で動く。
 const isCI = !!process.env.CI;
 
 const wayfinderGenerateCommand = isCI

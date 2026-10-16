@@ -32,7 +32,6 @@ describe('署名付きの確認リンク', function () {
         expect($url)->not->toContain('secret');
     });
 
-    // メールの計測で付くクエリのせいで、本人がリンクを使えなくならないようにする。
     it('署名の後に付いたクエリがあっても読める', function () {
         $url = SignedPayloadLink::make('email-change.verify', now()->addHour(), 1, ['to' => 'b@example.com']);
 
@@ -60,7 +59,6 @@ describe('署名付きの確認リンク', function () {
         '期限の重複' => [fn (string $url): string => $url.'&expires='.now()->addYear()->getTimestamp()],
     ]);
 
-    // POST 本文の値は署名されていないので、別のリンクの値に差し替えさせない。
     it('署名したクエリの値だけを読む', function () {
         $url = SignedPayloadLink::make('email-change.verify', now()->addHour(), 1, ['to' => 'signed@example.com']);
         $other = SignedPayloadLink::make('email-change.verify', now()->addHour(), 1, ['to' => 'other@example.com']);

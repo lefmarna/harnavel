@@ -178,7 +178,7 @@ if (/artisan down[^\n]*\|\|/.test(enable.replaceAll(/'[^']*'/g, ""))) {
   }
 }
 
-// 古い OPcache が使われる期間はメンテナンスを維持する。待機時間は配備設定が定める。
+// 待機時間は配備設定が定めるので、メンテナンス中に待つことだけを確かめる。
 if (!/\bsleep\s+[1-9]/.test(runOf("Wait for OPcache revalidation"))) {
   fail("the OPcache window must be waited out while maintenance is still active");
 }
@@ -191,7 +191,6 @@ if (accepted.length !== 1 || accepted[0] !== "200") {
   fail("release health must be decided by an exact match on HTTP 200 and no other status");
 }
 
-// Composer が vendor を更新した後、マイグレーションより前にメンテナンスを再設定する。
 const postDeploy = runOf("Run post-deploy commands");
 const composerAt = postDeploy.indexOf("composer");
 const downAt = postDeploy.indexOf("artisan down");

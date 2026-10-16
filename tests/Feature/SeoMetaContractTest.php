@@ -245,7 +245,6 @@ describe('SEO メタ契約', function () {
         expect($payloads)->not->toBeEmpty()
             ->and($payloads[0])->toContain('\u003C\/script\u003E');
 
-        // 退避しても JSON としては元の値のまま読めること。
         $schemas = extractStructuredDataItems($content);
 
         expect(findStructuredDataByType($schemas, 'WebSite')['description'] ?? null)->toBe($payload);

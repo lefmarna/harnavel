@@ -7,9 +7,6 @@ namespace App\ViewModels\Auth;
 use App\ViewModels\PageViewModel;
 use Inertia\RenderContext;
 
-/**
- * メールで届いたリンクから開く、メールアドレス変更の確定の画面。
- */
 final readonly class EmailChangePageViewModel extends PageViewModel
 {
     /**

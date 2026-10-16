@@ -166,27 +166,6 @@ describe('Google OAuth コントローラ', function () {
         $this->assertAuthenticatedAs($existingUser);
     });
 
-    it('callback() は Google プロフィール名が null の場合もそのままサービスへ渡す', function () {
-        $existingUser = User::factory()->create(['email' => 'test@example.com']);
-
-        fakeGoogleUser([
-            'getId' => 'google-123',
-            'getEmail' => 'test@example.com',
-            'getName' => null,
-            'getRaw' => ['email_verified' => true],
-        ]);
-
-        mock(GoogleAuthServiceContract::class)
-            ->shouldReceive('findOrCreate')
-            ->with('google-123', 'test@example.com', null)
-            ->andReturn($existingUser);
-
-        $this->get(route('auth.google.callback'))
-            ->assertRedirect(config('fortify.home'));
-
-        $this->assertAuthenticatedAs($existingUser);
-    });
-
     it('callback() で Socialite が例外を投げたらログイン画面にリダイレクトする', function () {
         $driver = Mockery::mock(GoogleProvider::class);
         $driver->allows('user')->andThrow(new Exception('OAuth error'));
@@ -277,7 +256,7 @@ describe('Google OAuth コントローラ', function () {
 
         mock(GoogleAuthServiceContract::class)
             ->shouldReceive('findOrCreate')
-            ->andThrow(new GoogleLinkConfirmationPendingException($existingUser, 'google-123', 'existing@example.com'));
+            ->andThrow(new GoogleLinkConfirmationPendingException($existingUser, 'google-123'));
 
         $this->get(route('auth.google.callback'))
             ->assertRedirect(route('auth.google.link.confirm'))

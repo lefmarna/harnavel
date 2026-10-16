@@ -1,19 +1,10 @@
 import type { Page } from "@playwright/test";
 
 import { createUser, requestEmailChangeLink, type UserCredentials } from "../support/artisan";
+import { login } from "../support/auth";
 import { expect, test } from "../support/fixtures";
 
-// ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
-const HOME_URL = /\/dashboard$/;
 const PROFILE_URL = /\/settings\/profile$/;
-
-const login = async (page: Page, user: UserCredentials): Promise<void> => {
-  await page.goto("/login");
-  await page.getByLabel("メールアドレス").fill(user.email);
-  await page.getByLabel("パスワード").fill(user.password);
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(HOME_URL);
-};
 
 const openProfileSettings = async (page: Page, user: UserCredentials): Promise<void> => {
   await login(page, user);

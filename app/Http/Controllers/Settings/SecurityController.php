@@ -56,7 +56,6 @@ class SecurityController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($user, $validated): void {
-            // リクエストの最初に読んだ世代から進めると、途中の再設定で進んだ世代を巻き戻すため、ロックした行から進める。
             $lockedUser = $this->lockCurrentUser($user);
 
             $lockedUser->password = Hash::make($validated['password']);
@@ -67,10 +66,7 @@ class SecurityController extends Controller
             $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
         });
 
-        // 本人の Cookie を盗んだ第三者も同じセッション ID を持つため、ログインを保ったまま ID を作り直す。
-        $request->session()->migrate(destroy: true);
-        $user->recordSessionGeneration($request->session());
-        RememberCookie::reissue($user, $rememberToken);
+        $this->keepCurrentSession($request, $user, $rememberToken);
 
         Log::info('User password was changed.', ['user_id' => $user->getKey()]);
         $this->securityNotifier->notify($user, 'password_changed');
@@ -92,9 +88,7 @@ class SecurityController extends Controller
             $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
         });
 
-        $request->session()->migrate(destroy: true);
-        $user->recordSessionGeneration($request->session());
-        RememberCookie::reissue($user, $rememberToken);
+        $this->keepCurrentSession($request, $user, $rememberToken);
 
         Log::info('Other sessions were logged out.', ['user_id' => $user->getKey()]);
 
@@ -129,13 +123,21 @@ class SecurityController extends Controller
             return back()->withErrors(['google' => __('form.google_unlink.password_required')]);
         }
 
-        $request->session()->migrate(destroy: true);
-        $user->recordSessionGeneration($request->session());
-        RememberCookie::reissue($user, $rememberToken);
+        $this->keepCurrentSession($request, $user, $rememberToken);
 
         Log::info('Google account was unlinked.', ['user_id' => $user->getKey()]);
 
         return back()->with('status', 'google-unlinked');
+    }
+
+    /**
+     * 本人の Cookie を盗んだ第三者も同じセッション ID を持つため、ログインを保ったまま ID を作り直す。
+     */
+    private function keepCurrentSession(Request $request, User $user, ?string $rememberToken): void
+    {
+        $request->session()->migrate(destroy: true);
+        $user->recordSessionGeneration($request->session());
+        RememberCookie::reissue($user, $rememberToken);
     }
 
     /**

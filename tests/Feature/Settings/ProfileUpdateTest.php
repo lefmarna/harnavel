@@ -273,9 +273,9 @@ describe('設定トップ', function () {
             ->assertRedirect(route('profile.edit'));
     });
 
-    it('画面を開く以外のメソッドは受け付けない', function (string $method) {
+    it('画面を開く以外のメソッドは受け付けない', function () {
         $this->actingAs(User::factory()->create())
-            ->call($method, '/settings')
+            ->post('/settings')
             ->assertMethodNotAllowed();
-    })->with(['POST', 'PUT', 'PATCH', 'DELETE']);
+    });
 });

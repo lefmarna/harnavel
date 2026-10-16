@@ -91,15 +91,11 @@ export async function prepareE2eDatabase(
   artisan(["migrate:fresh", "--force", "--seed"], "inherit");
 }
 
-// CI は dev server を持たず、ビルド済みアセットが常にそのコミットの内容になる。
-export function usesViteDevServer(env: { CI?: string }): boolean {
-  return !env.CI;
-}
-
 export default async function globalSetup(): Promise<void> {
   const isCI = Boolean(process.env.CI);
 
-  if (usesViteDevServer(process.env)) {
+  // CI は dev server を持たず、ビルド済みアセットが常にそのコミットの内容になる。
+  if (!isCI) {
     await assertViteDevAssets(createViteDevAssetsProbe(REPO_ROOT));
   }
 

@@ -11,15 +11,12 @@ Global middleware adds a strict `script-src`: a per-request nonce plus `'strict-
 the template's own script tags and the scripts they load run, and markup injected through an XSS
 does not. It needs no host allowlist, so it holds for any app; AdSense supports only
 [this kind of strict CSP](https://support.google.com/adsense/answer/16283098?hl=en-GB) and adds
-`'unsafe-eval'` when a publisher ID is configured. With `APP_DEBUG` on, the policy is Report-Only,
-because Laravel's debug page runs scripts without the nonce. Every script tag an app adds needs the
-nonce, and E2E fails on any `securitypolicyviolation`. Other resource directives, Report-Only
+`'unsafe-eval'` when a publisher ID is configured. Every script tag an app adds needs the nonce, and E2E fails on any `securitypolicyviolation`. Other resource directives, Report-Only
 policies, reporting endpoints, and Permissions-Policy stay app-owned: they need per-app allowlists
 and would block styles and analytics beacons without stopping script execution.
 
-`Strict-Transport-Security: max-age=31536000` is added to HTTPS responses outside `local`, preserving
-an app-supplied header; local HTTPS proxies must not block HTTP development services on other ports.
-The template commits to HSTS for one year on that host. `includeSubDomains` and `preload` stay
+`Strict-Transport-Security: max-age=31536000` is added to HTTPS responses outside `local`, so the
+template commits to HSTS for one year on that host. `includeSubDomains` and `preload` stay
 app-owned because the template cannot guarantee HTTPS for every subdomain. The PHP header callback
 below does not send HSTS, because it would need HTTPS detection outside Laravel; one normal HTTPS
 response establishes the policy.

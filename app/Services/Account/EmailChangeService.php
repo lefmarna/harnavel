@@ -101,9 +101,6 @@ class EmailChangeService
         return $previous !== null && $previous->greaterThanOrEqualTo($now) ? $previous->addSecond() : $now;
     }
 
-    /**
-     * プロフィールの保存もこの判定に従う。
-     */
     public function sameAddress(string $current, string $other): bool
     {
         return Str::lower($current) === Str::lower($other);

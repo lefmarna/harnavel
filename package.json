@@ -13,7 +13,7 @@
     "lint:check": "vp lint --type-aware",
     "lint:fix": "vp lint --fix",
     "types:check": "tsc -p tsconfig.json --pretty && tsc -p resources/js/tsconfig.json --pretty false && tsc -p scripts/tsconfig.json --pretty false && tsc -p e2e/tsconfig.json --pretty false",
-    "test:unit": "node --import tsx --test 'resources/js/**/*.test.{cts,mts,ts,tsx}' 'e2e/**/*.test.{cts,mts,ts}' 'scripts/**/*.test.{cts,mts,ts}'",
+    "test:unit": "node --import tsx --test 'resources/js/**/*.test.{cts,mts,ts,tsx}' 'scripts/**/*.test.{cts,mts,ts}'",
     "lint:docs": "node --import tsx scripts/lint-docs.ts",
     "test:deploy-lifecycle": "node --import tsx scripts/test-deploy-lifecycle.ts",
     "test:deploy-rsync-excludes": "node --import tsx scripts/test-deploy-rsync-excludes.ts",

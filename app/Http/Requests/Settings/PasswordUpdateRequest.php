@@ -54,7 +54,6 @@ class PasswordUpdateRequest extends FormRequest
 
     /**
      * この画面だけ password の意味が「新しいパスワード」に変わるので上書きする。
-     * current_password と password_confirmation は validation.attributes の既定と同じ。
      *
      * @return array<string, string>
      */

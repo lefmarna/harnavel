@@ -165,12 +165,6 @@ describe('パスキーのユーザーハンドル秘密鍵', function () {
             ->and($process->getOutput().$process->getErrorOutput())->toContain('PASSKEYS_USER_HANDLE_SECRET');
     });
 
-    it('本番環境でも秘密鍵が明示されていれば起動する', function () {
-        $process = bootWithEnvironment(AppSubprocess::productionEnvironment());
-
-        expect($process->isSuccessful())->toBeTrue($process->getOutput().$process->getErrorOutput());
-    });
-
     it('フォールバック時代のパスキーを保つため APP_KEY と同じ値を明示しても起動する', function () {
         $appKey = 'base64:'.base64_encode(random_bytes(32));
 

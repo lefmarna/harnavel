@@ -176,9 +176,7 @@ describe('セッションの失効', function () {
         expect($user->refresh()->remember_token)->toBe($rememberToken);
     });
 
-    // 失効より前に始まった変更を、失効の後に書き込ませない。巻き戻しも、失効させたセッションへの新しい世代の記録も起きない。
     it('他の端末を失効させる操作の後も、操作した端末はログイン保持で復帰できる', function (Closure $operate) {
-        config(['session.driver' => 'database']);
         $user = User::factory()->create(['google_id' => 'google-1']);
         $recaller = $this->post(route('login.store'), [
             'email' => $user->email,
@@ -265,6 +263,7 @@ describe('セッションの失効', function () {
             ->not->toContain('|'.$user->refresh()->getRememberToken().'|');
     });
 
+    // 失効より前に始まった変更を、失効の後に書き込ませない。巻き戻しも、失効させたセッションへの新しい世代の記録も起きない。
     it('設定画面でのパスワード変更の途中で再設定されたら、その変更を拒否する', function () {
         $user = User::factory()->create();
         $sessionId = loginFromNewDevice($user);

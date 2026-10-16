@@ -7,24 +7,15 @@ import {
   setUserPassword,
   type UserCredentials,
 } from "../support/artisan";
+import { HOME_URL, login } from "../support/auth";
 import { expect, test } from "../support/fixtures";
 import { enableVirtualAuthenticator } from "../support/passkey";
 
-// ログイン後の遷移先は config('fortify.home')。派生アプリはここだけ差し替える。
-const HOME_URL = /\/dashboard$/;
 const SECURITY_URL = /\/settings\/security$/;
 const PROFILE_URL = /\/settings\/profile$/;
 const CONFIRM_PASSWORD_URL = /\/user\/confirm-password$/;
 
 const SEEDED_USER: UserCredentials = { email: "test@example.com", password: "Test1234" };
-
-const login = async (page: Page, user: UserCredentials): Promise<void> => {
-  await page.goto("/login");
-  await page.getByLabel("メールアドレス").fill(user.email);
-  await page.getByLabel("パスワード").fill(user.password);
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(page).toHaveURL(HOME_URL);
-};
 
 const confirmPassword = async (page: Page, password: string): Promise<void> => {
   await page.locator('input[name="password"]').fill(password);
@@ -108,6 +99,8 @@ test("パスキーを登録してパスキーだけでログインできる", as
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
 
   await expect(page).toHaveURL(HOME_URL);
+  const cookies = await context.cookies();
+  expect(cookies.some((cookie) => cookie.name.startsWith("remember_web_"))).toBe(true);
 });
 
 test("パスキー削除の完了通知と端末に残った資格情報の認証エラーを日本語で表示する", async ({
@@ -194,30 +187,6 @@ test("hex ハンドルへの変更後も旧バイナリ形式のパスキーで�
 type AutofillStage = "options" | "support-check";
 
 type AutofillRaceWindow = Window & { releaseAutofill: () => void };
-
-test("ボタンでパスキーログインするとログイン状態を保持する", async ({
-  page,
-  context,
-  browserName,
-}) => {
-  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
-
-  await enableVirtualAuthenticator(page, context);
-  await openSecuritySettings(page, createUser());
-  await registerPasskey(page, "ログイン状態の保持");
-  await expect(page.getByText("ログイン状態の保持", { exact: true })).toBeVisible();
-  await context.clearCookies();
-
-  await page.addInitScript(() => {
-    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
-  });
-  await page.goto("/login");
-  await page.getByRole("button", { name: "パスキーでログイン" }).click();
-
-  await expect(page).toHaveURL(HOME_URL);
-  const cookies = await context.cookies();
-  expect(cookies.some((cookie) => cookie.name.startsWith("remember_web_"))).toBe(true);
-});
 
 test("自動入力でパスキーログインするとログイン状態を保持する", async ({
   page,
@@ -699,7 +668,6 @@ test("パスワード未設定でパスキーだけを持つユーザーはパ�
 
   await page.goto("/settings/security");
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
-  // パスキー未登録なので、パスキーでの確認は出さない。
   await expect(page.locator('input[name="password"]')).toBeVisible();
   await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();
 

@@ -166,7 +166,6 @@ export default defineConfig(({ mode }) => {
         functions: ["clsx", "cn", "cva"],
       },
       ignorePatterns: [
-        "resources/views/mail/**",
         "/boost.json",
         ...generatedFrontendPaths,
         // Laravel Boost と cc-sdd が全体を再生成する。

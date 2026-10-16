@@ -571,6 +571,76 @@ test("パスワード確認の期限が切れても再確認してパスキー�
   await expect(page.getByText("期限切れ後のパスキー", { exact: true })).toBeVisible();
 });
 
+/**
+ * csrf-token meta を置くと、ログイン時に作り直したトークンを SPA が取り込めないまま、@laravel/passkeys が
+ * 古い値を送ってしまう。PreventRequestForgery は Sec-Fetch-Site: same-origin なら先に通すので、素の
+ * ブラウザでは表に出ない。送らないブラウザを再現して、トークンの検証まで進ませる。
+ *
+ * route.continue({ headers }) では Playwright が sec-* を残すため、ブラウザを介さない route.fetch() で送り直す。
+ */
+test("Sec-Fetch-Site を送らないブラウザでも SPA 遷移のままパスキーを登録できる", async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "仮想オーセンティケータは Chromium のみ対応している");
+
+  await enableVirtualAuthenticator(page, context);
+
+  // 文書の読み直しはログインまで。以降は画面内の導線だけで進む。
+  const user = createUser();
+  await login(page, user);
+
+  const passkeyStorePath = "/user/passkeys";
+  const csrfProbePath = "/login";
+  const sent: Record<string, string>[] = [];
+  await context.route(
+    (url) => [passkeyStorePath, csrfProbePath].includes(url.pathname),
+    async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+
+        return;
+      }
+
+      const headers = { ...route.request().headers() };
+      delete headers["sec-fetch-site"];
+      sent.push(headers);
+
+      await route.fulfill({ response: await route.fetch({ headers }) });
+    },
+  );
+
+  await page.locator('[data-test="sidebar-menu-button"]').click();
+  await page.getByRole("menuitem", { name: "Settings" }).click();
+  await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
+  await page.locator('input[name="password"]').fill(user.password);
+  await page.locator('[data-test="confirm-password-button"]').click();
+  await expect(page).toHaveURL(PROFILE_URL);
+  await page.getByRole("link", { name: "セキュリティ" }).click();
+  await expect(page).toHaveURL(SECURITY_URL);
+
+  await registerPasskey(page, "CSRF 回帰のパスキー");
+  await expect(page.getByText("CSRF 回帰のパスキー", { exact: true })).toBeVisible();
+
+  // 毎応答で更新される Cookie の値を使い、文書に焼き付いた meta の値は使っていない。
+  expect(sent).toHaveLength(1);
+  expect(sent[0]?.["x-xsrf-token"]).toBeTruthy();
+  expect(sent[0]?.["x-csrf-token"]).toBeUndefined();
+
+  // 上の成功が Sec-Fetch-Site の素通りではなく、トークンの検証を通った結果であることを確かめる。
+  const probeStatus = await page.evaluate(async (path) => {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { Accept: "application/json", "X-XSRF-TOKEN": "broken-token" },
+    });
+
+    return response.status;
+  }, csrfProbePath);
+
+  expect(probeStatus).toBe(419);
+});
+
 test("自動入力が失敗しても再読み込みなしでパスキー認証を再試行できる", async ({
   page,
   context,

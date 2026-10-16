@@ -10,6 +10,7 @@ use App\Http\Middleware\RejectRevokedSessions;
 use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Http\Middleware\RotateSessionOnConfirmation;
 use App\Services\Observability\ProductionExceptionNotifier;
+use App\ViewModels\StaticPageViewModel;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -90,6 +91,45 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             $status = $response->getStatusCode();
+
+            // Laravel 既定の英語の HTML は、SPA 遷移では Inertia が画面の上のモーダルに出してしまう。
+            // fetch など JSON を求める要求には、既定の JSON のまま返す。
+            $errorPage = [403 => 'forbidden', 404 => 'not_found', 429 => 'too_many_requests'][$status] ?? null;
+
+            // web ミドルウェアの外（セッションがない）では画面に要る共有データを作れないので、既定の応答のまま返す。
+            if ($errorPage !== null && $request->hasSession() && ! ($request->expectsJson() && ! $request->header('X-Inertia'))) {
+                // ThrottleRequests は HandleInertiaRequests より先に動くので、429 ではその処理（版の設定と照合、
+                // 共有データ）がまだない。古い bundle はこの画面を持たないため、版が違えば読み直させる。
+                if (Inertia::getShared('currentUrl') === null) {
+                    $inertia = app(HandleInertiaRequests::class);
+                    $version = (string) $inertia->version($request);
+
+                    if ($request->header('X-Inertia') && $request->isMethod('GET')
+                        && $request->header('X-Inertia-Version', '') !== $version) {
+                        return Inertia::location($request->fullUrl());
+                    }
+
+                    Inertia::version($version);
+                    Inertia::share($inertia->share($request));
+                }
+
+                $page = Inertia::render(
+                    'errors/'.str_replace('_', '-', $errorPage),
+                    new StaticPageViewModel(
+                        title: __("pages.errors.{$errorPage}.title"),
+                        description: __("pages.errors.{$errorPage}.description"),
+                        noIndex: true,
+                    ),
+                )
+                    ->toResponse($request)
+                    ->setStatusCode($status);
+
+                if ($response->headers->has('Retry-After')) {
+                    $page->headers->set('Retry-After', $response->headers->get('Retry-After'));
+                }
+
+                return $page;
+            }
 
             // フルページロードの 500 は Blade（TADR-0004）のまま返し、Vite と JS に依存させない。
             // X-Inertia があれば JS はすでに動いているので、Inertia ページで返してよい。

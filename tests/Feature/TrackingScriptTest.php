@@ -64,6 +64,21 @@ describe('トラッキングスクリプト', function () {
         '署名付きのGoogle連携確認画面' => [fn (): string => URL::temporarySignedRoute('auth.google.link.verify', now()->addHour(), ['userId' => '1', 'payload' => 'secret-payload'])],
     ]);
 
+    // 回数制限で画面を返すと、URL に残る認可コードと state を GA へ渡してしまう。
+    it('Google ログインのコールバックの画面ではトラッキングスクリプトを注入しない', function () {
+        $this->app->instance('env', 'production');
+        config()->set('services.google.analytics_tracking_id', 'G-TEST123456');
+        $url = route('auth.google.callback', ['code' => 'secret-code', 'state' => 'secret-state']);
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->get($url);
+        }
+
+        $this->get($url)
+            ->assertTooManyRequests()
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('tracking.trackingEnabled', false));
+    });
+
     // 秘密を含む画面からの Inertia 遷移ではスクリプトが読み込まれないままになるため、全体を読み込み直させる。
     it('秘密を含むURLの画面から通常画面へ移るときは全体を読み込み直させる', function () {
         $this->app->instance('env', 'production');

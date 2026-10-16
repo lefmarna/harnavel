@@ -1,4 +1,4 @@
-FROM php:8.5.9-fpm-bookworm AS app
+FROM php:8.5.11-fpm-bookworm AS app
 
 COPY --from=composer:2.10.2 /usr/bin/composer /usr/bin/composer
 

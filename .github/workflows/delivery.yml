@@ -234,10 +234,10 @@ jobs:
             if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
               ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
               "test -x /usr/bin/php8.5 && \
-              test -r ~/opt/bin/composer-2.10.2 && \
-              composer_version=\$(/usr/bin/php8.5 ~/opt/bin/composer-2.10.2 --version --no-ansi) && \
+              test -r ~/opt/bin/composer-2.10.3 && \
+              composer_version=\$(/usr/bin/php8.5 ~/opt/bin/composer-2.10.3 --version --no-ansi) && \
               printf '%s\n' \"\$composer_version\" && \
-              printf '%s\n' \"\$composer_version\" | grep -Eq '^Composer version 2\.10\.2([[:space:]]|$)'"; then
+              printf '%s\n' \"\$composer_version\" | grep -Eq '^Composer version 2\.10\.3([[:space:]]|$)'"; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then
@@ -314,7 +314,7 @@ jobs:
             ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
               ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
               "cd -- \"$DEPLOY_DIRECTORY\" && \
-              /usr/bin/php8.5 ~/opt/bin/composer-2.10.2 install --no-dev --no-interaction --optimize-autoloader && \
+              /usr/bin/php8.5 ~/opt/bin/composer-2.10.3 install --no-dev --no-interaction --optimize-autoloader && \
               /usr/bin/php8.5 artisan down --render='errors::503' --retry=60 && \
               [ -s storage/framework/down ] && \
               [ -r storage/framework/maintenance.php ] && \

@@ -1,6 +1,6 @@
 [tools]
-node = "24.20.0"
-pnpm = "12.2.1"
+node = "24.22.0"
+pnpm = "12.11.2"
 
 # depends は並列実行されるため、順序が要る処理は run で逐次に呼ぶ。
 [tasks.setup]

@@ -6,6 +6,7 @@ namespace App\Actions\Passkeys;
 
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
+use App\Support\RememberCookie;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,7 @@ class DeletePasskey extends BaseDeletePasskey
         /** @var User $user 認証するのは users テーブルだけ。 */
         /** @var int|string $key */
         $key = $user->getKey();
+        $rememberToken = $user->getRememberToken();
 
         $lockedUser = DB::transaction(function () use ($user, $key, $passkey): User {
             $lockedUser = $this->userRepository->find($key, lock: true);
@@ -50,5 +52,6 @@ class DeletePasskey extends BaseDeletePasskey
         $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
         $this->session->migrate(destroy: true);
         $lockedUser->recordSessionGeneration($this->session);
+        RememberCookie::reissue($lockedUser, $rememberToken);
     }
 }

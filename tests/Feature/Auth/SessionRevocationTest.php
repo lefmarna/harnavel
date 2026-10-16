@@ -177,6 +177,94 @@ describe('セッションの失効', function () {
     });
 
     // 失効より前に始まった変更を、失効の後に書き込ませない。巻き戻しも、失効させたセッションへの新しい世代の記録も起きない。
+    it('他の端末を失効させる操作の後も、操作した端末はログイン保持で復帰できる', function (Closure $operate) {
+        config(['session.driver' => 'database']);
+        $user = User::factory()->create(['google_id' => 'google-1']);
+        $recaller = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => UserFactory::DEFAULT_PASSWORD,
+            'remember' => true,
+        ])->getCookie(recallerCookieName())->getValue();
+        $sessionId = lastSessionId();
+
+        forgetRequestState();
+        $response = $operate(
+            $this->withCookie(config('session.cookie'), $sessionId)
+                ->withCookie(recallerCookieName(), $recaller)
+                ->withSession(['auth.password_confirmed_at' => time()]),
+            $user,
+        )->assertSessionHasNoErrors();
+
+        forgetRequestState();
+        $this->withCookie(recallerCookieName(), $response->getCookie(recallerCookieName())?->getValue())
+            ->get(route('dashboard'))
+            ->assertOk();
+    })->with([
+        'パスワードの変更' => fn ($test) => $test->put(route('user-password.update'), [
+            'current_password' => UserFactory::DEFAULT_PASSWORD,
+            'password' => 'new-password1',
+            'password_confirmation' => 'new-password1',
+        ]),
+        'Google 連携の解除' => fn ($test) => $test->delete(route('security.google.destroy')),
+        'パスキーの削除' => fn ($test, User $user) => $test->delete(route('passkey.destroy', $user->passkeys()->create([
+            'name' => 'iPhone',
+            'credential_id' => 'credential-1',
+            'credential' => ['id' => 'credential-1'],
+        ]))),
+        '他の端末からのログアウト' => fn ($test) => $test->delete(route('security.sessions.destroy')),
+    ]);
+
+    it('ログイン保持を使っていない端末には、操作の後も保持 Cookie を出さない', function () {
+        $response = $this->actingAs(User::factory()->create())
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete(route('security.sessions.destroy'));
+
+        expect($response->getCookie(recallerCookieName()))->toBeNull();
+    });
+
+    it('別の利用者の保持 Cookie が残っていても、操作した利用者の保持 Cookie は出さない', function () {
+        $other = User::factory()->create();
+        $recaller = $this->post(route('login.store'), [
+            'email' => $other->email,
+            'password' => UserFactory::DEFAULT_PASSWORD,
+            'remember' => true,
+        ])->getCookie(recallerCookieName())->getValue();
+
+        $user = User::factory()->create();
+
+        forgetRequestState();
+        $response = $this->actingAs($user)
+            ->withCookie(recallerCookieName(), $recaller)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->delete(route('security.sessions.destroy'));
+
+        expect($response->getCookie(recallerCookieName())?->getValue())->not->toStartWith($user->getKey().'|');
+    });
+
+    it('すでに使えなくなった自分の保持 Cookie が残っていても、保持 Cookie を出し直さない', function () {
+        $user = User::factory()->create();
+        $recaller = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => UserFactory::DEFAULT_PASSWORD,
+            'remember' => true,
+        ])->getCookie(recallerCookieName())->getValue();
+        $user->refresh()->revokeSessions();
+        $user->save();
+
+        forgetRequestState();
+        $response = $this->actingAs($user)
+            ->withCookie(recallerCookieName(), $recaller)
+            ->withSession([
+                'auth.password_confirmed_at' => time(),
+                User::SESSION_GENERATION_KEY => $user->session_generation,
+            ])
+            ->delete(route('security.sessions.destroy'))
+            ->assertSessionHas('status', 'other-sessions-logged-out');
+
+        expect($response->getCookie(recallerCookieName())?->getValue())
+            ->not->toContain('|'.$user->refresh()->getRememberToken().'|');
+    });
+
     it('設定画面でのパスワード変更の途中で再設定されたら、その変更を拒否する', function () {
         $user = User::factory()->create();
         $sessionId = loginFromNewDevice($user);

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 
@@ -106,6 +107,19 @@ describe('濫用対策のレート制限', function () {
             $changeEmail($user, 'new5@example.com')->assertSessionHasErrors([
                 'email' => '確認メールの送信が続いたため、しばらく時間をおいてから再度お試しください。',
             ]);
+        });
+
+        it('時間単位の上限で断った変更も、回数制限による拒否として記録する', function () use ($changeEmail) {
+            $user = User::factory()->create();
+
+            for ($attempt = 0; $attempt < 5; $attempt++) {
+                $changeEmail($user, "new{$attempt}@example.com");
+            }
+            Log::spy();
+
+            $changeEmail($user, 'new5@example.com')->assertSessionHasErrors('email');
+
+            Log::shouldHaveReceived('warning')->with('Request was rate limited.')->once();
         });
 
         it('メールアドレスの変更は、接続元ごとにも数える', function () use ($changeEmail) {

@@ -15,7 +15,8 @@ unlinking Google also revokes the other sessions, because a thief may already ha
 it. Unlinking Google requires a password, so every account keeps a password or a Google link and a
 passkey only adds a way to sign in. The security page also logs out every other device, so an
 owner who never set a password can still revoke a stolen session or remember cookie. The acting
-session survives by regenerating its ID.
+session survives by regenerating its ID, and gets a new remember cookie when it signed in with one.
+Laravel offers no public way to reissue that cookie, so the template calls the guard's own method.
 Revocation covers sessions only: an app that issues API tokens revokes them on the same events.
 
 An unverified account may have been registered by someone other than the email's owner. When the
@@ -76,7 +77,10 @@ hosts lists them itself.
 
 Inertia encrypts the page data it keeps in browser history and clears that history after logout,
 account deletion, and a revoked session's rejection, so the back button on a shared device does not
-redraw the previous user's pages without asking the server.
+redraw the previous user's pages without asking the server. The clear reaches the browser with the next
+page it receives. When a revoked session is first rejected on a JSON request, the back button can
+still redraw pages that same session already showed until then; that data was already disclosed to
+it, so this is accepted instead of handling 401 in every fetch.
 
 URLs carrying a reset token, an email-verification hash, or a signature are kept out of analytics,
 advertising scripts, logs, and Discord notifications, because each copy is a usable credential held

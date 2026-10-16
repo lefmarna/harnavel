@@ -9,6 +9,7 @@ use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Services\Account\SecurityNotifier;
+use App\Support\RememberCookie;
 use App\ViewModels\Settings\SecurityPageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,6 +50,7 @@ class SecurityController extends Controller
     public function update(PasswordUpdateRequest $request): RedirectResponse
     {
         $user = $this->currentUser($request);
+        $rememberToken = $user->getRememberToken();
 
         /** @var array{password: string} $validated */
         $validated = $request->validated();
@@ -68,6 +70,7 @@ class SecurityController extends Controller
         // 本人の Cookie を盗んだ第三者も同じセッション ID を持つため、ログインを保ったまま ID を作り直す。
         $request->session()->migrate(destroy: true);
         $user->recordSessionGeneration($request->session());
+        RememberCookie::reissue($user, $rememberToken);
 
         Log::info('User password was changed.', ['user_id' => $user->getKey()]);
         $this->securityNotifier->notify($user, 'password_changed');
@@ -78,6 +81,7 @@ class SecurityController extends Controller
     public function destroyOtherSessions(Request $request): RedirectResponse
     {
         $user = $this->currentUser($request);
+        $rememberToken = $user->getRememberToken();
 
         DB::transaction(function () use ($user): void {
             $lockedUser = $this->lockCurrentUser($user);
@@ -90,6 +94,7 @@ class SecurityController extends Controller
 
         $request->session()->migrate(destroy: true);
         $user->recordSessionGeneration($request->session());
+        RememberCookie::reissue($user, $rememberToken);
 
         Log::info('Other sessions were logged out.', ['user_id' => $user->getKey()]);
 
@@ -102,6 +107,7 @@ class SecurityController extends Controller
     public function destroyGoogle(Request $request): RedirectResponse
     {
         $user = $this->currentUser($request);
+        $rememberToken = $user->getRememberToken();
 
         $unlinked = DB::transaction(function () use ($user): bool {
             $lockedUser = $this->lockCurrentUser($user);
@@ -125,6 +131,7 @@ class SecurityController extends Controller
 
         $request->session()->migrate(destroy: true);
         $user->recordSessionGeneration($request->session());
+        RememberCookie::reissue($user, $rememberToken);
 
         Log::info('Google account was unlinked.', ['user_id' => $user->getKey()]);
 

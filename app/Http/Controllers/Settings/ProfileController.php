@@ -9,6 +9,7 @@ use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
 use App\Services\Account\EmailChangeService;
 use App\ViewModels\Settings\ProfilePageViewModel;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -121,6 +122,9 @@ class ProfileController extends Controller
 
         foreach ($limits as $key => $maxAttempts) {
             if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+                // 429 ではなく入力欄の誤りとして返すので、記録と通知はほかの回数制限と同じ経路へ流す。
+                report(new ThrottleRequestsException);
+
                 return false;
             }
         }

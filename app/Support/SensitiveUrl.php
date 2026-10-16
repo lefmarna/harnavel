@@ -19,7 +19,10 @@ final class SensitiveUrl
 
     public static function carriesSecret(Request $request): bool
     {
-        return $request->query->has('signature') || self::secretParameters($request) !== [];
+        // Google ログインのコールバックは、クエリに認可コードと state を持つ。
+        return $request->query->has('signature')
+            || $request->routeIs('auth.google.callback')
+            || self::secretParameters($request) !== [];
     }
 
     /**

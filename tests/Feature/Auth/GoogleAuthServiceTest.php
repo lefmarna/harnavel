@@ -472,6 +472,24 @@ describe('Google 認証サービス', function () {
         expect($service->confirmLink('999999', 'google-confirm', 'confirm@example.com', '0'))->toBeFalse();
     });
 
+    it('findOrCreate は findCandidates を行ロック付きで取得する', function () {
+        $findCandidatesWithLock = false;
+        $fakeRepo = new FakeUserRepository(
+            findCandidates: function (string $googleId, string $email, bool $lock) use (&$findCandidatesWithLock): Collection {
+                $findCandidatesWithLock = $lock;
+
+                return collect();
+            },
+            save: fn (User $user) => $user->save(),
+        );
+
+        app()->instance(UserRepositoryContract::class, $fakeRepo);
+
+        app(GoogleAuthService::class)->findOrCreate('lock-google', 'lock@example.com', 'Lock User');
+
+        expect($findCandidatesWithLock)->toBeTrue();
+    });
+
     describe('リンク確認の未仕様分岐', function () {
         it('同じ google_id で再確認した場合 true になる', function () {
             $existing = User::factory()->create([

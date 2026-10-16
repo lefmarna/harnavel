@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use Inertia\ResponseFactory;
 
 beforeEach(function () {
     $this->app->instance('env', 'production');
@@ -32,6 +35,11 @@ beforeEach(function () {
     Route::middleware('web')->get('/_testing/errors/419', function () {
         abort(419);
     });
+
+    Route::middleware('web')->get('/_testing/errors/403', fn () => abort(403));
+    Route::get('/_testing/errors/404-without-session', fn () => abort(404));
+    Route::middleware('web')->get('/_testing/errors/404', fn () => abort(404));
+    Route::middleware(['web', 'throttle:1,1'])->get('/_testing/errors/429', fn () => 'ok');
 });
 
 describe('本番エラーページ', function () {
@@ -151,5 +159,78 @@ describe('SPA遷移時の500エラーページ', function () {
         // 変換後の汎用ページは例外メッセージを一切含まないため、メッセージの存在で
         // 「変換されていない＝調査用の詳細が残る」ことを担保できる。
         expect($response->getContent())->toContain('secret stack message');
+    });
+});
+
+describe('403・404・429 のエラーページ', function () {
+    $request = function (string $uri, array $headers = []) {
+        if ($uri === '/_testing/errors/429') {
+            test()->get($uri);
+            // 前の要求で共有したデータを、次の要求へ持ち越さない。
+            app()->forgetInstance(ResponseFactory::class);
+            Inertia::clearResolvedInstance(ResponseFactory::class);
+        }
+
+        return test()->get($uri, $headers);
+    };
+
+    it('アプリの画面を、検索結果に出さない設定で返す', function (string $uri, int $status, string $component, string $title) use ($request) {
+        $request($uri)
+            ->assertStatus($status)
+            ->assertInertia(fn ($page) => $page
+                ->component($component)
+                ->where('seo.title', $title)
+                ->where('seo.robots', 'noindex, nofollow'));
+    })->with([
+        '403' => ['/_testing/errors/403', 403, 'errors/forbidden', 'アクセスできません'],
+        '404' => ['/_testing/errors/404', 404, 'errors/not-found', 'ページが見つかりません'],
+        '存在しない URL' => ['/_testing/no-such-page', 404, 'errors/not-found', 'ページが見つかりません'],
+        '429' => ['/_testing/errors/429', 429, 'errors/too-many-requests', 'しばらくお待ちください'],
+    ]);
+
+    // 画面の共通部分は、共有データの url や currentUrl を前提にする。
+    it('SPA遷移時もアプリの画面を、共有データとともに返す', function (string $uri, int $status, string $component) use ($request) {
+        $request($uri, $this->inertiaHeaders)
+            ->assertStatus($status)
+            ->assertJsonPath('component', $component)
+            ->assertJsonPath('props.currentUrl', url($uri));
+    })->with([
+        '403' => ['/_testing/errors/403', 403, 'errors/forbidden'],
+        '404' => ['/_testing/no-such-page', 404, 'errors/not-found'],
+        '429' => ['/_testing/errors/429', 429, 'errors/too-many-requests'],
+    ]);
+
+    it('429 でも、古い版の画面からの SPA 遷移は読み直させる', function () use ($request) {
+        $request('/_testing/errors/429', ['X-Inertia' => 'true', 'X-Inertia-Version' => 'stale'])
+            ->assertStatus(409)
+            ->assertHeader('X-Inertia-Location', url('/_testing/errors/429'));
+    });
+
+    it('429 の画面にも今の版を付け、次の遷移で読み直させない', function () use ($request) {
+        app()->bind(HandleInertiaRequests::class, fn () => new class extends HandleInertiaRequests
+        {
+            public function version(Request $request): ?string
+            {
+                return 'current';
+            }
+        });
+
+        $request('/_testing/errors/429', ['X-Inertia' => 'true', 'X-Inertia-Version' => 'current'])
+            ->assertStatus(429)
+            ->assertJsonPath('version', 'current');
+    });
+
+    it('セッションのない要求では、既定の応答のまま返す', function () {
+        $this->get('/_testing/errors/404-without-session')->assertNotFound();
+    });
+
+    it('JSON を求める要求には画面を返さない', function () {
+        $this->getJson('/_testing/errors/404')
+            ->assertNotFound()
+            ->assertJsonMissingPath('component');
+    });
+
+    it('429 は再試行までの秒数を残す', function () use ($request) {
+        expect($request('/_testing/errors/429')->headers->get('Retry-After'))->not->toBeNull();
     });
 });

@@ -1,0 +1,21 @@
+import { expect, test } from "../support/fixtures";
+
+test("存在しない URL では、アプリの 404 画面を表示する", async ({ page }) => {
+  const response = await page.goto("/no-such-page");
+
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "ページが見つかりません" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "トップページへ戻る" })).toBeVisible();
+});
+
+test("回数制限にかかったときは、アプリの 429 画面を表示する", async ({ page }) => {
+  // 制限は接続元ごとに 1 分 10 回。先に使い切ってから、画面として開く。
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await page.request.get("/auth/google/callback", { maxRedirects: 0 });
+  }
+
+  const response = await page.goto("/auth/google/callback");
+
+  expect(response?.status()).toBe(429);
+  await expect(page.getByRole("heading", { name: "しばらくお待ちください" })).toBeVisible();
+});

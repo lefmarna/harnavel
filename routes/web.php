@@ -55,3 +55,6 @@ Route::get('.well-known/passkey-endpoints', function () {
 })->name('well-known.passkeys');
 
 require __DIR__.'/settings.php';
+
+// 存在しない URL も web ミドルウェアを通し、画面に要る共有データをそろえてから 404 の画面を返す。
+Route::fallback(fn () => abort(404));

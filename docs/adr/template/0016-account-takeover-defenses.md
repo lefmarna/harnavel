@@ -5,17 +5,18 @@ cookie from outliving the owner's response, and stops a registrant of someone el
 keeping the account, but accepts risks whose fixes would cost every owner usability.
 
 Resetting or changing the password, deleting a passkey, unlinking Google, logging out other devices
-(which lets an owner without a password revoke a stolen session), and reclaiming an unverified account advance the user's session generation and rotate
-`remember_token`; a session that recorded an older generation is logged out before `auth` runs.
-Deleting the user's `sessions` rows was rejected because a login racing a reset writes its row after
-the deletion. Laravel's `AuthenticateSession` was rejected because it skips users without a password
-and adopts the current hash for a session that has none. Writes a stolen session could race
-(password and address changes, passkey registration, account deletion) lock the user row and refuse
-with 409 when the generation moved after the request began. A deleted passkey or unlinked Google
-account may already have signed a thief in, so removing one revokes the other sessions; the acting
-session survives with a new ID and, when it had one, a new remember cookie. Unlinking Google requires
-a password, so every account keeps a password or a Google link. Revocation covers sessions only: an
-app that issues API tokens revokes them on the same events.
+(which lets an owner without a password revoke a stolen session), and reclaiming an unverified
+account advance the user's session generation and rotate `remember_token`; a session that recorded
+an older generation is logged out before `auth` runs. Deleting the user's `sessions` rows was
+rejected because a login racing a reset writes its row after the deletion. Laravel's
+`AuthenticateSession` was rejected because it skips users without a password and adopts the current
+hash for a session that has none. Writes a stolen session could race (password and address changes,
+passkey registration, account deletion) lock the user row and refuse with 409 when the generation
+moved after the request began. A deleted passkey or unlinked Google account may already have signed
+a thief in, so removing one revokes the other sessions; the acting session survives with a new ID
+and, when it had one, a new remember cookie. Unlinking Google requires a password, so every account
+keeps a password or a Google link. Revocation covers sessions only: an app that issues API tokens
+revokes them on the same events.
 
 An unverified account may have been registered by someone other than the email's owner. When the
 owner proves the address through a Google link or a password reset, the account becomes verified and

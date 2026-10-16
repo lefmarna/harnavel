@@ -247,7 +247,6 @@ describe('SEO メタ契約', function () {
         expect(findStructuredDataByType($schemas, 'WebSite')['description'] ?? null)->toBe($payload);
     });
 
-    //
     // 見るのは JSON-LD の生の中身だけ。ページ全体には Inertia の data-page など別経路の
     // JSON も載っていて、そちらのスラッシュを拾うと何も確かめられない。
     it('構造化データはスラッシュも退避したまま出力する', function () {

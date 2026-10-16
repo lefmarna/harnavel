@@ -18,7 +18,8 @@ and its merge, and every merge method rewrites the SHA.
 What carries over is the tree. A successful run uploads the assets it tested under the name of its
 tree, and when the pushed commit has the same tree, `delivery` deploys that build without rerunning
 lint and tests. Because any branch can upload an artifact under any name, `delivery` also checks
-which run produced it. This guards against mistakes, not against collaborators: anyone who can forge the artifact can also push to `develop` directly.
+which run produced it. This guards against mistakes, not against collaborators: anyone who can forge
+the artifact can also push to `develop` directly.
 
 A release pull request whose merge result has the same tree as `develop` skips `quality`, because
 `delivery` already verified that tree before deploying `develop`.

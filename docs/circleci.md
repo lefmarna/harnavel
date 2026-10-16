@@ -2,8 +2,8 @@
 
 A repository opts in to running pull request E2E and mutation testing on CircleCI
 ([TADR-0015](adr/template/0015-circleci-pull-request-checks.md)) by setting the `E2E_RECORD_BUCKET`
-Actions variable. The Cloud Storage Always Free limits apply only in `us-central1`, `us-east1`, and
-`us-west1`.
+Actions variable. The only Google Cloud resource is a bucket of tree records, which stays within the
+Cloud Storage Always Free limits only in `us-central1`, `us-east1`, and `us-west1`.
 
 When no readable E2E record exists for the tree, including while CircleCI is out of credits or still
 running, `delivery` runs lint, Pest, and E2E itself, so merge after the CircleCI check passes.

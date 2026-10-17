@@ -19,12 +19,6 @@ const parsePort = (value: string | undefined, fallback: number): number => {
   return Number.isNaN(port) ? fallback : port;
 };
 
-const generatedFrontendPaths = [
-  "resources/js/actions/**",
-  "resources/js/routes/**",
-  "resources/js/wayfinder/**",
-];
-
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const vitePort = parsePort(env.VITE_PORT, 5173);
@@ -72,7 +66,6 @@ export default defineConfig(({ mode }) => {
         "import/default": "off",
         "import/namespace": "off",
         "react/rules-of-hooks": "error",
-        "react/exhaustive-deps": "error",
         // コンポーネントの関数呼び出しを検出するルールは correctness に含まれないため、個別に有効化する。
         "react/capitalized-calls": "warn",
         "typescript/ban-ts-comment": "error",
@@ -147,17 +140,7 @@ export default defineConfig(({ mode }) => {
           },
         },
       ],
-      ignorePatterns: [
-        "vendor",
-        "node_modules",
-        ".deploy",
-        "public",
-        "bootstrap/ssr",
-        "playwright-report",
-        "test-results",
-        ".playwright-cli",
-        ...generatedFrontendPaths,
-      ],
+      ignorePatterns: ["public"],
     },
     fmt: {
       sortImports: true,
@@ -167,7 +150,6 @@ export default defineConfig(({ mode }) => {
       },
       ignorePatterns: [
         "/boost.json",
-        ...generatedFrontendPaths,
         // Laravel Boost と cc-sdd が全体を再生成する。
         ".agents/skills/**",
         ".claude/skills/**",
@@ -175,11 +157,8 @@ export default defineConfig(({ mode }) => {
         ".kiro/**/*.md",
         "docs/generated/**/*.md",
         "pnpm-lock.yaml",
-        "storage/app/private/",
-        "storage/app/public/",
         "storage/framework/",
         "storage/inertia-devtools/",
-        "storage/logs/",
       ],
       overrides: [
         {

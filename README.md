@@ -98,14 +98,13 @@ pnpm test:e2e --project=chromium
 
 このリポジトリ独自のコードは [MIT License](LICENSE) です。次の第三者由来のコードと文書は、それぞれのライセンスに従います。MIT の許諾文は [LICENSE](LICENSE) と同じです。
 
-| 対象                                                                    | 出典                                                                                    | ライセンス | 著作権表示                      |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------- | ------------------------------- |
-| アプリの骨格                                                            | [laravel/react-starter-kit](https://github.com/laravel/react-starter-kit)               | MIT        | 記載なし                        |
-| `resources/js/components/ui/`                                           | [shadcn/ui](https://github.com/shadcn-ui/ui)                                            | MIT        | Copyright (c) 2023 shadcn       |
-| `resources/js/hooks/use-clipboard.ts`                                   | [usehooks-ts](https://github.com/juliencrn/usehooks-ts)                                 | MIT        | Copyright (c) 2020 Julien CARON |
-| `boost.json` の `skills` に挙げたスキル                                 | [Laravel Boost](https://github.com/laravel/boost)                                       | MIT        | Copyright (c) Taylor Otwell     |
-| `kiro-*` スキル、`.kiro/settings/templates/`、`docs/generated/specs.md` | [cc-sdd](https://github.com/gotalab/cc-sdd)                                             | MIT        | Copyright (c) 2025 gotalab      |
-| `frontend-design` スキル                                                | [anthropics/skills](https://github.com/anthropics/skills)                               | Apache-2.0 | スキル内の `LICENSE.txt`        |
-| `modern-web-guidance` スキル                                            | [GoogleChrome/modern-web-guidance](https://github.com/GoogleChrome/modern-web-guidance) | Apache-2.0 | スキル内の `LICENSE`            |
+| 対象                                                                    | 出典                                                                      | ライセンス | 著作権表示                      |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------- | ------------------------------- |
+| アプリの骨格                                                            | [laravel/react-starter-kit](https://github.com/laravel/react-starter-kit) | MIT        | 記載なし                        |
+| `resources/js/components/ui/`                                           | [shadcn/ui](https://github.com/shadcn-ui/ui)                              | MIT        | Copyright (c) 2023 shadcn       |
+| `resources/js/hooks/use-clipboard.ts`                                   | [usehooks-ts](https://github.com/juliencrn/usehooks-ts)                   | MIT        | Copyright (c) 2020 Julien CARON |
+| `boost.json` の `skills` に挙げたスキル                                 | [Laravel Boost](https://github.com/laravel/boost)                         | MIT        | Copyright (c) Taylor Otwell     |
+| `kiro-*` スキル、`.kiro/settings/templates/`、`docs/generated/specs.md` | [cc-sdd](https://github.com/gotalab/cc-sdd)                               | MIT        | Copyright (c) 2025 gotalab      |
+| `frontend-design` スキル                                                | [anthropics/skills](https://github.com/anthropics/skills)                 | Apache-2.0 | スキル内の `LICENSE.txt`        |
 
-スキルは `.agents/skills/` と `.claude/skills/` の両方に置いています。`modern-web-guidance` のうち、このリポジトリで修正したファイルは冒頭にその旨を記載しています。上流から更新するときも、修正を引き継いだファイルにはこの記載を残してください。また、上流の説明によると、その文書の一部は [MDN Web Docs](https://developer.mozilla.org/)（Mozilla Contributors）と [W3C](https://www.w3.org/)、[WHATWG](https://whatwg.org)、[IETF](https://www.ietf.org) の仕様に由来します。
+スキルは `.agents/skills/` と `.claude/skills/` の両方に置いています。

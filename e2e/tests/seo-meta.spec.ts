@@ -5,10 +5,11 @@ test("SPA遷移時にSEOメタタグが更新される", async ({ page }) => {
 
   await expect(page).toHaveTitle(/ホーム - /);
 
-  const welcomeOgUrl = await page.locator('meta[property="og:url"]').getAttribute("content");
+  const ogUrl = page.locator('meta[property="og:url"]');
+  await expect(ogUrl).toHaveAttribute("content", /\/$/);
+  const welcomeOgUrl = await ogUrl.getAttribute("content");
   const welcomeCanonical = page.locator('link[rel="canonical"]');
 
-  expect(welcomeOgUrl).toMatch(/\/$/);
   await expect(welcomeCanonical).toHaveAttribute("href", /\/$/);
 
   await page.click('a[href*="login"]');

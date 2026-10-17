@@ -1,5 +1,6 @@
 import { usePage } from "@inertiajs/react";
 
+import PageExpiredAlert from "@/components/page-expired-alert";
 import AuthLayoutTemplate from "@/layouts/auth/auth-simple-layout";
 import type { SharedData } from "@/types";
 
@@ -19,6 +20,7 @@ export default function AuthLayout({
 
   return (
     <AuthLayoutTemplate title={resolvedTitle} description={resolvedDescription} {...props}>
+      <PageExpiredAlert />
       {children}
     </AuthLayoutTemplate>
   );

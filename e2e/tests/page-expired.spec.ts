@@ -1,4 +1,4 @@
-import type { BrowserContext } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 
 import { createUser } from "../support/artisan";
 import { login } from "../support/auth";
@@ -42,13 +42,17 @@ test("ログイン前の画面で送信の有効期限が切れたら、その�
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test("ログイン後の画面で送信の有効期限が切れたら、そのことを伝える", async ({ page, context }) => {
+const openProfileSettings = async (page: Page): Promise<void> => {
   const user = createUser();
   await login(page, user);
   await page.goto("/settings/profile");
   await page.locator('input[name="password"]').fill(user.password);
   await page.locator('[data-test="confirm-password-button"]').click();
   await expect(page).toHaveURL(PROFILE_URL);
+};
+
+test("ログイン後の画面で送信の有効期限が切れたら、そのことを伝える", async ({ page, context }) => {
+  await openProfileSettings(page);
 
   await expireCsrfToken(context, "/settings/profile");
   await page.getByLabel("ニックネーム").fill("期限切れの送信");
@@ -56,4 +60,51 @@ test("ログイン後の画面で送信の有効期限が切れたら、その�
 
   await expect(page.getByText(PAGE_EXPIRED_MESSAGE)).toBeVisible();
   await expect(page).toHaveURL(PROFILE_URL);
+});
+
+test("ダイアログから送信して有効期限が切れたら、ダイアログの中で伝える", async ({
+  page,
+  context,
+}) => {
+  await openProfileSettings(page);
+
+  await page.locator('[data-test="delete-user-button"]').click();
+  await expireCsrfToken(context, "/settings/profile");
+  await page.locator('[data-test="confirm-delete-user-button"]').click();
+
+  await expect(page.getByRole("dialog").getByText(PAGE_EXPIRED_MESSAGE)).toBeVisible();
+});
+
+test("画面の下の方で送信して有効期限が切れても、伝えるメッセージを画面内に出す", async ({
+  page,
+  context,
+}) => {
+  await openProfileSettings(page);
+  await page.goto("/settings/security");
+
+  await expireCsrfToken(context, "/settings/sessions");
+  const logoutOtherSessions = page.locator('[data-test="logout-other-sessions-button"]');
+  await logoutOtherSessions.click();
+  await expect(page.getByText(PAGE_EXPIRED_MESSAGE)).toBeInViewport();
+
+  // 2 回目も同じ文言が返るので、文言の変化ではなく応答ごとに寄せていることを確かめる。
+  await logoutOtherSessions.scrollIntoViewIfNeeded();
+  await expect(page.getByText(PAGE_EXPIRED_MESSAGE)).not.toBeInViewport();
+  await logoutOtherSessions.click();
+  await expect(page.getByText(PAGE_EXPIRED_MESSAGE)).toBeInViewport();
+});
+
+test("スマホのサイドバーから送信して有効期限が切れても、そのことを伝える", async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await login(page, createUser());
+
+  await page.locator('[data-sidebar="trigger"]').click();
+  await page.locator('[data-test="sidebar-menu-button"]').click();
+  await expireCsrfToken(context, "/logout");
+  await page.locator('[data-test="logout-button"]').click();
+
+  await expect(page.getByRole("alert").filter({ hasText: PAGE_EXPIRED_MESSAGE })).toBeInViewport();
 });

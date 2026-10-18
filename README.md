@@ -96,15 +96,4 @@ pnpm test:e2e --project=chromium
 
 ## ライセンス
 
-このリポジトリ独自のコードは [MIT License](LICENSE) です。次の第三者由来のコードと文書は、それぞれのライセンスに従います。MIT の許諾文は [LICENSE](LICENSE) と同じです。
-
-| 対象                                                                    | 出典                                                                      | ライセンス | 著作権表示                      |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------- | ------------------------------- |
-| アプリの骨格                                                            | [laravel/react-starter-kit](https://github.com/laravel/react-starter-kit) | MIT        | 記載なし                        |
-| `resources/js/components/ui/`                                           | [shadcn/ui](https://github.com/shadcn-ui/ui)                              | MIT        | Copyright (c) 2023 shadcn       |
-| `resources/js/hooks/use-clipboard.ts`                                   | [usehooks-ts](https://github.com/juliencrn/usehooks-ts)                   | MIT        | Copyright (c) 2020 Julien CARON |
-| `boost.json` の `skills` に挙げたスキル                                 | [Laravel Boost](https://github.com/laravel/boost)                         | MIT        | Copyright (c) Taylor Otwell     |
-| `kiro-*` スキル、`.kiro/settings/templates/`、`docs/generated/specs.md` | [cc-sdd](https://github.com/gotalab/cc-sdd)                               | MIT        | Copyright (c) 2025 gotalab      |
-| `frontend-design` スキル                                                | [anthropics/skills](https://github.com/anthropics/skills)                 | Apache-2.0 | スキル内の `LICENSE.txt`        |
-
-スキルは `.agents/skills/` と `.claude/skills/` の両方に置いています。
+このリポジトリ独自のコードは [MIT License](LICENSE) です。第三者由来のコードと文書は、それぞれのライセンスに従います。一覧と許諾文は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。

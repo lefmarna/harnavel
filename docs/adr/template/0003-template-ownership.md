@@ -5,6 +5,10 @@ stay app-owned. Generic improvements return through the template to avoid diverg
 when apps solve the same problem differently, the template adopts the best design and every app
 converges on it, so apps differ only where their domain or presentation requires.
 Coverage floors and mutation selections are app-owned; mutation eligibility and blocking score are shared.
+`LICENSE`, `.github/SECURITY.md`, and the `license` field in `composer.json` describe only the
+published template; apps delete the files, keep them deleted, and set the field to `proprietary`,
+since in a private app they would imply an MIT license and a reporting channel that does not exist.
+Third-party notices live in `THIRD_PARTY_NOTICES.md`, which apps keep.
 
 Dependency constraints follow the same split: a constraint the template declares is shared and apps
 reproduce it verbatim, while a package only the app declares carries an app-owned constraint.

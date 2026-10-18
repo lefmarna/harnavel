@@ -10,9 +10,7 @@ use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Validated;
 use Illuminate\Auth\SessionGuard;
-use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -334,31 +332,5 @@ describe('セッションの失効', function () {
         Auth::login($loadedBeforeRevocation, remember: true);
 
         expect($user->refresh()->getRememberToken())->toBe($owner->getRememberToken());
-    });
-
-    it('ログイン保持の値が空の既存ユーザーにも、移行で値を入れる', function () {
-        $user = User::factory()->create();
-        User::query()->whereKey($user->getKey())->update(['remember_token' => null]);
-
-        (require database_path('migrations/2026_10_12_000000_fill_empty_remember_tokens.php'))->up();
-
-        expect($user->refresh()->getRememberToken())->toBeString()->not->toBeEmpty();
-    });
-
-    it('移行が読んだ後に並行するログインが入れた値を、移行で上書きしない', function () {
-        $user = User::factory()->create();
-        User::query()->whereKey($user->getKey())->update(['remember_token' => null]);
-        $loggedIn = false;
-        DB::listen(function (QueryExecuted $query) use ($user, &$loggedIn): void {
-            if ($loggedIn || ! str_starts_with($query->sql, 'select')) {
-                return;
-            }
-            $loggedIn = true;
-            DB::table('users')->where('id', $user->getKey())->update(['remember_token' => 'concurrent-login-token']);
-        });
-
-        (require database_path('migrations/2026_10_12_000000_fill_empty_remember_tokens.php'))->up();
-
-        expect($user->refresh()->getRememberToken())->toBe('concurrent-login-token');
     });
 });

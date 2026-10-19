@@ -91,6 +91,15 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
+     * 失効はどの経路でも remember_token を作り直すので、パスワードのないユーザーもログイン保持で
+     * 復帰させる（TADR-0016）。
+     */
+    public function getAuthPassword(): string
+    {
+        return $this->password ?? '';
+    }
+
+    /**
      * パスワードがあればそちらで確認させ、Google のログイン状態だけでは通さない（TADR-0016）。
      */
     public function canConfirmWithGoogle(): bool

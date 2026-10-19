@@ -142,6 +142,30 @@ describe('Google OAuth コントローラ', function () {
         $this->assertAuthenticatedAs($existingUser);
     });
 
+    it('パスワード未設定のユーザーも、Google ログインで得たログイン保持 Cookie で復帰できる', function () {
+        $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
+
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => $user->email,
+            'getName' => $user->name,
+            'getRaw' => ['email_verified' => true],
+        ]);
+
+        mock(GoogleAuthServiceContract::class)
+            ->shouldReceive('findOrCreate')
+            ->andReturn($user);
+
+        $recaller = $this->get(route('auth.google.callback'))
+            ->getCookie(Auth::guard()->getRecallerName())
+            ->getValue();
+
+        forgetRequestState();
+        $this->withCookie(Auth::guard()->getRecallerName(), $recaller)
+            ->get(route('dashboard'))
+            ->assertOk();
+    });
+
     it('callback() は intended URL があれば fortify.home より優先してリダイレクトする', function () {
         $existingUser = User::factory()->create(['email' => 'test@example.com']);
 

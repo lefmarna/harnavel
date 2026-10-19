@@ -45,6 +45,8 @@ Route::prefix('auth/google/link')->name('auth.google.link.')->controller(GoogleA
     Route::get('/confirm', 'linkConfirm')->name('confirm');
     Route::get('/verify/{userId}', 'linkVerify')->name('verify');
     Route::post('/verify/{userId}', 'linkComplete')->middleware('throttle:10,1')->name('complete');
+    Route::get('/completed', 'linkCompleted')->name('completed');
+    Route::get('/failed', 'linkFailed')->name('failed');
 });
 
 Route::get('.well-known/passkey-endpoints', function () {

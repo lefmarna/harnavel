@@ -53,7 +53,7 @@ describe('Google 連携リンク検証', function () {
                 ->where('status', 'confirm'));
     });
 
-    it('署名付き Google 連携リンクの POST で成功ページを表示する', function () {
+    it('署名付き Google 連携リンクの POST で連携を確定し、完了画面へ移る', function () {
         $service = Mockery::mock(GoogleAuthServiceContract::class);
         $service->shouldReceive('confirmLink')
             ->once()
@@ -67,7 +67,11 @@ describe('Google 連携リンク検証', function () {
             'session_generation' => '0',
         ]);
 
-        $this->post($url)
+        $this->post($url)->assertRedirect(route('auth.google.link.completed'));
+    });
+
+    it('Google 連携の完了画面は再読み込みしても完了を表示する', function () {
+        $this->get(route('auth.google.link.completed'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('auth/google-link/verify')
@@ -94,7 +98,7 @@ describe('Google 連携リンク検証', function () {
                 ->where('status', 'error'));
     });
 
-    it('Google 連携リンクの署名が改ざんされている場合はエラーページを表示する', function () {
+    it('Google 連携リンクの署名が改ざんされている場合は失敗画面へ移る', function () {
         $service = Mockery::mock(GoogleAuthServiceContract::class);
         $service->shouldNotReceive('confirmLink');
         app()->instance(GoogleAuthServiceContract::class, $service);
@@ -108,11 +112,7 @@ describe('Google 連携リンク検証', function () {
         $invalidUrl = preg_replace('/signature=[^&]+/', 'signature=invalid', $url);
         expect($invalidUrl)->toBeString();
 
-        $this->post($invalidUrl)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('auth/google-link/verify')
-                ->where('status', 'error'));
+        $this->post($invalidUrl)->assertRedirect(route('auth.google.link.failed'));
     });
 
     it('Google 連携リンクの payload が不正な場合はエラーページを表示する', function () {
@@ -150,7 +150,7 @@ describe('Google 連携リンク検証', function () {
         'session_generation が無い' => [['google_id' => 'google-123', 'email' => 'existing@example.com']],
     ]);
 
-    it('Google 連携確定が失敗したときはエラーページを表示する', function () {
+    it('Google 連携確定が失敗したときは失敗画面へ移る', function () {
         Log::spy();
 
         $service = Mockery::mock(GoogleAuthServiceContract::class);
@@ -166,13 +166,7 @@ describe('Google 連携リンク検証', function () {
             'session_generation' => '0',
         ]);
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('auth/google-link/verify')
-                ->where('status', 'error')
-                ->where('seo.title', 'Googleログイン連携エラー')
-                ->where('seo.description', 'Googleログイン連携に失敗しました。'));
+        $this->post($url)->assertRedirect(route('auth.google.link.failed'));
 
         Log::shouldHaveReceived('warning')
             ->withArgs(function (string $message, array $context): bool {
@@ -202,11 +196,7 @@ describe('Google 連携リンク検証', function () {
             'session_generation' => '0',
         ]);
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('auth/google-link/verify')
-                ->where('status', 'error'));
+        $this->post($url)->assertRedirect(route('auth.google.link.failed'));
 
         Log::shouldHaveReceived('warning')
             ->withArgs(function (string $message, array $context): bool {
@@ -214,6 +204,16 @@ describe('Google 連携リンク検証', function () {
                     && $context === ['exception_class' => QueryException::class];
             })
             ->once();
+    });
+
+    it('Google 連携の失敗画面は再読み込みしても失敗を表示する', function () {
+        $this->get(route('auth.google.link.failed'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/google-link/verify')
+                ->where('status', 'error')
+                ->where('seo.title', 'Googleログイン連携エラー')
+                ->where('seo.description', 'Googleログイン連携に失敗しました。'));
     });
 });
 

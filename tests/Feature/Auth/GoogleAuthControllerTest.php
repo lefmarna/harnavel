@@ -162,8 +162,9 @@ describe('Google OAuth コントローラ', function () {
 
         forgetRequestState();
         $this->withCookie(Auth::guard()->getRecallerName(), $recaller)
-            ->get(route('dashboard'))
-            ->assertOk();
+            ->get(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
     });
 
     it('callback() は intended URL があれば fortify.home より優先してリダイレクトする', function () {

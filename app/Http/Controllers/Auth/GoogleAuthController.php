@@ -205,12 +205,12 @@ class GoogleAuthController extends Controller
         );
     }
 
-    public function linkComplete(Request $request, string $userId): Response
+    public function linkComplete(Request $request, string $userId): RedirectResponse
     {
         $linkPayload = $this->validatedGoogleLinkPayload($request);
 
         if ($linkPayload === null) {
-            return $this->googleLinkVerifyPage('error');
+            return redirect()->route('auth.google.link.failed');
         }
 
         try {
@@ -219,15 +219,25 @@ class GoogleAuthController extends Controller
                     'user_id' => $userId,
                 ]);
 
-                return $this->googleLinkVerifyPage('error');
+                return redirect()->route('auth.google.link.failed');
             }
         } catch (Throwable $e) {
             Log::warning('Google link verification failed.', ['exception_class' => $e::class]);
 
-            return $this->googleLinkVerifyPage('error');
+            return redirect()->route('auth.google.link.failed');
         }
 
+        return redirect()->route('auth.google.link.completed');
+    }
+
+    public function linkCompleted(): Response
+    {
         return $this->googleLinkVerifyPage('success');
+    }
+
+    public function linkFailed(): Response
+    {
+        return $this->googleLinkVerifyPage('error');
     }
 
     /**

@@ -26,7 +26,12 @@ test("新しいメールアドレスは確認リンクで確定する", async ({
 
   await page.goto(requestEmailChangeLink(user.email, newEmail));
   await page.getByRole("button", { name: "メールアドレスを変更する" }).click();
-  await expect(
-    page.getByText("次回からは新しいメールアドレスでログインしてください。", { exact: false }),
-  ).toBeVisible();
+  const completed = page.getByText("次回からは新しいメールアドレスでログインしてください。", {
+    exact: false,
+  });
+  await expect(completed).toBeVisible();
+  await expect(page).toHaveURL(/\/settings\/email\/completed$/);
+
+  await page.reload();
+  await expect(completed).toBeVisible();
 });

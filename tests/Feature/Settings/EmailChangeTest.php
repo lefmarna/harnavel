@@ -39,7 +39,7 @@ function completeEmailChange(string $verifyUrl, string $previousEmail): void
 {
     Mail::fake();
 
-    test()->post($verifyUrl)->assertOk();
+    test()->post($verifyUrl)->assertRedirect(route('email-change.completed'));
 
     Mail::assertSent(EmailChangedMail::class, fn (EmailChangedMail $mail): bool => $mail->hasTo($previousEmail));
 
@@ -138,16 +138,20 @@ describe('メールアドレスの変更', function () {
         $url = requestEmailChange($user, 'new@example.com');
         Mail::fake();
 
-        $this->post($url)
+        $this->post($url)->assertRedirect(route('email-change.completed'));
+
+        expect($user->refresh()->email)->toBe('new@example.com')
+            ->and($user->email_verified_at)->not->toBeNull();
+    });
+
+    it('変更の完了画面は再読み込みしても完了を表示する', function () {
+        $this->get(route('email-change.completed'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('auth/email-change/verify')
                 ->where('status', 'success')
                 ->where('seo.title', 'メールアドレス変更完了')
                 ->where('seo.description', 'メールアドレスの変更が完了しました。'));
-
-        expect($user->refresh()->email)->toBe('new@example.com')
-            ->and($user->email_verified_at)->not->toBeNull();
     });
 
     it('切り替えたら旧アドレスへ、操作用のリンクを含まず、取り戻す手順を案内する通知を送る', function () {
@@ -155,7 +159,7 @@ describe('メールアドレスの変更', function () {
         $url = requestEmailChange($user, 'new@example.com');
         Mail::fake();
 
-        $this->post($url)->assertOk();
+        $this->post($url)->assertRedirect(route('email-change.completed'));
 
         Mail::assertSent(EmailChangedMail::class, function (EmailChangedMail $mail): bool {
             $html = $mail->render();
@@ -183,9 +187,7 @@ describe('メールアドレスの変更', function () {
         Exceptions::fake();
         Mail::shouldReceive('to')->andThrow(new TransportException('Connection refused'));
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('status', 'success'));
+        $this->post($url)->assertRedirect(route('email-change.completed'));
 
         Exceptions::assertReported(TransportException::class);
         expect($user->refresh()->email)->toBe('new@example.com');
@@ -197,9 +199,7 @@ describe('メールアドレスの変更', function () {
         completeEmailChange($url, 'old@example.com');
         Mail::fake();
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('status', 'success'));
+        $this->post($url)->assertRedirect(route('email-change.completed'));
 
         Mail::assertNothingSent();
     });
@@ -210,14 +210,19 @@ describe('メールアドレスの変更', function () {
         $second = requestEmailChange($user, 'second@example.com');
         completeEmailChange($second, 'old@example.com');
 
-        $this->post($first)
+        $this->post($first)->assertRedirect(route('email-change.failed'));
+
+        expect($user->refresh()->email)->toBe('second@example.com');
+    });
+
+    it('変更の失敗画面は再読み込みしても失敗を表示する', function () {
+        $this->get(route('email-change.failed'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
+                ->component('auth/email-change/verify')
                 ->where('status', 'error')
                 ->where('seo.title', 'メールアドレス変更エラー')
                 ->where('seo.description', 'メールアドレスを変更できませんでした。'));
-
-        expect($user->refresh()->email)->toBe('second@example.com');
     });
 
     it('セッションを失効させた後は、それより前の確認リンクを使えない', function () {
@@ -226,9 +231,7 @@ describe('メールアドレスの変更', function () {
         $user->refresh()->revokeSessions();
         $user->save();
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('status', 'error'));
+        $this->post($url)->assertRedirect(route('email-change.failed'));
 
         expect($user->refresh()->email)->toBe('old@example.com');
     });
@@ -240,9 +243,7 @@ describe('メールアドレスの変更', function () {
         completeEmailChange($url, 'old@example.com');
         completeEmailChange(requestEmailChange($user->refresh(), 'old@example.com'), 'attacker@example.com');
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('status', 'error'));
+        $this->post($url)->assertRedirect(route('email-change.failed'));
 
         expect($user->refresh()->email)->toBe('old@example.com');
     });
@@ -253,9 +254,7 @@ describe('メールアドレスの変更', function () {
         $url = requestEmailChange($user, 'new@example.com');
         $user->refresh()->forceFill(['email' => 'Old@Example.com'])->save();
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('status', 'success'));
+        $this->post($url)->assertRedirect(route('email-change.completed'));
 
         expect($user->refresh()->email)->toBe('new@example.com');
     });
@@ -268,9 +267,7 @@ describe('メールアドレスの変更', function () {
         $user->refresh()->forceFill(['email' => 'New@Example.com'])->save();
         Mail::fake();
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('status', 'success'));
+        $this->post($url)->assertRedirect(route('email-change.completed'));
 
         Mail::assertNothingSent();
         expect($user->refresh()->email)->toBe('New@Example.com');
@@ -281,9 +278,7 @@ describe('メールアドレスの変更', function () {
         $url = requestEmailChange($user, 'new@example.com');
         User::factory()->create(['email' => 'new@example.com']);
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('status', 'error'));
+        $this->post($url)->assertRedirect(route('email-change.failed'));
 
         expect($user->refresh()->email)->toBe('old@example.com');
     });
@@ -292,9 +287,7 @@ describe('メールアドレスの変更', function () {
         $user = User::factory()->create(['email' => 'old@example.com']);
         $url = $tamper(requestEmailChange($user, 'new@example.com'));
 
-        $this->post($url)
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->where('status', 'error'));
+        $this->post($url)->assertRedirect(route('email-change.failed'));
 
         expect($user->refresh()->email)->toBe('old@example.com');
     })->with([

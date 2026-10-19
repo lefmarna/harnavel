@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Account\EmailChangeService;
 use App\Support\SignedPayloadLink;
 use App\ViewModels\Auth\EmailChangePageViewModel;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -30,7 +31,7 @@ class EmailChangeController extends Controller
             : $this->page('confirm', $request->fullUrl(), $payload['to']);
     }
 
-    public function complete(Request $request, string $userId): Response
+    public function complete(Request $request, string $userId): RedirectResponse
     {
         /** @var array{from: string, to: string, state: string}|null $payload */
         $payload = SignedPayloadLink::read($request, ['from', 'to', 'state']);
@@ -38,7 +39,17 @@ class EmailChangeController extends Controller
         $confirmed = $payload !== null
             && $this->emailChangeService->confirm($userId, $payload['from'], $payload['to'], $payload['state']);
 
-        return $this->page($confirmed ? 'success' : 'error');
+        return redirect()->route($confirmed ? 'email-change.completed' : 'email-change.failed');
+    }
+
+    public function completed(): Response
+    {
+        return $this->page('success');
+    }
+
+    public function failed(): Response
+    {
+        return $this->page('error');
     }
 
     /**

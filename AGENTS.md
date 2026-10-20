@@ -10,8 +10,8 @@ A Laravel + Inertia React starter template.
 - README and code comments: Japanese; docs: English.
 - Docs and comments hold only what code, tests, and general knowledge cannot reveal.
 - Do not hand-edit generated docs or Boost skills (Kiro exception: TADR-0008).
-- Validation (as relevant): `mise run test`, `mise run mutate --min=100`, `mise run verify:backend:full` (backend + mutation + E2E); `pnpm format:check`, `lint:check`, `types:check`, `test:unit`, `lint:docs`.
+- Validation (as relevant): `mise run test`, `mise run mutate --min=100`, `mise run verify:backend:full` (backend + mutation + E2E).
 - Run local Playwright serially within each worktree; runs share its E2E database.
-- Delegate read-heavy exploration to `explorer`.
+- Delegate broad searches to a subagent; read files you will edit directly.
 
 References: `CONTEXT.md`, `docs/adr/`, `docs/branches-and-ci.md`, `docs/logging-guidelines.md`, `docs/generated/boost.md`.

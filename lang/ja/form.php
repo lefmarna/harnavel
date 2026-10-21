@@ -6,8 +6,8 @@ declare(strict_types=1);
 // マップなので、パスワード変更（PasswordUpdate）の「新しいパスワード」という文言が、
 // 登録や再設定など password を使うほかの画面にも出てしまう。
 //
-// 登録（CreateNewUser）と再設定（ResetUserPassword）は validation.php の 'attributes' しか
-// 見ないため、既定の属性名はそちらに残し、ここには画面ごとに意味が変わるものと既定に無いものを置く。
+// 既定の属性名は validation.php の 'attributes' に置き、ここには画面ごとに意味が変わるものと
+// 既定に無いものを置く。name はパスキーの名前にも使うため、既定の属性名にしない。
 
 return [
     'password_update' => [
@@ -22,15 +22,6 @@ return [
 
     'profile_update' => [
         'name' => 'ニックネーム',
-        'email' => 'メールアドレス',
-        'name_required' => 'ニックネームを入力してください。',
-        'name_string' => 'ニックネームは文字列で入力してください。',
-        'name_max' => 'ニックネームは255文字以内で入力してください。',
-        'email_required' => 'メールアドレスを入力してください。',
-        'email_string' => 'メールアドレスは文字列で入力してください。',
-        'email_email' => '有効なメールアドレスを入力してください。',
-        'email_max' => 'メールアドレスは255文字以内で入力してください。',
-        'email_unique' => 'このメールアドレスは既に使用されています。',
         'email_change_failed' => '確認メールを送信できませんでした。時間をおいて再度お試しください。',
         'email_change_throttled' => '確認メールの送信が続いたため、しばらく時間をおいてから再度お試しください。',
     ],

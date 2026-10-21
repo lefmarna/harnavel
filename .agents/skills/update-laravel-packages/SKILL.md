@@ -77,7 +77,7 @@ it.
   is a three-surface change: the image tag in `.docker/php/Dockerfile`, the versioned
   `~/opt/bin/composer-<version>` PHAR provisioned manually on every XServer environment, and the
   paths in the `.github/workflows/delivery.yml` preflight and post-deploy commands (see
-  `docs/infrastructure.md`, XServer Server Toolchain). Update the Dockerfile and every workflow
+  `docs/infrastructure.md`, XServer toolchain). Update the Dockerfile and every workflow
   occurrence together —
   `pnpm test:toolchain-versions` enforces their agreement — and stop for approval until the user
   confirms the new PHAR exists on every deploy target; merging without it breaks the next deploy

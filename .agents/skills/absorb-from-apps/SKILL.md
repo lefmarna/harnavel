@@ -11,12 +11,9 @@ The decision model is [`TADR-0003`](../../../docs/adr/template/0003-template-own
 
 ## Principles
 
-Use [`TADR-0003`](../../../docs/adr/template/0003-template-ownership.md) for the classification model, the tier rules below to classify a concrete path, and [`merge-template`](../merge-template/SKILL.md) for ownership details.
-
-- **Convergence uses three tiers** (TADR-0003):
-  - **T1 Shared**: files with no app-specific content. Aim for byte identity.
-  - **T2 Hybrid**: template scaffolding and app content coexist. Converge only template-origin hunks and leave app extensions in place. These files do not become byte-identical.
-  - **T3 App-owned**: presentation, branding, domain, and deploy settings. Do not converge.
+- **Classify each path with the [`merge-template`](../merge-template/SKILL.md) Ownership rules**:
+  Shared paths aim for byte identity, Hybrid paths converge only template-origin hunks, and
+  App-owned paths do not converge.
 - **Leave app-priority content app-side**: coverage calibration, mutation allowlist class names,
   domain logic, design tokens, i18n, app-specific routes/domains/deploy settings, `CONTEXT.md`, and
   App ADRs (`docs/adr/NNNN-*.md`). Do not move these upstream.
@@ -80,9 +77,9 @@ A consensus scan is also useful: at least two apps are byte-identical to each ot
   resolution, not an improvement. Restore the app to the template version instead of upstreaming
   them, and check the other apps for the same rewrite.
 
-### 3. Classify T1 / T2 / T3
+### 3. Classify Ownership
 
-Classify every changed file and hunk into the three tiers. Exclude T3 and app-specific hunks.
+Classify every changed file and hunk as Shared, Hybrid, or App-owned. Exclude App-owned and app-specific hunks.
 
 ### 4. Choose the Best Version Hunk by Hunk
 
@@ -92,7 +89,7 @@ Classify every changed file and hunk into the three tiers. Exclude T3 and app-sp
 
 ### 5. Move Changes Upstream to the Template
 
-- Keep PRs small by file kind. For T1 files, write the exact bytes from the best-version app when byte identity is the goal. For T2 files, converge only template-origin hunks.
+- Keep PRs small by file kind. For Shared files, write the exact bytes from the best-version app when byte identity is the goal. For Hybrid files, converge only template-origin hunks.
 - Verify according to the changed area in each PR: `mise run verify:backend`,
   `pnpm format:check && pnpm lint:check && pnpm types:check`, `mise run mutate`,
   `pnpm lint:docs`, or workflow checks.
@@ -106,7 +103,7 @@ After the template is pushed, each app should run `git pull <REMOTE> main` and `
 
 After each app pull/merge, run `git diff <REMOTE>/main` again and confirm:
 
-- Converged T1 files are byte-identical, and shared hunks in T2 files are gone.
+- Converged Shared files are byte-identical, and shared hunks in Hybrid files are gone.
 - Remaining drift is calibration lines or app-specific content only.
 - No conflict markers remain:
 
@@ -120,9 +117,3 @@ git -C "$d" grep -nI -E '<<<<<<<|>>>>>>>' -- . ':(exclude)vendor/**' ':(exclude)
 # Absorb from two derived apps checked out beside the template.
 /absorb-from-apps APPS="../app-one ../app-two"
 ```
-
-## Related
-
-- Downstream (template -> app): [`merge-template`](../merge-template/SKILL.md)
-- Decision model: [`TADR-0003`](../../../docs/adr/template/0003-template-ownership.md)
-- Testing and mutation policy: `docs/testing-as-spec.md`

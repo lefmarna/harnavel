@@ -40,8 +40,8 @@ describe('パスキー', function () {
         $this->getJson(route('well-known.passkeys'))
             ->assertOk()
             ->assertExactJson([
-                'enroll' => route('security.edit'),
-                'manage' => route('security.edit'),
+                'enroll' => settingsUrl('security'),
+                'manage' => settingsUrl('security'),
             ]);
     });
 

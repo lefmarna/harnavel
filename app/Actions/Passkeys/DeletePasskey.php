@@ -6,7 +6,7 @@ namespace App\Actions\Passkeys;
 
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
-use App\Support\RememberCookie;
+use App\Services\Account\SessionRevocation;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\DB;
@@ -21,23 +21,17 @@ class DeletePasskey extends BaseDeletePasskey
 {
     public function __construct(
         private readonly UserRepositoryContract $userRepository,
+        private readonly SessionRevocation $sessionRevocation,
         private readonly Session $session,
     ) {}
 
     public function __invoke(Authenticatable $user, Passkey $passkey): void
     {
         /** @var User $user 認証するのは users テーブルだけ。 */
-        /** @var int|string $key */
-        $key = $user->getKey();
         $rememberToken = $user->getRememberToken();
 
-        $lockedUser = DB::transaction(function () use ($user, $key, $passkey): User {
-            $lockedUser = $this->userRepository->find($key, lock: true);
-
-            // 途中で失効させていれば、失効した第三者のセッションに新しい世代を記録させない。
-            if ($lockedUser === null || $lockedUser->session_generation !== $user->session_generation) {
-                abort(409);
-            }
+        $lockedUser = DB::transaction(function () use ($user, $passkey): User {
+            $lockedUser = $this->sessionRevocation->lockUnrevoked($user);
 
             $passkey->delete();
             $lockedUser->revokeSessions();
@@ -49,8 +43,6 @@ class DeletePasskey extends BaseDeletePasskey
         PasskeyDeleted::dispatch($user, $passkey);
 
         $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
-        $this->session->migrate(destroy: true);
-        $lockedUser->recordSessionGeneration($this->session);
-        RememberCookie::reissue($lockedUser, $rememberToken);
+        $this->sessionRevocation->keepCurrentSession($this->session, $user, $rememberToken);
     }
 }

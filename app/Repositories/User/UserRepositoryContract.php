@@ -24,4 +24,6 @@ interface UserRepositoryContract
     public function findByEmail(string $email, bool $lock = false): ?User;
 
     public function save(User $user): void;
+
+    public function delete(User $user): void;
 }

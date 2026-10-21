@@ -18,7 +18,7 @@ function unlinkGoogle(User $user): TestResponse
 {
     return test()->actingAs($user)
         ->withSession(['auth.password_confirmed_at' => now()->getTimestamp()])
-        ->from(route('security.edit'))
+        ->from(settingsUrl('security'))
         ->delete(route('security.google.destroy'));
 }
 
@@ -32,7 +32,7 @@ describe('Google ログイン連携の解除', function () {
 
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => now()->getTimestamp()])
-            ->get(route('security.edit'))
+            ->get(settingsUrl('security'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('googleLinked', $linked)
                 ->where('canUnlinkGoogle', $canUnlink));
@@ -52,16 +52,16 @@ describe('Google ログイン連携の解除', function () {
         forgetRequestState();
         $this->withCookie(config('session.cookie'), $currentSessionId)
             ->withSession(['auth.password_confirmed_at' => now()->getTimestamp()])
-            ->from(route('security.edit'))
+            ->from(settingsUrl('security'))
             ->delete(route('security.google.destroy'))
-            ->assertRedirect(route('security.edit'))
+            ->assertRedirect(settingsUrl('security'))
             ->assertSessionHas('status', 'google-unlinked');
         $renewedSessionId = lastSessionId();
 
         expect($user->refresh()->google_id)->toBeNull()
             ->and($renewedSessionId)->not->toBe($currentSessionId);
-        visitDashboardFrom($renewedSessionId)->assertOk();
-        visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($renewedSessionId)->assertOk();
+        visitProtectedPageFrom($otherDeviceSessionId)->assertRedirect(route('login'));
     });
 
     it('連携の解除を記録する', function () {

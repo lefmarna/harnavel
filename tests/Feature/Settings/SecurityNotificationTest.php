@@ -16,7 +16,7 @@ function changePasswordFromSettings(User $user): void
 {
     test()->actingAs($user)
         ->withSession(['auth.password_confirmed_at' => now()->getTimestamp()])
-        ->from(route('security.edit'))
+        ->from(settingsUrl('security'))
         ->put(route('user-password.update'), [
             'current_password' => UserFactory::DEFAULT_PASSWORD,
             'password' => 'new-password1',
@@ -100,7 +100,7 @@ describe('セキュリティに関わる変更の通知', function () {
         $mail->assertSeeInHtml('Googleログイン連携を削除・解除');
         $mail->assertSeeInOrderInHtml([
             'ログインしている場合',
-            route('security.edit'),
+            settingsUrl('security'),
             'ログインしていない場合や、セキュリティ設定で本人確認ができない場合',
             'ログアウトしてから',
             route('password.request'),

@@ -57,7 +57,7 @@ describe('セッションの失効', function () {
             'password' => UserFactory::DEFAULT_PASSWORD,
         ])->assertRedirect(config('fortify.home'));
 
-        visitDashboardFrom(lastSessionId())->assertRedirect(route('login'));
+        visitProtectedPageFrom(lastSessionId())->assertRedirect(route('login'));
         $this->assertGuest();
     });
 
@@ -72,18 +72,17 @@ describe('セッションの失効', function () {
         forgetRequestState();
         Event::listen(Login::class, fn () => resetPasswordElsewhere($user));
 
-        $this->withCookie(recallerCookieName(), $recaller)
-            ->get(route('dashboard'))
+        getProtectedPage($this->withCookie(recallerCookieName(), $recaller))
             ->assertOk();
 
-        visitDashboardFrom(lastSessionId())->assertRedirect(route('login'));
+        visitProtectedPageFrom(lastSessionId())->assertRedirect(route('login'));
         $this->assertGuest();
     });
 
     it('失効の後にパスワードでログインしたセッションは使い続けられる', function () {
         $user = User::factory()->create(['session_generation' => 1]);
 
-        visitDashboardFrom(loginFromNewDevice($user))->assertOk();
+        visitProtectedPageFrom(loginFromNewDevice($user))->assertOk();
     });
 
     it('失効の後にログイン保持 Cookie で復帰したセッションは使い続けられる', function () {
@@ -95,11 +94,10 @@ describe('セッションの失効', function () {
         ])->getCookie(recallerCookieName())->getValue();
 
         forgetRequestState();
-        $this->withCookie(recallerCookieName(), $recaller)
-            ->get(route('dashboard'))
+        getProtectedPage($this->withCookie(recallerCookieName(), $recaller))
             ->assertOk();
 
-        visitDashboardFrom(lastSessionId())->assertOk();
+        visitProtectedPageFrom(lastSessionId())->assertOk();
     });
 
     // 世代を記録する前から続くログインを、導入時に一斉にログアウトさせない。
@@ -114,11 +112,11 @@ describe('セッションの失効', function () {
         $session->forget(User::SESSION_GENERATION_KEY);
         $session->save();
 
-        visitDashboardFrom($sessionId)->assertOk();
+        visitProtectedPageFrom($sessionId)->assertOk();
 
         resetPasswordElsewhere($user);
 
-        visitDashboardFrom($sessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($sessionId)->assertRedirect(route('login'));
     });
 
     it('失効させたセッションでログインの要らない画面を開くと、ゲストとして表示する', function () {
@@ -142,7 +140,7 @@ describe('セッションの失効', function () {
         resetPasswordElsewhere($user);
         Log::spy();
 
-        visitDashboardFrom($sessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($sessionId)->assertRedirect(route('login'));
 
         Log::shouldHaveReceived('info')->with('Revoked session was rejected.', ['user_id' => $user->getKey()])->once();
     });
@@ -153,9 +151,7 @@ describe('セッションの失効', function () {
         resetPasswordElsewhere($user);
 
         forgetRequestState();
-        $this->withCookie(config('session.cookie'), $sessionId)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('dashboard'))
+        getProtectedPage($this->withCookie(config('session.cookie'), $sessionId))
             ->assertRedirect(route('login'));
 
         expect(app('session')->driver()->has('auth.password_confirmed_at'))->toBeFalse();
@@ -167,7 +163,7 @@ describe('セッションの失効', function () {
         resetPasswordElsewhere($user);
         $rememberToken = $user->refresh()->remember_token;
 
-        visitDashboardFrom($sessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($sessionId)->assertRedirect(route('login'));
 
         expect($user->refresh()->remember_token)->toBe($rememberToken);
     });
@@ -190,8 +186,7 @@ describe('セッションの失効', function () {
         )->assertSessionHasNoErrors();
 
         forgetRequestState();
-        $this->withCookie(recallerCookieName(), $response->getCookie(recallerCookieName())?->getValue())
-            ->get(route('dashboard'))
+        getProtectedPage($this->withCookie(recallerCookieName(), $response->getCookie(recallerCookieName())?->getValue()))
             ->assertOk();
     })->with([
         'パスワードの変更' => fn ($test) => $test->put(route('user-password.update'), [
@@ -277,7 +272,7 @@ describe('セッションの失効', function () {
 
         $this->withCookie(config('session.cookie'), $sessionId)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->from(route('security.edit'))
+            ->from(settingsUrl('security'))
             ->put(route('user-password.update'), [
                 'current_password' => UserFactory::DEFAULT_PASSWORD,
                 'password' => 'new-password3',

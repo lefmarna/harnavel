@@ -7,7 +7,10 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\User;
+use App\Repositories\User\UserRepositoryContract;
 use App\Services\Account\EmailChangeService;
+use App\Services\Account\SessionRevocation;
+use App\Support\EmailAddress;
 use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +25,11 @@ use Throwable;
 
 class ProfileController extends Controller
 {
-    public function __construct(private readonly EmailChangeService $emailChangeService) {}
+    public function __construct(
+        private readonly UserRepositoryContract $userRepository,
+        private readonly EmailChangeService $emailChangeService,
+        private readonly SessionRevocation $sessionRevocation,
+    ) {}
 
     /**
      * Show the user's profile settings page.
@@ -50,20 +57,20 @@ class ProfileController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($user, $validated): void {
-            $lockedUser = $this->lockCurrentUser($user);
+            $lockedUser = $this->sessionRevocation->lockUnrevoked($user);
             $lockedUser->name = $validated['name'];
 
             // 大文字小文字だけの違いは同じアドレスなので、確認を待たずに反映する。判定はロックした行で行い、
             // 途中で切り替わったアドレスを書き戻さない。
-            if ($this->emailChangeService->sameAddress($lockedUser->email, $validated['email'])) {
+            if (EmailAddress::same($lockedUser->email, $validated['email'])) {
                 $lockedUser->email = $validated['email'];
             }
 
-            $lockedUser->save();
+            $this->userRepository->save($lockedUser);
             $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
         });
 
-        if ($this->emailChangeService->sameAddress($user->email, $validated['email'])) {
+        if (EmailAddress::same($user->email, $validated['email'])) {
             return to_route('profile.edit');
         }
 
@@ -92,7 +99,7 @@ class ProfileController extends Controller
         $user = $this->currentUser($request);
 
         // ログアウトは remember_token を作り直すので、失効の判定より後に行う。
-        DB::transaction(fn () => $this->lockCurrentUser($user)->delete());
+        DB::transaction(fn () => $this->userRepository->delete($this->sessionRevocation->lockUnrevoked($user)));
 
         Auth::logout();
 

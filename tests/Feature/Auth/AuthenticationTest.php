@@ -5,23 +5,8 @@ declare(strict_types=1);
 use App\Models\User;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\RateLimiter;
-use Inertia\Testing\AssertableInertia as Assert;
 
 describe('ログイン', function () {
-    it('ログイン画面を表示できる', function () {
-        $response = $this->get(route('login'));
-
-        $response
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page) => $page
-                    ->component('auth/login')
-                    ->where('seo.title', 'ログイン')
-                    ->where('seo.description', 'メールアドレスとパスワードを入力してログインします。')
-            );
-    });
-
     it('ログイン画面から認証できる', function () {
         $user = User::factory()->create();
 
@@ -54,17 +39,18 @@ describe('ログイン', function () {
         $response->assertRedirect(route('home'));
     });
 
-    it('レート制限される', function () {
+    it('同じアカウントと接続元からのログインは1分に5回までに制限される', function () {
         $user = User::factory()->create();
 
-        RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->post(route('login.store'), ['email' => $user->email, 'password' => 'wrong-password']);
+        }
 
-        $response = $this->post(route('login.store'), [
-            'email' => $user->email,
-            'password' => 'wrong-password',
-        ]);
-
-        $response->assertTooManyRequests();
+        $this->post(route('login.store'), ['email' => $user->email, 'password' => UserFactory::DEFAULT_PASSWORD])
+            ->assertTooManyRequests();
+        $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.1'])
+            ->post(route('login.store'), ['email' => $user->email, 'password' => UserFactory::DEFAULT_PASSWORD])
+            ->assertRedirect(config('fortify.home'));
     });
 
     it('同じアカウントへのログイン失敗は IP が違っても1時間に20回までに制限される', function () {

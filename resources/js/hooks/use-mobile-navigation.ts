@@ -4,7 +4,7 @@ export type CleanupFn = () => void;
 
 export function useMobileNavigation(): CleanupFn {
   return useCallback(() => {
-    // Remove pointer-events style from body...
+    // 開いたメニューから遷移すると、Radix が body に付けた pointer-events: none が残る。
     document.body.style.removeProperty("pointer-events");
   }, []);
 }

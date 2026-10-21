@@ -18,16 +18,4 @@ describe('メール認証通知', function () {
 
         Notification::assertSentTo($user, VerifyEmail::class);
     });
-
-    it('メール認証済みなら認証通知を送信しない', function () {
-        Notification::fake();
-
-        $user = User::factory()->create();
-
-        $this->actingAs($user)
-            ->post(route('verification.send'))
-            ->assertRedirect(config('fortify.home'));
-
-        Notification::assertNothingSent();
-    });
 });

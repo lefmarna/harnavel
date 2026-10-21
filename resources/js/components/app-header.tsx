@@ -1,5 +1,5 @@
 import { Link, usePage } from "@inertiajs/react";
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,8 +21,8 @@ import { UserMenuContent } from "@/components/user-menu-content";
 import { useCurrentUrl } from "@/hooks/use-current-url";
 import { getInitials } from "@/lib/initials";
 import { cn, toUrl } from "@/lib/utils";
-import { dashboard } from "@/routes";
-import type { BreadcrumbItem, NavItem, SharedData } from "@/types";
+import { logoHref, mainNavItems, secondaryNavItems } from "@/navigation";
+import type { BreadcrumbItem, SharedData } from "@/types";
 
 import AppLogo from "./app-logo";
 import AppLogoIcon from "./app-logo-icon";
@@ -30,27 +30,6 @@ import AppLogoIcon from "./app-logo-icon";
 type Props = {
   breadcrumbs?: BreadcrumbItem[];
 };
-
-const mainNavItems: NavItem[] = [
-  {
-    title: "ダッシュボード",
-    href: dashboard(),
-    icon: LayoutGrid,
-  },
-];
-
-const rightNavItems: NavItem[] = [
-  {
-    title: "リポジトリ",
-    href: "https://github.com/laravel/react-starter-kit",
-    icon: Folder,
-  },
-  {
-    title: "ドキュメント",
-    href: "https://laravel.com/docs/starter-kits#react",
-    icon: BookOpen,
-  },
-];
 
 const activeItemStyles = "text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100";
 
@@ -68,7 +47,6 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     <>
       <div className="border-b border-sidebar-border/80">
         <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
-          {/* Mobile Menu */}
           <div className="lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
@@ -100,7 +78,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
 
                     <div className="flex flex-col space-y-4">
-                      {rightNavItems.map((item) => (
+                      {secondaryNavItems.map((item) => (
                         <a
                           key={item.title}
                           href={toUrl(item.href)}
@@ -119,11 +97,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             </Sheet>
           </div>
 
-          <Link href={dashboard()} prefetch className="flex items-center space-x-2">
+          <Link href={logoHref} prefetch className="flex items-center space-x-2">
             <AppLogo />
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">
             <NavigationMenu className="flex h-full items-stretch">
               <NavigationMenuList className="flex h-full items-stretch space-x-2">
@@ -158,7 +135,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 <Search className="!size-5 opacity-80 group-hover:opacity-100" />
               </Button>
               <div className="ml-1 hidden gap-1 lg:flex">
-                {rightNavItems.map((item) => (
+                {secondaryNavItems.map((item) => (
                   <TooltipProvider key={item.title} delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger>

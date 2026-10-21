@@ -24,6 +24,15 @@ required template changes without coupling the merge to routine package maintena
 
 Special cases:
 
+- Shared specs reach app pages only through calibration points: `home` in `config/fortify.php`,
+  `HOME_URL`, `PROTECTED_PATH`, and `SETTINGS_PATHS` in `e2e/support/auth.ts`, and
+  `getProtectedPage()` and `settingsUrl()` in `tests/Pest.php`. Keep the app's values, and assert
+  through them (`config('fortify.home')`, never a literal route).
+- The welcome and dashboard pages, `resources/js/navigation.ts`, the logo, and copy values in
+  `lang/*/pages.php` are placeholders the app replaces; shared specs read page copy through
+  `pageCopy()`. Keep the `home` route name and the names of state-changing auth and settings
+  routes, which shared specs call.
+
 - A template change that restructures migrations (folding `add_`/`make_` migrations into their
   create migration, or dropping a create/drop pair) arrives as resolved deletions, not conflicts, so
   it never appears in step 3. An app whose production database cannot be rebuilt must restore its own

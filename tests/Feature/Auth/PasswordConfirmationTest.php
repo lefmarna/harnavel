@@ -12,21 +12,6 @@ use Inertia\Testing\AssertableInertia as Assert;
 mutates(RotateSessionOnConfirmation::class);
 
 describe('パスワード確認', function () {
-    it('パスワード確認画面を表示できる', function () {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->get(route('password.confirm'));
-
-        $response->assertOk();
-
-        $response->assertInertia(
-            fn (Assert $page) => $page
-                ->component('auth/confirm-password')
-                ->where('seo.title', '本人確認')
-                ->where('seo.description', '続行するには現在のパスワードを入力してください。')
-        );
-    });
-
     it('パスキーを持たないユーザーにはパスキーでの確認を案内しない', function () {
         $user = User::factory()->create();
 

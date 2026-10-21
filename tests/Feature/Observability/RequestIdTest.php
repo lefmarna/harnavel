@@ -28,7 +28,7 @@ beforeEach(function () {
 });
 
 describe('問い合わせID', function () {
-    it('外部から渡された X-Request-Id を採用せずアプリ側で生成できる', function () {
+    it('外部から渡された X-Request-Id を採用せず、アプリ側で生成した ID をレスポンスヘッダーに返す', function () {
         $response = $this->withHeader('X-Request-Id', 'client-supplied-id')
             ->getJson('/_testing/request-id');
 
@@ -36,7 +36,8 @@ describe('問い合わせID', function () {
 
         expect($response->json('request_id'))
             ->not->toBe('client-supplied-id')
-            ->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/');
+            ->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/')
+            ->toBe($response->headers->get('X-Request-Id'));
     });
 
     it('ログコンテキストに request_id と安全なリクエストメタ情報を共有できる', function () {
@@ -110,16 +111,6 @@ describe('問い合わせID', function () {
             })
             ->atLeast()
             ->once();
-    });
-
-    it('レスポンスヘッダーに X-Request-Id を返せる', function () {
-        $response = $this->getJson('/_testing/request-id');
-
-        $response->assertOk();
-
-        expect($response->headers->get('X-Request-Id'))
-            ->toBe($response->json('request_id'))
-            ->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/');
     });
 
     it('パス中の秘密を伏せてログコンテキストへ共有できる', function (Closure $url, string $expected, string $route) {

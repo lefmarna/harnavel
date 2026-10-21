@@ -134,11 +134,43 @@ function loginFromNewDevice(User $user): string
     return lastSessionId();
 }
 
-function visitDashboardFrom(string $sessionId): TestResponse
+/**
+ * 画面の文言は派生アプリが差し替えるので、テストは翻訳キーで参照する。訳が無ければキーのまま返るため落とす。
+ */
+function pageCopy(string $key): string
+{
+    $copy = __($key);
+
+    expect($copy)->toBeString()->not->toBe($key);
+
+    /** @var string $copy */
+    return $copy;
+}
+
+/**
+ * 設定画面の URL。派生アプリが差し替える。
+ *
+ * @param  'profile'|'security'  $section
+ */
+function settingsUrl(string $section): string
+{
+    return route("{$section}.edit");
+}
+
+/**
+ * ログインが必要な画面を開く。派生アプリが差し替える。本人確認を求める画面でも通るよう、確認済みの
+ * セッションで開く。
+ */
+function getProtectedPage(TestCase $test): TestResponse
+{
+    return $test->withSession(['auth.password_confirmed_at' => time()])->get(route('dashboard'));
+}
+
+function visitProtectedPageFrom(string $sessionId): TestResponse
 {
     forgetRequestState();
 
-    return test()->withCookie(config('session.cookie'), $sessionId)->get(route('dashboard'));
+    return getProtectedPage(test()->withCookie(config('session.cookie'), $sessionId));
 }
 
 function configureGoogleOAuth(bool $configured): void

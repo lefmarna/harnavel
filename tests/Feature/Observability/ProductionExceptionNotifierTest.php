@@ -532,8 +532,8 @@ describe('本番例外通知', function () {
         });
     });
 
-    it('app.name が空なら content とフィールドのアプリ名に Laravel を使う', function () {
-        config()->set('app.name', '');
+    it('app.name が空か文字列でなければ content とフィールドのアプリ名に Laravel を使う', function (mixed $appName) {
+        config()->set('app.name', $appName);
 
         app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
         app()->terminate();
@@ -547,24 +547,10 @@ describe('本番例外通知', function () {
 
             return true;
         });
-    });
-
-    it('app.name が文字列でなければ content とフィールドのアプリ名に Laravel を使う', function () {
-        config()->set('app.name', ['array-name']);
-
-        app(ProductionExceptionNotifier::class)->report(new RuntimeException('failure'), observabilityRequest());
-        app()->terminate();
-
-        Http::assertSent(function (HttpClientRequest $request): bool {
-            $payload = $request->data();
-            $fields = collect($payload['embeds'][0]['fields'])->pluck('value', 'name');
-
-            expect($payload['content'])->toStartWith('[Laravel]')
-                ->and($fields->get('app'))->toBe('Laravel');
-
-            return true;
-        });
-    });
+    })->with([
+        '空' => [''],
+        '文字列でない' => [['array-name']],
+    ]);
 
     it('Discord payload に入力値 Cookie Authorization セッションを含めない', function () {
         app(ProductionExceptionNotifier::class)->report(

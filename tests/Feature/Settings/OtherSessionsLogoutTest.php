@@ -15,15 +15,15 @@ describe('他のすべての端末からログアウト', function () {
         forgetRequestState();
         $this->withCookie(config('session.cookie'), $currentSessionId)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->from(route('security.edit'))
+            ->from(settingsUrl('security'))
             ->delete(route('security.sessions.destroy'))
-            ->assertRedirect(route('security.edit'))
+            ->assertRedirect(settingsUrl('security'))
             ->assertSessionHas('status', 'other-sessions-logged-out');
         $renewedSessionId = lastSessionId();
 
         expect($renewedSessionId)->not->toBe($currentSessionId);
-        visitDashboardFrom($renewedSessionId)->assertOk();
-        visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($renewedSessionId)->assertOk();
+        visitProtectedPageFrom($otherDeviceSessionId)->assertRedirect(route('login'));
     });
 
     it('他の端末のログアウトを記録する', function () {

@@ -14,39 +14,8 @@ describe('ユーザー登録', function () {
         $this->get(route('home'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('welcome')
                 ->where('canRegister', true)
             );
-    });
-
-    it('登録画面を表示できる', function () {
-        $response = $this->get(route('register'));
-
-        $response
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page) => $page
-                    ->component('auth/register')
-                    ->where('seo.title', '新規登録')
-                    ->where('seo.description', '必要事項を入力して新しいアカウントを作成します。')
-            );
-    });
-
-    it('新規ユーザーを登録できる', function () {
-        $response = $this->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password1',
-            'password_confirmation' => 'password1',
-        ]);
-
-        $this->assertAuthenticated();
-        $response->assertRedirect(config('fortify.home'));
-
-        $this->assertDatabaseHas('users', [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
     });
 
     it('検証文言では画面と同じ項目名を使う', function () {
@@ -81,7 +50,9 @@ describe('ユーザー登録', function () {
             ->and(Hash::check('known-plain', $storedPassword))->toBeFalse();
     });
 
-    it('登録時のメールアドレスは小文字で保存される', function () {
+    it('新規ユーザーを登録し、メールアドレスはログインと同じ規則でそろえて保存する', function (bool $lowercase, string $expected) {
+        config(['fortify.lowercase_usernames' => $lowercase]);
+
         $response = $this->post(route('register.store'), [
             'name' => 'Test User',
             'email' => 'Test.User@Example.COM',
@@ -93,22 +64,11 @@ describe('ユーザー登録', function () {
         $response->assertRedirect(config('fortify.home'));
 
         // DB の照合順序は大文字小文字を区別しないため assertDatabaseHas では小文字化を検証できない。
-        expect(User::query()->value('email'))->toBe('test.user@example.com');
-    });
-
-    it('lowercase usernamesが無効なら登録時にメールアドレスの大文字小文字を維持する', function () {
-        config(['fortify.lowercase_usernames' => false]);
-
-        $response = $this->post(route('register.store'), [
-            'name' => 'Test User',
-            'email' => 'Test.User@Example.COM',
-            'password' => 'password1',
-            'password_confirmation' => 'password1',
-        ]);
-
-        $this->assertAuthenticated();
-        $response->assertRedirect(config('fortify.home'));
-
-        expect(User::query()->value('email'))->toBe('Test.User@Example.COM');
-    });
+        expect(User::query()->sole())
+            ->name->toBe('Test User')
+            ->email->toBe($expected);
+    })->with([
+        '小文字化が有効' => [true, 'test.user@example.com'],
+        '小文字化が無効' => [false, 'Test.User@Example.COM'],
+    ]);
 });

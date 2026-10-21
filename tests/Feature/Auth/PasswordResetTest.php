@@ -11,22 +11,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
-use Inertia\Testing\AssertableInertia as Assert;
 
 describe('パスワード再設定', function () {
-    it('パスワード再設定リンク画面を表示できる', function () {
-        $response = $this->get(route('password.request'));
-
-        $response
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page) => $page
-                    ->component('auth/forgot-password')
-                    ->where('seo.title', 'パスワードをお忘れの方')
-                    ->where('seo.description', 'メールアドレスを入力してパスワード再設定リンクを受け取ります。')
-            );
-    });
-
     it('未登録や送信直後のメールアドレスにも送信時と同じ応答を返す', function (Closure $email) {
         Notification::fake();
 
@@ -45,29 +31,6 @@ describe('パスワード再設定', function () {
             return $user->email;
         }],
     ]);
-
-    it('パスワード再設定画面を表示できる', function () {
-        Notification::fake();
-
-        $user = User::factory()->create();
-
-        $this->post(route('password.email'), ['email' => $user->email]);
-
-        Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-            $response = $this->get(route('password.reset', $notification->token));
-
-            $response
-                ->assertOk()
-                ->assertInertia(
-                    fn (Assert $page) => $page
-                        ->component('auth/reset-password')
-                        ->where('seo.title', 'パスワード再設定')
-                        ->where('seo.description', 'アカウントの新しいパスワードを設定します。')
-                );
-
-            return true;
-        });
-    });
 
     it('bcrypt形式の文字列でパスワード再設定しても平文としてハッシュ化される', function () {
         Notification::fake();
@@ -128,8 +91,8 @@ describe('パスワード再設定', function () {
             'password_confirmation' => 'new-password1',
         ])->assertSessionHasNoErrors();
 
-        visitDashboardFrom($sessionId)->assertRedirect(route('login'));
-        visitDashboardFrom($otherUsersSessionId)->assertOk();
+        visitProtectedPageFrom($sessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($otherUsersSessionId)->assertOk();
     });
 
     it('メール未確認のアカウントを再設定するとパスキーと Google 連携を外して確認済みにする', function () {

@@ -23,6 +23,7 @@ final class FakeUserRepository implements UserRepositoryContract
      * @param  (Closure(string, bool): ?User)|null  $findByGoogleId
      * @param  (Closure(string, bool): ?User)|null  $findByEmail
      * @param  (Closure(User): void)|null  $save
+     * @param  (Closure(User): void)|null  $delete
      */
     public function __construct(
         private readonly ?Closure $find = null,
@@ -30,6 +31,7 @@ final class FakeUserRepository implements UserRepositoryContract
         private readonly ?Closure $findByGoogleId = null,
         private readonly ?Closure $findByEmail = null,
         private readonly ?Closure $save = null,
+        private readonly ?Closure $delete = null,
     ) {}
 
     public function find(string|int $id, bool $lock = false): ?User
@@ -55,6 +57,11 @@ final class FakeUserRepository implements UserRepositoryContract
     public function save(User $user): void
     {
         ($this->save ?? $this->missing(__FUNCTION__))($user);
+    }
+
+    public function delete(User $user): void
+    {
+        ($this->delete ?? $this->missing(__FUNCTION__))($user);
     }
 
     private function missing(string $method): never

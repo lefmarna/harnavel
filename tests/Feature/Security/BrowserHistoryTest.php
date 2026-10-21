@@ -9,8 +9,7 @@ mutates(RejectRevokedSessions::class);
 
 describe('ブラウザの履歴に残る画面データ', function () {
     it('画面のデータを暗号化して履歴に残す', function () {
-        $page = $this->actingAs(User::factory()->create())
-            ->get(route('dashboard'))
+        $page = getProtectedPage($this->actingAs(User::factory()->create()))
             ->inertiaPage();
 
         expect($page)->toHaveKey('encryptHistory', true);
@@ -31,7 +30,7 @@ describe('ブラウザの履歴に残る画面データ', function () {
             $user->revokeSessions();
             $user->save();
 
-            return $test->actingAs($user)->get(route('dashboard'));
+            return getProtectedPage($test->actingAs($user));
         },
     ]);
 });

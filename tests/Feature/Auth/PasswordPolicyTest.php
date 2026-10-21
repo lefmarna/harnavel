@@ -30,19 +30,19 @@ describe('パスワードポリシー', function () {
         ]);
     };
 
-    it('8文字未満は拒否される', function () use ($register) {
-        $register('abc1234')
+    it('規則に合わないパスワードは拒否される', function (string $password, bool $breached = false) use ($register) {
+        $register($password, $breached)
             ->assertSessionHasErrors('password');
         $this->assertGuest();
-    });
+    })->with([
+        '8文字未満' => ['abc1234'],
+        '64文字を超える' => [str_repeat('a', 60).'12345'],
+        '日本語など非ASCII文字を含む' => ['abcd1234あ'],
+        '空白を含む' => ['abcd 1234'],
+        '漏洩済み' => ['compromised-pass1', true],
+    ]);
 
-    it('64文字を超えると拒否される', function () use ($register) {
-        $register(str_repeat('a', 60).'12345')
-            ->assertSessionHasErrors('password');
-        $this->assertGuest();
-    });
-
-    it('文字種の組み合わせは求めない', function (string $password) use ($register) {
+    it('文字種の組み合わせは求めず、8文字から64文字まで受け付ける', function (string $password) use ($register) {
         $register($password)
             ->assertSessionHasNoErrors();
         $this->assertAuthenticated();
@@ -50,25 +50,8 @@ describe('パスワードポリシー', function () {
         '英字のみ' => 'onlyletters',
         '数字のみ' => '20261015',
         '記号のみ' => '!#$%&()*',
+        '64文字' => str_repeat('a', 56).'12345678',
     ]);
-
-    it('日本語など非ASCII文字を含むと拒否される', function () use ($register) {
-        $register('abcd1234あ')
-            ->assertSessionHasErrors('password');
-        $this->assertGuest();
-    });
-
-    it('空白を含むと拒否される', function () use ($register) {
-        $register('abcd 1234')
-            ->assertSessionHasErrors('password');
-        $this->assertGuest();
-    });
-
-    it('漏洩済みパスワードは拒否される', function () use ($register) {
-        $register('compromised-pass1', breached: true)
-            ->assertSessionHasErrors('password');
-        $this->assertGuest();
-    });
 
     it('新規登録の検証文言には共通の属性名を使う', function () use ($register) {
         $register('abc1234')

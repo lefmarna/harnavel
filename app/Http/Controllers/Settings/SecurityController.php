@@ -9,7 +9,7 @@ use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Services\Account\SecurityNotifier;
-use App\Support\RememberCookie;
+use App\Services\Account\SessionRevocation;
 use App\ViewModels\Settings\SecurityPageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +27,7 @@ class SecurityController extends Controller
     public function __construct(
         private readonly UserRepositoryContract $userRepository,
         private readonly SecurityNotifier $securityNotifier,
+        private readonly SessionRevocation $sessionRevocation,
     ) {}
 
     public function edit(Request $request): Response
@@ -56,7 +57,7 @@ class SecurityController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($user, $validated): void {
-            $lockedUser = $this->lockCurrentUser($user);
+            $lockedUser = $this->sessionRevocation->lockUnrevoked($user);
 
             $lockedUser->password = Hash::make($validated['password']);
             $lockedUser->revokeSessions();
@@ -66,7 +67,7 @@ class SecurityController extends Controller
             $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
         });
 
-        $this->keepCurrentSession($request, $user, $rememberToken);
+        $this->sessionRevocation->keepCurrentSession($request->session(), $user, $rememberToken);
 
         Log::info('User password was changed.', ['user_id' => $user->getKey()]);
         $this->securityNotifier->notify($user, 'password_changed');
@@ -80,7 +81,7 @@ class SecurityController extends Controller
         $rememberToken = $user->getRememberToken();
 
         DB::transaction(function () use ($user): void {
-            $lockedUser = $this->lockCurrentUser($user);
+            $lockedUser = $this->sessionRevocation->lockUnrevoked($user);
 
             $lockedUser->revokeSessions();
             $this->userRepository->save($lockedUser);
@@ -88,7 +89,7 @@ class SecurityController extends Controller
             $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
         });
 
-        $this->keepCurrentSession($request, $user, $rememberToken);
+        $this->sessionRevocation->keepCurrentSession($request->session(), $user, $rememberToken);
 
         Log::info('Other sessions were logged out.', ['user_id' => $user->getKey()]);
 
@@ -104,7 +105,7 @@ class SecurityController extends Controller
         $rememberToken = $user->getRememberToken();
 
         $unlinked = DB::transaction(function () use ($user): bool {
-            $lockedUser = $this->lockCurrentUser($user);
+            $lockedUser = $this->sessionRevocation->lockUnrevoked($user);
 
             if ($lockedUser->password === null) {
                 return false;
@@ -123,21 +124,11 @@ class SecurityController extends Controller
             return back()->withErrors(['google' => __('form.google_unlink.password_required')]);
         }
 
-        $this->keepCurrentSession($request, $user, $rememberToken);
+        $this->sessionRevocation->keepCurrentSession($request->session(), $user, $rememberToken);
 
         Log::info('Google account was unlinked.', ['user_id' => $user->getKey()]);
 
         return back()->with('status', 'google-unlinked');
-    }
-
-    /**
-     * 本人の Cookie を盗んだ第三者も同じセッション ID を持つため、ログインを保ったまま ID を作り直す。
-     */
-    private function keepCurrentSession(Request $request, User $user, ?string $rememberToken): void
-    {
-        $request->session()->migrate(destroy: true);
-        $user->recordSessionGeneration($request->session());
-        RememberCookie::reissue($user, $rememberToken);
     }
 
     /**

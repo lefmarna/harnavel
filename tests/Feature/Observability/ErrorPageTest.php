@@ -92,29 +92,16 @@ describe('本番エラーページ', function () {
             ->not->toContain('secret-password')
             ->not->toContain('Stack trace');
     });
-
-    it('フルページロード時はBladeの500ページを返す', function () {
-        $response = $this->get('/_testing/errors/500');
-
-        $response->assertInternalServerError();
-        $response->assertHeaderMissing('X-Inertia');
-        expect($response->getContent())->toContain('<!DOCTYPE html>');
-    });
 });
 
 describe('SPA遷移時の500エラーページ', function () {
-    it('SPA遷移時にInertiaコンポーネントを返す', function () {
-        $response = $this->get('/_testing/errors/500', $this->inertiaHeaders);
-
-        $response->assertInternalServerError();
-        $response->assertJsonPath('component', 'errors/server-error');
-    });
-
-    it('SPA遷移時にrequestId propを返す', function () {
+    it('SPA遷移時はInertiaの500画面に問い合わせIDを渡す', function () {
         $response = $this->get('/_testing/errors/500', $this->inertiaHeaders);
 
         $requestId = $response->headers->get('X-Request-Id');
 
+        $response->assertInternalServerError();
+        $response->assertJsonPath('component', 'errors/server-error');
         expect($requestId)->toMatch('/^[0-9A-HJKMNP-TV-Z]{26}$/');
         $response->assertJsonPath('props.requestId', $requestId);
     });

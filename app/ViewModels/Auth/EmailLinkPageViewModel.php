@@ -7,12 +7,14 @@ namespace App\ViewModels\Auth;
 use App\ViewModels\PageViewModel;
 use Inertia\RenderContext;
 
-final readonly class EmailChangePageViewModel extends PageViewModel
+final readonly class EmailLinkPageViewModel extends PageViewModel
 {
     /**
+     * @param  string  $copyKey  confirm・success・error ごとの title と description を持つ翻訳キー
      * @param  'confirm'|'success'|'error'  $status
      */
     public function __construct(
+        private string $copyKey,
         private string $status,
         private ?string $actionUrl = null,
         private ?string $email = null,
@@ -39,8 +41,8 @@ final readonly class EmailChangePageViewModel extends PageViewModel
         }
 
         $props['seo'] = $this->noIndexSeo(
-            __("pages.auth.email_change.verify.{$this->status}.title"),
-            __("pages.auth.email_change.verify.{$this->status}.description"),
+            __("{$this->copyKey}.{$this->status}.title"),
+            __("{$this->copyKey}.{$this->status}.description"),
         );
 
         return $props;

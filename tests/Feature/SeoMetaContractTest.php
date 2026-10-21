@@ -90,9 +90,8 @@ describe('SEO メタ契約', function () {
 
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('welcome')
             ->has('seo')
-            ->where('seo.title', 'ホーム')
+            ->where('seo.title', pageCopy('pages.home.title'))
             ->where('seo.description', config('app.description'))
         );
     });
@@ -163,7 +162,7 @@ describe('SEO メタ契約', function () {
             ->toMatchArray([
                 '@type' => 'WebPage',
                 '@id' => route('home').'#webpage',
-                'name' => 'ホーム - '.config('app.display_name'),
+                'name' => pageCopy('pages.home.title').' - '.config('app.display_name'),
                 'description' => config('app.description'),
                 'url' => route('home'),
             ])
@@ -180,7 +179,7 @@ describe('SEO メタ契約', function () {
         $ogUrl = extractHeadAttribute($content, 'meta', ['property' => 'og:url'], 'content');
         $robots = extractHeadAttribute($content, 'meta', ['name' => 'robots'], 'content');
 
-        expect($titleMatches[1] ?? '')->toBe('ホーム - '.config('app.display_name'))
+        expect($titleMatches[1] ?? '')->toBe(pageCopy('pages.home.title').' - '.config('app.display_name'))
             ->and($canonicalUrl)->toBe(route('home'))
             ->and($ogUrl)->toBe(route('home'))
             ->and($robots)->toBe('noindex, nofollow');
@@ -213,15 +212,18 @@ describe('SEO メタ契約', function () {
         );
     });
 
-    it('shared auth userは安定した任意フィールドを公開する', function () {
-        $user = User::factory()->create();
+    it('shared auth userは安定した任意フィールドを公開し、認証の機密情報は公開しない', function () {
+        $user = User::factory()->create(['google_id' => 'secret-google-id-12345']);
 
-        $response = $this->actingAs($user)->get(route('dashboard'));
+        $response = getProtectedPage($this->actingAs($user));
 
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->has('auth.user')
             ->where('auth.user.avatar', null)
+            ->missing('auth.user.google_id')
+            ->missing('auth.user.password')
+            ->missing('auth.user.remember_token')
             ->where('auth.hasPassword', true)
         );
     });
@@ -263,7 +265,7 @@ describe('SEO メタ契約', function () {
 
         $response = $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('profile.edit'));
+            ->get(settingsUrl('profile'));
         $schemas = extractStructuredDataItems($response->getContent());
 
         $websiteSchema = findStructuredDataByType($schemas, 'WebSite');
@@ -275,14 +277,14 @@ describe('SEO メタ契約', function () {
             ->and($webPageSchema)
             ->toMatchArray([
                 '@type' => 'WebPage',
-                '@id' => route('profile.edit').'#webpage',
-                'name' => 'プロフィール設定 - '.config('app.display_name'),
-                'description' => 'ニックネームとメールアドレスを管理します。',
-                'url' => route('profile.edit'),
+                '@id' => settingsUrl('profile').'#webpage',
+                'name' => pageCopy('pages.settings.profile.title').' - '.config('app.display_name'),
+                'description' => pageCopy('pages.settings.profile.description'),
+                'url' => settingsUrl('profile'),
             ]);
     });
 
-    it('各ページは固有のseo.titleとdescriptionを公開する', function (string $routeName, ?array $user, string $title, string $description, bool $noIndex, array $routeParams = []) {
+    it('各ページは固有のseo.titleとdescriptionを公開する', function (string $routeName, ?array $user, string $component, string $copyKey, bool $noIndex, array $routeParams = []) {
         if ($user !== null) {
             $this->actingAs(User::factory()->create($user))
                 ->withSession(['auth.password_confirmed_at' => time()]);
@@ -294,19 +296,20 @@ describe('SEO メタ契約', function () {
         $response->assertInertia(fn (AssertableInertia $page) => ($noIndex
             ? $page->where('seo.robots', 'noindex, nofollow')
             : $page->missing('seo.robots'))
-            ->where('seo.title', $title)
-            ->where('seo.description', $description)
+            ->component($component)
+            ->where('seo.title', pageCopy("{$copyKey}.title"))
+            ->where('seo.description', pageCopy("{$copyKey}.description"))
         );
     })->with([
-        'login' => ['login', null, 'ログイン', 'メールアドレスとパスワードを入力してログインします。', true],
-        'register' => ['register', null, '新規登録', '必要事項を入力して新しいアカウントを作成します。', true],
-        'forgot-password' => ['password.request', null, 'パスワードをお忘れの方', 'メールアドレスを入力してパスワード再設定リンクを受け取ります。', true],
-        'reset-password' => ['password.reset', null, 'パスワード再設定', 'アカウントの新しいパスワードを設定します。', true, ['token' => 'test-token']],
-        'verify-email' => ['verification.notice', ['email_verified_at' => null], 'メール認証', 'メールアドレスの認証を完了してください。', true],
-        'confirm-password' => ['password.confirm', [], '本人確認', '続行するには現在のパスワードを入力してください。', true],
-        'dashboard' => ['dashboard', [], 'ダッシュボード', 'アプリケーションの利用状況や設定への導線を確認できます。', false],
-        'profile' => ['profile.edit', [], 'プロフィール設定', 'ニックネームとメールアドレスを管理します。', false],
-        'security' => ['security.edit', [], 'セキュリティ設定', 'パスワード、パスキー、Googleログイン連携を管理します。', false],
-        'appearance' => ['appearance.edit', [], '表示設定', 'テーマの表示方法を選択します。', false],
+        'login' => ['login', null, 'auth/login', 'pages.auth.login', true],
+        'register' => ['register', null, 'auth/register', 'pages.auth.register', true],
+        'forgot-password' => ['password.request', null, 'auth/forgot-password', 'pages.auth.forgot_password', true],
+        'reset-password' => ['password.reset', null, 'auth/reset-password', 'pages.auth.reset_password', true, ['token' => 'test-token']],
+        'verify-email' => ['verification.notice', ['email_verified_at' => null], 'auth/verify-email', 'pages.auth.verify_email', true],
+        'confirm-password' => ['password.confirm', [], 'auth/confirm-password', 'pages.auth.confirm_password', true],
+        'dashboard' => ['dashboard', [], 'dashboard', 'pages.dashboard', false],
+        'profile' => ['profile.edit', [], 'settings/profile', 'pages.settings.profile', false],
+        'security' => ['security.edit', [], 'settings/security', 'pages.settings.security', false],
+        'appearance' => ['appearance.edit', [], 'settings/appearance', 'pages.settings.appearance', false],
     ]);
 });

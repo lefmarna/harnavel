@@ -67,9 +67,8 @@ table.
   processes; synchronous jobs; protected remote data during `rsync --delete`; bounded logs, because
   the host has limited disk and no external rotation. `.env.example` therefore deviates from
   upstream's unrotated logging default; track upstream's rotation mechanism, do not drop it.
-- Queue tables (`jobs`, `job_batches`, `failed_jobs`) are dropped by a template migration because
-  queues run synchronously. Do not adopt upstream schema changes to tables the template drops, and
-  do not restore them.
+- The template ships no queue tables (`jobs`, `job_batches`, `failed_jobs`) because queues run
+  synchronously. Do not adopt upstream migrations for them.
 - Host/container command boundary from `AGENTS.md`.
 - Japanese README and tests, English engineering docs, testing-as-spec workflow, ADR policy, and
   domain glossary policy.
@@ -79,7 +78,8 @@ table.
   the replacement behavior and its derived-application rollout are explicitly approved.
 - Frontend pages, components, layouts, hooks, and presentation that this template implements
   independently from Laravel's default starter UI.
-- Layer decisions and PageViewModel/Wayfinder conventions established by Template ADRs and tests.
+- Layer decisions and PageViewModel/Wayfinder conventions established by Template ADRs, tests, and
+  existing `app/ViewModels`.
 
 ### Follow upstream by default
 

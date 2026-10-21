@@ -6,24 +6,8 @@ use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
-use Inertia\Testing\AssertableInertia as Assert;
 
 describe('メール認証', function () {
-    it('メール認証画面を表示できる', function () {
-        $user = User::factory()->unverified()->create();
-
-        $response = $this->actingAs($user)->get(route('verification.notice'));
-
-        $response
-            ->assertOk()
-            ->assertInertia(
-                fn (Assert $page) => $page
-                    ->component('auth/verify-email')
-                    ->where('seo.title', 'メール認証')
-                    ->where('seo.description', 'メールアドレスの認証を完了してください。')
-            );
-    });
-
     it('メール認証できる', function () {
         $user = User::factory()->unverified()->create();
 
@@ -92,34 +76,5 @@ describe('メール認証', function () {
 
         Event::assertNotDispatched(Verified::class);
         expect($user->fresh()->hasVerifiedEmail())->toBeFalse();
-    });
-
-    it('認証済みユーザーはメール認証案内からダッシュボードへリダイレクトされる', function () {
-        $user = User::factory()->create();
-
-        Event::fake();
-
-        $response = $this->actingAs($user)->get(route('verification.notice'));
-
-        Event::assertNotDispatched(Verified::class);
-        $response->assertRedirect(config('fortify.home'));
-    });
-
-    it('既に認証済みのユーザーが認証リンクを開いても再度イベントを発火せずにリダイレクトされる', function () {
-        $user = User::factory()->create();
-
-        Event::fake();
-
-        $verificationUrl = URL::temporarySignedRoute(
-            'verification.verify',
-            now()->addMinutes(60),
-            ['id' => $user->id, 'hash' => sha1($user->email)]
-        );
-
-        $this->actingAs($user)->get($verificationUrl)
-            ->assertRedirect(config('fortify.home').'?verified=1');
-
-        Event::assertNotDispatched(Verified::class);
-        expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
     });
 });

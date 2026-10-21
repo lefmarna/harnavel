@@ -62,11 +62,8 @@ Remove:
      `find docs/adr -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9]-*.md' -print`.
    - Run line counts and keyword searches against that explicit list.
 2. For each target ADR, confirm that the currently valid decision can be stated in one sentence.
-3. Compact.
-   - Keep only the background needed for the decision in `Context`.
-   - Write `Decision` in the present tense.
-   - Keep only alternatives that are likely to be reconsidered in `Considered alternatives`.
-   - Keep only current constraints and risks in `Consequences`.
+3. Compact: rewrite each ADR as present-tense prose stating the decision, the trade-off it accepts,
+   and only the alternatives likely to be reconsidered.
 4. If deleting or merging ADRs, update references.
    - In the template source, search normally:
      `rg -n "ADR[- ]?NNNN|TADR[- ]?NNNN|deleted-file-slug|old heading" .`.

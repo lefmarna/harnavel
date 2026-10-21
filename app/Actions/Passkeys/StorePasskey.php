@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Passkeys;
 
 use App\Models\User;
-use App\Repositories\User\UserRepositoryContract;
+use App\Services\Account\SessionRevocation;
 use Illuminate\Support\Facades\DB;
 use Laravel\Passkeys\Actions\StorePasskey as BaseStorePasskey;
 use Laravel\Passkeys\Contracts\PasskeyUser;
@@ -18,20 +18,13 @@ use Webauthn\CredentialRecord;
  */
 class StorePasskey extends BaseStorePasskey
 {
-    public function __construct(private readonly UserRepositoryContract $userRepository) {}
+    public function __construct(private readonly SessionRevocation $sessionRevocation) {}
 
     public function createPasskey(PasskeyUser $user, string $name, CredentialRecord $source): Passkey
     {
         return DB::transaction(function () use ($user, $name, $source): Passkey {
             /** @var User $user 認証するのは users テーブルだけ。 */
-            /** @var int|string $key */
-            $key = $user->getKey();
-
-            $lockedUser = $this->userRepository->find($key, lock: true);
-
-            if ($lockedUser === null || $lockedUser->session_generation !== $user->session_generation) {
-                abort(409);
-            }
+            $this->sessionRevocation->lockUnrevoked($user);
 
             return parent::createPasskey($user, $name, $source);
         });

@@ -22,7 +22,7 @@ describe('セキュリティ設定', function () {
         $response = $this
             ->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('security.edit'));
+            ->get(settingsUrl('security'));
 
         $response
             ->assertOk()
@@ -39,8 +39,8 @@ describe('セキュリティ設定', function () {
                     ->where('canManagePasskeys', true)
                     ->where('canRegisterPasskey', true)
                     ->where('passkeys', [])
-                    ->where('seo.title', 'セキュリティ設定')
-                    ->where('seo.description', 'パスワード、パスキー、Googleログイン連携を管理します。')
+                    ->where('seo.title', pageCopy('pages.settings.security.title'))
+                    ->where('seo.description', pageCopy('pages.settings.security.description'))
             );
     });
 
@@ -56,7 +56,7 @@ describe('セキュリティ設定', function () {
         $this
             ->withCookie(config('session.cookie'), $currentSessionId)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->from(route('security.edit'))
+            ->from(settingsUrl('security'))
             ->put(route('user-password.update'), [
                 'current_password' => UserFactory::DEFAULT_PASSWORD,
                 'password' => 'new-password1',
@@ -67,10 +67,10 @@ describe('セキュリティ設定', function () {
 
         expect($renewedSessionId)->not->toBe($currentSessionId)
             ->and($user->refresh()->remember_token)->not->toBe('old-remember-token');
-        visitDashboardFrom($renewedSessionId)->assertOk();
-        visitDashboardFrom($currentSessionId)->assertRedirect(route('login'));
-        visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
-        visitDashboardFrom($otherUsersSessionId)->assertOk();
+        visitProtectedPageFrom($renewedSessionId)->assertOk();
+        visitProtectedPageFrom($currentSessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($otherDeviceSessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($otherUsersSessionId)->assertOk();
     });
 
     it('パスワードを更新すると、それ以前に発行した再設定リンクを使えなくする', function () {
@@ -104,7 +104,7 @@ describe('セキュリティ設定', function () {
         $response = $this
             ->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->from(route('security.edit'))
+            ->from(settingsUrl('security'))
             ->put(route('user-password.update'), [
                 'current_password' => UserFactory::DEFAULT_PASSWORD,
                 'password' => $password,
@@ -113,7 +113,7 @@ describe('セキュリティ設定', function () {
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('security.edit'));
+            ->assertRedirect(settingsUrl('security'));
 
         $storedPassword = $user->refresh()->password;
 
@@ -129,7 +129,7 @@ describe('セキュリティ設定', function () {
         $response = $this
             ->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->from(route('security.edit'))
+            ->from(settingsUrl('security'))
             ->put(route('user-password.update'), $payload);
 
         $response->assertSessionHasErrors([$field => $expectedMessage]);
@@ -185,7 +185,7 @@ describe('セキュリティ設定', function () {
         $response = $this
             ->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('security.edit'));
+            ->get(settingsUrl('security'));
 
         $response
             ->assertOk()
@@ -197,52 +197,46 @@ describe('セキュリティ設定', function () {
             );
     });
 
-    it('パスワードを持つユーザーはパスワード確認を求められる', function () {
-        $user = User::factory()->create();
+    it('資格情報を1つでも持つユーザーには、設定の表示とパスワードの設定で本人確認を求める', function (array $attributes, bool $withPasskey, bool $googleOAuth) {
+        configureGoogleOAuth($googleOAuth);
+        $user = User::factory()->create($attributes);
+        if ($withPasskey) {
+            $user->passkeys()->create(['name' => 'Key', 'credential_id' => 'credential-1', 'credential' => ['id' => 'credential-1']]);
+        }
+        $password = $user->password;
 
-        $this
-            ->actingAs($user)
-            ->get(route('security.edit'))
+        $this->actingAs($user)
+            ->get(settingsUrl('security'))
             ->assertRedirect(route('password.confirm'));
-    });
-
-    it('資格情報を持たないユーザーはパスワード確認なしで到達できる', function () {
-        $user = User::factory()->create(['password' => null, 'google_id' => null]);
-
-        $this
-            ->actingAs($user)
-            ->get(route('security.edit'))
-            ->assertOk();
-    });
-
-    it('Google ログインが使えなくても Google 連携済みのユーザーには確認を求める', function () {
-        configureGoogleOAuth(false);
-        $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
-
-        $this
-            ->actingAs($user)
-            ->get(route('security.edit'))
-            ->assertRedirect(route('password.confirm'));
-    });
-
-    it('Google 連携済みのパスワード未設定ユーザーは Google での確認を求められる', function () {
-        configureGoogleOAuth(true);
-        $user = User::factory()->create(['password' => null, 'google_id' => 'google-123']);
-
-        $this
-            ->actingAs($user)
-            ->get(route('security.edit'))
-            ->assertRedirect(route('password.confirm'));
-
-        $this
-            ->actingAs($user)
+        $this->actingAs($user)
             ->put(route('user-password.update'), [
                 'password' => 'attacker-password1',
                 'password_confirmation' => 'attacker-password1',
             ])
             ->assertRedirect(route('password.confirm'));
 
-        expect($user->refresh()->password)->toBeNull();
+        expect($user->refresh()->password)->toBe($password);
+    })->with([
+        'パスワード' => [[], false, false],
+        'Google 連携だけ' => [['password' => null, 'google_id' => 'google-123'], false, true],
+        'Google 連携だけで Google ログインが使えない' => [['password' => null, 'google_id' => 'google-123'], false, false],
+        'パスキーだけ' => [['password' => null], true, false],
+    ]);
+
+    it('資格情報を持たないユーザーは、確認なしで設定を開いて最初のパスワードを設定できる', function () {
+        $user = User::factory()->create(['password' => null, 'google_id' => null]);
+
+        $this->actingAs($user)
+            ->get(settingsUrl('security'))
+            ->assertOk();
+        $this->actingAs($user)
+            ->put(route('user-password.update'), [
+                'password' => 'first-password1',
+                'password_confirmation' => 'first-password1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        expect($user->refresh()->password)->not->toBeNull();
     });
 
     it('ゲストがパスワード確認付きルートに到達した場合は確認画面へ誘導する', function () {
@@ -271,8 +265,8 @@ describe('セキュリティ設定', function () {
 
         expect($renewedSessionId)->not->toBe($currentSessionId)
             ->and($user->passkeys()->count())->toBe(0);
-        visitDashboardFrom($renewedSessionId)->assertOk();
-        visitDashboardFrom($otherDeviceSessionId)->assertRedirect(route('login'));
+        visitProtectedPageFrom($renewedSessionId)->assertOk();
+        visitProtectedPageFrom($otherDeviceSessionId)->assertRedirect(route('login'));
     });
 
     it('パスキー削除の途中でセッションが失効したら、その削除を拒否する', function () {
@@ -316,71 +310,10 @@ describe('セキュリティ設定', function () {
         expect($other->passkeys()->count())->toBe(1);
     });
 
-    it('パスキーを持つパスワード未設定ユーザーはパスワード確認を求められる', function () {
-        $user = User::factory()->create(['password' => null]);
-
-        $user->passkeys()->create([
-            'name' => 'Google のみのユーザーのパスキー',
-            'credential_id' => 'credential-4',
-            'credential' => ['id' => 'credential-4'],
-        ]);
-
-        $this
-            ->actingAs($user)
-            ->get(route('security.edit'))
-            ->assertRedirect(route('password.confirm'));
-    });
-
-    it('パスワード確認の有効期限に auth.password_timeout を使う', function () {
-        config(['auth.password_timeout' => 60]);
-
-        $user = User::factory()->create();
-
-        $this
-            ->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time() - 120])
-            ->get(route('security.edit'))
-            ->assertRedirect(route('password.confirm'));
-    });
-
-    it('パスキーを持つパスワード未設定ユーザーは確認なしにパスワードを設定できない', function () {
-        $user = User::factory()->create(['password' => null]);
-
-        $user->passkeys()->create([
-            'name' => 'パスキーのみのユーザー',
-            'credential_id' => 'credential-5',
-            'credential' => ['id' => 'credential-5'],
-        ]);
-
-        $this
-            ->actingAs($user)
-            ->put(route('user-password.update'), [
-                'password' => 'attacker-password1',
-                'password_confirmation' => 'attacker-password1',
-            ])
-            ->assertRedirect(route('password.confirm'));
-
-        expect($user->refresh()->password)->toBeNull();
-    });
-
-    it('資格情報を持たないユーザーは確認なしで最初のパスワードを設定できる', function () {
-        $user = User::factory()->create(['password' => null]);
-
-        $this
-            ->actingAs($user)
-            ->put(route('user-password.update'), [
-                'password' => 'first-password1',
-                'password_confirmation' => 'first-password1',
-            ])
-            ->assertSessionHasNoErrors();
-
-        expect($user->refresh()->password)->not->toBeNull();
-    });
-
     it('メール未確認のユーザーにはパスキーの登録を出さない', function () {
         $this->actingAs(User::factory()->unverified()->create())
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('security.edit'))
+            ->get(settingsUrl('security'))
             ->assertInertia(fn ($page) => $page->where('canRegisterPasskey', false));
     });
 
@@ -390,7 +323,7 @@ describe('セキュリティ設定', function () {
         $response = $this
             ->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => time()])
-            ->from(route('security.edit'))
+            ->from(settingsUrl('security'))
             ->call($method, route($routeName), $payload);
 
         $response->assertSessionHasNoErrors();

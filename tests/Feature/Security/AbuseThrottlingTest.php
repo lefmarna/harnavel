@@ -87,7 +87,7 @@ describe('濫用対策のレート制限', function () {
             return test()->actingAs($user)
                 ->withSession(['auth.password_confirmed_at' => time()])
                 ->withServerVariables(['REMOTE_ADDR' => $ip])
-                ->from(route('profile.edit'))
+                ->from(settingsUrl('profile'))
                 ->patch(route('profile.update'), ['name' => $user->name, 'email' => $email]);
         };
 

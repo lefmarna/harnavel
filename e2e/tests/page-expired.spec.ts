@@ -1,11 +1,11 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
 import { createUser } from "../support/artisan";
-import { login } from "../support/auth";
+import { login, openConfirmedSettings, SETTINGS_PATHS, settingsUrl } from "../support/auth";
 import { expect, test } from "../support/fixtures";
 
 const PAGE_EXPIRED_MESSAGE = "ページの有効期限が切れました。再度お試しください。";
-const PROFILE_URL = /\/settings\/profile$/;
+const PROFILE_URL = settingsUrl("profile");
 
 // Sec-Fetch-Site を送らないブラウザで、期限の切れたトークンのまま送信した状態を再現する。
 const expireCsrfToken = async (context: BrowserContext, path: string): Promise<void> => {
@@ -42,14 +42,8 @@ test("ログイン前の画面で送信の有効期限が切れたら、その�
   await expect(page).toHaveURL(/\/login$/);
 });
 
-const openProfileSettings = async (page: Page): Promise<void> => {
-  const user = createUser();
-  await login(page, user);
-  await page.goto("/settings/profile");
-  await page.locator('input[name="password"]').fill(user.password);
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(PROFILE_URL);
-};
+const openProfileSettings = (page: Page): Promise<void> =>
+  openConfirmedSettings(page, createUser(), "profile");
 
 test("ログイン後の画面で送信の有効期限が切れたら、そのことを伝える", async ({ page, context }) => {
   await openProfileSettings(page);
@@ -80,7 +74,7 @@ test("画面の下の方で送信して有効期限が切れても、伝える�
   context,
 }) => {
   await openProfileSettings(page);
-  await page.goto("/settings/security");
+  await page.goto(SETTINGS_PATHS.security);
 
   await expireCsrfToken(context, "/settings/sessions");
   const logoutOtherSessions = page.locator('[data-test="logout-other-sessions-button"]');

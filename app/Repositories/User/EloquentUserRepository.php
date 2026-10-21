@@ -60,4 +60,9 @@ class EloquentUserRepository implements UserRepositoryContract
     {
         $user->save();
     }
+
+    public function delete(User $user): void
+    {
+        $user->delete();
+    }
 }

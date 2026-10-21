@@ -25,7 +25,7 @@ class AddSecurityHeaders
         $headers = require __DIR__.'/../../../bootstrap/security-headers.php';
 
         // デバッグ画面は nonce のないスクリプトと eval で動き、Inertia が表示する iframe も元の画面の
-        // CSP を継承するので、デバッグ時は違反を報告するだけにする（TADR-0012）。
+        // CSP を継承するので、デバッグ時は違反を報告するだけにする。
         if (config('app.debug')) {
             $headers['Content-Security-Policy-Report-Only'] = $this->scriptSrc($nonce);
         } else {

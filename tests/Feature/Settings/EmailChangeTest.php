@@ -5,14 +5,14 @@ declare(strict_types=1);
 use App\Mail\EmailChangedMail;
 use App\Mail\VerifyNewEmailMail;
 use App\Models\User;
-use App\ViewModels\Auth\EmailChangePageViewModel;
+use App\ViewModels\Auth\EmailLinkPageViewModel;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
 use Symfony\Component\Mailer\Exception\TransportException;
 
-mutates(EmailChangePageViewModel::class);
+mutates(EmailLinkPageViewModel::class);
 
 function requestEmailChange(User $user, string $email): string
 {
@@ -63,7 +63,7 @@ describe('メールアドレスの変更', function () {
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => now()->getTimestamp()])
             ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com'])
-            ->assertRedirect(route('profile.edit'))
+            ->assertRedirect(settingsUrl('profile'))
             ->assertSessionHas('status', 'email-change-link-sent');
     });
 
@@ -87,7 +87,7 @@ describe('メールアドレスの変更', function () {
 
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => now()->getTimestamp()])
-            ->from(route('profile.edit'))
+            ->from(settingsUrl('profile'))
             ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com'])
             ->assertSessionHasErrors(['email' => '確認メールを送信できませんでした。時間をおいて再度お試しください。']);
 
@@ -127,8 +127,8 @@ describe('メールアドレスの変更', function () {
                 ->where('status', 'confirm')
                 ->where('email', 'new@example.com')
                 ->where('actionUrl', $url)
-                ->where('seo.title', 'メールアドレス変更の確認')
-                ->where('seo.description', '新しいメールアドレスへの変更を確認してください。'));
+                ->where('seo.title', pageCopy('pages.auth.email_change.verify.confirm.title'))
+                ->where('seo.description', pageCopy('pages.auth.email_change.verify.confirm.description')));
 
         expect($user->refresh()->email)->toBe('old@example.com');
     });
@@ -150,8 +150,8 @@ describe('メールアドレスの変更', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('auth/email-change/verify')
                 ->where('status', 'success')
-                ->where('seo.title', 'メールアドレス変更完了')
-                ->where('seo.description', 'メールアドレスの変更が完了しました。'));
+                ->where('seo.title', pageCopy('pages.auth.email_change.verify.success.title'))
+                ->where('seo.description', pageCopy('pages.auth.email_change.verify.success.description')));
     });
 
     it('切り替えたら旧アドレスへ、操作用のリンクを含まず、取り戻す手順を案内する通知を送る', function () {
@@ -221,8 +221,8 @@ describe('メールアドレスの変更', function () {
             ->assertInertia(fn (Assert $page) => $page
                 ->component('auth/email-change/verify')
                 ->where('status', 'error')
-                ->where('seo.title', 'メールアドレス変更エラー')
-                ->where('seo.description', 'メールアドレスを変更できませんでした。'));
+                ->where('seo.title', pageCopy('pages.auth.email_change.verify.error.title'))
+                ->where('seo.description', pageCopy('pages.auth.email_change.verify.error.description')));
     });
 
     it('セッションを失効させた後は、それより前の確認リンクを使えない', function () {

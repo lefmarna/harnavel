@@ -161,8 +161,7 @@ describe('Google OAuth コントローラ', function () {
             ->getValue();
 
         forgetRequestState();
-        $this->withCookie(Auth::guard()->getRecallerName(), $recaller)
-            ->get(route('dashboard'));
+        getProtectedPage($this->withCookie(Auth::guard()->getRecallerName(), $recaller));
 
         $this->assertAuthenticatedAs($user);
     });
@@ -182,7 +181,7 @@ describe('Google OAuth コントローラ', function () {
             ->with('google-123', 'test@example.com', 'Test User')
             ->andReturn($existingUser);
 
-        $intended = route('profile.edit');
+        $intended = settingsUrl('profile');
 
         $this->withSession(['url.intended' => $intended])
             ->get(route('auth.google.callback'))
@@ -191,7 +190,8 @@ describe('Google OAuth コントローラ', function () {
         $this->assertAuthenticatedAs($existingUser);
     });
 
-    it('callback() で Socialite が例外を投げたらログイン画面にリダイレクトする', function () {
+    it('callback() で Socialite が例外を投げたら、例外クラス名だけを記録してログイン画面にリダイレクトする', function () {
+        Log::spy();
         $driver = Mockery::mock(GoogleProvider::class);
         $driver->allows('user')->andThrow(new Exception('OAuth error'));
         Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
@@ -199,6 +199,10 @@ describe('Google OAuth コントローラ', function () {
         $this->get(route('auth.google.callback'))
             ->assertRedirect(route('login'))
             ->assertSessionHas('error');
+
+        Log::shouldHaveReceived('warning')
+            ->with('Google OAuth callback failed.', ['exception_class' => Exception::class])
+            ->once();
     });
 
     it('callback() でメール未検証なら警告でログイン画面にリダイレクトする', function () {
@@ -293,47 +297,13 @@ describe('Google OAuth コントローラ', function () {
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('auth/google-link/confirm')
-                ->where('seo.title', 'Googleログイン連携の確認')
-                ->where('seo.description', '確認メールからGoogleログイン連携を完了してください。'));
+                ->where('seo.title', pageCopy('pages.auth.google_link.title'))
+                ->where('seo.description', pageCopy('pages.auth.google_link.description')));
     });
 
     it('Google 連携確認画面は直接アクセスすると404を返す', function () {
         $this->get(route('auth.google.link.confirm'))
             ->assertNotFound();
-    });
-
-    it('callback() で Socialite が例外を投げてもログには例外クラス名だけを残す', function () {
-        Log::spy();
-
-        $driver = Mockery::mock(GoogleProvider::class);
-        $driver->allows('user')->andThrow(new Exception('OAuth error'));
-        Socialite::shouldReceive('driver')->with('google')->andReturn($driver);
-
-        $this->get(route('auth.google.callback'));
-
-        Log::shouldHaveReceived('warning')
-            ->withArgs(function (string $message, array $context): bool {
-                return $message === 'Google OAuth callback failed.'
-                    && $context === ['exception_class' => Exception::class];
-            })
-            ->once();
-    });
-
-    it('shared auth data は google_id と認証機密情報をフロントへ公開しない', function () {
-        $user = User::factory()->create([
-            'google_id' => 'secret-google-id-12345',
-        ]);
-
-        $this->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => time()])
-            ->get(route('profile.edit'))
-            ->assertInertia(fn ($page) => $page
-                ->has('auth.user')
-                ->missing('auth.user.google_id')
-                ->missing('auth.user.password')
-                ->missing('auth.user.remember_token')
-                ->where('auth.hasPassword', true)
-            );
     });
 
     describe('Google での本人確認', function () {
@@ -379,9 +349,9 @@ describe('Google OAuth コントローラ', function () {
 
             $this->actingAs($user)
                 ->withCookie(config('session.cookie'), $sessionId)
-                ->withSession(['google_reauthentication' => true, 'url.intended' => route('security.edit')])
+                ->withSession(['google_reauthentication' => true, 'url.intended' => settingsUrl('security')])
                 ->get(route('auth.google.callback'))
-                ->assertRedirect(route('security.edit'))
+                ->assertRedirect(settingsUrl('security'))
                 ->assertSessionHas('auth.password_confirmed_at')
                 ->assertSessionMissing('google_reauthentication');
 

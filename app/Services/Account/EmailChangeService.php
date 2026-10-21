@@ -8,13 +8,13 @@ use App\Mail\EmailChangedMail;
 use App\Mail\VerifyNewEmailMail;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
+use App\Support\EmailAddress;
 use App\Support\SignedPayloadLink;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Throwable;
 
 class EmailChangeService
@@ -47,12 +47,12 @@ class EmailChangeService
                 $user = $this->userRepository->find($userId, lock: true);
 
                 // 同じリンクをもう一度開いたときは、通知を重ねずに成功とする。
-                if ($user !== null && $this->sameAddress($user->email, $to)) {
+                if ($user !== null && EmailAddress::same($user->email, $to)) {
                     return false;
                 }
 
                 if ($user === null
-                    || ! $this->sameAddress($user->email, $from)
+                    || ! EmailAddress::same($user->email, $from)
                     || $this->accountState($user) !== $state) {
                     return null;
                 }
@@ -96,11 +96,6 @@ class EmailChangeService
         $previous = $user->email_verified_at;
 
         return $previous !== null && $previous->greaterThanOrEqualTo($now) ? $previous->addSecond() : $now;
-    }
-
-    public function sameAddress(string $current, string $other): bool
-    {
-        return Str::lower($current) === Str::lower($other);
     }
 
     /**

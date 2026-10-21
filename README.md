@@ -6,7 +6,7 @@ Harnavel（ハーナベル）は、Laravel 13 + Inertia React + MariaDB を Dock
 
 ## 特徴
 
-- **XServer 共有ホスティング前提**: 常駐プロセスや SSR を使わずに動かし、サーバー上で直接リリースを置き換えます（[docs/infrastructure.md](docs/infrastructure.md)、[TADR-0006](docs/adr/template/0006-in-place-deployment.md)）。
+- **XServer 共有ホスティング前提**: 常駐プロセスや SSR を使わずに動かし（SEO メタタグは `app.blade.php` で初期 HTML に出力します）、サーバー上で直接リリースを置き換えます（[docs/infrastructure.md](docs/infrastructure.md)、[TADR-0006](docs/adr/template/0006-in-place-deployment.md)）。
 - **テストを仕様として扱う**: 振る舞いの変更は失敗するテストから始め、ミューテーションテストでテストの強さを確かめます（[docs/testing-as-spec.md](docs/testing-as-spec.md)）。
 - **AI エージェント用のハーネス**: `AGENTS.md`、スキル、設計判断の記録（ADR）を同梱し、エージェントが同じ規約で作業できるようにしています（[AGENTS.md](AGENTS.md)、[docs/adr/README.md](docs/adr/README.md)）。
 - **派生アプリとの共有**: 派生アプリはこのテンプレートを取り込み続け、汎用的な改善はテンプレートへ戻します（[TADR-0003](docs/adr/template/0003-template-ownership.md)）。
@@ -20,9 +20,6 @@ Harnavel（ハーナベル）は、Laravel 13 + Inertia React + MariaDB を Dock
 | Styling        | Tailwind CSS v4, Radix UI        |
 | Testing        | Pest v5, Playwright              |
 | Infrastructure | Docker (Nginx, MariaDB, Mailpit) |
-
-> [!NOTE]
-> **SSR は使用しません。** デプロイ先の XServer 共有ホスティングでは Node.js プロセスを常駐できないため、Inertia SSR は無効化しています。SEO メタタグは `app.blade.php` 側で初期 HTML に出力します。
 
 > [!IMPORTANT]
 > **OGP 画像はプロジェクトごとに追加してください。** SNS シェア用の既定画像は `public/opengraph-image.jpg`（推奨: 1200x630px）で、初期 HTML の OGP/Twitter Card はこの JPG を参照します。リポジトリには含まれていないため、デプロイ前に必ず作成してください。
@@ -73,7 +70,7 @@ pnpm lint:check         # type-aware Oxlint（変更なし）
 pnpm fix                # Oxlint の safe fix + Oxfmt
 pnpm types:check        # TypeScript 型チェック
 pnpm lint:docs          # docs/ + README/AGENTS/CONTEXT のリンク検証
-pnpm test:e2e --project=chromium
+pnpm test:e2e
 ```
 
 `pnpm install` は Git hooks（lefthook）も入れます。pre-commit は staged files を整形してから、lint、型チェック、unit test、docs、Larastan を実行します。

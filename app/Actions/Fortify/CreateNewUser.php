@@ -7,15 +7,18 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
+use App\Repositories\User\UserRepositoryContract;
+use App\Support\EmailAddress;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 use Laravel\Fortify\Fortify;
 
 class CreateNewUser implements CreatesNewUsers
 {
     use PasswordValidationRules, ProfileValidationRules;
+
+    public function __construct(private readonly UserRepositoryContract $userRepository) {}
 
     /**
      * Validate and create a newly registered user.
@@ -32,10 +35,13 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ], attributes: ['name' => __('form.profile_update.name')])->validate();
 
-        return User::create([
+        $user = new User([
             ...$validated,
             'password' => Hash::make($validated['password']),
         ]);
+        $this->userRepository->save($user);
+
+        return $user;
     }
 
     /**
@@ -44,18 +50,12 @@ class CreateNewUser implements CreatesNewUsers
      */
     private function normalizeInput(array $input): array
     {
-        if (! config('fortify.lowercase_usernames')) {
-            return $input;
-        }
-
         $usernameField = Fortify::username();
         $username = $input[$usernameField] ?? null;
 
-        if (! is_string($username)) {
-            return $input;
+        if (is_string($username)) {
+            $input[$usernameField] = EmailAddress::normalize($username);
         }
-
-        $input[$usernameField] = Str::lower($username);
 
         return $input;
     }

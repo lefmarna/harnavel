@@ -7,28 +7,25 @@ import {
   setUserPassword,
   type UserCredentials,
 } from "../support/artisan";
-import { HOME_URL, login } from "../support/auth";
+import {
+  confirmPassword,
+  HOME_URL,
+  login,
+  openConfirmedSettings,
+  SETTINGS_PATHS,
+  settingsUrl,
+} from "../support/auth";
 import { expect, test } from "../support/fixtures";
 import { enableVirtualAuthenticator } from "../support/passkey";
 
-const SECURITY_URL = /\/settings\/security$/;
-const PROFILE_URL = /\/settings\/profile$/;
+const SECURITY_URL = settingsUrl("security");
+const PROFILE_URL = settingsUrl("profile");
 const CONFIRM_PASSWORD_URL = /\/user\/confirm-password$/;
 
 const SEEDED_USER: UserCredentials = { email: "test@example.com", password: "Test1234" };
 
-const confirmPassword = async (page: Page, password: string): Promise<void> => {
-  await page.locator('input[name="password"]').fill(password);
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(SECURITY_URL);
-};
-
-const openSecuritySettings = async (page: Page, user = SEEDED_USER): Promise<void> => {
-  await login(page, user);
-
-  await page.goto("/settings/security");
-  await confirmPassword(page, user.password);
-};
+const openSecuritySettings = (page: Page, user = SEEDED_USER): Promise<void> =>
+  openConfirmedSettings(page, user, "security");
 
 const registerPasskey = async (page: Page, name: string): Promise<void> => {
   await page.getByRole("button", { name: "パスキーを追加" }).click();
@@ -49,7 +46,7 @@ test("設定した origin と異なる URL ではパスキー操作を隠し利�
 
   const loginURL = new URL("/login", baseURL);
   loginURL.hostname = "127.0.0.1";
-  const securityURL = new URL("/settings/security", loginURL);
+  const securityURL = new URL(SETTINGS_PATHS.security, loginURL);
 
   await page.goto("/login");
   await expect(page.locator('[data-test="passkey-verify-button"]')).toBeVisible();
@@ -65,9 +62,7 @@ test("設定した origin と異なる URL ではパスキー操作を隠し利�
   await expect(page).toHaveURL(HOME_URL);
 
   await page.goto(securityURL.href);
-  await page.locator('input[name="password"]').fill("Test1234");
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(/\/settings\/security$/);
+  await confirmPassword(page, "Test1234", SECURITY_URL);
 
   await expect(page.locator('[data-test="add-passkey-button"]')).toBeHidden();
   await expect(page.locator('[data-test="passkey-register-unavailable"]')).toHaveText(/\S/);
@@ -178,7 +173,7 @@ test("hex ハンドルへの変更後も旧バイナリ形式のパスキーで�
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
   await expect(page).toHaveURL(HOME_URL);
 
-  await page.goto("/settings/security");
+  await page.goto(SETTINGS_PATHS.security);
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
   await page.getByRole("button", { name: "パスキーで確認" }).click();
   await expect(page).toHaveURL(SECURITY_URL);
@@ -533,7 +528,7 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
 
-  await confirmPassword(page, SEEDED_USER.password);
+  await confirmPassword(page, SEEDED_USER.password, SECURITY_URL);
 
   await registerPasskey(page, "期限切れ後のパスキー");
 
@@ -583,9 +578,7 @@ test("Sec-Fetch-Site を送らないブラウザでも SPA 遷移のままパス
   await page.locator('[data-test="sidebar-menu-button"]').click();
   await page.getByRole("menuitem", { name: "Settings" }).click();
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
-  await page.locator('input[name="password"]').fill(user.password);
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(PROFILE_URL);
+  await confirmPassword(page, user.password, PROFILE_URL);
   await page.getByRole("link", { name: "セキュリティ" }).click();
   await expect(page).toHaveURL(SECURITY_URL);
 
@@ -666,19 +659,19 @@ test("パスワード未設定でパスキーだけを持つユーザーはパ�
   const user = createUser();
   await login(page, user);
 
-  await page.goto("/settings/security");
+  await page.goto(SETTINGS_PATHS.security);
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
   await expect(page.locator('input[name="password"]')).toBeVisible();
   await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();
 
-  await confirmPassword(page, user.password);
+  await confirmPassword(page, user.password, SECURITY_URL);
   await registerPasskey(page, "パスキーだけの本人確認");
   await expect(page.getByText("パスキーだけの本人確認", { exact: true })).toBeVisible();
 
   setUserPassword(user.email, null);
   expirePasswordConfirmation();
 
-  await page.goto("/settings/security");
+  await page.goto(SETTINGS_PATHS.security);
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
 
   const passkeyButton = page.getByRole("button", { name: "パスキーで確認" });
@@ -756,11 +749,9 @@ test("自動入力が環境の都合で使えなくても、開いただけの�
 test("本人確認済みならパスワードを入力せずにアカウントを削除できる", async ({ page }) => {
   const user = createUser();
   await login(page, user);
-  await page.goto("/settings/profile");
+  await page.goto(SETTINGS_PATHS.profile);
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
-  await page.locator('input[name="password"]').fill(user.password);
-  await page.locator('[data-test="confirm-password-button"]').click();
-  await expect(page).toHaveURL(PROFILE_URL);
+  await confirmPassword(page, user.password, PROFILE_URL);
 
   await page.locator('[data-test="delete-user-button"]').click();
   const dialog = page.getByRole("dialog");
@@ -773,7 +764,7 @@ test("本人確認済みならパスワードを入力せずにアカウント�
   await page.locator('[data-test="delete-user-button"]').click();
   await page.locator('[data-test="confirm-delete-user-button"]').click();
   await expect(page).not.toHaveURL(PROFILE_URL);
-  await page.goto("/settings/profile");
+  await page.goto(SETTINGS_PATHS.profile);
   await expect(page).toHaveURL(/\/login$/);
 
   await page.getByLabel("メールアドレス").fill(user.email);

@@ -10,7 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
 use App\Support\GoogleOAuth;
 use App\Support\SignedPayloadLink;
-use App\ViewModels\Auth\GoogleLinkVerifyPageViewModel;
+use App\ViewModels\Auth\EmailLinkPageViewModel;
 use App\ViewModels\StaticPageViewModel;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -249,11 +249,14 @@ class GoogleAuthController extends Controller
         return SignedPayloadLink::read($request, ['google_id', 'email', 'session_generation']);
     }
 
+    /**
+     * @param  'confirm'|'success'|'error'  $status
+     */
     private function googleLinkVerifyPage(string $status, ?string $actionUrl = null, ?string $email = null): Response
     {
         return Inertia::render(
             'auth/google-link/verify',
-            new GoogleLinkVerifyPageViewModel($status, $actionUrl, $email),
+            new EmailLinkPageViewModel('pages.auth.google_link', $status, $actionUrl, $email),
         );
     }
 }

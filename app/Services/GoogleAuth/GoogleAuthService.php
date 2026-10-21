@@ -10,13 +10,13 @@ use App\Mail\LinkGoogleAccountMail;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Services\Account\SecurityNotifier;
+use App\Support\EmailAddress;
 use App\Support\SignedPayloadLink;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 
 class GoogleAuthService implements GoogleAuthServiceContract
 {
@@ -33,10 +33,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
         $lowercaseUsernames = (bool) config('fortify.lowercase_usernames');
         $caseInsensitiveEmail = ! $lowercaseUsernames;
-
-        if ($lowercaseUsernames) {
-            $email = Str::lower($email);
-        }
+        $email = EmailAddress::normalize($email);
 
         try {
             for ($attempt = 0; $attempt < self::MAX_CREATE_RETRIES; $attempt++) {
@@ -85,7 +82,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
                     return false;
                 }
 
-                if (! $this->emailsMatch($user->email, $email)) {
+                if (! EmailAddress::same($user->email, $email)) {
                     Log::warning('Google link confirmation failed because the email did not match.', [
                         'user_id' => $userId,
                     ]);
@@ -203,7 +200,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
         // Google ID の一致はログインの根拠になるが、メールの所有を示すのは同じアドレスのときだけ。
         // 違うアドレスを確認済みにしたり、本人が設定画面で変えたアドレスを書き戻したりしない。
-        if ($this->emailsMatch($user->email, $email)) {
+        if (EmailAddress::same($user->email, $email)) {
             if ($user->email_verified_at === null) {
                 $user->forceFill(['email_verified_at' => now()]);
             }
@@ -218,11 +215,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
         }
 
         return $user;
-    }
-
-    private function emailsMatch(string $storedEmail, string $payloadEmail): bool
-    {
-        return Str::lower($storedEmail) === Str::lower($payloadEmail);
     }
 
     private function sendLinkConfirmationEmail(User $user, string $googleId): void
@@ -260,6 +252,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
         }
 
         /** @var User|null */
-        return $candidates->first(fn (User $user): bool => Str::lower($user->email) === Str::lower($email));
+        return $candidates->first(fn (User $user): bool => EmailAddress::same($user->email, $email));
     }
 }

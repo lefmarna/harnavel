@@ -1,4 +1,3 @@
-// Components
 import { Form } from "@inertiajs/react";
 import { LoaderCircle } from "lucide-react";
 

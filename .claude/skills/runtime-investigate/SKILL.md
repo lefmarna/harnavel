@@ -12,5 +12,5 @@ with every agent toolchain that works this repository. Skill-local paths it give
 `references/`, resolve next to that file, not next to this one.
 
 This file exists only to register the skill with the Claude-specific frontmatter above, which
-a symlink would destroy. It carries no instructions of its own — never add any here, or the
-two copies diverge again.
+a symlink would destroy. It carries no instructions of its own — never add any here, so the
+two copies cannot diverge.

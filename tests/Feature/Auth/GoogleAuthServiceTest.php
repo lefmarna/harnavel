@@ -296,41 +296,6 @@ describe('Google 認証サービス', function () {
         expect($service->findOrCreate('google-A', 'b@example.com', 'User')->is($userA))->toBeTrue();
     });
 
-    it('lowercase usernamesが無効なら UniqueConstraintViolationException 後も mixed-case メールの既存ユーザーに確認メールを送信する', function () {
-        Mail::fake();
-        config(['fortify.lowercase_usernames' => false]);
-
-        $existing = User::factory()->unverified()->create([
-            'email' => 'Test.User@Example.COM',
-            'google_id' => null,
-        ]);
-
-        $saveCount = 0;
-        $fakeRepo = new FakeUserRepository(
-            findCandidates: fn (): Collection => collect(),
-            findByGoogleId: fn (): null => null,
-            findByEmail: fn (): User => $existing,
-            save: function () use (&$saveCount): void {
-                if ($saveCount++ === 0) {
-                    throw testingUniqueConstraintViolation();
-                }
-            },
-        );
-
-        app()->instance(UserRepositoryContract::class, $fakeRepo);
-        $service = app(GoogleAuthService::class);
-
-        expect(fn () => $service->findOrCreate('new-google', 'test.user@example.com', 'Fallback User'))
-            ->toThrow(GoogleLinkConfirmationPendingException::class);
-
-        expect($existing->fresh())
-            ->google_id->toBeNull()
-            ->email->toBe('Test.User@Example.COM')
-            ->email_verified_at->toBeNull();
-
-        Mail::assertSent(LinkGoogleAccountMail::class);
-    });
-
     it('confirmLink は署名メールの対象ユーザーへ google_id を連携しメール認証済みにする', function () {
         $existing = User::factory()->unverified()->create([
             'email' => 'confirm@example.com',

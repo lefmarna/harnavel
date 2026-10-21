@@ -22,7 +22,7 @@ describe('プロフィール設定', function () {
 
         $response = $this
             ->actingAs($user)
-            ->get(route('profile.edit'));
+            ->get(settingsUrl('profile'));
 
         $response
             ->assertOk()
@@ -31,12 +31,12 @@ describe('プロフィール設定', function () {
                     ->component('settings/profile')
                     ->where('mustVerifyEmail', true)
                     ->where('status', null)
-                    ->where('seo.title', 'プロフィール設定')
-                    ->where('seo.description', 'ニックネームとメールアドレスを管理します。')
+                    ->where('seo.title', pageCopy('pages.settings.profile.title'))
+                    ->where('seo.description', pageCopy('pages.settings.profile.description'))
             );
     });
 
-    it('ニックネームを更新できる', function () {
+    it('ニックネームを更新でき、メールアドレスが変わらなければ認証状態を維持する', function () {
         $user = User::factory()->create();
 
         $response = $this
@@ -48,12 +48,15 @@ describe('プロフィール設定', function () {
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
+            ->assertRedirect(settingsUrl('profile'));
 
-        expect($user->refresh()->name)->toBe('Test User');
+        expect($user->refresh())
+            ->name->toBe('Test User')
+            ->email_verified_at->not->toBeNull();
     });
 
-    it('プロフィール更新時の新しいメールアドレスは小文字にして確認メールを送る', function () {
+    it('新しいメールアドレスはログインと同じ規則でそろえて確認メールを送る', function (bool $lowercase, string $expected) {
+        config(['fortify.lowercase_usernames' => $lowercase]);
         Mail::fake();
         $user = User::factory()->create();
 
@@ -65,24 +68,11 @@ describe('プロフィール設定', function () {
             ])
             ->assertSessionHasNoErrors();
 
-        Mail::assertSent(VerifyNewEmailMail::class, fn (VerifyNewEmailMail $mail): bool => $mail->hasTo('test.user@example.com'));
-    });
-
-    it('lowercase usernamesが無効なら新しいメールアドレスの大文字小文字を維持して確認メールを送る', function () {
-        config(['fortify.lowercase_usernames' => false]);
-        Mail::fake();
-        $user = User::factory()->create();
-
-        $this
-            ->actingAs($user)
-            ->patch(route('profile.update'), [
-                'name' => 'Test User',
-                'email' => 'Test.User@Example.COM',
-            ])
-            ->assertSessionHasNoErrors();
-
-        Mail::assertSent(VerifyNewEmailMail::class, fn (VerifyNewEmailMail $mail): bool => $mail->hasTo('Test.User@Example.COM'));
-    });
+        Mail::assertSent(VerifyNewEmailMail::class, fn (VerifyNewEmailMail $mail): bool => $mail->hasTo($expected));
+    })->with([
+        '小文字化が有効' => [true, 'test.user@example.com'],
+        '小文字化が無効' => [false, 'Test.User@Example.COM'],
+    ]);
 
     it('lowercase usernamesが無効ならメールアドレスの大文字小文字だけの変更ではメール認証状態を維持する', function () {
         config(['fortify.lowercase_usernames' => false]);
@@ -101,35 +91,18 @@ describe('プロフィール設定', function () {
 
         $response
             ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
+            ->assertRedirect(settingsUrl('profile'));
 
         expect($user->refresh()->email)->toBe('Test.User@Example.COM');
         expect($user->email_verified_at)->not->toBeNull();
     });
 
-    it('メールアドレスが変わらない場合はメール認証状態を維持する', function () {
+    it('プロフィール更新の検証文言は登録画面と同じ共通の文言を使う', function (array $payload, string $field, string $expectedMessage) {
         $user = User::factory()->create();
 
         $response = $this
             ->actingAs($user)
-            ->patch(route('profile.update'), [
-                'name' => 'Test User',
-                'email' => $user->email,
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('profile.edit'));
-
-        expect($user->refresh()->email_verified_at)->not->toBeNull();
-    });
-
-    it('プロフィール更新の検証文言を表示する', function (array $payload, string $field, string $expectedMessage) {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->from(route('profile.edit'))
+            ->from(settingsUrl('profile'))
             ->patch(route('profile.update'), $payload);
 
         $response->assertSessionHasErrors([$field => $expectedMessage]);
@@ -137,37 +110,37 @@ describe('プロフィール設定', function () {
         'ニックネーム未入力' => [
             ['email' => 'test@example.com'],
             'name',
-            'ニックネームを入力してください。',
+            'ニックネームは必須項目です。',
         ],
         'ニックネームが文字列でない' => [
             ['name' => ['array'], 'email' => 'test@example.com'],
             'name',
-            'ニックネームは文字列で入力してください。',
+            'ニックネームには、文字列を指定してください。',
         ],
         'ニックネームが長すぎる' => [
             ['name' => str_repeat('a', 256), 'email' => 'test@example.com'],
             'name',
-            'ニックネームは255文字以内で入力してください。',
+            'ニックネームの文字数は、255文字以下である必要があります。',
         ],
         'メールアドレス未入力' => [
             ['name' => 'Test User'],
             'email',
-            'メールアドレスを入力してください。',
+            'メールアドレスは必須項目です。',
         ],
         'メールアドレスが文字列でない' => [
             ['name' => 'Test User', 'email' => ['array']],
             'email',
-            'メールアドレスは文字列で入力してください。',
+            'メールアドレスには、文字列を指定してください。',
         ],
         'メールアドレスの形式が不正' => [
             ['name' => 'Test User', 'email' => 'not-an-email'],
             'email',
-            '有効なメールアドレスを入力してください。',
+            'メールアドレスは、有効なメールアドレス形式で指定してください。',
         ],
         'メールアドレスが長すぎる' => [
             ['name' => 'Test User', 'email' => str_repeat('a', 244).'@example.com'],
             'email',
-            'メールアドレスは255文字以内で入力してください。',
+            'メールアドレスの文字数は、255文字以下である必要があります。',
         ],
     ]);
 
@@ -177,14 +150,14 @@ describe('プロフィール設定', function () {
 
         $response = $this
             ->actingAs($user)
-            ->from(route('profile.edit'))
+            ->from(settingsUrl('profile'))
             ->patch(route('profile.update'), [
                 'name' => 'Test User',
                 'email' => $other->email,
             ]);
 
         $response->assertSessionHasErrors([
-            'email' => 'このメールアドレスは既に使用されています。',
+            'email' => '指定のメールアドレスは既に使用されています。',
         ]);
     });
 
@@ -265,7 +238,7 @@ describe('設定トップ', function () {
     it('開くとプロフィール設定へ転送する', function () {
         $this->actingAs(User::factory()->create())
             ->get('/settings')
-            ->assertRedirect(route('profile.edit'));
+            ->assertRedirect(settingsUrl('profile'));
     });
 
     it('画面を開く以外のメソッドは受け付けない', function () {

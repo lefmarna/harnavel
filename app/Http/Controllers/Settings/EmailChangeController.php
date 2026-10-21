@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Services\Account\EmailChangeService;
 use App\Support\SignedPayloadLink;
-use App\ViewModels\Auth\EmailChangePageViewModel;
+use App\ViewModels\Auth\EmailLinkPageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -57,6 +57,6 @@ class EmailChangeController extends Controller
      */
     private function page(string $status, ?string $actionUrl = null, ?string $email = null): Response
     {
-        return Inertia::render('auth/email-change/verify', new EmailChangePageViewModel($status, $actionUrl, $email));
+        return Inertia::render('auth/email-change/verify', new EmailLinkPageViewModel('pages.auth.email_change.verify', $status, $actionUrl, $email));
     }
 }

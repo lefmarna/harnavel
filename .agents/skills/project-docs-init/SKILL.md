@@ -130,7 +130,5 @@ After finishing, report:
 ## Notes
 
 - Keep the template docs structure minimal and do not add unnecessary files.
-- Never edit generated files under `docs/generated/`.
-- Preserve the rule that files under `docs/` are English and `README.md` is Japanese.
 - Decide whether to add information by asking "would AI make a mistake if this were deleted?" If not, do not add it.
 - In derived projects, the text should read as "this project documentation", not "template documentation".

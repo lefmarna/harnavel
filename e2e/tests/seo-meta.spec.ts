@@ -1,50 +1,36 @@
 import { expect, test } from "../support/fixtures";
 
+// 文言は派生アプリが差し替えるので、値ではなく遷移で書き換わることと、各タグがそろうことを確かめる。
 test("SPA遷移時にSEOメタタグが更新される", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page).toHaveTitle(/ホーム - /);
-
   const ogUrl = page.locator('meta[property="og:url"]');
   await expect(ogUrl).toHaveAttribute("content", /\/$/);
-  const welcomeOgUrl = await ogUrl.getAttribute("content");
-  const welcomeCanonical = page.locator('link[rel="canonical"]');
-
-  await expect(welcomeCanonical).toHaveAttribute("href", /\/$/);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/$/);
+  const homeTitle = await page.title();
+  const homeDescription = await page.locator('meta[name="description"]').getAttribute("content");
 
   await page.click('a[href*="login"]');
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page).toHaveTitle(/ログイン - /);
+  await expect(page).not.toHaveTitle(homeTitle);
 
-  const loginOgTitle = page.locator('meta[property="og:title"]');
-  await expect(loginOgTitle).toHaveAttribute("content", /ログイン - /);
+  const title = await page.title();
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
+  await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", title);
 
-  const loginDescription = page.locator('meta[name="description"]');
-  await expect(loginDescription).toHaveAttribute(
+  const description = page.locator('meta[name="description"]');
+  await expect(description).not.toHaveAttribute("content", homeDescription ?? "");
+  const loginDescription = (await description.getAttribute("content")) ?? "";
+  expect(loginDescription).not.toBe("");
+  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute(
     "content",
-    "メールアドレスとパスワードを入力してログインします。",
+    loginDescription,
   );
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
-
-  const loginCanonical = page.locator('link[rel="canonical"]');
-  await expect(loginCanonical).toHaveAttribute("href", /\/login$/);
-
-  const loginOgUrl = page.locator('meta[property="og:url"]');
-  await expect(loginOgUrl).toHaveAttribute("content", /\/login$/);
-
-  expect(await loginOgUrl.getAttribute("content")).not.toBe(welcomeOgUrl);
-
-  const loginTwitterTitle = page.locator('meta[name="twitter:title"]');
-  await expect(loginTwitterTitle).toHaveAttribute("content", /ログイン - /);
-
-  const loginOgDescription = page.locator('meta[property="og:description"]');
-  await expect(loginOgDescription).toHaveAttribute(
-    "content",
-    "メールアドレスとパスワードを入力してログインします。",
-  );
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/login$/);
+  await expect(ogUrl).toHaveAttribute("content", /\/login$/);
 });
 
-// 初期 HTML はサーバーが出すので、React が描画した後のタグを確かめる。
 test("パスワードリセットページのcanonicalとog:urlにクエリ文字列が含まれない", async ({ page }) => {
   await page.goto("/reset-password/test-token?email=test%40example.com");
   await expect(page.locator('input[name="password"]')).toBeVisible();

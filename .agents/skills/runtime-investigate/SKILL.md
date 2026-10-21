@@ -114,7 +114,7 @@ Start at `--lines 50` and raise it only after a smaller window proved insufficie
 There is no way to read `storage/logs/laravel.log` from here: it would need an SSH key on this
 machine or a log-reading route in production, and neither is worth it. For a 5xx the Discord
 notification is the application-level evidence — it carries the request ID, environment, exception
-class and message, HTTP details, and `file:line`. Ask the user for that notification, or for the
+class, HTTP details, and `file:line`, but never the exception message. Ask the user for that notification, or for the
 `X-Request-Id` of the failing response, and correlate it with the code.
 
 ## Done when

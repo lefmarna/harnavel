@@ -8,10 +8,10 @@ package assumptions.
 
 | Classification | Deciding evidence | Default action |
 | --- | --- | --- |
-| Current Laravel-owned | The fresh reference contains the package in the same capability area | Copy the reference constraint string and section exactly, even when the repository currently declares a newer lower bound |
-| Unadopted reference-surface | The fresh reference contains the package, but all consumers belong to frontend or another starter surface intentionally replaced by this template | Omit the package and its companion files together; record the consumer evidence |
+| Current Laravel-owned | The template adopts the reference capability without deliberate independent ownership | Use the reference constraint; choose the manifest section by the retained consumer's role |
+| Unadopted reference-surface | The reference capability is omitted, replaced, or unsupported here | Omit its dedicated packages and companion files; record the consumer evidence |
 | Legacy Laravel-owned | The fresh reference omits it and the repository's initial starter or an earlier Laravel synchronization introduced it | Remove it if unused; otherwise migrate to Laravel's current replacement |
-| Template-owned | A post-starter commit introduced it for an explicit retained template capability | Update to the latest compatible stable version |
+| Template-owned | History establishes an independently maintained template capability, whether or not the reference now uses the package | Adopt the latest compatible stable release as the verified minimum |
 | Unresolved | History, reference output, and usages do not establish ownership | Preserve and request a decision |
 
 Package names can move between the first two Laravel-owned categories as the upstream starter
@@ -31,14 +31,11 @@ the package, reference constraint, required condition, consumer or advisory evid
 verification as a compatibility exception, and obtain approval before adopting it. This is an
 exception to reference-string convergence, not a reason to raise every constraint to registry latest.
 
-Express durable minimum versions, broken-version exclusions, and necessary coordinated pins in
-shared inputs where possible. If a required fix needs a targeted migration, document the affected
-packages, required condition, reason, and derived-app steps even when only a lockfile changes.
-Persist required rollout instructions with the template change in a versioned migration note or
-commit description, not only in the execution report. Routine lockfile refreshes carry no
-requirement to match the template's resolutions. Explain removals with consumer evidence so
-derived apps can retain their own direct declarations when their app-specific consumers still
-need the package.
+Express required minimum versions, exclusions, and coordinated pins in shared inputs. Persist only
+non-obvious, mandatory derived-app actions that those inputs and shared code cannot convey, with
+the relevant change; routine upgrades do not need migration documents. Keep execution findings in
+the report. Routine lockfile refreshes do not require matching template resolutions. Explain
+removals so derived apps can retain declarations for their own consumers.
 
 ## Known template-owned capabilities
 
@@ -83,7 +80,7 @@ table.
 
 ### Follow upstream by default
 
-- Laravel default comments, configuration ordering, type declarations, bootstrapping idioms, and
+- Laravel configuration ordering, type declarations, bootstrapping idioms, and
   starter scaffolding that do not conflict with a preserved capability.
 - New Laravel files and settings unless they require unsupported infrastructure or change retained
   behavior.
@@ -98,23 +95,10 @@ table.
 Do not exclude `.env.example`, dotfiles, lockfiles, agent instructions, generated configuration,
 or files merely because the template currently lacks them.
 
-## Recorded constraint exceptions
-
-`require.php` does not follow the reference. A fresh Laravel declares `^8.3` while its own locked
-Symfony requires `>=8.4.1`, so the reference's constraint describes a runtime on which
-`composer install` cannot succeed. This template declares the runtime it actually pins and tests:
-the Docker tag matches XServer's PHP, and every CI job runs that same series. Keep this constraint
-in step with the Docker PHP series rather than with the reference, and treat a lower floor as a
-support claim nothing here exercises.
-
 ## Required evidence for removals
 
-Before removing a package, script, config key, or file:
-
-1. Show that the fresh reference omits it.
-2. Identify the commit or older starter that introduced it.
-3. Search code, config, scripts, tests, CI, and docs for consumers.
-4. Explain the replacement or why no replacement is needed.
-5. Name the checks that prove retained behavior still works.
-
-If any item cannot be completed, classify the removal as unresolved and obtain approval.
+Establish provenance, retained consumers, and the replacement or reason none is needed. Inspect
+scripts, configuration, tests, and CI as well as application code. Reference presence does not
+prevent removal of an unused dependency, unsupported command, or setting covered by current
+defaults. Use relevant existing checks; do not add tests that merely duplicate configuration.
+Request a decision only when ownership or behavior impact remains unresolved.

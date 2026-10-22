@@ -19,9 +19,9 @@
   },
   "require-dev": {
     "fakerphp/faker": "^1.24",
-    "guzzlehttp/guzzle": "^7.15 || ^8.0",
+    "guzzlehttp/guzzle": "^8.3",
     "larastan/larastan": "^3.9",
-    "laravel-lang/lang": "^15.37",
+    "laravel-lang/lang": "^15.37.4",
     "laravel/boost": "^2.2",
     "laravel/pail": "^1.2.5",
     "laravel/pao": "^1.0.6",
@@ -47,10 +47,6 @@
     }
   },
   "scripts": {
-    "dev": [
-      "Composer\\Config::disableProcessTimeout",
-      "pnpm exec concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"pnpm run dev\" --names=server,queue,logs,vite --kill-others"
-    ],
     "lint": [
       "pint --parallel"
     ],

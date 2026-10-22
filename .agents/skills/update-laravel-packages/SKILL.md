@@ -82,8 +82,8 @@ it.
   validates its version before maintenance or `rsync --delete` but does not provision it.
 - Keep the Dockerfile's unpinned `composer global require laravel/installer` behavior so a no-cache
   rebuild installs the latest stable Laravel Installer. If it becomes pinned, update it explicitly.
-- Resolve the latest stable Node and pnpm versions using their official registries or mise and
-  update `mise.toml`.
+- Resolve the latest release in the newest Node LTS line and the latest stable pnpm release from
+  official sources or mise, and pin them in `mise.toml`.
 - Treat a Node or pnpm major-version bump as a breaking toolchain change, not a silent number
   update. Read the affected versions' official migration guidance for lockfile, store, engine, and
   build-script compatibility; do not assume every pnpm major requires a new lockfile or store.

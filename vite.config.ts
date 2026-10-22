@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => {
       categories: {
         correctness: "error",
       },
-      plugins: ["eslint", "import", "typescript", "unicorn", "oxc", "react"],
+      plugins: ["import", "typescript", "unicorn", "oxc", "react"],
       options: {
         reportUnusedDisableDirectives: "error",
       },
@@ -156,7 +156,6 @@ export default defineConfig(({ mode }) => {
         // エージェント向け文書では、表の桁揃え用の空白を省く。
         ".kiro/**/*.md",
         "docs/generated/**/*.md",
-        "pnpm-lock.yaml",
         "storage/framework/",
         "storage/inertia-devtools/",
       ],

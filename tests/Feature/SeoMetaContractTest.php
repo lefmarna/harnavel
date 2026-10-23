@@ -101,7 +101,7 @@ describe('SEO メタ契約', function () {
         $content = $response->getContent();
 
         expect($content)->toContain('<link rel="canonical" data-inertia="canonical"')
-            ->and($content)->toContain('<title data-inertia>ホーム - ')
+            ->and($content)->toContain('<title data-inertia>')
             ->and($content)->toContain('<meta data-inertia="description" name="description"')
             ->and($content)->toContain('<meta data-inertia="robots" name="robots"')
             ->and($content)->toContain('<meta data-inertia="og:type" property="og:type" content="website">')

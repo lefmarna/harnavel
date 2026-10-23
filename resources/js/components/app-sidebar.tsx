@@ -12,11 +12,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { logoHref, mainNavItems, secondaryNavItems } from "@/navigation";
+import { useNavigation } from "@/navigation";
 
 import AppLogo from "./app-logo";
 
 export function AppSidebar() {
+  const { logoHref, mainNavItems, secondaryNavItems } = useNavigation();
+
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>

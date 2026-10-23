@@ -81,7 +81,7 @@ class ProfileController extends Controller
         try {
             $this->emailChangeService->request($user, $validated['email']);
         } catch (Throwable $e) {
-            report($e);
+            Log::warning('Email change verification could not be sent.', ['exception_class' => $e::class]);
 
             return to_route('profile.edit')->withErrors(['email' => __('form.profile_update.email_change_failed')]);
         }

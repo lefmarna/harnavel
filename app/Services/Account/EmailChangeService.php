@@ -106,7 +106,7 @@ class EmailChangeService
         try {
             Mail::to($previousEmail)->send(new EmailChangedMail);
         } catch (Throwable $e) {
-            report($e);
+            Log::warning('Email change notification could not be sent.', ['exception_class' => $e::class]);
         }
     }
 }

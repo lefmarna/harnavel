@@ -27,7 +27,7 @@ final readonly class SecurityPageViewModel extends PageViewModel
      *     passkeys: list<array{id: int, name: string, authenticator: string|null, created_at_diff: string, last_used_at_diff: string|null}>,
      *     googleLinked: bool,
      *     canUnlinkGoogle: bool,
-     *     seo: array{title: string, description: string}
+     *     seo: array{title: string, description: string, robots: string}
      * }
      */
     public function toInertiaProperties(RenderContext $context): array
@@ -38,7 +38,7 @@ final readonly class SecurityPageViewModel extends PageViewModel
             'passkeys' => $this->passkeys,
             'googleLinked' => $this->googleLinked,
             'canUnlinkGoogle' => $this->canUnlinkGoogle,
-            'seo' => $this->basicSeo(__('pages.settings.security.title'), __('pages.settings.security.description')),
+            'seo' => $this->noIndexSeo(__('pages.settings.security.title'), __('pages.settings.security.description')),
         ];
     }
 }

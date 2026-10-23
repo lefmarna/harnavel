@@ -6,6 +6,7 @@ namespace App\Services\Account;
 
 use App\Mail\AccountSecurityMail;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -22,7 +23,7 @@ class SecurityNotifier
         try {
             Mail::to($user->email)->send(new AccountSecurityMail($event));
         } catch (Throwable $e) {
-            report($e);
+            Log::warning('Account security notification could not be sent.', ['exception_class' => $e::class]);
         }
     }
 }

@@ -140,7 +140,6 @@ export default defineConfig(({ mode }) => {
           },
         },
       ],
-      ignorePatterns: ["public"],
     },
     fmt: {
       sortImports: true,
@@ -156,7 +155,6 @@ export default defineConfig(({ mode }) => {
         // エージェント向け文書では、表の桁揃え用の空白を省く。
         ".kiro/**/*.md",
         "docs/generated/**/*.md",
-        "storage/framework/",
         "storage/inertia-devtools/",
       ],
       overrides: [

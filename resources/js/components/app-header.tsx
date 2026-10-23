@@ -21,7 +21,7 @@ import { UserMenuContent } from "@/components/user-menu-content";
 import { useCurrentUrl } from "@/hooks/use-current-url";
 import { getInitials } from "@/lib/initials";
 import { cn, toUrl } from "@/lib/utils";
-import { logoHref, mainNavItems, secondaryNavItems } from "@/navigation";
+import { useNavigation } from "@/navigation";
 import type { BreadcrumbItem, SharedData } from "@/types";
 
 import AppLogo from "./app-logo";
@@ -37,6 +37,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
   const page = usePage<SharedData>();
   const { auth } = page.props;
   const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+  const { logoHref, mainNavItems, secondaryNavItems } = useNavigation();
   const user = auth.user;
 
   if (!user) {

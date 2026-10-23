@@ -3,10 +3,9 @@ import { LayoutGrid } from "lucide-react";
 import { dashboard, home } from "@/routes";
 import type { NavItem } from "@/types";
 
-// 派生アプリが差し替える。
-export const logoHref = home();
+const logoHref = home();
 
-export const mainNavItems: NavItem[] = [
+const mainNavItems: NavItem[] = [
   {
     title: "ダッシュボード",
     href: dashboard(),
@@ -14,4 +13,9 @@ export const mainNavItems: NavItem[] = [
   },
 ];
 
-export const secondaryNavItems: NavItem[] = [];
+const secondaryNavItems: NavItem[] = [];
+
+// 派生アプリが差し替える。
+export function useNavigation() {
+  return { logoHref, mainNavItems, secondaryNavItems };
+}

@@ -39,6 +39,8 @@ describe('パスワードポリシー', function () {
         '64文字を超える' => [str_repeat('a', 60).'12345'],
         '日本語など非ASCII文字を含む' => ['abcd1234あ'],
         '空白を含む' => ['abcd 1234'],
+        '末尾にLFを含む' => ["abcd1234\n"],
+        '末尾にCRLFを含む' => ["abcd1234\r\n"],
         '漏洩済み' => ['compromised-pass1', true],
     ]);
 
@@ -53,10 +55,17 @@ describe('パスワードポリシー', function () {
         '64文字' => str_repeat('a', 56).'12345678',
     ]);
 
-    it('新規登録の検証文言には共通の属性名を使う', function () use ($register) {
-        $register('abc1234')
+    it('新規登録の検証文言には共通の属性名とパスワード規則の説明を使う', function (string $locale, string $password, string $message) use ($register) {
+        app()->setLocale($locale);
+
+        $register($password)
             ->assertSessionHasErrors([
-                'password' => 'パスワードの文字数は、8文字以上である必要があります。',
+                'password' => $message,
             ]);
-    });
+    })->with([
+        '日本語の属性名' => ['ja', 'abc1234', 'パスワードの文字数は、8文字以上である必要があります。'],
+        '英語の属性名' => ['en', 'abc1234', 'The password field must be at least 8 characters.'],
+        '日本語の文字種' => ['ja', 'abcd1234あ', 'パスワードは半角の英字・数字・記号のみ使用できます。'],
+        '英語の文字種' => ['en', 'abcd1234あ', 'The password may only contain single-byte letters, numbers, and symbols.'],
+    ]);
 });

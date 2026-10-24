@@ -1,5 +1,4 @@
 /.phpunit.cache
-/bootstrap/ssr
 /node_modules
 /public/build
 /public/hot
@@ -19,10 +18,6 @@
 .claude/settings.local.json
 .phpactor.json
 .phpunit.result.cache
-Homestead.json
-Homestead.yaml
-npm-debug.log
-yarn-error.log
 /auth.json
 /.fleet
 /.idea
@@ -33,7 +28,5 @@ yarn-error.log
 # Playwright
 /test-results/
 /playwright-report/
-/blob-report/
-/playwright/.cache/
 /playwright/.auth/
 .playwright-cli/

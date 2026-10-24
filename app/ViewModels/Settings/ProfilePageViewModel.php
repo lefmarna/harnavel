@@ -18,7 +18,7 @@ final readonly class ProfilePageViewModel extends PageViewModel
      * @return array{
      *     mustVerifyEmail: bool,
      *     status: string|null,
-     *     seo: array{title: string, description: string}
+     *     seo: array{title: string, description: string, robots: string}
      * }
      */
     public function toInertiaProperties(RenderContext $context): array
@@ -26,7 +26,7 @@ final readonly class ProfilePageViewModel extends PageViewModel
         return [
             'mustVerifyEmail' => $this->mustVerifyEmail,
             'status' => $this->status,
-            'seo' => $this->basicSeo(__('pages.settings.profile.title'), __('pages.settings.profile.description')),
+            'seo' => $this->noIndexSeo(__('pages.settings.profile.title'), __('pages.settings.profile.description')),
         ];
     }
 }

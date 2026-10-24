@@ -5,7 +5,6 @@ import EmailLinkStatus, {
   EmailLinkConfirmButton,
   type EmailLinkPageProps,
 } from "@/components/email-link-status";
-import TextLink from "@/components/text-link";
 import { Button } from "@/components/ui/button";
 import { login } from "@/routes";
 import { google } from "@/routes/auth";
@@ -55,7 +54,9 @@ export default function GoogleLinkVerify({ status, actionUrl, email }: EmailLink
         <Link href={login().url}>ログイン画面へ戻る</Link>
       </Button>
 
-      <TextLink href={google.url()}>Googleログインをやり直す</TextLink>
+      <a href={google.url()} className="text-sm underline underline-offset-4">
+        Googleログインをやり直す
+      </a>
     </EmailLinkStatus>
   );
 }

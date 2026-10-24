@@ -308,8 +308,8 @@ describe('SEO メタ契約', function () {
         'verify-email' => ['verification.notice', ['email_verified_at' => null], 'auth/verify-email', 'pages.auth.verify_email', true],
         'confirm-password' => ['password.confirm', [], 'auth/confirm-password', 'pages.auth.confirm_password', true],
         'dashboard' => ['dashboard', [], 'dashboard', 'pages.dashboard', false],
-        'profile' => ['profile.edit', [], 'settings/profile', 'pages.settings.profile', false],
-        'security' => ['security.edit', [], 'settings/security', 'pages.settings.security', false],
-        'appearance' => ['appearance.edit', [], 'settings/appearance', 'pages.settings.appearance', false],
+        'profile' => ['profile.edit', [], 'settings/profile', 'pages.settings.profile', true],
+        'security' => ['security.edit', [], 'settings/security', 'pages.settings.security', true],
+        'appearance' => ['appearance.edit', [], 'settings/appearance', 'pages.settings.appearance', true],
     ]);
 });

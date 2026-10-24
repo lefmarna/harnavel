@@ -2,8 +2,6 @@ allowBuilds:
   esbuild: false
   lefthook: false
   unrs-resolver: false
-packages:
-  - "."
 
 overrides:
   # Vite の二重導入でプラグインの型が分裂しないよう、Vite+ のインスタンスに揃える。

@@ -21,8 +21,3 @@ Entry format:
 <One-paragraph definition. Add synonyms, or what the term explicitly does NOT mean, only
 when confusion is a real risk.>
 ```
-
----
-
-_No terms yet — the template has no domain. Entries appear once a derived project defines
-its first term (seeded via `project-docs-init`)._

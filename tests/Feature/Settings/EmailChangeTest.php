@@ -80,9 +80,10 @@ describe('メールアドレスの変更', function () {
         Mail::assertNothingSent();
     });
 
-    it('確認メールを送れなかったときはエラーを表示し、例外を報告する', function () {
+    it('確認メールを送れなかったときはエラーを表示し、個人情報を含めずに失敗を記録する', function () {
         Exceptions::fake();
-        Mail::shouldReceive('to')->andThrow(new TransportException('Connection refused'));
+        Log::spy();
+        Mail::shouldReceive('to')->andThrow(new TransportException('550 <new@example.com> User unknown'));
         $user = User::factory()->create(['email' => 'old@example.com']);
 
         $this->actingAs($user)
@@ -91,7 +92,10 @@ describe('メールアドレスの変更', function () {
             ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com'])
             ->assertSessionHasErrors(['email' => '確認メールを送信できませんでした。時間をおいて再度お試しください。']);
 
-        Exceptions::assertReported(TransportException::class);
+        Exceptions::assertNothingReported();
+        Log::shouldHaveReceived('warning')->with('Email change verification could not be sent.', [
+            'exception_class' => TransportException::class,
+        ])->once();
         expect($user->refresh()->email)->toBe('old@example.com');
     });
 
@@ -181,15 +185,19 @@ describe('メールアドレスの変更', function () {
         Log::shouldHaveReceived('info')->with('User email was changed.', ['user_id' => $user->getKey()])->once();
     });
 
-    it('旧アドレスへの通知を送れなくても切り替えは完了し、例外を報告する', function () {
+    it('旧アドレスへの通知を送れなくても切り替えは完了し、個人情報を含めずに失敗を記録する', function () {
         $user = User::factory()->create(['email' => 'old@example.com']);
         $url = requestEmailChange($user, 'new@example.com');
         Exceptions::fake();
-        Mail::shouldReceive('to')->andThrow(new TransportException('Connection refused'));
+        Log::spy();
+        Mail::shouldReceive('to')->andThrow(new TransportException('550 <old@example.com> User unknown'));
 
         $this->post($url)->assertRedirect(route('email-change.completed'));
 
-        Exceptions::assertReported(TransportException::class);
+        Exceptions::assertNothingReported();
+        Log::shouldHaveReceived('warning')->with('Email change notification could not be sent.', [
+            'exception_class' => TransportException::class,
+        ])->once();
         expect($user->refresh()->email)->toBe('new@example.com');
     });
 

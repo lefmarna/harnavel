@@ -8,6 +8,7 @@ use App\Services\GoogleAuth\GoogleAuthService;
 use Database\Factories\UserFactory;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Passkeys\Events\PasskeyRegistered;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -79,14 +80,18 @@ describe('セキュリティに関わる変更の通知', function () {
         Mail::assertNotSent(AccountSecurityMail::class);
     });
 
-    it('通知を送れなくても変更は完了し、例外を報告する', function () {
+    it('通知を送れなくても変更は完了し、個人情報を含めずに失敗を記録する', function () {
         Exceptions::fake();
-        Mail::shouldReceive('to')->andThrow(new TransportException('Connection refused'));
+        Log::spy();
+        Mail::shouldReceive('to')->andThrow(new TransportException('550 <owner@example.com> User unknown'));
         $user = User::factory()->create();
 
         changePasswordFromSettings($user);
 
-        Exceptions::assertReported(TransportException::class);
+        Exceptions::assertNothingReported();
+        Log::shouldHaveReceived('warning')->with('Account security notification could not be sent.', [
+            'exception_class' => TransportException::class,
+        ])->once();
         expect(Hash::check('new-password1', $user->refresh()->password))->toBeTrue();
     });
 

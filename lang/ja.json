@@ -35,7 +35,7 @@
   "Service Unavailable": "サービスは利用できません",
   "Showing": "表示中",
   "The :attribute must be at least :length characters and contain at least one number.": ":attributeは:length文字以上で、数字を１文字以上含めなければいけません。",
-  "The :attribute must be at least :length characters and contain at least one special character and one number.": ":attributeは:length文字以上で、記号と数字をそれぞれ１文字以上含めなければいけません。。",
+  "The :attribute must be at least :length characters and contain at least one special character and one number.": ":attributeは:length文字以上で、記号と数字をそれぞれ１文字以上含めなければいけません。",
   "The :attribute must be at least :length characters and contain at least one special character.": ":attributeは:length文字以上で、記号を１文字以上含めなければいけません。",
   "The :attribute must be at least :length characters and contain at least one uppercase character and one number.": ":attributeは:length文字以上で、大文字と数字をそれぞれ１文字以上含めなければいけません。",
   "The :attribute must be at least :length characters and contain at least one uppercase character and one special character.": ":attributeは:length文字以上で、大文字と記号をそれぞれ１文字以上含めなければいけません。",

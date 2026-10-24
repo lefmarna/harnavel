@@ -48,6 +48,7 @@ Route::middleware(['auth'])->group(function () {
             new StaticPageViewModel(
                 title: __('pages.settings.appearance.title'),
                 description: __('pages.settings.appearance.description'),
+                noIndex: true,
             ),
         );
     })->name('appearance.edit');

@@ -67,6 +67,17 @@ function main(): void {
   assertAllEqual(workflowPhpSeries, phpSeries, "PHP series", ".github/workflows/delivery.yml");
   console.log(`OK: delivery.yml uses the tested PHP series (${phpSeries}).`);
 
+  for (const name of ["reusable-quality.yml", "mutation.yml"]) {
+    const file = `.github/workflows/${name}`;
+    const testedPhpSeries = matchAll(
+      fs.readFileSync(path.join(ROOT, file), "utf8"),
+      /^\s+php-version:\s*["']?(\d+\.\d+)["']?\s*$/gm,
+      `php-version in ${file}`,
+    );
+    assertAllEqual(testedPhpSeries, phpSeries, "PHP series", file);
+    console.log(`OK: ${name} tests the deployed PHP series (${phpSeries}).`);
+  }
+
   // CircleCI の E2E とミューテーションテストも、配備先と同じ系列の PHP で検証する。
   const circleciPhpSeries = matchAll(
     fs.readFileSync(CIRCLECI_PATH, "utf8"),

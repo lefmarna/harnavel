@@ -8,11 +8,9 @@ use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
-use App\Support\EmailAddress;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
-use Laravel\Fortify\Fortify;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -27,10 +25,8 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input): User
     {
-        $normalizedInput = $this->normalizeInput($input);
-
         /** @var array{name: string, email: string, password: string} $validated */
-        $validated = Validator::make($normalizedInput, [
+        $validated = Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
         ], attributes: ['name' => __('form.profile_update.name')])->validate();
@@ -42,21 +38,5 @@ class CreateNewUser implements CreatesNewUsers
         $this->userRepository->save($user);
 
         return $user;
-    }
-
-    /**
-     * @param  array<string, string>  $input
-     * @return array<string, string>
-     */
-    private function normalizeInput(array $input): array
-    {
-        $usernameField = Fortify::username();
-        $username = $input[$usernameField] ?? null;
-
-        if (is_string($username)) {
-            $input[$usernameField] = EmailAddress::normalize($username);
-        }
-
-        return $input;
     }
 }

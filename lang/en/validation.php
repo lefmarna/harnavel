@@ -155,4 +155,17 @@ return [
     'uppercase' => 'The :attribute field must be uppercase.',
     'url' => 'The :attribute field must be a valid URL.',
     'uuid' => 'The :attribute field must be a valid UUID.',
+
+    'custom' => [
+        'password' => [
+            'regex' => 'The password may only contain single-byte letters, numbers, and symbols.',
+        ],
+    ],
+
+    'attributes' => [
+        'email' => 'email address',
+        'password' => 'password',
+        'current_password' => 'current password',
+        'password_confirmation' => 'password confirmation',
+    ],
 ];

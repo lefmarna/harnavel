@@ -76,6 +76,15 @@ function ordersRequest(?string $routeName): Request
     return $request;
 }
 
+function mailRequest(string $path, string $uri): Request
+{
+    $request = Request::create("https://example.test/{$path}", 'POST');
+    $route = new RoutingRoute(['POST'], $uri, []);
+    $request->setRouteResolver(fn (): RoutingRoute => $route);
+
+    return $request;
+}
+
 describe('本番例外通知', function () {
     it('HTTPリクエストの未処理例外を Discord 通知へ接続できる', function () {
         $this->get('/_testing/notify-exception')->assertInternalServerError();
@@ -245,6 +254,17 @@ describe('本番例外通知', function () {
             app(ProductionExceptionNotifier::class)->report($exception);
             app(ProductionExceptionNotifier::class)->report($exception);
         }],
+        // SMTP の応答は宛先を含み、パスは利用者ごとに変わる。
+        '宛先とパスだけ違うメール送信の失敗' => [function (): void {
+            app(ProductionExceptionNotifier::class)->report(
+                new TransportException('550 5.1.1 <first@example.test> User unknown'),
+                mailRequest('settings/email/verify/1', 'settings/email/verify/{userId}'),
+            );
+            app(ProductionExceptionNotifier::class)->report(
+                new TransportException('550 5.1.1 <second@example.test> User unknown'),
+                mailRequest('settings/email/verify/2', 'settings/email/verify/{userId}'),
+            );
+        }],
     ]);
 
     it('別の障害とみなす例外はそれぞれ通知する', function (Closure $reportTwice) {
@@ -278,6 +298,11 @@ describe('本番例外通知', function () {
             $exception = new RuntimeException('database is unavailable');
             app(ProductionExceptionNotifier::class)->report($exception, ordersRequest('orders.store'));
             app(ProductionExceptionNotifier::class)->report($exception, ordersRequest(null));
+        }],
+        'メール送信の失敗でルートが異なる' => [function (): void {
+            $exception = new TransportException('Connection refused');
+            app(ProductionExceptionNotifier::class)->report($exception, mailRequest('settings/email/verify/1', 'settings/email/verify/{userId}'));
+            app(ProductionExceptionNotifier::class)->report($exception, mailRequest('settings/profile', 'settings/profile'));
         }],
     ]);
 

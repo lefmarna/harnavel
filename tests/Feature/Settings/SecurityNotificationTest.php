@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Mail\AccountSecurityMail;
 use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthService;
+use App\Services\Observability\ProductionExceptionNotifier;
 use Database\Factories\UserFactory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -80,10 +82,13 @@ describe('セキュリティに関わる変更の通知', function () {
         Mail::assertNotSent(AccountSecurityMail::class);
     });
 
-    it('通知を送れなくても変更は完了し、個人情報を含めずに失敗を記録する', function () {
+    it('通知を送れなくても変更は完了し、個人情報を含めずに失敗を記録して Discord へ知らせる', function () {
         Exceptions::fake();
         Log::spy();
-        Mail::shouldReceive('to')->andThrow(new TransportException('550 <owner@example.com> User unknown'));
+        $exception = new TransportException('550 <owner@example.com> User unknown');
+        Mail::shouldReceive('to')->andThrow($exception);
+        $this->mock(ProductionExceptionNotifier::class)
+            ->shouldReceive('report')->once()->with($exception, Mockery::type(Request::class));
         $user = User::factory()->create();
 
         changePasswordFromSettings($user);

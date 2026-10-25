@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Services\Account\EmailChangeService;
 use App\Services\Account\SessionRevocation;
+use App\Services\Observability\ProductionExceptionNotifier;
 use App\Support\EmailAddress;
 use App\ViewModels\Settings\ProfilePageViewModel;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
@@ -29,6 +30,7 @@ class ProfileController extends Controller
         private readonly UserRepositoryContract $userRepository,
         private readonly EmailChangeService $emailChangeService,
         private readonly SessionRevocation $sessionRevocation,
+        private readonly ProductionExceptionNotifier $exceptionNotifier,
     ) {}
 
     /**
@@ -82,6 +84,7 @@ class ProfileController extends Controller
             $this->emailChangeService->request($user, $validated['email']);
         } catch (Throwable $e) {
             Log::warning('Email change verification could not be sent.', ['exception_class' => $e::class]);
+            $this->exceptionNotifier->report($e, $request);
 
             return to_route('profile.edit')->withErrors(['email' => __('form.profile_update.email_change_failed')]);
         }

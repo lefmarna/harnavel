@@ -6,13 +6,17 @@ use App\Exceptions\GoogleAuthException;
 use App\Exceptions\GoogleLinkConfirmationPendingException;
 use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
+use App\Services\Observability\ProductionExceptionNotifier;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
+use Symfony\Component\Mailer\Exception\TransportException;
 
 use function Pest\Laravel\mock;
 
@@ -289,6 +293,31 @@ describe('Google OAuth コントローラ', function () {
         $this->get(route('auth.google.callback'))
             ->assertRedirect(route('auth.google.link.confirm'))
             ->assertSessionHas('google_link_email_sent', true);
+    });
+
+    it('callback() で連携の確認メールを送れなかったときは汎用の文言で戻し、Discord へ知らせる', function () {
+        Log::spy();
+        User::factory()->create(['email' => 'existing@example.com', 'google_id' => null]);
+
+        fakeGoogleUser([
+            'getId' => 'google-123',
+            'getEmail' => 'existing@example.com',
+            'getName' => 'Existing User',
+            'getRaw' => ['email_verified' => true],
+        ]);
+
+        $exception = new TransportException('550 <existing@example.com> User unknown');
+        Mail::shouldReceive('to')->andThrow($exception);
+        mock(ProductionExceptionNotifier::class)
+            ->shouldReceive('report')->once()->with($exception, Mockery::type(Request::class));
+
+        $this->get(route('auth.google.callback'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('error', 'Google認証に失敗しました。もう一度お試しください。');
+
+        Log::shouldHaveReceived('warning')
+            ->with('Google OAuth unexpected error.', ['exception_class' => TransportException::class])
+            ->once();
     });
 
     it('Google 連携確認画面は確認メール送信直後のフローでのみ表示できる', function () {

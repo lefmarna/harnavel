@@ -8,6 +8,7 @@ use App\Mail\EmailChangedMail;
 use App\Mail\VerifyNewEmailMail;
 use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
+use App\Services\Observability\ProductionExceptionNotifier;
 use App\Support\EmailAddress;
 use App\Support\SignedPayloadLink;
 use Carbon\CarbonImmutable;
@@ -21,7 +22,10 @@ class EmailChangeService
 {
     private const VERIFY_LINK_MINUTES = 60;
 
-    public function __construct(private readonly UserRepositoryContract $userRepository) {}
+    public function __construct(
+        private readonly UserRepositoryContract $userRepository,
+        private readonly ProductionExceptionNotifier $exceptionNotifier,
+    ) {}
 
     public function request(User $user, string $email): void
     {
@@ -107,6 +111,7 @@ class EmailChangeService
             Mail::to($previousEmail)->send(new EmailChangedMail);
         } catch (Throwable $e) {
             Log::warning('Email change notification could not be sent.', ['exception_class' => $e::class]);
+            $this->exceptionNotifier->report($e, request());
         }
     }
 }

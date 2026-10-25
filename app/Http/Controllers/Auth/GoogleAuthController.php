@@ -8,6 +8,7 @@ use App\Exceptions\GoogleAuthException;
 use App\Exceptions\GoogleLinkConfirmationPendingException;
 use App\Http\Controllers\Controller;
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
+use App\Services\Observability\ProductionExceptionNotifier;
 use App\Support\GoogleOAuth;
 use App\Support\SignedPayloadLink;
 use App\ViewModels\Auth\EmailLinkPageViewModel;
@@ -29,7 +30,10 @@ class GoogleAuthController extends Controller
 {
     private const REAUTHENTICATION_SESSION_KEY = 'google_reauthentication';
 
-    public function __construct(private readonly GoogleAuthServiceContract $googleAuthService) {}
+    public function __construct(
+        private readonly GoogleAuthServiceContract $googleAuthService,
+        private readonly ProductionExceptionNotifier $exceptionNotifier,
+    ) {}
 
     public function redirect(): RedirectResponse
     {
@@ -123,6 +127,7 @@ class GoogleAuthController extends Controller
                 ->with('error', $e->getMessage());
         } catch (Throwable $e) {
             Log::warning('Google OAuth unexpected error.', ['exception_class' => $e::class]);
+            $this->exceptionNotifier->report($e, $request);
 
             return redirect()->route('login')
                 ->with('error', __('auth.google.failed'));

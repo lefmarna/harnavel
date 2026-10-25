@@ -5,7 +5,9 @@ declare(strict_types=1);
 use App\Mail\EmailChangedMail;
 use App\Mail\VerifyNewEmailMail;
 use App\Models\User;
+use App\Services\Observability\ProductionExceptionNotifier;
 use App\ViewModels\Auth\EmailLinkPageViewModel;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -80,10 +82,13 @@ describe('メールアドレスの変更', function () {
         Mail::assertNothingSent();
     });
 
-    it('確認メールを送れなかったときはエラーを表示し、個人情報を含めずに失敗を記録する', function () {
+    it('確認メールを送れなかったときはエラーを表示し、個人情報を含めずに失敗を記録して Discord へ知らせる', function () {
         Exceptions::fake();
         Log::spy();
-        Mail::shouldReceive('to')->andThrow(new TransportException('550 <new@example.com> User unknown'));
+        $exception = new TransportException('550 <new@example.com> User unknown');
+        Mail::shouldReceive('to')->andThrow($exception);
+        $this->mock(ProductionExceptionNotifier::class)
+            ->shouldReceive('report')->once()->with($exception, Mockery::type(Request::class));
         $user = User::factory()->create(['email' => 'old@example.com']);
 
         $this->actingAs($user)
@@ -185,12 +190,15 @@ describe('メールアドレスの変更', function () {
         Log::shouldHaveReceived('info')->with('User email was changed.', ['user_id' => $user->getKey()])->once();
     });
 
-    it('旧アドレスへの通知を送れなくても切り替えは完了し、個人情報を含めずに失敗を記録する', function () {
+    it('旧アドレスへの通知を送れなくても切り替えは完了し、個人情報を含めずに失敗を記録して Discord へ知らせる', function () {
         $user = User::factory()->create(['email' => 'old@example.com']);
         $url = requestEmailChange($user, 'new@example.com');
         Exceptions::fake();
         Log::spy();
-        Mail::shouldReceive('to')->andThrow(new TransportException('550 <old@example.com> User unknown'));
+        $exception = new TransportException('550 <old@example.com> User unknown');
+        Mail::shouldReceive('to')->andThrow($exception);
+        $this->mock(ProductionExceptionNotifier::class)
+            ->shouldReceive('report')->once()->with($exception, Mockery::type(Request::class));
 
         $this->post($url)->assertRedirect(route('email-change.completed'));
 

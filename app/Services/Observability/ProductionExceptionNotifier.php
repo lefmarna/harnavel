@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PDOException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Throwable;
 
 class ProductionExceptionNotifier
@@ -158,13 +159,16 @@ class ProductionExceptionNotifier
 
     private function deduplicationKey(Throwable $exception, ?Request $request): string
     {
+        $isMailFailure = $exception instanceof TransportExceptionInterface;
+
         $fingerprint = implode('|', [
             app()->environment(),
             $exception::class,
-            // DB の例外は値ごとにメッセージが変わるため、同じ経路の障害としてまとめる。
-            $exception instanceof PDOException ? null : hash('sha256', $exception->getMessage()),
-            // 回数制限はパスの ID を変えれば別キーになるので、ルートのテンプレートでまとめる。
-            $exception instanceof ThrottleRequestsException ? $request?->route()?->uri() : $request?->path(),
+            // DB の例外は値ごとに、SMTP の応答は宛先ごとにメッセージが変わるため、同じ経路の障害としてまとめる。
+            $exception instanceof PDOException || $isMailFailure ? null : hash('sha256', $exception->getMessage()),
+            // 回数制限はパスの ID を変えれば別キーになり、メール送信の失敗は利用者ごとのパスで分かれるので、
+            // ルートのテンプレートでまとめる。
+            $exception instanceof ThrottleRequestsException || $isMailFailure ? $request?->route()?->uri() : $request?->path(),
             $request?->route()?->getName(),
         ]);
 

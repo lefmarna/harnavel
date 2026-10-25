@@ -31,3 +31,6 @@ lines stay in the server's log files and are never forwarded.
 `ProductionExceptionNotifier` reports unhandled 500s and rate-limit rejections, deduplicated per
 route. It builds its payload from the request, not from the log, and shares only `request_id` with
 it. The payload names the exception class but never its message, since Discord is a third party.
+
+A caught mail failure is logged by class and passed to the notifier directly rather than to
+`report()`, which would write the SMTP response to the log.

@@ -139,7 +139,7 @@ export default function Security({
                       leave="transition ease-in-out"
                       leaveTo="opacity-0"
                     >
-                      <p className="text-sm text-neutral-600">保存しました</p>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-400">保存しました</p>
                     </Transition>
                   </div>
                 </>

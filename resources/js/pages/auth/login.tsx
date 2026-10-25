@@ -134,10 +134,16 @@ export default function Login({
         )}
       </Form>
 
-      {error && <div className="mb-4 text-center text-sm font-medium text-red-600">{error}</div>}
+      {error && (
+        <div className="mb-4 text-center text-sm font-medium text-red-600 dark:text-red-400">
+          {error}
+        </div>
+      )}
 
       {status && (
-        <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>
+        <div className="mb-4 text-center text-sm font-medium text-green-600 dark:text-green-400">
+          {status}
+        </div>
       )}
     </AuthLayout>
   );

@@ -131,7 +131,9 @@ function ConfirmError({ message }: { message: string | null }) {
     return null;
   }
 
-  return <div className="text-center text-sm font-medium text-red-600">{message}</div>;
+  return (
+    <div className="text-center text-sm font-medium text-red-600 dark:text-red-400">{message}</div>
+  );
 }
 
 function PasskeyConfirm() {

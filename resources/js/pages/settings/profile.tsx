@@ -101,7 +101,7 @@ export default function Profile({
                   <InputError className="mt-2" message={errors.email} />
 
                   {status === "email-change-link-sent" && (
-                    <p className="text-sm font-medium text-green-600">
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
                       新しいメールアドレスに確認メールを送信しました。メール内のリンクを開くと変更が完了します。
                     </p>
                   )}
@@ -121,7 +121,7 @@ export default function Profile({
                     </p>
 
                     {status === "verification-link-sent" && (
-                      <div className="mt-2 text-sm font-medium text-green-600">
+                      <div className="mt-2 text-sm font-medium text-green-600 dark:text-green-400">
                         メールアドレス宛に新しい認証リンクを送信しました。
                       </div>
                     )}
@@ -140,7 +140,7 @@ export default function Profile({
                     leave="transition ease-in-out"
                     leaveTo="opacity-0"
                   >
-                    <p className="text-sm text-neutral-600">保存しました</p>
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400">保存しました</p>
                   </Transition>
                 </div>
               </>

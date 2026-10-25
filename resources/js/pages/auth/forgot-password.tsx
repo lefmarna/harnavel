@@ -14,7 +14,9 @@ export default function ForgotPassword({ status }: { status?: string }) {
   return (
     <AuthLayout>
       {status && (
-        <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>
+        <div className="mb-4 text-center text-sm font-medium text-green-600 dark:text-green-400">
+          {status}
+        </div>
       )}
 
       <div className="space-y-6">

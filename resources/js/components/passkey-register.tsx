@@ -110,7 +110,7 @@ function AvailablePasskeyRegister({ onSuccess }: Props) {
           leave="transition ease-in-out"
           leaveTo="opacity-0"
         >
-          <p className="text-sm text-neutral-600">パスキーを追加しました</p>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">パスキーを追加しました</p>
         </Transition>
       </div>
     );

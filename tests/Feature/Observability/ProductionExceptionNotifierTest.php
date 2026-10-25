@@ -254,7 +254,6 @@ describe('本番例外通知', function () {
             app(ProductionExceptionNotifier::class)->report($exception);
             app(ProductionExceptionNotifier::class)->report($exception);
         }],
-        // SMTP の応答は宛先を含み、パスは利用者ごとに変わる。
         '宛先とパスだけ違うメール送信の失敗' => [function (): void {
             app(ProductionExceptionNotifier::class)->report(
                 new TransportException('550 5.1.1 <first@example.test> User unknown'),

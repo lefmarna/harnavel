@@ -16,7 +16,7 @@ required template changes without coupling the merge to routine package maintena
 - **Shared:** template-origin framework, auth/settings foundations, test infrastructure,
   architecture rules, CI actions, reusable workflows, template ADRs, and testing policy. Prefer the
   template.
-- **Hybrid:** `AGENTS.md`, `delivery.yml`, `mise.toml`, `phpstan.neon.dist`, `renovate.json`,
+- **Hybrid:** `README.md`, `AGENTS.md`, `delivery.yml`, `mise.toml`, `phpstan.neon.dist`, `renovate.json`,
   architecture tests, and files containing both shared scaffolding and app behavior. Take
   template-origin changes and keep app-specific content.
 - **App-owned:** domain behavior, presentation, branding, environment values, `CONTEXT.md`, flat App
@@ -24,6 +24,21 @@ required template changes without coupling the merge to routine package maintena
 
 Special cases:
 
+- For a derived app's `README.md`, use the latest template's
+  `.agents/skills/project-docs-init/assets/README.md` as the shared baseline. Harnavel's root README
+  introduces the template and is not the app README source. Preserve the pre-pull bodies of the
+  `app:overview`, `app:development`, and `app:notices` marker pairs, and take all text outside them
+  from the latest scaffold. Reconcile the README even when Git merged it cleanly or the root README
+  did not change: updates to the scaffold must still reach the app.
+- On the first merge of this convention, a legacy README may lack those markers. Identify and
+  retain its product description, features, usage, environment values, extra commands, app-specific
+  docs links, and notices in the corresponding app blocks, including content embedded in shared
+  sections. Apply the scaffold's current shared text, keep each marker pair exactly once, and leave
+  no placeholders. This reconciles shared development guidance without replacing app-specific
+  content. Once marked, preserve the app block bodies through subsequent template merges. If later
+  app-specific additions appear outside those blocks, move them into the appropriate block before
+  synchronizing shared text; do not silently discard them. Compare against the pre-pull scaffold
+  when available to distinguish local additions from shared guidance being updated.
 - Shared specs reach app pages only through calibration points: `home` in `config/fortify.php`,
   `HOME_URL`, `PROTECTED_PATH`, and `SETTINGS_PATHS` in `e2e/support/auth.ts`, and
   `getProtectedPage()` and `settingsUrl()` in `tests/Pest.php`. Keep the app's values, and assert
@@ -69,7 +84,7 @@ Special cases:
 
 1. Resolve `REMOTE` and `BRANCH` from the invocation, defaulting to `template` and `main`, then
    inspect `git status`, remotes, the current branch, and `MERGE_HEAD`. Preserve or recover the
-   pre-pull app dependency baseline before changing lockfiles.
+   pre-pull app README and dependency baselines before reconciling merged files.
 2. Pull the resolved remote and branch with `git pull --no-commit --no-ff` when they have not
    already been pulled, so a conflict-free merge still stops before committing.
 3. List unresolved paths with `git diff --diff-filter=U --name-only`.
@@ -77,7 +92,8 @@ Special cases:
 5. Classify each hunk as shared, hybrid, or app-owned and remove dead code introduced by the
    resolution.
 6. Reconcile dependency inputs and required shared fixes using the dependency reference, checking
-   cleanly merged paths too. Regenerate Wayfinder output when its inputs changed.
+   cleanly merged paths too. Reconcile README against the derived-app scaffold and its preserved
+   app blocks. Regenerate Wayfinder output when its inputs changed.
 7. List app paths that the template once deleted and still omits:
 
    ```bash

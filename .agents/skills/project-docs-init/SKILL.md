@@ -11,6 +11,11 @@ Initialize documentation for a new project expanded from the template repository
 
 This template is a Laravel + Inertia + Docker starter, so each derived project needs its own customized `docs/` content. Read the existing project context, such as `old_docs/`, and reflect project-specific information while preserving the template docs structure.
 
+Start this once in the primary checkout. Adapt the app's documentation and defaults before the
+first `mise run setup`, then prepare the primary environment and verify in Step 6. Commit the
+initialized files after verification and before creating additional Worktrees. Subsequent Orca
+Worktrees use `mise run setup` without rerunning this skill.
+
 Important:
 
 - Keep docs short.
@@ -29,7 +34,7 @@ Confirm the following before running:
 Ask the user to confirm:
 
 1. **Context directory**: where the project's existing documentation lives. Default: `old_docs/`.
-2. **Local identifiers and port settings**: `APP_NAME`, `DB_DATABASE`, and Docker ports used by this project. These are changed per project so multiple projects can be developed in parallel.
+2. **Local identifiers and port block**: `APP_NAME`, `DB_DATABASE`, and an unused 100-port block starting at `DEV_PORT_BASE`. These are chosen per application; Worktree setup assigns ports within that block.
 
 ## Step 2: Read Context
 
@@ -51,9 +56,9 @@ Files in the template docs structure that need project-specific updates:
 | `AGENTS.md` | Adapt the project summary and session rules (Step 4). |
 | `CONTEXT.md` | Fill initial entries with domain terms extracted from context. Preserve the opening contract text and entry format. |
 | `docs/infrastructure.md` | Record only external production facts that differ from the template and cannot be read from repository configuration. |
-| `.env.example` | Update default values for `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port numbers. |
+| `.env.example` | Update default values for `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and the app's port block. |
 | `public/manifest.webmanifest` | Update the static app name and description in the Web App Manifest. |
-| `README.md` | Update the project name, purpose, audience, scope, and setup text. |
+| `README.md` | Build from `assets/README.md`, filling the app-owned blocks described in Step 4. |
 | `docs/adr/NNNN-*.md` | Record adopted app-specific trade-offs only when they meet `docs/adr/README.md`; update its App ADRs index. |
 
 The following files are template-shared and should generally not be changed:
@@ -69,10 +74,25 @@ Adapt `README.md` and `AGENTS.md` within their existing roles:
 
 **`README.md`**
 
-- Change the title to the project name or project-name-based wording.
-- Describe the purpose, audience, and scope briefly in the opening paragraphs.
-- Do not leave scaffold-oriented explanations such as "this is a template" or "for horizontal rollout across multiple projects".
-- Keep setup steps for actual users.
+Use [the derived-app README scaffold](assets/README.md), not Harnavel's root README. Its links are
+relative to the generated README at the repository root. Keep its shared text and marker pairs;
+replace all placeholders inside the following app-owned blocks:
+
+| Block | Content |
+| --- | --- |
+| `app:overview` | `PROJECT_NAME` and `PROJECT_OVERVIEW`: the app's title, purpose, audience, scope, features, and product usage. |
+| `app:development` | `APP_DEVELOPMENT_NOTES`: app-specific prerequisites, environment values, extra commands, and links to app-specific development or operations docs. |
+| `app:notices` | `APP_NOTICES`: app-specific licensing, privacy, trademark, and other notices. |
+
+Use supplied context and any existing app README to fill these blocks, preserving app-specific
+information. Empty optional blocks keep their markers with no placeholder text. Remove inherited
+template promotion and one-time initialization instructions. Shared technology, Orca setup,
+standard commands, and documentation links follow the scaffold. Put additional app-specific
+content in the appropriate block rather than editing the shared text. Document local URLs through
+`mise run dev:info`.
+
+The scaffold is template-owned and remains unchanged in derived apps. Later template merges
+update README text outside the app blocks from the latest scaffold while preserving their bodies.
 
 **`AGENTS.md`**
 
@@ -82,11 +102,14 @@ Adapt `README.md` and `AGENTS.md` within their existing roles:
 
 ## Step 5: Update Local Identifiers and Port Settings
 
-Using the user-provided `APP_NAME`, `DB_DATABASE`, port numbers, and the project name extracted from context, update:
+Using the user-provided `APP_NAME`, `DB_DATABASE`, `DEV_PORT_BASE`, and the project name extracted from context, update:
 
-- Default URL after setup in `README.md`.
-- Relevant `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and port variables in `.env.example`.
+- Relevant `APP_NAME`, `DB_DATABASE`, and `VITE_APP_NAME` defaults in `.env.example`.
+- `DEV_PORT_BASE` and the primary-checkout port defaults in `.env.example`: Nginx at base, Vite at base + 1, MariaDB at base + 2, Mailpit SMTP at base + 3, and Mailpit UI at base + 4. Additional Worktree ports are assigned by setup; do not prescribe fixed URLs for them in README.
 - `name`, `short_name`, and `description` in `public/manifest.webmanifest`.
+
+For an app with registered development environments, retain its existing port block; changing it
+requires a separate environment migration. See [Worktree development](../../../docs/worktree-development.md).
 
 Naming rules:
 
@@ -112,12 +135,16 @@ No OPcache measurement is required to start deploying. The deployment waits out 
 window while maintenance is active. Recheck the external assumption only if the environment leaves
 XServer, changes PHP version, gains a `.user.ini`, or serves stale behavior after a green deploy.
 
-## Step 6: Review and Verify
+## Step 6: Review, Set Up, and Verify
 
 1. Present the updates to the user and get approval.
-2. Run `pnpm lint:docs` to verify link consistency under `docs/`.
-3. Confirm README and AGENTS follow Step 4.
-4. Report unresolved context rather than forcing every source detail into docs.
+2. After the app defaults are finalized, run `mise run setup` in the primary checkout. This prepares
+   the dependencies, containers, and generated assets needed by verification and commit hooks.
+   Keep the `app` container running for the pre-commit backend analysis.
+3. Run `pnpm lint:docs` to verify link consistency under `docs/`.
+4. Confirm README and AGENTS follow Step 4: all README placeholders are replaced, each app block
+   occurs once with its marker pair intact, and text outside the blocks matches the scaffold.
+5. Report unresolved context rather than forcing every source detail into docs.
 
 ## Output
 

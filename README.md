@@ -1,11 +1,13 @@
 # Harnavel
 
-Harnavel（ハーナベル）は、Laravel 13 + Inertia React + MariaDB を Docker で開発するためのテンプレートです。
+Harnavel（ハーナベル）は、Orca の worktree で AI エージェントと開発するための Laravel 13 + Inertia React テンプレートです。
+開発環境は Docker で動かし、作業ごとにブランチと環境を分けます。
 複数案件へ横展開しやすいように、認証・基本画面・開発コマンド・運用ルールを初期状態で揃えています。
 作者個人の開発基盤として随時更新しており、互換性や安定性は保証しません。
 
 ## 特徴
 
+- **Orca で作業ごとに環境を用意**: worktree の作成時にセットアップし、完了してからエージェントを起動します。MariaDB と Mailpit はアプリ内で共有し、DB は worktree ごとに分けます（[docs/worktree-development.md](docs/worktree-development.md)）。
 - **XServer 共有ホスティング前提**: 常駐プロセスや SSR を使わずに動かし（SEO メタタグは `app.blade.php` で初期 HTML に出力します）、サーバー上で直接リリースを置き換えます（[docs/infrastructure.md](docs/infrastructure.md)、[TADR-0006](docs/adr/template/0006-in-place-deployment.md)）。
 - **テストを仕様として扱う**: 振る舞いの変更は失敗するテストから始め、ミューテーションテストでテストの強さを確かめます（[docs/testing-as-spec.md](docs/testing-as-spec.md)）。
 - **AI エージェント用のハーネス**: `AGENTS.md`、スキル、設計判断の記録（ADR）を同梱し、エージェントが同じ規約で作業できるようにしています（[AGENTS.md](AGENTS.md)、[docs/adr/README.md](docs/adr/README.md)）。
@@ -26,54 +28,60 @@ Harnavel（ハーナベル）は、Laravel 13 + Inertia React + MariaDB を Dock
 
 ## 前提環境
 
+- Orca
 - Docker / Docker Compose
-- `mise`（推奨。Node.js と pnpm を揃えるため）
+- `mise`（Node.js と pnpm を揃えるため）
 
-## 最短セットアップ
+## 新しい派生アプリの初期設定
 
-初回セットアップは `mise` タスクを使うのが最短です。
+新しい派生アプリでは、clone した主 checkout でエージェントへ [`project-docs-init`](.agents/skills/project-docs-init/SKILL.md) を明示して依頼します。
+アプリの目的・対象ユーザー・機能範囲などの資料（既定は `old_docs/`）と、アプリ名・DB 名・ほかのアプリと重ならないポート枠を渡してください。
+このスキルは [派生アプリ用 README のひな形](.agents/skills/project-docs-init/assets/README.md) にアプリ固有の情報を差し込み、ドメイン用語や環境設定の既定値も整えます。通常の worktree 作成時には実行しません。
+
+Harnavel の README はテンプレートの紹介用です。派生アプリの README は専用のひな形を使い、アプリ名・機能・固有の開発設定・注意事項を差し替えます。開発手順などの共通部分は、`merge-template` でひな形の更新に追従します。
+
+アプリ名やポート枠などの既定値を編集した後、主 checkout で環境を用意して検証します。
 
 ```bash
-# 任意: デフォルト値を調整したい場合だけ先に作成
-cp .env.example .env
-
-# ツール導入、依存関係、Git hooks、共有環境とこの Worktree の起動、Laravel初期化、アセットのビルドまで実行
 mise run setup
+pnpm lint:docs
+```
+
+セットアップと検証が通ったら、初期設定の変更をコミットしてから以下の開発手順へ進みます。コミット時の検証にも依存パッケージと起動中の `app` コンテナが必要です。
+アプリごとのポート枠は `DEV_PORT_BASE` から 100 ポート分を使います。割り当ての詳細は [Worktree development](docs/worktree-development.md) を参照してください。
+
+## Orca で開発する
+
+1. clone したリポジトリを Orca に登録します。主 checkout は共有 DB のデータ保存先でもあるため、追加した worktree の利用中は移動・削除しません。
+2. 作業ごとに worktree を作成します。分岐元は通常 `main`、派生アプリに `develop` がある場合は `develop` にします（[ブランチ運用](docs/branches-and-ci.md)）。
+3. セットアップを有効にしてエージェントを起動します。同梱の `orca.yaml` が `mise run setup` を実行し、完了を待ってからエージェントを起動します。
+
+セットアップ後、作業する worktree のターミナルで URL を確認します。
+
+```bash
+mise run dev:info
 
 # フロントエンドを変更するときだけ Vite を起動
 pnpm dev
 ```
 
-Vite は負荷を抑えるため常駐させません。起動していない間は `mise run setup` 時にビルドしたアセットで表示するため、フロントエンドの変更を画面で確認するときは `pnpm dev` を起動してください。
+アプリの URL は worktree ごとに変わります。Mailpit を含め、接続先は `dev:info` の表示で確認してください。ブラウザの Cookie はポートで分離されないので、worktree ごとにブラウザプロファイルも分けます。
 
-セットアップ完了後の既定 URL:
-
-- アプリ: `http://localhost:20000`
-- Mailpit: `http://localhost:20004`
-
-MariaDB と Mailpit は同じアプリの Worktree 間で共有し、DB は Worktree ごとに分けます。ポートの割り当て、Orca、削除の手順は [Worktree development](docs/worktree-development.md) を参照してください。
-
+Vite は負荷を抑えるため常駐させません。起動していない間は、セットアップ時にビルドしたアセットで表示します。
 `pnpm dev` の二重起動は避けてください。ポート衝突で終了した側が `public/hot` を削除するため、先に起動した dev server が生きたままアプリだけビルド済みアセットの配信に切り替わります（E2E はこの状態を検出して中止します）。
 
-## 日常的によく使うコマンド
+作業はそのブランチから PR を作成して取り込みます。不要になった追加 worktree は、Orca のアーカイブ処理で `mise run worktree:remove` を実行してから片付けます。その worktree の DB も削除されるため、残したいデータは先に退避してください。
+
+### 手動でセットアップする場合
+
+Orca のセットアップを省略した場合や、Orca を使わずに開発する場合も、対象の checkout で同じタスクを実行できます。
 
 ```bash
-mise run up             # コンテナ起動
-mise run stop           # コンテナ停止
-mise run down           # コンテナ停止 + 削除
-mise run dev:info       # この Worktree の URL・DB・Compose 名
-mise run infra:stop     # 全 Worktree を down した後で共有 DB・Mailpit を停止
-mise run app            # app コンテナへ入る
-mise run verify:backend # Pint -> Larastan -> Pest（カバレッジ閾値は mise.toml を参照）
-pnpm format:check       # Oxfmt チェックのみ
-pnpm lint:check         # type-aware Oxlint（変更なし）
-pnpm fix                # Oxlint の safe fix + Oxfmt
-pnpm types:check        # TypeScript 型チェック
-pnpm lint:docs          # docs/ + README/AGENTS/CONTEXT のリンク検証
-pnpm test:e2e
+mise run setup
+mise run dev:info
 ```
 
-`pnpm install` は Git hooks（lefthook）も入れます。pre-commit は staged files を整形してから、lint、型チェック、unit test、docs、Larastan を実行します。
+追加 worktree を手動で削除するときは、先にその worktree で `mise run worktree:remove` を実行します。
 
 ## ドキュメントの見方
 

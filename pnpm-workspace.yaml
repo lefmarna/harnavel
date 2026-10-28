@@ -1,6 +1,5 @@
 allowBuilds:
   esbuild: false
-  lefthook: false
   unrs-resolver: false
 
 overrides:

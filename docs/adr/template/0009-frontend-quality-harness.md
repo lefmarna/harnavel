@@ -5,6 +5,9 @@ Formatting, linting, and runtime-specific type checks remain independent. Global
 and blanket compiler-rule pinning would turn advisory diagnostics and upstream reclassifications
 into build failures.
 
+Prefer native rollback and symlink exclusion over compatibility code. Whole-project hook checks
+must stay read-only: Vite+ can restage task edits to any tracked file.
+
 Deterministic correctness gates remain necessary regardless of coding-agent capability. Additional
 lint rules must detect concrete defects beyond existing checks without routinely forcing boilerplate
 or suppressions for valid code. Broad advisory categories remain opt-in because their false positives

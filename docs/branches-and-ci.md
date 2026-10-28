@@ -5,7 +5,7 @@ working branch: each Worktree works on its own branch and merges through a pull 
 without `develop` open pull requests against `main`.
 
 Pushing a branch is a backup, so push freely and open a draft pull request early. Checks start when
-it is marked ready and rerun on each later push; lefthook covers the gap locally. Repositories
+it is marked ready and rerun on each later push; Vite+ commit hooks cover the gap locally. Repositories
 connected to [CircleCI](circleci.md) run pull request E2E and mutation testing there.
 
 ## How delivery avoids retesting

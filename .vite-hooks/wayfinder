@@ -1,0 +1,5 @@
+#!/bin/sh
+VITE_PORT="${VITE_PORT:-$(awk -F= '/^VITE_PORT=/{gsub(/"/, "", $2); print $2; exit}' .env 2>/dev/null)}"
+if ! curl -fsS "http://localhost:${VITE_PORT}/@vite/client" >/dev/null 2>&1; then
+  mise run wayfinder
+fi

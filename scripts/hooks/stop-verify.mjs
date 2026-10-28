@@ -73,8 +73,6 @@ const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0;
 const hasPnpm = hasCommand("pnpm");
 const dockerReady = hasAnyPhpChange && hasCommand("docker") && dockerAppRunning(repo);
 
-// 自動修正は lefthook と同じ順序で逐次実行する。
-
 const fixFailures = [];
 
 if (

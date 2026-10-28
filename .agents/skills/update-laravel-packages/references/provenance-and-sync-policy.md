@@ -49,8 +49,8 @@ is permanent if Laravel or a better maintained replacement now provides it.
 | Google authentication | `laravel/socialite`, Google auth services/routes/tests, commit `cf0705c` | Preserve the existing OAuth and account-linking behavior |
 | Browser E2E tests | `@playwright/test`, `playwright.config.ts`, `e2e/`, CI, commit `5b75c37` | Keep smoke and auth browser coverage runnable |
 | Docs and script checks | `tsx`, `scripts/`, package scripts, commits `196f853`, `b7ebda4`, `da48cc8` | Keep docs, deploy-safety, and unit script checks runnable |
-| Git hooks | `lefthook`, `lefthook.yml`, package `prepare`, commit `3f4643a` | Keep local hook installation without affecting production deploys |
-| Frontend toolchain | `vite-plus`, the `lint`/`fmt` blocks of `vite.config.ts`, the `vite@*` override in `pnpm-workspace.yaml`, TypeScript configs, package `format`/`lint`/`types:check` scripts, `lefthook.yml`, TADR-0009 | Keep Vite+ as the single source of Vite, Oxfmt, Oxlint, and `oxlint-tsgolint`; keep Oxfmt the only formatter and type-aware Oxlint the only linter, and preserve the semantic guardrails configured in the `lint` block |
+| Git hooks | `vite-plus`, `.vite-hooks/`, the `staged` block of `vite.config.ts`, package `prepare`/`check:hooks`, TADR-0009 | Keep local hook installation without affecting production deploys |
+| Frontend toolchain | `vite-plus`, the `lint`/`fmt` blocks of `vite.config.ts`, the `vite@*` override in `pnpm-workspace.yaml`, TypeScript configs, package `format`/`lint`/`types:check` scripts, TADR-0009 | Keep Vite+ as the single source of Vite, Oxfmt, Oxlint, and `oxlint-tsgolint`; keep Oxfmt the only formatter and type-aware Oxlint the only linter, and preserve the semantic guardrails configured in the `lint` block |
 
 If history after these commits changes the capability, follow the latest evidence rather than the
 table.

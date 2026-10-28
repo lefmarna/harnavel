@@ -89,7 +89,7 @@ it.
   build-script compatibility; do not assume every pnpm major requires a new lockfile or store.
   Recreate `node_modules` when the migration requires it, preserving the lockfile, and resolve any
   dependency build-script decisions explicitly in `pnpm-workspace.yaml` (`allowBuilds`) so install
-  succeeds while `prepare`/lefthook still runs. A blanket `ignore-scripts` workaround conflicts
+  succeeds while `prepare`/Vite+ hook setup still runs. A blanket `ignore-scripts` workaround conflicts
   with this template's `prepare` hook. Record the resulting derived-app steps in the report.
 - Keep `require.php` aligned with the Docker/XServer series exercised by CI and compatible with
   the resolved dependencies. The reference's broader PHP floor is not this template's support

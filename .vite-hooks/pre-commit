@@ -1,0 +1,18 @@
+#!/bin/sh
+staged_files=$(git diff --cached --raw --diff-filter=ACMR | awk -F '\t' '$1 ~ /^:[0-7]{6} 100[0-7]{3} / { print $NF }')
+# Vite+ のマージ対象と判定を揃え、全体検証の抜けを防ぐ。
+if git rev-parse --verify -q MERGE_HEAD >/dev/null; then
+  merge_files=$(git diff --cached --name-only MERGE_HEAD)
+  staged_files=$(printf '%s\n' "$staged_files" | grep -Fx -- "$merge_files" || :)
+fi
+
+if [ -n "$staged_files" ]; then
+  set --
+  # Vite+ の空判定は削除・種別変更を数えないため、それらが残る場合だけ空判定を省く。
+  if ! git diff --cached --quiet --diff-filter=DT; then
+    set -- --allow-empty
+  fi
+  vp staged --relative --concurrent false --continue-on-error "$@"
+else
+  pnpm check:hooks
+fi

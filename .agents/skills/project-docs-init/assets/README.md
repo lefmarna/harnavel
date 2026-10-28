@@ -77,8 +77,6 @@ pnpm lint:docs          # docs/ + README/AGENTS/CONTEXT のリンク検証
 pnpm test:e2e
 ```
 
-`pnpm install` は Git hooks（lefthook）も入れます。pre-commit は staged files を整形してから、lint、型チェック、unit test、docs、Larastan を実行します。
-
 ## ドキュメントの見方
 
 - [README](README.md): 人間向けの概要とセットアップ

@@ -39,7 +39,7 @@ orca.yaml
 .zed
 
 vite.config.ts
-lefthook.yml
+.vite-hooks
 mise.toml
 tsconfig.json
 package.json

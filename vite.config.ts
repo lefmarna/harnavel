@@ -24,6 +24,16 @@ export default defineConfig(({ mode }) => {
   const vitePort = parsePort(env.VITE_PORT, 5173);
 
   return {
+    staged: {
+      "*.php": [
+        ["sh .vite-hooks/wayfinder", "docker compose exec -T app vendor/bin/pint --format=agent"],
+      ],
+      "*.{cjs,cts,js,jsx,mjs,mts,ts,tsx}": "vp lint --fix --no-error-on-unmatched-pattern",
+      "*.{cjs,css,cts,html,js,json,jsx,md,mjs,mts,toml,ts,tsx,yaml,yml}":
+        "vp fmt --no-error-on-unmatched-pattern",
+      // 全体検証を staged の外へ出すと、未ステージ差分の復元後に検証してしまう。
+      "*": () => "pnpm check:hooks",
+    },
     server: {
       port: vitePort,
       strictPort: true,

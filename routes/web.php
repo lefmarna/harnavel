@@ -38,13 +38,13 @@ Route::get('auth/google/reauthenticate', [GoogleAuthController::class, 'reauthen
 
 // Google 側に登録したリダイレクト URI を増やさないよう、本人確認でもログインと同じ URI へ戻る。
 Route::get('auth/google/callback', [GoogleAuthController::class, 'callback'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:10,1,google-callback')
     ->name('auth.google.callback');
 
 Route::prefix('auth/google/link')->name('auth.google.link.')->controller(GoogleAuthController::class)->group(function () {
     Route::get('/confirm', 'linkConfirm')->name('confirm');
     Route::get('/verify/{userId}', 'linkVerify')->name('verify');
-    Route::post('/verify/{userId}', 'linkComplete')->middleware('throttle:10,1')->name('complete');
+    Route::post('/verify/{userId}', 'linkComplete')->middleware('throttle:10,1,google-link')->name('complete');
     Route::get('/completed', 'linkCompleted')->name('completed');
     Route::get('/failed', 'linkFailed')->name('failed');
 });

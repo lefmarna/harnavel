@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Listeners;
 
+use Illuminate\Auth\Events\CurrentDeviceLogout;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
@@ -28,6 +29,7 @@ class LogSecurityEvents
         return [
             Login::class => 'login',
             Logout::class => 'logout',
+            CurrentDeviceLogout::class => 'logout',
             Failed::class => 'failed',
             Registered::class => 'registered',
             PasswordReset::class => 'passwordReset',
@@ -41,7 +43,7 @@ class LogSecurityEvents
         Log::info('User logged in.', ['user_id' => $this->userId($event->user), 'remember' => $event->remember]);
     }
 
-    public function logout(Logout $event): void
+    public function logout(Logout|CurrentDeviceLogout $event): void
     {
         Log::info('User logged out.', ['user_id' => $this->userId($event->user)]);
     }

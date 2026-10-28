@@ -91,6 +91,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             $status = $response->getStatusCode();
 
+            if ($status === 429 && $request->header('X-Inertia') && ! $request->isMethod('GET')) {
+                return back()->withErrors([
+                    'too_many_requests' => __('pages.errors.too_many_requests.description'),
+                ]);
+            }
+
             // Laravel 既定の英語の HTML は、SPA 遷移では Inertia が画面の上のモーダルに出してしまう。
             $errorPage = [403 => 'forbidden', 404 => 'not_found', 429 => 'too_many_requests'][$status] ?? null;
 

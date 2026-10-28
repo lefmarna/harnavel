@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Actions\Passkeys\DeletePasskey;
 use App\Actions\Passkeys\StorePasskey;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Middleware\RequirePasswordWhenSet;
 use App\Listeners\LogSecurityEvents;
 use App\Listeners\ShareAuthenticatedUserLogContext;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController as BaseAuthenticatedSessionController;
 use Laravel\Passkeys\Actions\DeletePasskey as BaseDeletePasskey;
 use Laravel\Passkeys\Actions\StorePasskey as BaseStorePasskey;
 use Laravel\Passkeys\Events\PasskeyRegistered;
@@ -41,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(BaseStorePasskey::class, StorePasskey::class);
         $this->app->bind(BaseDeletePasskey::class, DeletePasskey::class);
+        $this->app->bind(BaseAuthenticatedSessionController::class, AuthenticatedSessionController::class);
 
         $this->app->bind(RequirePasswordWhenSet::class, function (Application $app): RequirePasswordWhenSet {
             $timeout = Config::get('auth.password_timeout');

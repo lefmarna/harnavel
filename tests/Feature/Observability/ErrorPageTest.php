@@ -40,6 +40,7 @@ beforeEach(function () {
     Route::get('/_testing/errors/404-without-session', fn () => abort(404));
     Route::middleware('web')->get('/_testing/errors/404', fn () => abort(404));
     Route::middleware(['web', 'throttle:1,1'])->get('/_testing/errors/429', fn () => 'ok');
+    Route::middleware(['web', 'throttle:1,1,testing-form'])->match(['post', 'put'], '/_testing/errors/429-form', fn () => back());
 });
 
 describe('本番エラーページ', function () {
@@ -217,5 +218,26 @@ describe('403・404・429 のエラーページ', function () {
 
     it('429 は再試行までの秒数を残す', function () use ($request) {
         expect($request('/_testing/errors/429')->headers->get('Retry-After'))->not->toBeNull();
+    });
+
+    it('SPA のフォーム送信が回数制限にかかったときは、入力を残せるよう直前の画面へエラーを返す', function () {
+        $this->withoutMiddleware(PreventRequestForgery::class);
+        $this->post('/_testing/errors/429-form');
+
+        $this->from(route('home'))
+            ->post('/_testing/errors/429-form', [], $this->inertiaHeaders)
+            ->assertRedirect(route('home'))
+            ->assertSessionHasErrors(['too_many_requests' => pageCopy('pages.errors.too_many_requests.description')]);
+    });
+
+    // 回数制限は HandleInertiaRequests より先に拒否するので、PUT を GET で戻らせる変換は全体のミドルウェアに頼る。
+    it('SPA の PUT の送信が回数制限にかかっても、戻り先へ PUT を送り直させない', function () {
+        $this->withoutMiddleware(PreventRequestForgery::class);
+        $this->put('/_testing/errors/429-form');
+
+        $this->from(route('home'))
+            ->put('/_testing/errors/429-form', [], $this->inertiaHeaders)
+            ->assertStatus(303)
+            ->assertRedirect(route('home'));
     });
 });

@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 
 describe('濫用対策のレート制限', function () {
@@ -75,6 +77,18 @@ describe('濫用対策のレート制限', function () {
         }
 
         expect($this->put(route('user-password.update'))->getStatusCode())->not->toBe(429);
+    });
+
+    it('回数と分で指定した上限は、ルートごとに別々に数える', function () {
+        $unprefixed = collect(Route::getRoutes()->getRoutes())
+            ->filter(fn (RoutingRoute $route): bool => collect($route->gatherMiddleware())
+                ->contains(fn (mixed $middleware): bool => is_string($middleware)
+                    && preg_match('/^throttle:\d+(,\d+)?$/', $middleware) === 1))
+            ->map(fn (RoutingRoute $route): string => $route->getName() ?? $route->uri())
+            ->values()
+            ->all();
+
+        expect($unprefixed)->toBe([]);
     });
 
     describe('確認メールの 1 時間あたりの上限', function () {

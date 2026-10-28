@@ -16,7 +16,10 @@ moved after the request began. A deleted passkey or unlinked Google account may 
 a thief in, so removing one revokes the other sessions; the acting session survives with a new ID
 and, when it had one, a new remember cookie. Unlinking Google requires a password, so every account
 keeps a password or a Google link. Revocation covers sessions only: an app that issues API tokens
-revokes them on the same events.
+revokes them on the same events. Signing out ends only the current device and keeps
+`remember_token`: every sign-in is remembered, and rotating it would end other devices' remembered
+sign-ins without ending their open sessions. A remember cookie stolen from the signing-out device
+stays usable until the owner logs out other devices.
 
 An unverified account may have been registered by someone other than the email's owner. When the
 owner proves the address through a Google link or a password reset, the account becomes verified and

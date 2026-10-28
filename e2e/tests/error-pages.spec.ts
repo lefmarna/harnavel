@@ -22,6 +22,30 @@ test("回数制限にかかったときは、アプリの 429 画面を表示す
   await expect(page.getByRole("heading", { name: "しばらくお待ちください" })).toBeVisible();
 });
 
+test("フォームの送信が回数制限にかかったときは、入力を残したまま元の画面で伝える", async ({
+  page,
+}) => {
+  const user = createUser();
+  await page.goto("/login");
+  await page.locator('input[name="email"]').fill(user.email);
+
+  // 同じアカウントと接続元からのログインは 1 分 5 回まで。
+  for (let attempt = 0; attempt <= 5; attempt++) {
+    await page.locator('input[name="password"]').fill("wrong-password");
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" && new URL(response.url()).pathname === "/login",
+      ),
+      page.locator('[data-test="login-button"]').click(),
+    ]);
+  }
+
+  await expect(page.getByText("短い時間に操作が続いたため")).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.locator('input[name="email"]')).toHaveValue(user.email);
+});
+
 test("権限のない操作では、アプリの 403 画面を表示する", async ({ page }) => {
   await login(page, createUser());
 

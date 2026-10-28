@@ -168,6 +168,25 @@ describe('セッションの失効', function () {
         expect($user->refresh()->remember_token)->toBe($rememberToken);
     });
 
+    it('ログアウトしても、ほかの端末はログイン保持で復帰できる', function () {
+        $user = User::factory()->create();
+        $recaller = $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => UserFactory::DEFAULT_PASSWORD,
+            'remember' => true,
+        ])->getCookie(recallerCookieName())->getValue();
+        $sessionId = loginFromNewDevice($user);
+
+        forgetRequestState();
+        $this->withCookie(config('session.cookie'), $sessionId)
+            ->post(route('logout'))
+            ->assertRedirect(route('home'));
+
+        forgetRequestState();
+        getProtectedPage($this->withCookie(recallerCookieName(), $recaller))
+            ->assertOk();
+    });
+
     it('他の端末を失効させる操作の後も、操作した端末はログイン保持で復帰できる', function (Closure $operate) {
         $user = User::factory()->create(['google_id' => 'google-1']);
         $recaller = $this->post(route('login.store'), [

@@ -25,7 +25,7 @@ Select skills for the current task even when steering/spec context is already av
 - Read `.kiro/specs/{feature}/spec.json` for language and metadata
 - Read `.kiro/specs/{feature}/brief.md` if it exists (discovery context: problem, approach, scope decisions, boundary candidates)
 - Read `.kiro/specs/{feature}/requirements.md` for project description
-- Core project context: `CONTEXT.md`
+- Core project context: `GLOSSARY.md`
 - Additional `docs/adr/` records only when directly relevant to feature scope, user personas, business/domain rules, compliance/security constraints, operational constraints, or existing product boundaries
 - Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
 

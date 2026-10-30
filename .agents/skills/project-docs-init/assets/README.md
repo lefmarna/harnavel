@@ -73,7 +73,7 @@ pnpm format:check       # Oxfmt チェックのみ
 pnpm lint:check         # type-aware Oxlint（変更なし）
 pnpm fix                # Oxlint の safe fix + Oxfmt
 pnpm types:check        # TypeScript 型チェック
-pnpm lint:docs          # docs/ + README/AGENTS/CONTEXT のリンク検証
+pnpm lint:docs          # docs/ + README/AGENTS/GLOSSARY のリンク検証
 pnpm test:e2e
 ```
 
@@ -81,7 +81,7 @@ pnpm test:e2e
 
 - [README](README.md): 人間向けの概要とセットアップ
 - [AGENTS.md](AGENTS.md): AI エージェント向けの起点
-- [CONTEXT.md](CONTEXT.md): ドメイン用語集
+- [GLOSSARY.md](GLOSSARY.md): ドメイン用語集
 - [docs/testing-as-spec.md](docs/testing-as-spec.md): テストの責務分担とミューテーション方針
 - [docs/logging-guidelines.md](docs/logging-guidelines.md): アプリケーションログの運用ルール
 - [TADR-0009](docs/adr/template/0009-frontend-quality-harness.md): フロントエンド品質ゲートの責務分担

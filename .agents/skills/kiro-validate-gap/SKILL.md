@@ -26,7 +26,7 @@ Analyze implementation gap for feature **$1** based on approved requirements and
 1. **Load Context**:
    - Read `.kiro/specs/$1/spec.json` for language and metadata
    - Read `.kiro/specs/$1/requirements.md` for requirements
-   - Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+   - Core project context: `GLOSSARY.md`, `docs/generated/boost.md`
    - Additional `docs/adr/` records only when directly relevant to the feature's domain rules, integrations, runtime prerequisites, compliance/security constraints, or existing product boundaries
    - Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
 
@@ -38,7 +38,7 @@ Analyze implementation gap for feature **$1** based on approved requirements and
 The following research areas are independent and can be executed in parallel:
 1. **Codebase analysis**: Existing implementations, architecture patterns, integration points, extension possibilities
 2. **External dependency research**: Dependency compatibility, version constraints, known integration challenges (when needed)
-3. **Context loading**: Requirements, `CONTEXT.md`, `docs/generated/boost.md`, task-relevant `docs/adr/` records, relevant local agent skills/playbooks, and gap-analysis rules
+3. **Context loading**: Requirements, `GLOSSARY.md`, `docs/generated/boost.md`, task-relevant `docs/adr/` records, relevant local agent skills/playbooks, and gap-analysis rules
 
 If multi-agent is enabled, spawn sub-agents for each area above. Otherwise execute sequentially.
 
@@ -69,11 +69,11 @@ After all parallel research completes, synthesize findings for gap analysis.
 - **Multiple Options**: Present viable alternatives when applicable
 - **Thorough Investigation**: Use tools to deeply understand existing codebase
 - **Explicit Gaps**: Clearly flag areas needing research or investigation
-- **Context Discipline**: Start with `CONTEXT.md` and `docs/generated/boost.md`, and expand only with analysis-relevant `docs/adr/` records or local skills/playbooks selected above
+- **Context Discipline**: Start with `GLOSSARY.md` and `docs/generated/boost.md`, and expand only with analysis-relevant `docs/adr/` records or local skills/playbooks selected above
 </instructions>
 
 ## Tool Guidance
-- **Read first**: Load spec, `CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records and local playbooks/agent skills, and rules before analysis
+- **Read first**: Load spec, `GLOSSARY.md`, `docs/generated/boost.md`, relevant `docs/adr/` records and local playbooks/agent skills, and rules before analysis
 - **Grep extensively**: Search codebase for patterns, conventions, and integration points
 - **WebSearch/WebFetch**: Research external dependencies and best practices when needed
 - **Write last**: Generate analysis only after complete investigation

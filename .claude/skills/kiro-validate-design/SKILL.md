@@ -29,14 +29,14 @@ Select skills for the current task even when steering/spec context is already av
 - Read `.kiro/specs/{feature}/spec.json` for language and metadata
 - Read `.kiro/specs/{feature}/requirements.md` for requirements
 - Read `.kiro/specs/{feature}/design.md` for design document
-- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Core project context: `GLOSSARY.md`, `docs/generated/boost.md`
 - Additional `docs/adr/` records only when directly relevant to architecture boundaries, integrations, runtime prerequisites, domain rules, security/performance constraints, or team conventions that affect implementation readiness
 - Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
 
 #### Parallel Research
 
 The following research areas are independent and can be executed in parallel:
-1. **Context & rules loading**: Spec documents, `CONTEXT.md`, `docs/generated/boost.md`, task-relevant `docs/adr/` records, relevant local agent skills/playbooks, and `rules/design-review.md` from this skill's directory for review criteria
+1. **Context & rules loading**: Spec documents, `GLOSSARY.md`, `docs/generated/boost.md`, task-relevant `docs/adr/` records, relevant local agent skills/playbooks, and `rules/design-review.md` from this skill's directory for review criteria
 2. **Codebase pattern survey**: Gather existing architecture patterns, naming conventions, and component structure from the codebase to use as reference during review
 
 After all parallel research completes, synthesize findings for review.
@@ -59,10 +59,10 @@ After all parallel research completes, synthesize findings for review.
 - **Interactive approach**: Engage in dialogue, ask clarifying questions, propose alternatives
 - **Balanced assessment**: Recognize both strengths and weaknesses
 - **Actionable feedback**: All suggestions must be implementable
-- **Context Discipline**: Start with `CONTEXT.md` and `docs/generated/boost.md`, and expand only with review-relevant `docs/adr/` records or local skills/playbooks selected above
+- **Context Discipline**: Start with `GLOSSARY.md` and `docs/generated/boost.md`, and expand only with review-relevant `docs/adr/` records or local skills/playbooks selected above
 
 ## Tool Guidance
-- **Read first**: Load spec, `CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records and local playbooks/agent skills, and rules before review
+- **Read first**: Load spec, `GLOSSARY.md`, `docs/generated/boost.md`, relevant `docs/adr/` records and local playbooks/agent skills, and rules before review
 - **Grep if needed**: Search codebase for pattern validation or integration checks
 - **Interactive**: Engage with user throughout the review process
 

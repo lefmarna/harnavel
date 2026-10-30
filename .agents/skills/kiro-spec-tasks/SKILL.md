@@ -25,7 +25,7 @@ metadata:
 **Read all necessary context**:
 - `.kiro/specs/$1/spec.json`, `requirements.md`, `design.md`
 - `.kiro/specs/$1/tasks.md` (if exists, for merge mode)
-- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Core project context: `GLOSSARY.md`, `docs/generated/boost.md`
 - Additional `docs/adr/` records only when directly relevant to requirements coverage, design boundaries, runtime prerequisites, or team conventions that affect task executability
 - Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
 
@@ -44,7 +44,7 @@ metadata:
 #### Parallel Research
 
 The following research areas are independent and can be executed in parallel:
-1. **Context loading**: Spec documents (requirements.md, design.md), `CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records
+1. **Context loading**: Spec documents (requirements.md, design.md), `GLOSSARY.md`, `docs/generated/boost.md`, relevant `docs/adr/` records
 2. **Rules loading**: tasks-generation.md, tasks-parallel-analysis.md, tasks template
 
 If multi-agent is enabled, spawn sub-agents for each area above. Otherwise execute sequentially.

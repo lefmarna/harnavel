@@ -35,7 +35,7 @@ Reuse steering/spec context already available from conversation; load missing co
 Select skills for the current task even when steering/spec context is already available:
 - `.kiro/specs/{feature}/spec.json` and `tasks.md` for approvals, task selection, and dependencies
 - Referenced sections of `requirements.md` and `design.md`, expanding to related contracts as needed for the selected task
-- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Core project context: `GLOSSARY.md`, `docs/generated/boost.md`
 - Additional `docs/adr/` records only when directly relevant to the selected task's boundary, runtime prerequisites, integrations, domain rules, security/performance constraints, or team conventions that affect implementation or validation
 - Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
 

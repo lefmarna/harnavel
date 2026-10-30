@@ -25,7 +25,7 @@ async function findMarkdownFiles(dir: string): Promise<string[]> {
     files.push(path.join(dir, entry));
   }
 
-  for (const name of ["AGENTS.md", "CONTEXT.md", "README.md"]) {
+  for (const name of ["AGENTS.md", "GLOSSARY.md", "GLOSSARY-MAP.md", "README.md"]) {
     const p = path.join(ROOT, name);
 
     if (fs.existsSync(p)) {

@@ -24,7 +24,7 @@ metadata:
    - Read `.kiro/specs/$1/spec.json` for language and metadata
    - Read `.kiro/specs/$1/brief.md` if it exists (discovery context: problem, approach, scope decisions, boundary candidates)
    - Read `.kiro/specs/$1/requirements.md` for project description
-   - Core project context: `CONTEXT.md`
+   - Core project context: `GLOSSARY.md`
    - Additional `docs/adr/` records only when directly relevant to feature scope, user personas, business/domain rules, compliance/security constraints, operational constraints, or existing product boundaries
    - Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
 
@@ -40,7 +40,7 @@ The following research areas are independent. Decide the optimal decomposition b
 **In main context** (essential for requirements generation):
 - Spec files: spec.json, brief.md, requirements.md (project description)
 - EARS format rules, requirements review gate, requirements template
-- Core project context: CONTEXT.md (directly informs scope and constraints)
+- Core project context: GLOSSARY.md (directly informs scope and constraints)
 
 **Delegate to sub-agent** (keeps exploration out of main context):
 - **Codebase hints** (brownfield projects): Spawn a sub-agent to explore existing implementations that inform requirement scope. Ask it to summarize: (1) what already exists, (2) relevant interfaces/APIs, (3) patterns that new requirements should align with. Return a summary under 150 lines.

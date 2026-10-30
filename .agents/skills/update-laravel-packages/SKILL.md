@@ -14,7 +14,7 @@ compatibility baseline, not as versions to maximize.
 
 Before changing files:
 
-- Read `AGENTS.md`, `CONTEXT.md`, `docs/adr/README.md`, all relevant Template ADRs, and
+- Read `AGENTS.md`, `GLOSSARY.md`, `docs/adr/README.md`, all relevant Template ADRs, and
   `references/provenance-and-sync-policy.md` in this skill.
 - Read Laravel's official upgrade guide for every crossed Laravel major version.
 - Read the official release or compatibility information for template-owned dependencies before
@@ -316,7 +316,7 @@ not comparison noise.
 - Present the final disposition table, verification results, remaining intentional differences,
   and proposed commit message. Commit only after explicit approval.
 - Delete both container and host reference directories after the comparison is accepted.
-- Organize only ADRs and `CONTEXT.md` if the completed work changed a durable decision or domain
+- Organize only ADRs and `GLOSSARY.md` if the completed work changed a durable decision or domain
   language; do not create an ADR merely to log the upgrade.
 
 ## Required Report

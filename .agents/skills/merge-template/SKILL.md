@@ -19,7 +19,7 @@ required template changes without coupling the merge to routine package maintena
 - **Hybrid:** `README.md`, `AGENTS.md`, `delivery.yml`, `mise.toml`, `phpstan.neon.dist`, `renovate.json`,
   architecture tests, and files containing both shared scaffolding and app behavior. Take
   template-origin changes and keep app-specific content.
-- **App-owned:** domain behavior, presentation, branding, environment values, `CONTEXT.md`, flat App
+- **App-owned:** domain behavior, presentation, branding, environment values, `GLOSSARY.md`, flat App
   ADRs, and app-specific routes or deployment layout. Preserve the app.
 
 Special cases:

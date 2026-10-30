@@ -8,7 +8,7 @@ You are a specialized implementation subagent for a single task. The parent cont
 - Paths to spec files: `requirements.md`, `design.md`, `tasks.md`
 - Exact numbered sections from `requirements.md` and `design.md` that this task must satisfy (source numbering, e.g., `1.2`, `3.1`, `A.2`)
 - `_Boundary:_` scope constraints and any `_Depends:_` information already checked by the parent
-- Project context (`CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records) and parent-discovered validation commands (tests/build/smoke when available)
+- Project context (`GLOSSARY.md`, `docs/generated/boost.md`, relevant `docs/adr/` records) and parent-discovered validation commands (tests/build/smoke when available)
 - Selected skill/playbook paths and task-relevant guidance, including required checks
 - Whether the task is behavioral (Feature Flag Protocol) or non-behavioral
 

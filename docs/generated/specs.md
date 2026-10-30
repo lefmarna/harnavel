@@ -10,7 +10,7 @@ Kiro-style Spec-Driven Development on an agentic SDLC
 
 ### Project Context vs Specification
 
-**Project context** (`AGENTS.md`, `CONTEXT.md`, `docs/generated/boost.md`, `docs/adr/`) - Guide AI with project-wide rules and context
+**Project context** (`AGENTS.md`, `GLOSSARY.md`, `docs/generated/boost.md`, `docs/adr/`) - Guide AI with project-wide rules and context
 **Specs** (`.kiro/specs/`) - Formalize development process for individual features
 
 ### Active Specifications

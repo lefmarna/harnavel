@@ -43,7 +43,7 @@ Read every file in the context directory and extract:
 - Project name and summary.
 - Target users and problems solved.
 - Major features and scope.
-- Domain terms, as initial entry candidates for `CONTEXT.md`.
+- Domain terms, as initial entry candidates for `GLOSSARY.md`.
 - Technical constraints and notable facts.
 - Undecided items.
 
@@ -54,7 +54,7 @@ Files in the template docs structure that need project-specific updates:
 | File | Update |
 | --- | --- |
 | `AGENTS.md` | Adapt the project summary and session rules (Step 4). |
-| `CONTEXT.md` | Fill initial entries with domain terms extracted from context. Preserve the opening contract text and entry format. |
+| `GLOSSARY.md` | Fill initial entries with domain terms extracted from context. Preserve the opening contract text and entry format. |
 | `docs/infrastructure.md` | Record only external production facts that differ from the template and cannot be read from repository configuration. |
 | `.env.example` | Update default values for `APP_NAME`, `DB_DATABASE`, `VITE_APP_NAME`, and the app's port block. |
 | `public/manifest.webmanifest` | Update the static app name and description in the Web App Manifest. |

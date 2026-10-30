@@ -87,7 +87,7 @@ mise run dev:info
 
 - [README](README.md): 人間向けの概要とセットアップ
 - [AGENTS.md](AGENTS.md): AI エージェント向けの起点
-- [CONTEXT.md](CONTEXT.md): ドメイン用語集（展開先プロジェクトで育てる）
+- [GLOSSARY.md](GLOSSARY.md): ドメイン用語集（展開先プロジェクトで育てる）
 - [docs/testing-as-spec.md](docs/testing-as-spec.md): テストの責務分担とミューテーション方針
 - [docs/logging-guidelines.md](docs/logging-guidelines.md): アプリケーションログの運用ルール
 - [TADR-0009](docs/adr/template/0009-frontend-quality-harness.md): フロントエンド品質ゲートの責務分担

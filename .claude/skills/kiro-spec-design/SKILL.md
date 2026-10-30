@@ -25,7 +25,7 @@ Reuse steering/spec context already available from conversation; load missing co
 Select skills for the current task even when steering/spec context is already available:
 - `.kiro/specs/{feature}/spec.json`, `requirements.md`, `design.md` (if exists)
 - `.kiro/specs/{feature}/research.md` (if exists, contains gap analysis from `/kiro-validate-gap`)
-- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Core project context: `GLOSSARY.md`, `docs/generated/boost.md`
 - Additional `docs/adr/` records only when directly relevant to requirement coverage, architecture boundaries, integrations, runtime prerequisites, security/performance constraints, or team conventions that affect implementation readiness
 - Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
 - Consult relevant domain skills even when building by hand without adopting a new library.
@@ -72,7 +72,7 @@ The following research areas are independent and can be dispatched as **subagent
 **Typical research areas** (adjust as appropriate):
 - **Codebase analysis**: Existing architecture patterns, integration points, code conventions (using Grep/Glob)
 - **External research**: Dependencies, APIs, latest best practices (using WebSearch/WebFetch)
-- **Context loading** (usually main context): `CONTEXT.md`, `docs/generated/boost.md`, relevant `docs/adr/` records, design principles, discovery rules, templates
+- **Context loading** (usually main context): `GLOSSARY.md`, `docs/generated/boost.md`, relevant `docs/adr/` records, design principles, discovery rules, templates
 
 For simple additions, skip subagent dispatch entirely and do a quick pattern check in main context.
 

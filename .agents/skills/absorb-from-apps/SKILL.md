@@ -15,7 +15,7 @@ The decision model is [`TADR-0003`](../../../docs/adr/template/0003-template-own
   Shared paths aim for byte identity, Hybrid paths converge only template-origin hunks, and
   App-owned paths do not converge.
 - **Leave app-priority content app-side**: coverage calibration, mutation allowlist class names,
-  domain logic, design tokens, i18n, app-specific routes/domains/deploy settings, `CONTEXT.md`, and
+  domain logic, design tokens, i18n, app-specific routes/domains/deploy settings, `GLOSSARY.md`, and
   App ADRs (`docs/adr/NNNN-*.md`). Do not move these upstream.
 - **Choose by best practice, not majority vote**. Select the best version hunk by hunk.
 - **Mutation targets are deliberate.** Add deterministic, observable logic proactively and keep the

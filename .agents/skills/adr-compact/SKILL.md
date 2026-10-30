@@ -9,7 +9,7 @@ Return ADRs to only the durable decisions that prevent future readers from havin
 
 ## Preflight
 
-- Read `AGENTS.md`, `docs/adr/README.md`, and `CONTEXT.md`.
+- Read `AGENTS.md`, `docs/adr/README.md`, and `GLOSSARY.md`.
 - Determine repository ownership before reading any ADR body:
   - Run `git remote get-url template` and `git remote get-url origin` without opening ADR files.
   - If a `template` Git remote exists, treat the repository as a derived app. Scope the entire run

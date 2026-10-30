@@ -20,7 +20,7 @@ description: Entry point for new work. Determines the best action path or work d
 Gather **only metadata** to determine the action path. Do NOT read full file contents yet.
 
 - **Specs inventory**: Scan `.kiro/specs/*/spec.json` for `name`, `phase` fields and `approvals` status. Note feature names and their current status.
-- **Project context existence**: Check which files exist (`CONTEXT.md`, `docs/generated/boost.md`, `docs/adr/`, `.kiro/roadmap.md`). Do NOT read their contents yet.
+- **Project context existence**: Check which files exist (`GLOSSARY.md`, `docs/generated/boost.md`, `docs/adr/`, `.kiro/roadmap.md`). Do NOT read their contents yet.
 - **Roadmap check**: If `.kiro/roadmap.md` exists, read it. This contains project-level context (approach, scope, constraints, spec list) from a previous discovery session. Use it to restore project context.
 - **Top-level structure**: List the project root directory to note key directories and files. Do NOT recurse into subdirectories.
 
@@ -60,7 +60,7 @@ For Path A/B, recommend the next action and stop.
 **Only for Path C, D, and E.** Now load the context needed for discovery.
 
 **In main context** (essential for dialogue with user):
-- **Project context**: Read CONTEXT.md, docs/generated/boost.md, and relevant docs/adr/ records (if they exist) for project goals, constraints, and tech stack
+- **Project context**: Read GLOSSARY.md, docs/generated/boost.md, and relevant docs/adr/ records (if they exist) for project goals, constraints, and tech stack
 - **Relevant specs**: If the request is adjacent to an existing spec, read that spec's requirements.md to understand boundaries and avoid overlap
 
 **Delegate to sub-agent** (keeps exploration out of main context):
@@ -82,7 +82,7 @@ Ask clarifying questions **sequentially** (not all at once), prioritizing bounda
 6. **Upstream / downstream**: What existing systems, specs, or components does this depend on? What future work is likely to depend on this?
 7. **Constraints**: Are there technology, timeline, or compatibility constraints?
 
-Ask only questions whose answers you cannot infer from the context already loaded. Skip questions that `CONTEXT.md`, `docs/generated/boost.md`, or an ADR already answers. If the user already provided a clear description, skip to Step 5.
+Ask only questions whose answers you cannot infer from the context already loaded. Skip questions that `GLOSSARY.md`, `docs/generated/boost.md`, or an ADR already answers. If the user already provided a clear description, skip to Step 5.
 The goal is NOT to assign final owners yet. The goal is to discover the cleanest responsibility boundaries that can later become specs, tasks, and review scopes.
 
 ## Step 5: Propose Approaches

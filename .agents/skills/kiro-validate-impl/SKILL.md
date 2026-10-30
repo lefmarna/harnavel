@@ -70,7 +70,7 @@ For each detected feature:
 - Read `.kiro/specs/<feature>/requirements.md` for requirements
 - Read `.kiro/specs/<feature>/design.md` for design structure
 - Read `.kiro/specs/<feature>/tasks.md` for task list and Implementation Notes
-- Core project context: `CONTEXT.md`, `docs/generated/boost.md`
+- Core project context: `GLOSSARY.md`, `docs/generated/boost.md`
 - Additional `docs/adr/` records only when directly relevant to the validated boundaries, runtime prerequisites, integrations, domain rules, security/performance constraints, or team conventions that affect the GO/NO-GO call
 - Use explicitly requested skills and task-relevant local skills/playbooks, including design, accessibility, and UX. Select by description and read only needed guidance, even for small tasks; preserve required checks and host/project rules.
 

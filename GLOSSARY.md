@@ -10,7 +10,7 @@ Rules:
 - Current state only — rewrite superseded meanings instead of appending history.
 - Term entries may use the language the domain speaks (Japanese is fine); keep this
   header as is.
-- App-owned: seeded by the template, never merged back to it. Split into `CONTEXT-MAP.md`
+- App-owned: seeded by the template, never merged back to it. Split into `GLOSSARY-MAP.md`
   plus per-context files only when one glossary no longer fits one bounded context.
 
 Entry format:

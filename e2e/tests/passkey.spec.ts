@@ -343,8 +343,8 @@ test("自動入力の options 取得中にボタンを押しても、パスキ�
 
   await page.goto("/login");
   await options.markClicked();
-  // 手動側が待つなら手動の取得は来ないので、時間で流す。
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
+  // 手動側が待つなら手動の取得は来ないので、時間で流す。
   await page.waitForTimeout(1_000);
   release();
 

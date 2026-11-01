@@ -3,18 +3,6 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, extname, join } from "node:path";
 
-const PHPSTAN_PATHS = [
-  "app/",
-  "bootstrap/app.php",
-  "bootstrap/providers.php",
-  "config/",
-  "database/",
-  "routes/",
-  "tests/Support/",
-];
-const isPhpStanTarget = (file) =>
-  PHPSTAN_PATHS.some((path) => (path.endsWith("/") ? file.startsWith(path) : file === path));
-
 const OXFMT_EXTS = new Set([
   ".cjs",
   ".css",
@@ -67,8 +55,6 @@ const lintAll = byExt(all, LINT_EXTS);
 const lintFiles = byExt(existing, LINT_EXTS);
 const phpAll = byExt(all, PHP_EXTS).filter((file) => !isBlade(file));
 const phpExisting = byExt(existing, PHP_EXTS).filter((file) => !isBlade(file));
-const phpStanAll = phpAll.filter(isPhpStanTarget);
-const phpStanExisting = phpExisting.filter(isPhpStanTarget);
 const hasTs = byExt(all, TS_EXTS).length > 0;
 const hasMd = byExt(all, MD_EXTS).length > 0;
 const hasJsTsDeletions = lintAll.length > lintFiles.length;
@@ -77,7 +63,6 @@ const hasLintConfigChange = all.some((file) => LINT_CONFIG_FILES.has(file));
 const hasFormatConfigChange = all.some((file) => FORMAT_CONFIG_FILES.has(file));
 const hasTypeConfigChange = all.some(isTypeConfig);
 const hasFrontendToolchainChange = all.some((file) => FRONTEND_TOOLCHAIN_FILES.has(file));
-const hasPhpStanDeletions = phpStanAll.length > phpStanExisting.length;
 const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0;
 const hasPnpm = hasCommand("pnpm");
 const dockerReady = hasAnyPhpChange && hasCommand("docker") && dockerAppRunning(repo);
@@ -175,33 +160,15 @@ if (hasMd && hasPnpm) {
   tasks.push(runAsync(["pnpm", "lint:docs"], repo, "Markdown links"));
 }
 
-if (dockerReady) {
-  if (phpStanAll.length) {
-    tasks.push(
-      hasPhpStanDeletions
-        ? runAsync(
-            ["docker", "compose", "exec", "-T", "app", "composer", "analyse"],
-            repo,
-            "Larastan",
-          )
-        : runAsync(
-            [
-              "docker",
-              "compose",
-              "exec",
-              "-T",
-              "app",
-              "vendor/bin/phpstan",
-              "analyse",
-              "--memory-limit=1G",
-              "--no-progress",
-              ...phpStanExisting,
-            ],
-            repo,
-            "Larastan",
-          ),
-    );
-  }
+// 変更していない呼び出し側のエラーも拾い、結果キャッシュも使えるよう、全体を解析する。
+if (dockerReady && phpAll.length) {
+  tasks.push(
+    runAsync(
+      ["docker", "compose", "exec", "-T", "app", "composer", "analyse", "--", "--no-progress"],
+      repo,
+      "Larastan",
+    ),
+  );
 }
 
 const failures = [

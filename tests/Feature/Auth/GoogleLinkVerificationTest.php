@@ -164,9 +164,6 @@ describe('Google 連携リンク検証', function () {
     });
 });
 
-/**
- * @param  array<string, string>  $payload
- */
 function googleLinkVerifyUrl(string $userId, array $payload, ?DateTimeInterface $expiresAt = null): string
 {
     return URL::temporarySignedRoute('auth.google.link.verify', $expiresAt ?? now()->addHour(), [

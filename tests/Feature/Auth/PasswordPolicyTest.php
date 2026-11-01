@@ -4,16 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Testing\TestResponse;
 
-/**
- * tests/Pest.php の既定の HTTP fake が先に登録されているため、$register で Factory を
- * 差し替えてから HaveIBeenPwned の fake を登録する。
- */
 describe('パスワードポリシー', function () {
-    /**
-     * @return TestResponse
-     */
+    // tests/Pest.php の HTTP fake が先に登録されているので、Factory を差し替えてから HaveIBeenPwned を fake する。
     $register = function (string $password, bool $breached = false) {
         $suffix = substr(strtoupper(sha1($password)), 5);
 

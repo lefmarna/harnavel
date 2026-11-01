@@ -5,11 +5,9 @@
  */
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const scriptPath = resolve(join(__dirname, "stop-verify.mjs"));
+const scriptPath = join(import.meta.dirname, "stop-verify.mjs");
 
 const stdinData = readFileSync(0, "utf8");
 

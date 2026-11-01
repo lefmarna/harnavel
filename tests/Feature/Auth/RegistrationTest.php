@@ -63,7 +63,7 @@ describe('ユーザー登録', function () {
         $this->assertAuthenticated();
         $response->assertRedirect(config('fortify.home'));
 
-        // DB の照合順序は大文字小文字を区別しないため assertDatabaseHas では小文字化を検証できない。
+        // DB の照合順序は大文字小文字を区別しないため、assertDatabaseHas では小文字化を検証できない。
         expect(User::query()->sole())
             ->name->toBe('Test User')
             ->email->toBe($expected);

@@ -46,7 +46,6 @@ final class SignedPayloadLink
         }
 
         try {
-            /** @var mixed $decoded */
             // POST 本文の値は署名されていないので、クエリから読む。
             $decoded = json_decode(Crypt::decryptString($request->query->getString('payload')), true, flags: JSON_THROW_ON_ERROR);
         } catch (Throwable $e) {

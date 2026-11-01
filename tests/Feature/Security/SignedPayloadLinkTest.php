@@ -54,7 +54,6 @@ describe('署名付きの確認リンク', function () {
         '署名の改ざん' => [fn (string $url): string => $url.'0'],
         '値の改ざん' => [fn (string $url): string => str_replace('payload=', 'payload=x', $url)],
         '期限の延長' => [fn (string $url): string => preg_replace('/expires=\d+/', 'expires='.now()->addYear()->getTimestamp(), $url) ?? $url],
-        // 署名はキーの表記のまま計算するが、PHP は変換したキーで期限を上書きする。
         'エンコードした期限の追加' => [fn (string $url): string => $url.'&%65xpires='.now()->addYear()->getTimestamp()],
         '期限の重複' => [fn (string $url): string => $url.'&expires='.now()->addYear()->getTimestamp()],
     ]);

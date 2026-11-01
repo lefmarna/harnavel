@@ -111,13 +111,11 @@ it('通常以外の経路の応答にも基本のヘッダーを付与する', f
     }, 500],
     '存在しないパスの404' => [fn ($test) => $test->get('/_testing/security-headers-missing'), 404],
     'webグループ外のヘルスチェック' => [fn ($test) => $test->get('/up'), 200],
-    // 巨大な本文は送らず、CONTENT_LENGTH の申告だけで ValidatePostSize を通す。
     'POSTサイズ超過の413' => [fn ($test) => $test->call('POST', '/_testing/security-headers-post', server: ['CONTENT_LENGTH' => (string) PHP_INT_MAX]), 413],
 ]);
 
 it('実行中のメンテナンスの503にも基本のヘッダーを付与する', function () {
-    // artisan down はコンテナ全体を止めるため、中断や並列実行で開発環境を 503 のまま残す。
-    // 判定だけを差し替え、このプロセスの外に状態を残さない。
+    // artisan down はコンテナ全体を止め、中断や並列実行で開発環境を 503 のまま残すので、判定だけを差し替える。
     $this->app->instance(MaintenanceMode::class, new class implements MaintenanceMode
     {
         public function activate(array $payload): void {}

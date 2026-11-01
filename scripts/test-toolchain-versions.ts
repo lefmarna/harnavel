@@ -1,10 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(import.meta.dirname, "..");
 
 const DOCKERFILE_PATH =
   process.env.TOOLCHAIN_DOCKERFILE ?? path.join(ROOT, ".docker/php/Dockerfile");
@@ -78,7 +75,6 @@ function main(): void {
     console.log(`OK: ${name} tests the deployed PHP series (${phpSeries}).`);
   }
 
-  // CircleCI の E2E とミューテーションテストも、配備先と同じ系列の PHP で検証する。
   const circleciPhpSeries = matchAll(
     fs.readFileSync(CIRCLECI_PATH, "utf8"),
     /image: cimg\/php:(\d+\.\d+)\./g,

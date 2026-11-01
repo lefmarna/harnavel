@@ -24,7 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
-// ログのスタックトレースに、パスワードなどの引数の先頭を残さない。php.ini はサーバーごとに違うため、ここで揃える。
+// php.ini はサーバーごとに違うため、スタックトレースに引数を残さない設定をここで揃える。
 ini_set('zend.exception_ignore_args', '1');
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -34,13 +34,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // 最外側へ置く。末尾に置くとメンテナンスの 503、POST サイズ超過、パス検査が
-        // 先に応答を返し、エラー応答にだけヘッダーが付かない（TADR-0012）。
+        // メンテナンスの 503 や POST サイズ超過など、先に返る応答にもヘッダーを付けるため最外側に置く（TADR-0012）。
         $middleware->prepend(AddSecurityHeaders::class);
 
-        // 偽の Host からパスワード再設定リンクなどの URL を作らせない。local とテストでは Laravel が無効にする。
-        // サブドメインも受け付けない。DNS が向いていない名前や乗っ取られた名前へリンクを向けさせないため。
-        // at を渡さないと Laravel は subdomains を無視してサブドメインを許可する。
+        // 偽の Host から再設定リンクなどの URL を作らせない。at を渡さないと Laravel は subdomains を無視する。
         $middleware->trustHosts(
             at: fn (): array => ['^'.preg_quote((string) parse_url(Config::string('app.url'), PHP_URL_HOST)).'$'],
             subdomains: false,
@@ -48,7 +45,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias(['password.confirm' => RequirePasswordWhenSet::class]);
 
-        // 失効したセッションを、ログインの要否を判定する auth より先にゲストへ戻す（TADR-0016）。
         $middleware->prependToPriorityList(AuthenticatesRequests::class, RejectRevokedSessions::class);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
@@ -97,13 +93,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 ]);
             }
 
-            // Laravel 既定の英語の HTML は、SPA 遷移では Inertia が画面の上のモーダルに出してしまう。
             $errorPage = [403 => 'forbidden', 404 => 'not_found', 429 => 'too_many_requests'][$status] ?? null;
 
-            // web ミドルウェアの外（セッションがない）では画面に要る共有データを作れないので、既定の応答のまま返す。
             if ($errorPage !== null && $request->hasSession() && ! ($request->expectsJson() && ! $request->header('X-Inertia'))) {
-                // ThrottleRequests は HandleInertiaRequests より先に動くので、429 ではその処理（版の設定と照合、
-                // 共有データ）がまだない。古い bundle はこの画面を持たないため、版が違えば読み直させる。
+                // ThrottleRequests は HandleInertiaRequests より先に拒否するため、429 では版の照合と共有データを補う。
                 if (Inertia::getShared('currentUrl') === null) {
                     $inertia = app(HandleInertiaRequests::class);
                     $version = (string) $inertia->version($request);
@@ -135,9 +128,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return $page;
             }
 
-            // フルページロードの 500 は Blade（TADR-0004）のまま返し、Vite と JS に依存させない。
-            // X-Inertia があれば JS はすでに動いているので、Inertia ページで返してよい。
-            // デバッグ時は Blade 500 と同じく変換せず、Ignition の応答を残す。
+            // フルページロードの 500 は Vite や JS に依存しない Blade のまま返す（TADR-0004）。
             if ($status === 500 && $request->header('X-Inertia') && ! config('app.debug')) {
                 $requestId = $request->attributes->get('request_id');
 

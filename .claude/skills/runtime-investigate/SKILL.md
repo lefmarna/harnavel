@@ -7,10 +7,6 @@ argument-hint: "[environment or symptom]"
 
 # Runtime Investigate
 
-Read `.agents/skills/runtime-investigate/SKILL.md` and follow it. That file is the canonical body of this skill, shared
-with every agent toolchain that works this repository. Skill-local paths it gives, such as
-`references/`, resolve next to that file, not next to this one.
-
-This file exists only to register the skill with the Claude-specific frontmatter above, which
-a symlink would destroy. It carries no instructions of its own — never add any here, so the
-two copies cannot diverge.
+Read `.agents/skills/runtime-investigate/SKILL.md` and follow it, resolving relative paths from that file's directory.
+This file only registers the Claude frontmatter, which a symlink would lose; keep every instruction
+in that file so the two copies cannot diverge.

@@ -28,7 +28,6 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
-// 漏洩パスワード照会を外部へ送らず、各テストで漏洩の有無を差し替えられるようにする。
 uses()
     ->beforeEach(function () {
         Http::preventStrayRequests();
@@ -94,18 +93,13 @@ function insertDatabaseSession(string $id, ?User $user): void
     ]);
 }
 
-/**
- * @return list<string>
- */
 function databaseSessionIds(): array
 {
-    /** @var list<string> */
     return DB::table('sessions')->orderBy('id')->pluck('id')->all();
 }
 
 /**
- * テストでは前のリクエストで読み込んだユーザーとセッションがメモリに残る。
- * 次のリクエストを、別のプロセスが受けたときと同じ状態から始める。
+ * 前のリクエストで読み込んだユーザーとセッションを忘れ、次のリクエストを別プロセスが受けた状態から始める。
  */
 function forgetRequestState(): void
 {
@@ -143,7 +137,6 @@ function pageCopy(string $key): string
 
     expect($copy)->toBeString()->not->toBe($key);
 
-    /** @var string $copy */
     return $copy;
 }
 

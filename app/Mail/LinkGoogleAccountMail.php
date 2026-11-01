@@ -24,18 +24,17 @@ class LinkGoogleAccountMail extends Mailable
         $fromAddress = config('mail.from.address');
         $fromName = config('mail.from.name');
         $appName = config('app.display_name', config('app.name'));
+        $appName = is_string($appName) ? $appName : 'Laravel';
 
         return $this
             ->from(
                 is_string($fromAddress) ? $fromAddress : '',
                 is_string($fromName) ? $fromName : '',
             )
-            ->subject(__('mail.link_google_account.subject', [
-                'app' => is_string($appName) ? $appName : 'Laravel',
-            ]))
+            ->subject(__('mail.link_google_account.subject', ['app' => $appName]))
             ->view('emails.link_google_account')
             ->with([
-                'appName' => is_string($appName) ? $appName : 'Laravel',
+                'appName' => $appName,
                 'user' => $this->user,
                 'url' => $this->url,
             ]);

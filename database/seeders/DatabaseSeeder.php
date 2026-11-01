@@ -15,7 +15,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 本番では固定の開発ユーザーを作らず、require-dev の Faker にも依存させない。
         if (app()->environment('local', 'testing')) {
             User::factory()->create([
                 'name' => 'Test User',

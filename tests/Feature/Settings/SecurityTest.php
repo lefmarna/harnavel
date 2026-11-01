@@ -164,8 +164,6 @@ describe('セキュリティ設定', function () {
             'password',
             'パスワード確認が一致しません。',
         ],
-        // 既定メッセージ側の :attribute。この画面だけ「新しいパスワード」で、
-        // lang/ja/validation.php の attributes.password（「パスワード」）を上書きしている。
         '既定メッセージの属性名' => [
             ['current_password' => UserFactory::DEFAULT_PASSWORD, 'password' => 'abc1234', 'password_confirmation' => 'abc1234'],
             'password',

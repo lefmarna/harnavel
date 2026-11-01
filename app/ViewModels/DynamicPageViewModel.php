@@ -7,7 +7,7 @@ namespace App\ViewModels;
 use Inertia\RenderContext;
 
 /**
- * 専用の ViewModel を作らないページで、ページ固有の props に SEO を合成する。
+ * 専用の PageViewModel を作らないページで、ページ固有の props に SEO を合成する。
  */
 final readonly class DynamicPageViewModel extends PageViewModel
 {

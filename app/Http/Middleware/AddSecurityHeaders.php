@@ -53,7 +53,7 @@ class AddSecurityHeaders
 
     private function scriptSrc(string $nonce): string
     {
-        // 'unsafe-inline' と https: は strict-dynamic に対応しないブラウザ向けの予備で、対応するブラウザは無視する。
+        // https: と 'unsafe-inline' は strict-dynamic 非対応ブラウザ向けの予備で、対応ブラウザは無視する。
         $scriptSrc = "script-src 'nonce-{$nonce}' 'strict-dynamic' https: 'unsafe-inline'";
 
         // AdSense が対応する CSP は eval を許すものだけなので、使うアプリでだけ許す。

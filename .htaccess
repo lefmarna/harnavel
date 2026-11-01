@@ -1,14 +1,11 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # 想定外のHost経由でアクセスさせないため
   RewriteCond %{HTTP_HOST} !^(?:(?:www|dev)\.)?example\.com$ [NC]
   RewriteRule ^ - [F]
 
-  # SSL証明書のHTTP-01検証を妨げないため
   RewriteRule ^\.well-known/acme-challenge(?:/|$) - [L]
 
-  # .envや.gitなどの非公開ファイルを露出させないため
   RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F]
 
   RewriteCond %{HTTP_HOST} ^www\.example\.com$ [NC]
@@ -20,17 +17,14 @@
   RewriteCond %{HTTP_HOST} !^(?:www\.)?example\.com$ [NC]
   RewriteRule ^ - [L]
 
-  # public/への再転送ループを防ぐため
   RewriteCond %{REQUEST_URI} !^/public/
   RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
-# セキュリティルールが適用できない状態で公開しないため
 <IfModule !mod_rewrite.c>
   Require all denied
 </IfModule>
 
-# URL書き換えとは別にドットファイルを保護するため
 <FilesMatch "^\.(?!well-known$)">
   Require all denied
 </FilesMatch>

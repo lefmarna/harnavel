@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Composer や Laravel の起動前にも応答するエントリーポイントと共有する。
+// Composer の autoload 前に応答する public/index.php と共有するため、素の配列で置く。
 return [
     'Content-Security-Policy' => "frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'",
     'X-Content-Type-Options' => 'nosniff',

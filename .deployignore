@@ -57,17 +57,11 @@ public/hot
 *.md
 docs
 
-# 環境設定（サーバーで別途作成）
 .env*
-
-# 開発環境用 .htaccess テンプレート（GitHub Actions でビルド時に .htaccess へ変換）
 .htaccess.develop
-
 .deploy
-
 scripts
 
-# フロントエンドのソースコード（CI の pnpm run build 済みであることが前提。本番では public/build を使用）
 resources/css
 resources/js
 
@@ -81,5 +75,4 @@ storage/framework/sessions/*
 storage/framework/testing/*
 storage/framework/views/*
 
-# CircleCI（PR の E2E・ミューテーション用。配備物には含めない）
 .circleci

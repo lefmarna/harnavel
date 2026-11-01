@@ -34,7 +34,6 @@ describe('本番環境の起動時検査', function () {
 
         expect($process->isSuccessful())->toBeTrue($process->getOutput().$process->getErrorOutput());
 
-        /** @var array{status: int, body: string} $result */
         $result = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
 
         expect($result['status'])->toBe(500)

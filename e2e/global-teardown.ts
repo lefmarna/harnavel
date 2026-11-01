@@ -1,15 +1,13 @@
 import { spawnSync } from "node:child_process";
 
+import { e2eContainerName } from "./support/artisan";
+
 export default function globalTeardown(): void {
   if (process.env.CI) {
     return;
   }
 
-  const container = process.env.PLAYWRIGHT_E2E_CONTAINER;
-
-  if (!container || !/^playwright-e2e-\d+-\d+$/.test(container)) {
-    throw new Error("Playwright E2E container name is missing or invalid.");
-  }
+  const container = e2eContainerName();
 
   const result = spawnSync("docker", ["rm", "--force", container], {
     encoding: "utf8",

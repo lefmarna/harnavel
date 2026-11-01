@@ -33,7 +33,6 @@ final class RejectRevokedSessions
             /** @var SessionGuard $guard */
             $guard = Auth::guard();
             $guard->logoutCurrentDevice();
-            // 続けて表示する画面からの送信が CSRF で弾かれないよう、トークンも作り直す。
             $request->session()->invalidate();
             $request->session()->regenerateToken();
             Inertia::clearHistory();

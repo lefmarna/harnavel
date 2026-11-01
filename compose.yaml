@@ -16,7 +16,6 @@ services:
       target: app
     working_dir: /app
     environment:
-      # テスト・E2E は開発 DB に触れない専用アカウントを使う（scripts/dev-environment.ts で作成）。
       TEST_DB_DATABASE: ${DB_DATABASE}_testing
       TEST_DB_USERNAME: ${DB_USERNAME}_test
       TEST_DB_PASSWORD: ${DB_PASSWORD}

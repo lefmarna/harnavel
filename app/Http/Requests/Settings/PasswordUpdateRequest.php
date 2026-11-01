@@ -53,8 +53,6 @@ class PasswordUpdateRequest extends FormRequest
     }
 
     /**
-     * この画面だけ password の意味が「新しいパスワード」に変わるので上書きする。
-     *
      * @return array<string, string>
      */
     public function attributes(): array

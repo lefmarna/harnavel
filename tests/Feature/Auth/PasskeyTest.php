@@ -108,16 +108,14 @@ describe('パスキー', function () {
     });
 
     it('ルートビューは csrf-token meta を出さない', function () {
-        // @laravel/passkeys は meta があれば XSRF-TOKEN cookie より優先するが、ログイン時の
-        // トークン再生成後も meta は古いままで、CSRF 検証が cookie を見に行かなくなる。
+        // @laravel/passkeys は meta を Cookie より優先するが、meta はログイン時のトークン再生成に追従しない。
         $this->get(route('login'))->assertDontSee('name="csrf-token"', escape: false);
     });
 });
 
 describe('パスキーの credential_id', function () {
     it('WebAuthn が許す最大長の資格情報 ID を保存できる', function () {
-        // 検証は 1023 バイトまで通し（webauthn-lib の CheckCredentialId）、保存はそれを Base64URL に
-        // した文字列。varchar(255) では 192 バイト以上の資格情報 ID が INSERT で落ちる。
+        // webauthn-lib（CheckCredentialId）が通す上限は 1023 バイトで、保存するのはその Base64URL。
         $credentialId = Base64UrlSafe::encodeUnpadded(random_bytes(1023));
 
         expect($credentialId)->toHaveLength(1364);
@@ -135,8 +133,6 @@ describe('パスキーの credential_id', function () {
     });
 
     it('資格情報 ID は大文字と小文字を別の値として扱う', function () {
-        // Base64URL は大文字小文字を区別する識別子。既定の *_general_ci では UNIQUE が誤衝突し、
-        // where() も別のパスキーを引き当てる。
         $user = User::factory()->create();
 
         $user->passkeys()->create([
@@ -196,9 +192,6 @@ describe('パスキーのユーザーハンドル秘密鍵', function () {
     });
 });
 
-/**
- * @param  array<string, string>  $env
- */
 function bootWithEnvironment(array $env, string $afterBoot = ''): Process
 {
     return AppSubprocess::php(

@@ -15,7 +15,6 @@ permissions:
 
 jobs:
   provenance:
-    # テンプレートリポジトリにはデプロイ先がないため、後続のジョブも含めて動かさない。
     if: ${{ !github.event.repository.is_template }}
     runs-on: ubuntu-latest
     permissions:
@@ -88,7 +87,6 @@ jobs:
           artifact=build-$tree
           found=$(find_run "$artifact")
 
-          # E2E を CircleCI に任せたビルドは、同じツリーの E2E 成功記録を読めたときだけ検証済みとする。
           if [ -z "$found" ] && [ -n "$E2E_RECORD_BUCKET" ]; then
             found=$(find_run "build-$tree-needs-e2e")
             if [ -n "$found" ] &&

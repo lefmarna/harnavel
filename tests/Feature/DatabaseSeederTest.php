@@ -5,9 +5,6 @@ declare(strict_types=1);
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 
-/**
- * db:seed の本番確認プロンプトを経由せず、Seeder 自身の環境分岐を検証する。
- */
 function runDatabaseSeeder(string $environment): void
 {
     app()->detectEnvironment(fn (): string => $environment);

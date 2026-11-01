@@ -1,4 +1,3 @@
-{{-- 配備時に静的 HTML としても焼かれるため、リクエストを持たない場合がある（lang/ja/errors.php）。 --}}
 @php
     $requestId = request()->attributes->get('request_id');
     $hasRequestId = is_string($requestId) && $requestId !== '';

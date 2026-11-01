@@ -32,7 +32,6 @@ if (! is_array($env)) {
 }
 
 foreach ($env as $key => $value) {
-    // GitHub Actions の式は CircleCI で評価できないため、同じ条件を再現できないものとして止める。
     if (! preg_match('/^[A-Z_][A-Z0-9_]*$/', (string) $key) || ! is_scalar($value) || str_contains((string) $value, '${{')) {
         fwrite(STDERR, "{$step} の {$key} は GitHub Actions の外で再現できません。\n");
         exit(1);

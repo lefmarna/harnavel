@@ -99,9 +99,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->password ?? '';
     }
 
-    /**
-     * パスワードがあればそちらで確認させ、Google のログイン状態だけでは通さない（TADR-0016）。
-     */
     public function canConfirmWithGoogle(): bool
     {
         return $this->password === null && $this->google_id !== null && GoogleOAuth::isConfigured();
@@ -137,9 +134,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         $session->put(self::SESSION_GENERATION_KEY, $this->session_generation);
     }
 
-    /**
-     * 世代を記録する前からのセッションは、まだ一度も失効させていない世代 0 として扱う。
-     */
     public function isCurrentSessionGeneration(Session $session): bool
     {
         return $session->get(self::SESSION_GENERATION_KEY, 0) === $this->session_generation;

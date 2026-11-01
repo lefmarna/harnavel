@@ -46,11 +46,9 @@ class EmailChangeService
     public function confirm(string $userId, string $from, string $to, string $state): bool
     {
         try {
-            // 切り替えたユーザー、すでに切り替わっていれば false、前提が崩れていれば null。
             $changed = DB::transaction(function () use ($userId, $from, $to, $state): User|false|null {
                 $user = $this->userRepository->find($userId, lock: true);
 
-                // 同じリンクをもう一度開いたときは、通知を重ねずに成功とする。
                 if ($user !== null && EmailAddress::same($user->email, $to)) {
                     return false;
                 }
@@ -102,9 +100,6 @@ class EmailChangeService
         return $previous !== null && $previous->greaterThanOrEqualTo($now) ? $previous->addSecond() : $now;
     }
 
-    /**
-     * 切り替えは確定済みのため、送信の失敗は報告だけにする。
-     */
     private function notifyPreviousAddress(string $previousEmail): void
     {
         try {

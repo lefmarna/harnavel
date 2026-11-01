@@ -9,7 +9,6 @@ use Database\Factories\UserFactory;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Validated;
-use Illuminate\Auth\SessionGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
@@ -37,10 +36,7 @@ function resetPasswordElsewhere(User $user): void
 
 function recallerCookieName(): string
 {
-    /** @var SessionGuard $guard */
-    $guard = Auth::guard('web');
-
-    return $guard->getRecallerName();
+    return Auth::guard('web')->getRecallerName();
 }
 
 describe('セッションの失効', function () {

@@ -22,9 +22,6 @@ final class SensitiveUrl
             || self::secretParameters($request) !== [];
     }
 
-    /**
-     * Request::url() と同じ形で、パス中の秘密をパラメーター名に置き換える。
-     */
     public static function redact(Request $request): string
     {
         $secrets = self::secretParameters($request);

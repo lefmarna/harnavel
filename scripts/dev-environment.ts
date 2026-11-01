@@ -41,7 +41,6 @@ const commonDir = fs.realpathSync(
 );
 const primary = path.dirname(commonDir);
 const registryFile = path.join(commonDir, "dev-worktrees.json");
-// アプリ共通の値。主 checkout が未セットアップでも .env.example から決まる。
 const primaryValue = (key: string): string =>
   readLocalEnv(primary)[key] ?? readLocalEnv(primary, ".env.example")[key] ?? "";
 
@@ -164,7 +163,6 @@ async function available(port: number): Promise<void> {
   });
 }
 
-// DB_URL は個別の接続設定より優先されるため、残っていると他の Worktree の DB に接続する。
 function assertNoDatabaseUrl(env: Record<string, string>): void {
   if (env.DB_URL)
     throw new Error(".env の DB_URL を空にしてください。Worktree ごとの DB 設定より優先されます。");

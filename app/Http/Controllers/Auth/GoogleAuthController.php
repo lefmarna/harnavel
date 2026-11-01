@@ -60,7 +60,6 @@ class GoogleAuthController extends Controller
         /** @var GoogleProvider $driver */
         $driver = Socialite::driver('google');
 
-        // 既存の Google セッションで黙って通過させず、どのアカウントで確認するかを選ばせる。
         return $driver->with(['prompt' => 'select_account'])->redirect();
     }
 

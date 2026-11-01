@@ -41,7 +41,7 @@ jobs:
 
   quality:
     needs: release
-    # Draft PR は push し放題にする。判定ジョブが失敗したときは検証する側に倒す。
+    # 判定ジョブが失敗しても、検証する側に倒す。
     if: ${{ !cancelled() && !github.event.pull_request.draft && needs.release.outputs.verified != 'true' }}
     uses: ./.github/workflows/reusable-quality.yml
     with:

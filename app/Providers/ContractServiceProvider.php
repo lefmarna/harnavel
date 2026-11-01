@@ -8,17 +8,11 @@ use Illuminate\Support\ServiceProvider;
 
 class ContractServiceProvider extends ServiceProvider
 {
-    /**
-     * @var list<string>
-     */
-    private const SERVICES = [
+    private const array SERVICES = [
         'GoogleAuth',
     ];
 
-    /**
-     * @var list<string>
-     */
-    private const REPOSITORIES = [
+    private const array REPOSITORIES = [
         'User',
     ];
 

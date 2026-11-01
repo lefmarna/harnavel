@@ -130,13 +130,13 @@ class AppServiceProvider extends ServiceProvider
 
         // 照合に使ったユーザーの世代を残す。照合と失効が重なれば失効前の世代が残り、次のリクエストで弾かれる（TADR-0016）。
         Event::listen(function (Login $event): void {
-            /** @var User $user 認証するのは users テーブルだけ。 */
+            /** @var User $user */
             $user = $event->user;
             $user->recordSessionGeneration(app(Session::class));
         });
 
         Event::listen(function (PasskeyRegistered $event): void {
-            /** @var User $user 認証するのは users テーブルだけ。 */
+            /** @var User $user */
             $user = $event->user;
             app(SecurityNotifier::class)->notify($user, 'passkey_added');
         });

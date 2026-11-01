@@ -14,10 +14,8 @@ parameters:
 
     level: max
 
-    # casts() の戻り値から属性の型を推論するために必要。
     parseModelCastsMethod: true
 
-    # level max に含まれない追加の厳格化。
     checkMissingCallableSignature: true
     checkTooWideReturnTypesInProtectedAndPublicMethods: true
     checkUninitializedProperties: true

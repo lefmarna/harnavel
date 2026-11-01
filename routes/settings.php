@@ -17,7 +17,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings/profile', [ProfileController::class, 'edit'])
         ->middleware('password.confirm')
         ->name('profile.edit');
-    // メールアドレスを変えると確認メールを送るため、任意のアドレスへ大量に送らせない。
     Route::patch('settings/profile', [ProfileController::class, 'update'])
         ->middleware(['password.confirm', 'throttle:6,1,email-change'])
         ->name('profile.update');

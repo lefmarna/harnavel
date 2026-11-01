@@ -21,11 +21,7 @@ use Symfony\Component\Mailer\Exception\TransportException;
 use function Pest\Laravel\mock;
 
 beforeEach(function () {
-    config([
-        'services.google.client_id' => 'google-client-id',
-        'services.google.client_secret' => 'google-client-secret',
-        'services.google.redirect' => 'https://example.com/auth/google/callback',
-    ]);
+    configureGoogleOAuth(true);
 });
 
 /**

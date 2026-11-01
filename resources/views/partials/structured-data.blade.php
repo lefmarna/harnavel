@@ -1,5 +1,5 @@
 @php
-    $siteName = isset($displayName) && is_string($displayName) && $displayName !== ''
+    $siteName = is_string($displayName ?? null) && $displayName !== ''
         ? $displayName
         : config('app.display_name', config('app.name', 'Laravel'));
     $siteDescription = config('app.description', '');
@@ -7,15 +7,9 @@
     $logoUrl = asset('apple-touch-icon.png');
     $author = config('app.author');
     $inLanguage = str_replace('_', '-', app()->getLocale());
-    $pageTitle = isset($title) && is_string($title) && $title !== ''
-        ? $title
-        : $siteName;
-    $pageDescription = isset($description) && is_string($description) && $description !== ''
-        ? $description
-        : $siteDescription;
-    $pageUrl = isset($url) && is_string($url) && $url !== ''
-        ? $url
-        : $siteUrl;
+    $pageTitle = is_string($title ?? null) && $title !== '' ? $title : $siteName;
+    $pageDescription = is_string($description ?? null) && $description !== '' ? $description : $siteDescription;
+    $pageUrl = is_string($url ?? null) && $url !== '' ? $url : $siteUrl;
     $websiteId = $siteUrl.'/#website';
     $webApplicationId = $siteUrl.'/#webapplication';
     $webPageId = rtrim($pageUrl, '/').'#webpage';
@@ -88,10 +82,7 @@
     $webApplicationSchema = array_filter($webApplicationSchema, $schemaFilter);
     $webPageSchema = array_filter($webPageSchema, $schemaFilter);
 
-    /**
-     * タイトルや説明にユーザー入力が届くアプリもあるので、`</script>` で script 要素を抜けないよう
-     * 退避する。`/` の退避（json_encode の既定）も二重の防御として外さない。
-     */
+    // ユーザー入力で </script> を閉じられないよう、< と / をともに退避する。
     $encodeSchema = fn (array $schema): string => json_encode(
         $schema,
         JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR

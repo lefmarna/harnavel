@@ -46,7 +46,6 @@ run = "docker compose down"
 [tasks.assets]
 description = "Build frontend assets and drop a hot file left by a stopped Vite"
 run = [
-  # 停止済みの Vite を指す public/hot が残ると、ビルド済みアセットが使われない。
   '[ ! -f public/hot ] || curl -gfsS -m 3 "$(cat public/hot)/@vite/client" >/dev/null 2>&1 || rm -f public/hot',
   "pnpm build",
 ]

@@ -2,7 +2,6 @@ name: mutation
 
 on:
   workflow_dispatch:
-  # 配備を止めず所要時間がコード量とともに伸びるため、main へ入る PR に限る。
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]

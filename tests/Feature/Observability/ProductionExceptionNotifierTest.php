@@ -237,7 +237,6 @@ describe('本番例外通知', function () {
             app(ProductionExceptionNotifier::class)->report($exception, $request);
             app(ProductionExceptionNotifier::class)->report($exception, $request);
         }],
-        // 別の行で作るので、発生行だけが異なる。
         '発生行だけ違う' => [function (): void {
             $request = observabilityRequest();
             app(ProductionExceptionNotifier::class)->report(new RuntimeException('database is unavailable'), $request);

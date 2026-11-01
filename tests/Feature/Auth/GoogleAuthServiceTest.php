@@ -78,6 +78,7 @@ describe('Google 認証サービス', function () {
         $existing = User::factory()->create([
             'email' => 'existing@example.com',
             'google_id' => null,
+            'session_generation' => 3,
         ]);
 
         $service = app(GoogleAuthService::class);
@@ -95,13 +96,12 @@ describe('Google 認証サービス', function () {
                 ->toHaveKeys(['expires', 'payload', 'signature'])
                 ->and($query['payload'])->toBeString()->not->toBeEmpty();
 
-            /** @var array{google_id?: mixed, email?: mixed, session_generation?: mixed} $payload */
             $payload = json_decode(Crypt::decryptString($query['payload']), true, flags: JSON_THROW_ON_ERROR);
 
             expect($payload)->toBe([
                 'google_id' => 'google-456',
                 'email' => 'existing@example.com',
-                'session_generation' => '0',
+                'session_generation' => '3',
             ]);
 
             return true;
@@ -140,9 +140,6 @@ describe('Google 認証サービス', function () {
 
         $service = app(GoogleAuthService::class);
 
-        // 厳密一致の候補照合ではレガシーな大小混在メールにヒットせず INSERT へ進むが、
-        // email の一意制約は utf8mb4_general_ci で大小を区別しないため重複となり、
-        // 一意制約リカバリ（findByEmail）で既存ユーザーへの連携確認待ちに収束する。
         expect(fn () => $service->findOrCreate('google-legacy-mixed', 'mixed.case@example.com', 'Legacy User'))
             ->toThrow(GoogleLinkConfirmationPendingException::class);
 
@@ -221,8 +218,7 @@ describe('Google 認証サービス', function () {
             'google_id' => 'race-google',
         ]);
 
-        // トランザクション内では先行リクエストがまだ見えず、save が一意制約で落ちたあとの
-        // フォールバックで初めて既存ユーザーが見える、という競合状態を作る。
+        // トランザクション内では先行リクエストが見えず、save が一意制約で落ちた後のフォールバックで初めて見える競合を作る。
         $fakeRepo = new FakeUserRepository(
             findCandidates: fn (): Collection => collect(),
             findByGoogleId: fn (): User => $existing,
@@ -281,8 +277,7 @@ describe('Google 認証サービス', function () {
             'email' => 'b@example.com',
         ]);
 
-        // 先行トランザクションの save 後に別トランザクションが
-        // google_id 側と email 側を別々に作成した状況をシミュレート
+        // 先行トランザクションの save 後に、別のトランザクションが google_id 側と email 側を別々に作った状況を作る。
         $fakeRepo = new FakeUserRepository(
             findCandidates: fn (): Collection => collect(),
             findByGoogleId: fn (): User => $userA,
@@ -396,7 +391,6 @@ describe('Google 認証サービス', function () {
         $foundId = null;
         $foundWithLock = false;
 
-        // findByEmail は差し込まない。confirmLink がそこへ回ると BadMethodCallException で落ちる。
         $fakeRepo = new FakeUserRepository(
             find: function (string|int $id, bool $lock) use ($existing, &$foundId, &$foundWithLock): User {
                 $foundId = $id;

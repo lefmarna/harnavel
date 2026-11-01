@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
@@ -9,44 +8,19 @@ import {
   isDatabaseTarget,
 } from "./e2e-database-target";
 import type { DatabaseTarget } from "./e2e-database-target";
-import { assertViteDevAssets, createViteDevAssetsProbe } from "./vite-dev-assets";
+import { runArtisan } from "./support/artisan";
+import { assertViteDevAssets } from "./vite-dev-assets";
 
-// Playwright は globalSetup を config 基準で解決するだけで chdir しないため、起動ディレクトリに依存させない。
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
-export type ArtisanRunner = (args: string[], stdio: "inherit" | "pipe") => string;
-
-const dockerArtisan: ArtisanRunner = (args, stdio) => {
-  const container = process.env.PLAYWRIGHT_E2E_CONTAINER;
-
-  if (!container || !/^playwright-e2e-\d+-\d+$/.test(container)) {
-    throw new Error("Playwright E2E container name is missing or invalid.");
-  }
-
-  return execFileSync("docker", ["exec", "-i", container, "scripts/run-e2e-artisan.sh", ...args], {
-    encoding: "utf8",
-    stdio,
-  });
-};
-
-const ciArtisan: ArtisanRunner = (args, stdio) => {
-  return execFileSync("php", ["artisan", ...args], {
-    encoding: "utf8",
-    stdio,
-  });
-};
-
-function resolvedTarget(artisan: ArtisanRunner): DatabaseTarget {
-  const output = artisan(
-    [
-      "tinker",
-      "--execute",
-      "$c = DB::connection();" +
-        'echo \'TARGET:\'.json_encode(["host" => $c->getConfig("host"),' +
-        ' "database" => $c->getConfig("database")]);',
-    ],
-    "pipe",
-  );
+function resolvedTarget(): DatabaseTarget {
+  const output = runArtisan([
+    "tinker",
+    "--execute",
+    "$c = DB::connection();" +
+      'echo \'TARGET:\'.json_encode(["host" => $c->getConfig("host"),' +
+      ' "database" => $c->getConfig("database")]);',
+  ]);
   const probe = /TARGET:(\{.*?\})/.exec(output)?.[1];
 
   if (probe === undefined) {
@@ -62,12 +36,12 @@ function resolvedTarget(artisan: ArtisanRunner): DatabaseTarget {
   return target;
 }
 
-async function waitForDatabase(artisan: ArtisanRunner, timeoutMs = 60_000): Promise<void> {
+async function waitForDatabase(timeoutMs = 60_000): Promise<void> {
   const startedAt = Date.now();
 
   for (;;) {
     try {
-      artisan(["tinker", "--execute", "DB::connection()->getPdo();"], "pipe");
+      runArtisan(["tinker", "--execute", "DB::connection()->getPdo();"]);
 
       return;
     } catch (error) {
@@ -82,25 +56,14 @@ async function waitForDatabase(artisan: ArtisanRunner, timeoutMs = 60_000): Prom
   }
 }
 
-export async function prepareE2eDatabase(
-  artisan: ArtisanRunner,
-  expectedTarget: DatabaseTarget,
-): Promise<void> {
-  assertE2eTarget(resolvedTarget(artisan), expectedTarget);
-  await waitForDatabase(artisan);
-  artisan(["migrate:fresh", "--force", "--seed"], "inherit");
-}
-
 export default async function globalSetup(): Promise<void> {
   const isCI = Boolean(process.env.CI);
 
-  // CI は dev server を持たず、ビルド済みアセットが常にそのコミットの内容になる。
   if (!isCI) {
-    await assertViteDevAssets(createViteDevAssetsProbe(REPO_ROOT));
+    await assertViteDevAssets(REPO_ROOT);
   }
 
-  await prepareE2eDatabase(
-    isCI ? ciArtisan : dockerArtisan,
-    isCI ? CI_E2E_TARGET : localE2eTarget(REPO_ROOT),
-  );
+  assertE2eTarget(resolvedTarget(), isCI ? CI_E2E_TARGET : localE2eTarget(REPO_ROOT));
+  await waitForDatabase();
+  runArtisan(["migrate:fresh", "--force", "--seed"], "inherit");
 }

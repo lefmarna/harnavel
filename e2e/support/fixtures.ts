@@ -4,7 +4,7 @@ type PageErrorFixtures = {
   pageErrors: void;
 };
 
-export const formatPageError = (error: Error): string =>
+const formatPageError = (error: Error): string =>
   error.stack?.trim() || `${error.name}: ${error.message}`;
 
 export const test = base.extend<PageErrorFixtures>({

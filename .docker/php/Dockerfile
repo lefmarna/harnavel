@@ -41,7 +41,6 @@ WORKDIR /app
 # 参照アプリ生成（update-laravel-packages スキル）専用の使い捨てステージ。
 FROM app AS package-reference
 
-# Node.js 25 以降は Corepack を同梱しないため、npm で入れてから有効化する。
 RUN apt-get update \
   && curl -fsSL https://deb.nodesource.com/setup_26.x -o /tmp/nodesource_setup.sh \
   && bash /tmp/nodesource_setup.sh \

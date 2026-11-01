@@ -1,6 +1,5 @@
 import type { BrowserContext, Page } from "@playwright/test";
 
-/** CDP 依存のため Chromium 専用。 */
 export const enableVirtualAuthenticator = async (
   page: Page,
   context: BrowserContext,

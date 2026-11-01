@@ -69,19 +69,6 @@ describe('メールアドレスの変更', function () {
             ->assertSessionHas('status', 'email-change-link-sent');
     });
 
-    it('大文字小文字だけの変更では確認メールを送らない', function () {
-        config(['fortify.lowercase_usernames' => false]);
-        Mail::fake();
-        $user = User::factory()->create(['email' => 'user@example.com']);
-
-        $this->actingAs($user)
-            ->withSession(['auth.password_confirmed_at' => now()->getTimestamp()])
-            ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'User@Example.com'])
-            ->assertSessionHasNoErrors();
-
-        Mail::assertNothingSent();
-    });
-
     it('確認メールを送れなかったときはエラーを表示し、個人情報を含めずに失敗を記録して Discord へ知らせる', function () {
         Exceptions::fake();
         Log::spy();

@@ -247,11 +247,9 @@ class GoogleAuthService implements GoogleAuthServiceContract
     {
         if (! $caseInsensitiveEmail) {
             // 大小混在の既存値はDBのCI一意制約を経てリカバリ経路で照合される。
-            /** @var User|null */
             return $candidates->firstWhere('email', $email);
         }
 
-        /** @var User|null */
         return $candidates->first(fn (User $user): bool => EmailAddress::same($user->email, $email));
     }
 }

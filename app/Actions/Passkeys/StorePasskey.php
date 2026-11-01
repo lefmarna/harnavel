@@ -23,7 +23,7 @@ class StorePasskey extends BaseStorePasskey
     public function createPasskey(PasskeyUser $user, string $name, CredentialRecord $source): Passkey
     {
         return DB::transaction(function () use ($user, $name, $source): Passkey {
-            /** @var User $user 認証するのは users テーブルだけ。 */
+            /** @var User $user */
             $this->sessionRevocation->lockUnrevoked($user);
 
             return parent::createPasskey($user, $name, $source);

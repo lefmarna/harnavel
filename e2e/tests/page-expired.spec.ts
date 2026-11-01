@@ -7,7 +7,6 @@ import { expect, test } from "../support/fixtures";
 const PAGE_EXPIRED_MESSAGE = "ページの有効期限が切れました。再度お試しください。";
 const PROFILE_URL = settingsUrl("profile");
 
-// Sec-Fetch-Site を送らないブラウザで、期限の切れたトークンのまま送信した状態を再現する。
 const expireCsrfToken = async (context: BrowserContext, path: string): Promise<void> => {
   await context.route(
     (url) => url.pathname === path,

@@ -50,7 +50,6 @@ class ResetUserPassword implements ResetsUserPasswords
                 throw ValidationException::withMessages(['email' => [__('passwords.token')]]);
             }
 
-            // 再設定リンクを受け取れたことは、メールの所有を示す（TADR-0016）。
             $revokesExistingCredentials = $lockedUser->email_verified_at === null;
 
             if ($revokesExistingCredentials) {

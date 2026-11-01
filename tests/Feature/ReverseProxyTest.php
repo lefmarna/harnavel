@@ -24,9 +24,6 @@ describe('リバースプロキシ', function () {
     });
 });
 
-/**
- * @return array{secure: bool, url: string, host: string, clientIp: string|null}
- */
 function proxyRequestMetadata(string $environment): array
 {
     $script = <<<'PHP'
@@ -66,7 +63,6 @@ function proxyRequestMetadata(string $environment): array
     expect($process->isSuccessful())
         ->toBeTrue($process->getOutput().$process->getErrorOutput());
 
-    /** @var array{status: int, secure: bool, url: string, host: string, clientIp: string|null} $metadata */
     $metadata = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
 
     expect($metadata)->toBeArray()
@@ -74,6 +70,5 @@ function proxyRequestMetadata(string $environment): array
 
     unset($metadata['status']);
 
-    /** @var array{secure: bool, url: string, host: string, clientIp: string|null} $metadata */
     return $metadata;
 }

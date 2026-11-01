@@ -229,7 +229,6 @@ const prepareAutofillRace = async (
 ): Promise<void> => {
   await enableVirtualAuthenticator(page, context);
 
-  // シードユーザーはログインの試行制限に近い。
   await openSecuritySettings(page, createUser());
   await registerPasskey(page, "自動入力と競合するボタン");
   await expect(page.getByText("自動入力と競合するボタン", { exact: true })).toBeVisible();
@@ -344,8 +343,8 @@ test("自動入力の options 取得中にボタンを押しても、パスキ�
 
   await page.goto("/login");
   await options.markClicked();
-  await page.getByRole("button", { name: "パスキーでログイン" }).click();
   // 手動側が待つなら手動の取得は来ないので、時間で流す。
+  await page.getByRole("button", { name: "パスキーでログイン" }).click();
   await page.waitForTimeout(1_000);
   release();
 
@@ -396,6 +395,7 @@ test("自動入力を待っている間に画面を離れたら、パスキー�
 
   release();
   await options.autofillResponded();
+  // 来ないはずの手動の取得を待つので、時間で流す。
   await page.waitForTimeout(1_000);
 
   expect(options.manualRequests()).toBe(0);
@@ -501,7 +501,6 @@ test("ログイン画面の自動入力が残っていても、パスキーで�
 
   // 再読み込みすると残っている自動入力が消えるので、画面内の導線で移動する。
   await page.locator('[data-test="sidebar-menu-button"]').click();
-  // プロフィール設定も本人確認を求めるため、設定を開いた時点で確認画面へ移る。
   await page.getByRole("menuitem", { name: "Settings" }).click();
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
 
@@ -537,10 +536,8 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
 /**
  * csrf-token meta を置くと、ログイン時に作り直したトークンを SPA が取り込めないまま、@laravel/passkeys が
- * 古い値を送ってしまう。PreventRequestForgery は Sec-Fetch-Site: same-origin なら先に通すので、素の
- * ブラウザでは表に出ない。送らないブラウザを再現して、トークンの検証まで進ませる。
- *
- * route.continue({ headers }) では Playwright が sec-* を残すため、ブラウザを介さない route.fetch() で送り直す。
+ * 古い値を送ってしまう。PreventRequestForgery は Sec-Fetch-Site: same-origin なら先に通すため、送らない
+ * ブラウザを再現する。route.continue({ headers }) では Playwright が sec-* を残すので、route.fetch() で送り直す。
  */
 test("Sec-Fetch-Site を送らないブラウザでも SPA 遷移のままパスキーを登録できる", async ({
   page,
@@ -551,7 +548,6 @@ test("Sec-Fetch-Site を送らないブラウザでも SPA 遷移のままパス
 
   await enableVirtualAuthenticator(page, context);
 
-  // 文書の読み直しはログインまで。以降は画面内の導線だけで進む。
   const user = createUser();
   await login(page, user);
 
@@ -620,12 +616,10 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
 
   await context.clearCookies();
 
-  // Conditional UI 対応環境の再現。この分岐でだけ自動入力が起動する。
   await page.addInitScript(() => {
     PublicKeyCredential.isConditionalMediationAvailable = async () => true;
   });
 
-  // 自動入力のオプション取得だけを 429 で落とす。スロットリングや一時的な通信断と同じ状態。
   await page.route("**/passkeys/login/options", async (route) => {
     await route.fulfill({
       status: 429,
@@ -639,7 +633,6 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
     page.getByText("試行回数が多すぎます。しばらく待ってからもう一度お試しください。"),
   ).toBeVisible();
 
-  // 自動入力は再試行しないので、ボタンから再試行する。
   await page.unroute("**/passkeys/login/options");
 
   await page.getByRole("button", { name: "パスキーでログイン" }).click();

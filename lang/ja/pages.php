@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// SSR を使わないため、初期 HTML の <title> と meta description に出す文言はサーバー側に置く。
+// SSR を使わないため、初期 HTML の <title> と meta description の文言はサーバー側に置く。
 
 return [
     'home' => [

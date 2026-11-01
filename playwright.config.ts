@@ -11,7 +11,9 @@ const PORT = isCI ? 8000 : envPort(env, "NGINX_PORT") + 5;
 const VITE_PORT = envPort(env, "VITE_PORT");
 const E2E_APP_URL = `http://localhost:${PORT}`;
 const E2E_READY_URL = `${E2E_APP_URL}/up`;
-const E2E_CONTAINER_NAME = `playwright-e2e-${PORT}-${process.pid}`;
+// ワーカーは config を読み直すため、親プロセスが決めた名前を環境変数から引き継ぐ。
+const E2E_CONTAINER_NAME =
+  process.env.PLAYWRIGHT_E2E_CONTAINER ?? `playwright-e2e-${PORT}-${process.pid}`;
 
 process.env.PLAYWRIGHT_E2E_CONTAINER = E2E_CONTAINER_NAME;
 

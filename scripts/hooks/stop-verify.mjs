@@ -3,8 +3,17 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, extname, join } from "node:path";
 
-const PHPSTAN_EXCLUDED_DIRS = ["tests/"];
-const isExcludedFromPhpStan = (file) => PHPSTAN_EXCLUDED_DIRS.some((dir) => file.startsWith(dir));
+const PHPSTAN_PATHS = [
+  "app/",
+  "bootstrap/app.php",
+  "bootstrap/providers.php",
+  "config/",
+  "database/",
+  "routes/",
+  "tests/Support/",
+];
+const isPhpStanTarget = (file) =>
+  PHPSTAN_PATHS.some((path) => (path.endsWith("/") ? file.startsWith(path) : file === path));
 
 const OXFMT_EXTS = new Set([
   ".cjs",
@@ -58,8 +67,8 @@ const lintAll = byExt(all, LINT_EXTS);
 const lintFiles = byExt(existing, LINT_EXTS);
 const phpAll = byExt(all, PHP_EXTS).filter((file) => !isBlade(file));
 const phpExisting = byExt(existing, PHP_EXTS).filter((file) => !isBlade(file));
-const phpStanAll = phpAll.filter((file) => !isExcludedFromPhpStan(file));
-const phpStanExisting = phpExisting.filter((file) => !isExcludedFromPhpStan(file));
+const phpStanAll = phpAll.filter(isPhpStanTarget);
+const phpStanExisting = phpExisting.filter(isPhpStanTarget);
 const hasTs = byExt(all, TS_EXTS).length > 0;
 const hasMd = byExt(all, MD_EXTS).length > 0;
 const hasJsTsDeletions = lintAll.length > lintFiles.length;

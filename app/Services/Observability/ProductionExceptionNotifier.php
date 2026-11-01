@@ -60,7 +60,7 @@ class ProductionExceptionNotifier
 
     private function reserveNotificationSlot(Throwable $exception, ?Request $request): bool
     {
-        $seconds = $this->deduplicationSeconds();
+        $seconds = Config::integer('observability.discord.deduplication_seconds');
 
         if ($seconds < 1) {
             return true;
@@ -85,8 +85,8 @@ class ProductionExceptionNotifier
         }
 
         try {
-            Http::timeout($this->discordTimeout())
-                ->connectTimeout($this->discordConnectTimeout())
+            Http::timeout(Config::float('observability.discord.timeout'))
+                ->connectTimeout(Config::float('observability.discord.connect_timeout'))
                 ->post($webhookUrl, $payload)
                 ->throw();
         } catch (Throwable $exception) {
@@ -194,21 +194,6 @@ class ProductionExceptionNotifier
         $webhookUrl = config('observability.discord.webhook_url');
 
         return is_string($webhookUrl) ? $webhookUrl : null;
-    }
-
-    private function deduplicationSeconds(): int
-    {
-        return Config::integer('observability.discord.deduplication_seconds');
-    }
-
-    private function discordTimeout(): float
-    {
-        return Config::float('observability.discord.timeout');
-    }
-
-    private function discordConnectTimeout(): float
-    {
-        return Config::float('observability.discord.connect_timeout');
     }
 
     private function userAgent(?Request $request): ?string

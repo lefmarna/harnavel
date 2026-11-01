@@ -13,9 +13,6 @@ use Inertia\Inertia;
 mutates(ConfirmPasswordPageViewModel::class, LoginPageViewModel::class, ResetPasswordPageViewModel::class, StatusPageViewModel::class);
 
 describe('Auth 専用 PageViewModel', function () {
-    /**
-     * @param  array<string, mixed>  $expectedProps
-     */
     it('注入したコピーを noindex の SEO として返し固有 props を公開する', function (
         string $component,
         PageViewModel $viewModel,

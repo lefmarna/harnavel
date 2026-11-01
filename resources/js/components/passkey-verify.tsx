@@ -35,7 +35,6 @@ const toVerifyOptions = (routes?: Routes) =>
   routes && { routes: { options: routes.options.url, submit: routes.submit.url } };
 
 const visitRedirect = (response: VerifyResponse) => {
-  // サーバーは常に redirect を返すが、型が省略可能なので vendor の既定値 "/" を置く。
   router.visit(response.redirect ?? "/");
 };
 
@@ -67,7 +66,6 @@ function AvailablePasskeyVerify({
         return;
       }
 
-      // 候補を選んだ後にサーバーで拒否された場合などは、出さないと何も起きなかったように見える。
       setAutofillError(error);
     },
   });
@@ -152,7 +150,6 @@ function usePasskeyAutofill({
 
     let disposed = false;
     const run: Promise<void> = (async () => {
-      // StrictMode で破棄された effect に options を取りに行かせない。
       if (!(await Passkeys.isAutofillSupported()) || disposed) {
         return;
       }

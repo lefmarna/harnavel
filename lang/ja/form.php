@@ -2,12 +2,9 @@
 
 declare(strict_types=1);
 
-// validation.php の 'custom' へは置けない。'custom' は field.rule の単一グローバル
-// マップなので、パスワード変更（PasswordUpdate）の「新しいパスワード」という文言が、
-// 登録や再設定など password を使うほかの画面にも出てしまう。
-//
-// 既定の属性名は validation.php の 'attributes' に置き、ここには画面ごとに意味が変わるものと
-// 既定に無いものを置く。name はパスキーの名前にも使うため、既定の属性名にしない。
+// validation.php の 'custom' は全画面共通の field.rule の対応表なので、画面ごとに意味が変わる文言と
+// 既定に無い属性名はここに置き、既定の属性名は validation.php に置く。
+// name はパスキーの名前にも使うため、既定の属性名にしない。
 
 return [
     'password_update' => [

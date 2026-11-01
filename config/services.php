@@ -43,9 +43,8 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
         'analytics_tracking_id' => env('GA_TRACKING_ID'),
         'adsense_publisher_id' => env('ADSENSE_PUBLISHER_ID'),
-
-        // Socialite はこの配列を OAuth 用 HTTP クライアントへ渡す。未設定だと総 timeout は 0（無制限）で、
-        // max_execution_time は I/O 待ちを数えない。追従を許すと timeout が転送ごとに再適用される。
+        // Socialite が OAuth の HTTP クライアントへ渡す。未設定の timeout は無制限で、max_execution_time は
+        // I/O 待ちを数えず、リダイレクトを追うと timeout が転送ごとに掛け直される。
         'guzzle' => [
             'connect_timeout' => 10,
             'timeout' => 15,

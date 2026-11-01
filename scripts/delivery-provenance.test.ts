@@ -65,7 +65,6 @@ describe("delivery の配備ゲート", function () {
   }
 });
 
-// gh と gcloud の応答だけを差し替え、--jq は本物の jq で評価する。
 const GH_STUB = `#!/bin/bash
 [ "$1" = api ] || exit 1
 shift

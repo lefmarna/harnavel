@@ -12,8 +12,8 @@
         }
 
         gtag('js', new Date());
-        // page_view は GoogleAnalyticsTracker が送る。GA4 管理画面の Enhanced Measurement
-        // 「ブラウザ履歴イベントに基づくページの変更」は OFF にする（有効だと二重計測になる）。
+        // page_view は GoogleAnalyticsTracker が送る。GA4 の拡張計測「ブラウザの履歴イベントに基づくページの変更」は
+        // OFF にする（有効だと二重計測になる）。
         gtag('config', '{{ $trackingId }}', {
             send_page_view: false,
         });

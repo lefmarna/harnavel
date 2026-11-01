@@ -11,7 +11,6 @@ test("存在しない URL では、アプリの 404 画面を表示する", asyn
 });
 
 test("回数制限にかかったときは、アプリの 429 画面を表示する", async ({ page }) => {
-  // 制限は接続元ごとに 1 分 10 回。先に使い切ってから、画面として開く。
   for (let attempt = 0; attempt < 10; attempt++) {
     await page.request.get("/auth/google/callback", { maxRedirects: 0 });
   }
@@ -29,7 +28,6 @@ test("フォームの送信が回数制限にかかったときは、入力を�
   await page.goto("/login");
   await page.locator('input[name="email"]').fill(user.email);
 
-  // 同じアカウントと接続元からのログインは 1 分 5 回まで。
   for (let attempt = 0; attempt <= 5; attempt++) {
     await page.locator('input[name="password"]').fill("wrong-password");
     await Promise.all([
@@ -49,7 +47,6 @@ test("フォームの送信が回数制限にかかったときは、入力を�
 test("権限のない操作では、アプリの 403 画面を表示する", async ({ page }) => {
   await login(page, createUser());
 
-  // 署名のないメール確認リンクは、ログイン済みでも 403 になる。
   const response = await page.goto("/email/verify/1/invalid-hash");
 
   expect(response?.status()).toBe(403);

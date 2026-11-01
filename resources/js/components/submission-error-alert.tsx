@@ -9,14 +9,8 @@ const submissionError = (errors: Record<string, string | undefined>) =>
   errors.page_expired ?? errors.too_many_requests;
 
 /**
- * 送信の有効期限切れ（419）と回数制限（429）を伝える。サーバーはどのフォームからでも直前の画面へ
- * page_expired か too_many_requests を返すので、フォームごとではなくレイアウトとダイアログで表示する。
- * 開いたダイアログやシートは背面を覆い、読み上げの対象からも外すため、その中にも出す。
- * destructive 系の色はアプリによって文字色にも赤背景の上の文字色にもなるので、入力エラーと同じ赤を使う。
- * アイコンの大きさと色も、Alert の版によって既定が違うため明示する。
- * スクロール位置を保つ送信では画面の外に出るので、表示したら見える位置まで寄せる。同じ文言が
- * 続けて返ると表示は変わらないため、該当する応答を受けるたびにも寄せる。固定ヘッダーに隠れない
- * よう上に余白を取る。
+ * 419 と 429 はサーバーが直前の画面へ共有エラーとして返し、開いたダイアログやシートは背面を覆うため、
+ * フォームごとではなくレイアウトとダイアログの双方で表示する。
  */
 export default function SubmissionErrorAlert({ className }: { className?: string }) {
   const message = submissionError(usePage().props.errors);
@@ -26,6 +20,7 @@ export default function SubmissionErrorAlert({ className }: { className?: string
     ref.current?.scrollIntoView({ block: "nearest" });
   }, [message]);
 
+  // 同じ文言が続けて返ると message は変わらないため、応答ごとにも寄せる。
   useEffect(
     () =>
       router.on("error", (event) => {
@@ -40,6 +35,8 @@ export default function SubmissionErrorAlert({ className }: { className?: string
     return null;
   }
 
+  // destructive の文字色はアプリによって赤背景の上の色になるため、入力エラーと同じ赤を使う。
+  // アイコンの大きさと色も Alert の版によって既定が違うため明示する。
   return (
     <Alert
       ref={ref}

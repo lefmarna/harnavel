@@ -34,12 +34,8 @@ function extractHeadAttribute(string $html, string $tag, array $requiredAttribut
 }
 
 /**
- * JSON-LD をデコードせずに取り出す。エスケープそのものを確かめる用途で使う。
- *
- * nonce 付きの CSP を敷くと script 要素に type 以外の属性が増える。属性の並びに
- * 依存しないよう、開始タグの中を先読みで突き合わせる。
- *
- * @return list<string>
+ * JSON-LD をデコードせずに取り出し、エスケープそのものを確かめる。nonce で script 要素の属性が増えても
+ * 並びに依存しないよう、開始タグの中を先読みで突き合わせる。
  */
 function extractStructuredDataPayloads(string $html): array
 {
@@ -52,9 +48,6 @@ function extractStructuredDataPayloads(string $html): array
     return array_values($matches[1] ?? []);
 }
 
-/**
- * @return list<array<string, mixed>>
- */
 function extractStructuredDataItems(string $html): array
 {
     return collect(extractStructuredDataPayloads($html))
@@ -64,10 +57,6 @@ function extractStructuredDataItems(string $html): array
         ->all();
 }
 
-/**
- * @param  list<array<string, mixed>>  $schemas
- * @return array<string, mixed>
- */
 function findStructuredDataByType(array $schemas, string $type): array
 {
     return collect($schemas)
@@ -234,11 +223,9 @@ describe('SEO メタ契約', function () {
 
         $content = $this->get(route('home'))->getContent();
 
-        // 生の HTML に現れないこと。現れた時点で script 要素は閉じている。
         expect($content)->not->toContain($payload);
 
-        // `<` そのものを退避していること。`/` の退避だけでも生の `</script>` は出ないため、
-        // 上の assert では `<` を塞ぐ側（JSON_HEX_TAG）が落ちても気づけない。
+        // `/` の退避だけでも生の `</script>` は出ないので、`<` 自体の退避（JSON_HEX_TAG）は別に確かめる。
         $payloads = extractStructuredDataPayloads($content);
 
         expect($payloads)->not->toBeEmpty()
@@ -249,8 +236,7 @@ describe('SEO メタ契約', function () {
         expect(findStructuredDataByType($schemas, 'WebSite')['description'] ?? null)->toBe($payload);
     });
 
-    // 見るのは JSON-LD の生の中身だけ。ページ全体には Inertia の data-page など別経路の
-    // JSON も載っていて、そちらのスラッシュを拾うと何も確かめられない。
+    // ページには Inertia の data-page など別経路の JSON もあるため、JSON-LD の中身だけを見る。
     it('構造化データはスラッシュも退避したまま出力する', function () {
         $payloads = extractStructuredDataPayloads($this->get(route('home'))->getContent());
         $siteUrl = rtrim((string) config('app.url'), '/');

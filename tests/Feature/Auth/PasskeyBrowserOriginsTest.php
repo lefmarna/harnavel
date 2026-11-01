@@ -7,10 +7,6 @@ use Webauthn\CeremonyStep\CheckAllowedOrigins;
 
 mutates(PasskeyBrowserOrigins::class);
 
-/**
- * @param  list<string>  $allowedOrigins
- * @return list<string>
- */
 function webauthnMatchedOrigins(array $allowedOrigins): array
 {
     $check = new CheckAllowedOrigins($allowedOrigins);

@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# mutation.yml と同じ条件のミューテーションテストを、CircleCI の cimg/php とサイドカーの MariaDB で実行する。
 set -euo pipefail
 
 : "${BASE_BRANCH:?PR の base がありません}"
 
-# mutation.yml の paths-ignore に当たる変更だけなら、ミュータントの生死は変わらない。
 excludes=()
 while IFS= read -r pattern; do
   excludes+=(":(exclude,glob)$pattern")

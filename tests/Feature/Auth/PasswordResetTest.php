@@ -124,8 +124,8 @@ describe('パスワード再設定', function () {
         $password = $user->password;
         $token = Password::createToken($user);
 
-        // Fortify がトークンの照合用にユーザーを読み込んだ直後に、別のリクエストがメールを変えたことにする。
         $changed = false;
+        // Fortify がトークン照合用にユーザーを読み込んだ直後、別のリクエストがメールを変えたことにする。
         User::retrieved(function (User $retrieved) use (&$changed): void {
             if ($changed) {
                 return;
@@ -179,8 +179,8 @@ describe('パスワード再設定', function () {
         $user = User::factory()->unverified()->create(['email' => 'owner@example.com']);
         $token = Password::createToken($user);
 
-        // 再設定を保存した直後に、別のリクエストがメールを変えたことにする。
         $changed = false;
+        // 再設定を保存した直後に、別のリクエストがメールを変えたことにする。
         Event::listen(TransactionCommitted::class, function () use (&$changed, $user): void {
             if ($changed) {
                 return;
@@ -223,7 +223,7 @@ describe('パスワード再設定', function () {
 
     it('長いメールアドレスでも DB キャッシュへ書き込んで再設定できる', function () {
         config(['cache.default' => 'database']);
-        // 形式チェックを通る長さで、キャッシュキーの列長 255 を超えうるもの。
+        // 形式チェックは通り、キャッシュキーの列長 255 を超えうる長さ。
         $email = str_repeat('a', 64).'@'.str_repeat('b', 63).'.'.str_repeat('c', 62).'.'.str_repeat('d', 40).'.com';
         $user = User::factory()->create(['email' => $email]);
 

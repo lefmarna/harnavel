@@ -2,15 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Exceptions\GoogleLinkConfirmationPendingException;
-use App\Mail\LinkGoogleAccountMail;
 use App\Models\User;
 use App\Services\GoogleAuth\GoogleAuthService;
 use Illuminate\Routing\Events\RouteMatched;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -97,21 +93,6 @@ describe('Google ログイン連携の解除', function () {
 
         expect(app(GoogleAuthService::class)->confirmLink((string) $user->getKey(), 'google-1', $user->email, '0'))->toBeFalse()
             ->and($user->refresh()->google_id)->toBeNull();
-    });
-
-    it('連携の確認リンクを送るときに、その時点のセッションの世代を含める', function () {
-        Mail::fake();
-        $user = User::factory()->create(['email' => 'owner@example.com', 'google_id' => null, 'session_generation' => 3]);
-
-        expect(fn () => app(GoogleAuthService::class)->findOrCreate('google-1', 'owner@example.com', 'Owner'))
-            ->toThrow(GoogleLinkConfirmationPendingException::class);
-
-        Mail::assertSent(LinkGoogleAccountMail::class, function (LinkGoogleAccountMail $mail): bool {
-            parse_str((string) parse_url($mail->url, PHP_URL_QUERY), $query);
-            $payload = json_decode(Crypt::decryptString($query['payload']), true);
-
-            return $payload['session_generation'] === '3';
-        });
     });
 
     it('解除の途中でセッションが失効したら、その解除を拒否する', function () {

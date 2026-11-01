@@ -4,11 +4,9 @@ Template ADRs (`template/NNNN-*.md`, `TADR-NNNN`) are template-owned and read-on
 App ADRs (`NNNN-*.md`, `ADR-NNNN`) and the index below are app-owned.
 
 Record only current decisions that are hard to reverse and surprising without their trade-off rationale.
-Omit what code or tests reveal. `AGENTS.md` holds a one-line summary and session constraints, `GLOSSARY.md` domain terms,
-and other docs procedures and external facts.
-
-Delete unadopted or superseded decisions; retain only rationale still in force unless another record
-requires a short supersession pointer. After removal, renumber owned records and update references.
+Omit what code, tests, `AGENTS.md`, `GLOSSARY.md`, or other docs already hold. Delete unadopted or
+superseded decisions (or leave a short supersession pointer when another record needs it), then
+renumber owned records and update references.
 
 ## App ADRs
 

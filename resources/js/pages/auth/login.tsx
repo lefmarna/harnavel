@@ -113,7 +113,6 @@ export default function Login({
                 </div>
 
                 <div className="grid gap-3">
-                  {/* パスキーはこのアカウント自身の資格情報なので、外部の Google より先に置く。 */}
                   <PasskeyVerify autofill remember />
 
                   {canGoogleLogin && (

@@ -6,7 +6,6 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import laravel from "laravel-vite-plugin";
 import { defineConfig, lazyPlugins, loadEnv } from "vite-plus";
 
-// CI は Docker を使わずホストの PHP で動く。
 const isCI = !!process.env.CI;
 
 const wayfinderGenerateCommand = isCI
@@ -37,12 +36,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: vitePort,
       strictPort: true,
-      // E2E のレポート出力で開いているページが再読み込みされないようにする。
       watch: {
         ignored: ["**/playwright-report/**"],
       },
     },
-    // ページの依存も起動時に取り込み、初回アクセス時の全体リロードを防ぐ。
     optimizeDeps: {
       entries: ["resources/js/app.tsx", "resources/js/pages/**/*.tsx"],
     },
@@ -76,7 +73,6 @@ export default defineConfig(({ mode }) => {
         "import/default": "off",
         "import/namespace": "off",
         "react/rules-of-hooks": "error",
-        // コンポーネントの関数呼び出しを検出するルールは correctness に含まれないため、個別に有効化する。
         "react/capitalized-calls": "warn",
         "typescript/ban-ts-comment": "error",
         "typescript/no-empty-object-type": "error",
@@ -159,17 +155,14 @@ export default defineConfig(({ mode }) => {
       },
       ignorePatterns: [
         "/boost.json",
-        // Laravel Boost と cc-sdd が全体を再生成する。
         ".agents/skills/**",
         ".claude/skills/**",
-        // エージェント向け文書では、表の桁揃え用の空白を省く。
         ".kiro/**/*.md",
         "docs/generated/**/*.md",
         "storage/inertia-devtools/",
       ],
       overrides: [
         {
-          // コード片が別の意味の JavaScript として整形されることを防ぐ。
           files: ["*.md"],
           options: {
             embeddedLanguageFormatting: "off",

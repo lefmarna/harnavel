@@ -14,7 +14,7 @@ beforeEach(function () {
     config()->set('app.debug', false);
     config()->set('observability.discord.webhook_url', null);
 
-    // GET はバージョン不一致で 409 になるため、Inertia と同じく文字列化して一致させる（ビルド前は null）。
+    // GET は版の不一致で 409 になるため、Inertia と同じく文字列化して一致させる（ビルド前は null）。
     $this->inertiaHeaders = [
         'X-Inertia' => 'true',
         'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
@@ -64,14 +64,10 @@ describe('本番エラーページ', function () {
     ]);
 
     it('500 は問い合わせIDが無いときプレースホルダを日本語で示す', function () {
-        // AssignRequestId を通らない経路では ID が無い。読み手に見える位置なので、
-        // 翻訳を通ることを固定する。訳が無ければキー名が出て落ちる。
         expect(view('errors.500')->render())->toContain('問い合わせID: <code>不明</code>');
     });
 
     it('503 は問い合わせIDが無いとき問い合わせIDを求めない', function () {
-        // 事前生成の 503 はリクエストを持たないため ID が常に無い。つまりこれが通常の状態で、
-        // 「IDをお知らせください」と促しながら中身を伏せ字にするのは案内として成立しない。
         $html = view('errors.503')->render();
 
         expect($html)
@@ -80,8 +76,7 @@ describe('本番エラーページ', function () {
     });
 
     it('本番エラーページにスタックトレースや入力値を表示しない', function () {
-        // Inertia レスポンスはページオブジェクトの url にクエリ文字列を含むため、
-        // 派生アプリでも誤検知しないよう入力値はリクエストボディで送信して検証する
+        // Inertia のページオブジェクトの url はクエリを含むため、入力値は本文で送る。
         $this->withoutMiddleware(PreventRequestForgery::class);
 
         $response = $this->post('/_testing/errors/500-with-input', ['password' => 'secret-password']);
@@ -141,9 +136,7 @@ describe('SPA遷移時の500エラーページ', function () {
         $response = $this->get('/_testing/errors/500', $this->inertiaHeaders);
 
         $response->assertInternalServerError();
-        // 汎用エラーページへ差し替えず、Ignition のデバッグレスポンスを素通しする。
-        // 変換後の汎用ページは例外メッセージを一切含まないため、メッセージの存在で
-        // 「変換されていない＝調査用の詳細が残る」ことを担保できる。
+        // 汎用ページは例外メッセージを含まないので、メッセージが残ることで Ignition の応答を素通ししたと分かる。
         expect($response->getContent())->toContain('secret stack message');
     });
 });
@@ -152,7 +145,7 @@ describe('403・404・429 のエラーページ', function () {
     $request = function (string $uri, array $headers = []) {
         if ($uri === '/_testing/errors/429') {
             test()->get($uri);
-            // 前の要求で共有したデータを、次の要求へ持ち越さない。
+            // 前の要求で共有したデータを次の要求へ持ち越さない。
             app()->forgetInstance(ResponseFactory::class);
             Inertia::clearResolvedInstance(ResponseFactory::class);
         }
@@ -174,7 +167,6 @@ describe('403・404・429 のエラーページ', function () {
         '429' => ['/_testing/errors/429', 429, 'errors/too-many-requests', 'しばらくお待ちください'],
     ]);
 
-    // 画面の共通部分は、共有データの url や currentUrl を前提にする。
     it('SPA遷移時もアプリの画面を、共有データとともに返す', function (string $uri, int $status, string $component) use ($request) {
         $request($uri, $this->inertiaHeaders)
             ->assertStatus($status)

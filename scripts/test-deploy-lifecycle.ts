@@ -1,12 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { parse } from "yaml";
 
 // XServer の上書き配備では /up だけで途中状態の安全性を証明できないため、TADR-0001 の配備契約を検証する。
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = path.resolve(import.meta.dirname, "..");
 const WORKFLOW =
   process.env.DEPLOY_LIFECYCLE_WORKFLOW ?? path.join(ROOT, ".github/workflows/delivery.yml");
 
@@ -73,7 +72,6 @@ for (let index = 1; index < ORDERED.length; index++) {
   }
 }
 
-// ジョブ構成が変わっても、配備が全ゲートの完了後になることを依存関係全体で確認する。
 function upstreamOf(job: string, seen = new Set<string>()): Set<string> {
   for (const dependency of [jobs[job]?.needs ?? []].flat()) {
     if (!seen.has(dependency)) {
@@ -206,7 +204,6 @@ if (!(composerAt < downAt && downAt < migrateAt)) {
   );
 }
 
-// PHP 文字列内の区切り文字を除外し、改行を含めて失敗時に後続コマンドへ進まないことを確認する。
 const chain = postDeploy
   .slice(downAt, migrateAt)
   .replaceAll(/'[^']*'/g, "")

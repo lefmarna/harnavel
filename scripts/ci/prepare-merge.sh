@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# チェックアウトした PR の head を、現在の base へマージする。GitHub Actions の pull_request と同じく、マージ後の内容を検証するため。
+# GitHub Actions の pull_request と同じく、PR の head を現在の base へマージした内容を検証する。
 set -euo pipefail
 
 : "${BASE_BRANCH:?PR の base がありません}"

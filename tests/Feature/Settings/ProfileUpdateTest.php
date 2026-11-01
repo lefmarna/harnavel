@@ -76,6 +76,7 @@ describe('プロフィール設定', function () {
 
     it('lowercase usernamesが無効ならメールアドレスの大文字小文字だけの変更ではメール認証状態を維持する', function () {
         config(['fortify.lowercase_usernames' => false]);
+        Mail::fake();
 
         $user = User::factory()->create([
             'email' => 'test.user@example.com',
@@ -93,6 +94,7 @@ describe('プロフィール設定', function () {
             ->assertSessionHasNoErrors()
             ->assertRedirect(settingsUrl('profile'));
 
+        Mail::assertNothingSent();
         expect($user->refresh()->email)->toBe('Test.User@Example.COM');
         expect($user->email_verified_at)->not->toBeNull();
     });

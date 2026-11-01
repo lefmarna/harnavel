@@ -100,7 +100,6 @@ describe('セキュリティに関わる変更の通知', function () {
         expect(Hash::check('new-password1', $user->refresh()->password))->toBeTrue();
     });
 
-    // 本人確認の手段を失っていてセキュリティ設定に進めない人には、ログアウトしてから再設定するよう案内する。
     it('通知には変更の内容と、ログインの有無に応じた対応の案内を載せる', function (string $event, string $subject, string $body) {
         config(['app.display_name' => 'テストアプリ']);
         $mail = new AccountSecurityMail($event);

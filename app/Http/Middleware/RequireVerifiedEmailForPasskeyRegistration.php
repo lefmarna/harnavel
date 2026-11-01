@@ -24,7 +24,6 @@ final class RequireVerifiedEmailForPasskeyRegistration
             return $next($request);
         }
 
-        // 宣言は null を含むが、未確認なら abort か転送、確認済みなら $next の応答を返す。
         /** @var Response $response */
         $response = (new EnsureEmailIsVerified)->handle($request, $next);
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# E2E に成功したツリーを GCS の記録で扱う。delivery は同じツリーの記録があるときだけ、この E2E を配備の根拠にする。
-# check は記録を確認できなければ失敗し、E2E を実行させる。
+# E2E に成功したツリーを GCS に記録する。delivery は同じツリーの記録があるときだけ、この E2E を配備の根拠にする。
 set -euo pipefail
 
 : "${E2E_RECORD_BUCKET:?記録先のバケットがありません}"
@@ -29,7 +28,6 @@ case "${1:-}" in
     ;;
 
   create)
-    # 追跡対象のファイルが変わっていれば、記録するツリーと検証した内容が一致しない。
     if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
       git status --short --untracked-files=no >&2
       echo "E2E 中に追跡対象のファイルが変わったため、ツリーを記録しません。" >&2

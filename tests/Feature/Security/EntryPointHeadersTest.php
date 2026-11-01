@@ -8,12 +8,7 @@ use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Process\Process;
 
 /**
- * 本物のエントリポイントをそのままHTTP SAPIで動かす。メンテナンスファイルと
- * 子プロセスの書き込みはこのフィクスチャ内に閉じ、共有アプリ側へ出さない。
- *
- * @param  Closure(string): void  $prepare
- * @param  array<string, string>  $headers
- * @param  list<string>  $ini
+ * 本物のエントリポイントを HTTP SAPI で動かし、メンテナンスファイルと子プロセスの書き込みはフィクスチャ内に閉じる。
  */
 function securityEntryPointResponse(Closure $prepare, string $path = '/', array $headers = [], array $ini = []): ResponseInterface
 {
@@ -68,7 +63,7 @@ function securityEntryPointResponse(Closure $prepare, string $path = '/', array 
             return str_contains($output, "(http://{$address}) started");
         });
 
-        // 上で選んだポートは候補にすぎない。別プロセスの応答を受け取らないこと。
+        // 選んだポートは候補にすぎないので、別プロセスの応答を受け取らない。
         if (! $started || ! $server->isRunning()) {
             throw new RuntimeException('Test server did not start: '.$output);
         }
@@ -92,9 +87,9 @@ function securityEntryPointResponse(Closure $prepare, string $path = '/', array 
     }
 }
 
+// 契約値は独立したリテラルで持つ。配列での比較はヘッダーフィールドの重複も弾く。
 function assertSecurityEntryPointBaseline(ResponseInterface $response): void
 {
-    // 契約値は独立したリテラルで持つ。配列での比較はヘッダーフィールドの重複も弾く。
     expect($response->getHeader('Content-Security-Policy'))
         ->toBe(["frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'"]);
     expect($response->getHeader('X-Content-Type-Options'))->toBe(['nosniff']);
@@ -102,7 +97,7 @@ function assertSecurityEntryPointBaseline(ResponseInterface $response): void
     expect($response->getHeader('X-Frame-Options'))->toBe(['DENY']);
 }
 
-// Laravel が付ける CSP は script-src を足した1つだけで、起動前の基本ポリシーと重複しない。
+// Laravel が付ける CSP は script-src を足した 1 つだけで、起動前の基本ポリシーと重複しない。
 function assertLaravelEntryPointHeaders(ResponseInterface $response): void
 {
     expect($response->getHeader('Content-Security-Policy'))->toHaveCount(1)
@@ -113,7 +108,6 @@ function assertLaravelEntryPointHeaders(ResponseInterface $response): void
     expect($response->getHeader('X-Frame-Options'))->toBe(['DENY']);
 }
 
-/** @param array<string, string> $policy */
 function bootSecurityEntryPoint(string $directory, array $policy = []): void
 {
     File::put($directory.'/vendor/autoload.php', '<?php require '.var_export(base_path('vendor/autoload.php'), true).';');

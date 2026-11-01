@@ -27,7 +27,7 @@ class DeletePasskey extends BaseDeletePasskey
 
     public function __invoke(Authenticatable $user, Passkey $passkey): void
     {
-        /** @var User $user 認証するのは users テーブルだけ。 */
+        /** @var User $user */
         $rememberToken = $user->getRememberToken();
 
         $lockedUser = DB::transaction(function () use ($user, $passkey): User {

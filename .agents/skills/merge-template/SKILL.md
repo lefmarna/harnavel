@@ -5,96 +5,76 @@ description: Resolve conflicts from pulling the template repository according to
 
 # Merge Template
 
-Integrate `git pull <remote> <branch>` changes and resolve conflicts by applying TADR-0003.
-
-Read [Dependency reconciliation](references/dependency-reconciliation.md) before pulling or
-resuming an existing merge. It defines how to preserve the app's dependency baseline and apply
-required template changes without coupling the merge to routine package maintenance.
+Integrate `git pull <remote> <branch>` changes and resolve conflicts by applying
+[TADR-0003](../../../docs/adr/template/0003-template-ownership.md). Read
+[Dependency reconciliation](references/dependency-reconciliation.md) before pulling or resuming a
+merge.
 
 ## Ownership
 
-- **Shared:** template-origin framework, auth/settings foundations, test infrastructure,
-  architecture rules, CI actions, reusable workflows, template ADRs, and testing policy. Prefer the
-  template.
-- **Hybrid:** `README.md`, `AGENTS.md`, `delivery.yml`, `mise.toml`, `phpstan.neon.dist`, `renovate.json`,
-  architecture tests, and files containing both shared scaffolding and app behavior. Take
-  template-origin changes and keep app-specific content.
-- **App-owned:** domain behavior, presentation, branding, environment values, `GLOSSARY.md`, flat App
-  ADRs, and app-specific routes or deployment layout. Preserve the app.
+- **Shared** (prefer the template): template-origin framework, auth/settings foundations, test
+  infrastructure, architecture rules, CI actions, reusable workflows, Template ADRs, testing policy,
+  and the vendored skills in `.claude/skills/` and `.agents/skills/`.
+- **Hybrid** (take template-origin changes, keep app content): `README.md`, `AGENTS.md`,
+  `delivery.yml`, `mise.toml`, `phpstan.neon.dist`, `renovate.json`, dependency manifests,
+  architecture tests, and other files mixing shared scaffolding with app behavior.
+- **App-owned** (preserve the app): domain behavior, presentation, branding, environment values,
+  lockfiles, `GLOSSARY.md`, flat App ADRs with the App ADRs index in `docs/adr/README.md`, and
+  app-specific routes or deployment layout.
 
 Special cases:
 
-- For a derived app's `README.md`, use the latest template's
-  `.agents/skills/project-docs-init/assets/README.md` as the shared baseline. Harnavel's root README
-  introduces the template and is not the app README source. Preserve the pre-pull bodies of the
-  `app:overview`, `app:development`, and `app:notices` marker pairs, and take all text outside them
-  from the latest scaffold. Reconcile the README even when Git merged it cleanly or the root README
-  did not change: updates to the scaffold must still reach the app.
-- On the first merge of this convention, a legacy README may lack those markers. Identify and
-  retain its product description, features, usage, environment values, extra commands, app-specific
-  docs links, and notices in the corresponding app blocks, including content embedded in shared
-  sections. Apply the scaffold's current shared text, keep each marker pair exactly once, and leave
-  no placeholders. This reconciles shared development guidance without replacing app-specific
-  content. Once marked, preserve the app block bodies through subsequent template merges. If later
-  app-specific additions appear outside those blocks, move them into the appropriate block before
-  synchronizing shared text; do not silently discard them. Compare against the pre-pull scaffold
-  when available to distinguish local additions from shared guidance being updated.
-- Shared specs reach app pages only through calibration points: `home` in `config/fortify.php`,
+- **README**: the shared baseline is the latest `.agents/skills/project-docs-init/assets/README.md`,
+  not Harnavel's root README. Keep the pre-pull bodies of the `app:overview`, `app:development`, and
+  `app:notices` blocks and take all other text from the scaffold, even when git merged README cleanly
+  or only the scaffold changed. A legacy README without markers gets them now: move its product
+  description, features, usage, environment values, extra commands, app docs links, and notices
+  into the matching blocks, with each marker pair exactly once and no placeholders left. App text
+  later found outside the blocks moves into them rather than being dropped; compare with the
+  pre-pull scaffold to tell local additions from shared text being updated.
+- **Calibration points**: shared specs reach app pages only through `home` in `config/fortify.php`,
   `HOME_URL`, `PROTECTED_PATH`, and `SETTINGS_PATHS` in `e2e/support/auth.ts`, and
-  `getProtectedPage()` and `settingsUrl()` in `tests/Pest.php`. Keep the app's values, and assert
-  through them (`config('fortify.home')`, never a literal route).
-- The welcome and dashboard pages, `resources/js/navigation.ts`, the logo, and copy values in
-  `lang/*/pages.php` are placeholders the app replaces; shared specs read page copy through
-  `pageCopy()`. Keep the `home` route name and the names of state-changing auth and settings
-  routes, which shared specs call.
-
-- A template change that restructures migrations (folding `add_`/`make_` migrations into their
-  create migration, or dropping a create/drop pair) arrives as resolved deletions, not conflicts, so
-  it never appears in step 3. An app whose production database cannot be rebuilt must restore its own
-  applied migrations from `git status` before committing; otherwise migrations the live schema
-  depends on disappear from the repository.
-- Dependency declarations are hybrid: align shared requirements and retain app-specific consumers
-  and constraints. Lockfiles are app-owned, including when git merges them without conflicts. Use
-  the pre-pull app lockfiles to reconcile merged dependency inputs with minimal changes; do not
-  adopt template lockfiles or run routine full updates as part of a merge. Required shared fixes
-  and toolchain migrations follow the dependency reconciliation reference.
-- Keep app-specific `delivery.yml` rsync excludes, release-critical files, environment secrets, and
-  extra deploy steps while aligning the shared Laravel maintenance and `/up` health flow.
-- Keep `parseModelCastsMethod: true`; preserve app-specific PHPStan paths and ignores.
-- Mutation uses the shared blocking score of 100%, but each app owns the classes named by
-  `mutates()`. Do not remove an app's old selection until its own allowlist has been built and
-  measured.
-- Preserve the app's dedicated E2E database. Do not restore E2E-only environment files or HTTP
-  helper routes.
-- Keep `e2e/global-setup.ts` shared. Apps needing process setup should point Playwright at an
-  app-owned wrapper that calls its default export.
-- Preserve flat App ADRs and the app-owned index in `docs/adr/README.md`; take Template ADRs from the
-  template.
-- Translation keys travel with their consumer. When an app replaced or dropped the screen, request,
-  or mailable a template key serves, do not take the key: an unreferenced key is copy nobody renders
-  and, in a bilingual app, a parity test enforces its translation forever.
-- Vendored skills under `.claude/skills/` and `.agents/skills/` are shared. Each path stays
-  byte-identical to the same path in the template. The two trees are not copies of each other —
-  toolchain-specific frontmatter, pointer bodies, and `agents/openai.yaml` sidecars legitimately
-  differ — so never reconcile one mirror against the other. Never rewrite their content while
-  resolving; take git's result verbatim. This applies to files git merged cleanly, not only to
-  conflicted ones.
+  `getProtectedPage()` and `settingsUrl()` in `tests/Pest.php`, and `replaceSiteDescription()` in
+  `tests/Feature/SeoMetaContractTest.php`. Keep the app's values, and assert through them
+  (`config('fortify.home')`, never a literal route).
+- **Placeholders**: the welcome and dashboard pages, `resources/js/navigation.ts`, the logo, and
+  copy in `lang/*/pages.php` are the app's to replace; shared specs read copy through `pageCopy()`.
+  Keep the `home` route name and the names of state-changing auth and settings routes shared specs
+  call.
+- **Migrations**: a template change that folds or drops migrations arrives as resolved deletions,
+  not conflicts. An app whose production database cannot be rebuilt restores its applied migrations
+  from `git status` before committing.
+- **Dependencies**: align shared requirements, keep app-specific consumers and constraints, and
+  reconcile lockfiles from the pre-pull app lockfiles per the dependency reference, including when
+  git merged them cleanly. Template lockfiles and routine full updates are not part of a merge.
+- **Delivery and analysis**: keep the app's `delivery.yml` rsync excludes, release-critical files,
+  secrets, and extra deploy steps while aligning the shared maintenance and `/up` health flow. Keep
+  `parseModelCastsMethod: true` with the app's PHPStan paths and ignores, and the app's `mutates()`
+  selections under the shared 100% score.
+- **E2E**: keep the app's dedicated E2E database; deleted E2E-only environment files and HTTP helper
+  routes stay deleted. `e2e/global-setup.ts` stays shared; an app needing process setup points
+  Playwright at an app-owned wrapper that calls its default export.
+- **Translation keys** travel with their consumer: skip a template key whose screen, request, or
+  mailable the app replaced or dropped, since in a bilingual app a parity test would enforce
+  translating copy nobody renders.
+- **Vendored skills**: each path stays byte-identical to the same path in the template, merged
+  cleanly or not; take git's result verbatim. The two trees legitimately differ (frontmatter,
+  pointer bodies, `agents/openai.yaml` sidecars), so never reconcile one against the other.
 
 ## Workflow
 
-1. Resolve `REMOTE` and `BRANCH` from the invocation, defaulting to `template` and `main`, then
-   inspect `git status`, remotes, the current branch, and `MERGE_HEAD`. Preserve or recover the
-   pre-pull app README and dependency baselines before reconciling merged files.
-2. Pull the resolved remote and branch with `git pull --no-commit --no-ff` when they have not
-   already been pulled, so a conflict-free merge still stops before committing.
-3. List unresolved paths with `git diff --diff-filter=U --name-only`.
-4. Read both sides and nearby tests before resolving each conflict.
-5. Classify each hunk as shared, hybrid, or app-owned and remove dead code introduced by the
-   resolution.
-6. Reconcile dependency inputs and required shared fixes using the dependency reference, checking
-   cleanly merged paths too. Reconcile README against the derived-app scaffold and its preserved
-   app blocks. Regenerate Wayfinder output when its inputs changed.
-7. List app paths that the template once deleted and still omits:
+1. Resolve `REMOTE` (default `template`) and `BRANCH` (default `main`). Inspect `git status`,
+   remotes, branch, and `MERGE_HEAD`, and preserve or recover the pre-pull README and dependency
+   baselines.
+2. Run `git pull --no-commit --no-ff <remote> <branch>` unless already pulled, so a conflict-free
+   merge still stops before committing.
+3. For each path in `git diff --diff-filter=U --name-only`, read both sides and nearby tests,
+   classify each hunk as shared, hybrid, or app-owned, and remove dead code the resolution leaves.
+4. Reconcile dependency inputs and required shared fixes per the dependency reference and README
+   against the scaffold, checking cleanly merged paths too. Regenerate Wayfinder output when its
+   inputs changed.
+5. List app paths the template once deleted and still omits, then delete each template leftover or
+   keep each app-owned path after checking its template history and current consumers:
 
    ```bash
    template_ref="${REMOTE:-template}/${BRANCH:-main}"
@@ -105,39 +85,26 @@ Special cases:
      <(git ls-files | sort -u)
    ```
 
-   Check each candidate's template history and current consumers before deleting a template
-   leftover or preserving an app-owned path.
-8. Confirm no conflict markers remain:
+6. Confirm no conflict markers remain, and that no vendored skill differs from the template only in
+   whitespace (cleanly merged files never reach step 3, so this is the only check for them); restore
+   any listed path with `git checkout "$template_ref" -- <path>`:
 
    ```bash
    git grep -nI -E '^(<<<<<<<|=======|>>>>>>>)' -- . \
-     ':(exclude)vendor/**' \
-     ':(exclude)node_modules/**' \
-     ':(exclude)public/build/**' \
-     ':(exclude)storage/**' \
-     ':(exclude)docs/generated/**'
-   ```
+     ':(exclude)vendor/**' ':(exclude)node_modules/**' ':(exclude)public/build/**' \
+     ':(exclude)storage/**' ':(exclude)docs/generated/**'
 
-9. Confirm the resolution left no whitespace-only drift in shared vendored paths. Files that git
-   merged cleanly never appear in step 3, so this is the only check that catches content rewritten
-   outside conflict resolution:
-
-   ```bash
    template_ref="${REMOTE:-template}/${BRANCH:-main}"
    comm -23 \
      <(git diff --name-only "$template_ref" -- .claude/skills .agents/skills | sort -u) \
-     <(git diff --name-only --ignore-all-space "$template_ref" -- .claude/skills .agents/skills |
-       sort -u)
+     <(git diff --name-only --ignore-all-space "$template_ref" -- .claude/skills .agents/skills | sort -u)
    ```
 
-   Any output is a shared file the resolution rewrote. Restore it with
-   `git checkout "$template_ref" -- <path>`.
+7. Run relevant checks from `AGENTS.md`, starting narrowly. Stage resolved files, resolving a
+   deletion with `rm` and `git add` (never `git rm`), review the staged diff, and stop before
+   committing.
 
-10. Run relevant checks from `AGENTS.md`, starting narrowly.
-11. Stage resolved files, review the staged diff, and stop before committing. Resolve a deletion
-    by removing the file with `rm` and staging the path with `git add`; never use `git rm`.
-
-Report template choices, preserved app choices, deleted or consolidated tests, verification
-results, dependency changes and their reasons, audit findings and maintenance follow-ups, and any
-improvement that should move upstream. Prefer the safer side for security and personal data, and
-move shared tests only with the implementation they specify.
+Report template choices, preserved app choices, deleted or consolidated tests, verification results,
+dependency changes and their reasons, audit findings and maintenance follow-ups, and improvements
+that should move upstream. Prefer the safer side for security and personal data, and move shared
+tests only with the implementation they specify.

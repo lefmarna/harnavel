@@ -26,6 +26,16 @@ follow the server's own reload.
 | `LOG_LEVEL`             | `info`                       | `debug` is local-only (`docs/logging-guidelines.md`).                                                           |
 | PHP `display_errors`    | `Off`, per domain on XServer | Errors raised before Laravel handles them, such as at startup, reach the response where `APP_DEBUG` cannot act. |
 
+## Cron entries
+
+The hosting runs no Laravel scheduler, so each periodic command is its own entry in the XServer cron
+settings of Develop and Production, run from the deploy directory with `/usr/bin/php8.5 artisan`.
+Delivery never registers them; add them before an environment's first deploy.
+
+| Command               | Frequency | Reason                                                                      |
+| --------------------- | --------- | --------------------------------------------------------------------------- |
+| `cache:prune-expired` | daily     | The database cache store keeps expired rate-limiter keys no one reads back. |
+
 ## Response header size
 
 Last measured: October 2026, on one Develop domain. Laravel's `AddLinkHeadersForPreloadedAssets` put

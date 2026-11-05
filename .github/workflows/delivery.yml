@@ -157,7 +157,7 @@ jobs:
 
       # トークンがなければ run-id は無視され、この run から取得する。
       - name: Download build artifacts
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: ${{ needs.provenance.outputs.artifact }}
           path: public/build/

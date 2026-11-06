@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'failed' => 'ログイン用の認証情報が正しくありません。再度お試しください。',
     'password' => 'パスワードが正しくありません。',
-    'throttle' => 'ログインの試行回数が多すぎます。:seconds 秒後にお試しください。',
+    'throttle' => 'ログインの試行回数が多すぎます。:seconds秒後にお試しください。',
 
     'google' => [
         'unavailable' => 'Googleログインは現在利用できません。',

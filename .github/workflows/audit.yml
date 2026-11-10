@@ -1,0 +1,37 @@
+name: Security Audit
+
+on:
+  # 04:17 JST daily; schedule is evaluated on the default branch (main).
+  schedule:
+    - cron: "17 19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: main
+
+      - name: Setup mise
+        uses: jdx/mise-action@v5.2.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@2.40.0
+        with:
+          php-version: "8.5"
+          tools: composer:v2
+
+      # Only lockfiles are needed: do not install all dependencies or run E2E.
+      - name: Audit Composer lockfile
+        run: composer audit --locked --abandoned=report
+
+      - name: Audit pnpm lockfile
+        if: success() || failure()
+        run: pnpm audit

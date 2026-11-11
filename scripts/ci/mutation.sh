@@ -28,6 +28,15 @@ composer install --no-interaction --prefer-dist --optimize-autoloader
 php artisan key:generate
 mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations
 
+shard=$(php scripts/ci/mutation-shard.php "${CIRCLE_NODE_INDEX:-0}" "${CIRCLE_NODE_TOTAL:-1}")
+if [ -z "$shard" ]; then
+  echo "このコンテナに割り当てたクラスはありません。"
+  exit 0
+fi
+mapfile -t shard <<< "$shard"
+
 scripts/ci/wait-for-database.sh
 env=$(php scripts/ci/workflow-env.php .github/workflows/mutation.yml "Run mutation testing")
-(eval "$env" && vendor/bin/pest --mutate --covered-only --no-progress --min=100)
+# 分けると割り当てたクラスの変異が 0 件になりうるので、0 件を失敗にしない。
+(eval "$env" && vendor/bin/pest --mutate --covered-only --no-progress --min=100 \
+  --ignore-min-score-on-zero-mutations "${shard[@]}")

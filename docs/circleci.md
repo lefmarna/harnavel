@@ -10,6 +10,14 @@ Grants are per repository and limited to its prefix: a pull request can rewrite 
 `.circleci/config.yml`, so a bucket-wide grant would let a collaborator on one repository forge
 records for another. Like build artifacts, records guard against mistakes, not collaborators.
 
+## Mutation testing
+
+The Free plan stops a job after one hour, so `mutation` splits the declared classes across
+`parallelism` containers. Pest's `--parallel` is no substitute: its per-mutant timeout comes from
+the shorter parallel initial run, and a timed-out mutant counts as killed. `--processes` is worse:
+pest-plugin-mutate 5.0 forwards it to each mutant's run, which rejects the option, so every mutant
+counts as killed.
+
 ## One-time setup
 
 ### CircleCI

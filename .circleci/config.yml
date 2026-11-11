@@ -11,7 +11,7 @@ executors:
           MARIADB_ROOT_PASSWORD: password
           MARIADB_DATABASE: app_testing
   php:
-    resource_class: medium
+    resource_class: small
     docker:
       - image: cimg/php:8.5.12
       - *mariadb
@@ -68,6 +68,7 @@ jobs:
 
   mutation:
     executor: php
+    parallelism: 4
     steps:
       - merge-pull-request
       - restore_cache:

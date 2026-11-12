@@ -1,0 +1,68 @@
+name: security-fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Branch the fix targets
+        required: true
+        type: choice
+        options:
+          - main
+          - develop
+
+# 反映と配備の起動の間で打ち切らないよう、新しい修正は待たせる。
+concurrency:
+  group: security-fix-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: ${{ github.ref == format('refs/heads/security-fix/{0}', inputs.base) }}
+    uses: ./.github/workflows/reusable-quality.yml
+    with:
+      audit-baseline: ${{ inputs.base }}
+
+  merge:
+    needs: verify
+    if: ${{ needs.verify.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Apply the verified fix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ inputs.base }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          IS_TEMPLATE: ${{ github.event.repository.is_template }}
+        run: scripts/ci/security-merge.sh
+
+  report:
+    needs: [verify, merge]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Report the failed fix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ inputs.base }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          echo "Verifying or applying \`$GITHUB_REF_NAME\` to \`$BASE\` failed: $RUN_URL" > "$RUNNER_TEMP/report.md"
+          scripts/ci/security-issue.sh comment "$BASE" "$RUNNER_TEMP/report.md"

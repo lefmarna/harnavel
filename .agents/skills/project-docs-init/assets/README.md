@@ -57,7 +57,7 @@ pnpm test:e2e           # Playwright E2E
 - [docs/logging-guidelines.md](docs/logging-guidelines.md): ログと通知の運用ルール
 - [docs/infrastructure.md](docs/infrastructure.md): XServer の運用前提とサーバー設定
 - [docs/worktree-development.md](docs/worktree-development.md): 共有開発環境と worktree の管理
-- [docs/branches-and-ci.md](docs/branches-and-ci.md): ブランチ運用・CI・Renovate
+- [docs/branches-and-ci.md](docs/branches-and-ci.md): ブランチ運用・CI・依存関係と脆弱性の更新
 - [docs/circleci.md](docs/circleci.md): CircleCI 連携設定
 - [docs/adr/README.md](docs/adr/README.md): 設計判断の記録（ADR / Template ADR）
 - [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md): 第三者由来のコードと文書のライセンス

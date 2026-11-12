@@ -1,0 +1,62 @@
+name: security
+
+# main への push でも動き、その修正を develop へ取り込む。
+on:
+  schedule:
+    - cron: "17 18 * * *"
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: security
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  remediate:
+    # 書き込み権限を渡すのは既定ブランチのスクリプトだけにする。予定実行は常に既定ブランチで動く。
+    if: ${{ github.event_name == 'schedule' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: write
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup mise
+        uses: jdx/mise-action@v5.2.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@2.40.0
+        with:
+          php-version: 8.5
+          tools: composer:v2
+          coverage: none
+
+      - name: Fix vulnerable dependencies
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch || github.ref_name }}
+        run: scripts/ci/security-remediate.sh
+
+      - name: Report the failed scan
+        if: ${{ failure() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.repository.default_branch || github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git checkout -q -f "$GITHUB_SHA"
+          printf 'The dependency security scan failed, so vulnerabilities may be unreported: %s\n' \
+            "$RUN_URL" > "$RUNNER_TEMP/report.md"
+          scripts/ci/security-issue.sh comment "$BASE" "$RUNNER_TEMP/report.md"

@@ -121,9 +121,9 @@ versions, so express them as shared minimums or exclusions per
 resolution, include a machine-generated comparison of Laravel-owned constraints and sections against
 the reference; no unexplained mismatch may remain.
 
-This skill owns every shared constraint string. Renovate merges only lockfile updates within them
-and holds declaration changes for approval, except that a vulnerability fix may move a constraint to
-the lowest fixed stable version; major and 0.x fixes still wait for review.
+This skill owns every shared constraint string. Renovate and the `security` workflow change only
+resolutions within them; Renovate holds declaration changes for approval, and an advisory whose fix
+needs a declaration change becomes a `security` issue, resolved here when the constraint is shared.
 
 ### 5. Resolve and audit
 

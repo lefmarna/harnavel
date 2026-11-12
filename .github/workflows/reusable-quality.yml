@@ -7,6 +7,10 @@ on:
         description: Run E2E here; false leaves it to CircleCI (docs/circleci.md)
         type: boolean
         default: true
+      audit-baseline:
+        description: Branch whose existing advisories may remain; defaults to the first parent
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -30,8 +34,11 @@ jobs:
           --health-retries=5
 
     steps:
+      # 依存関係の監査で直前のコミットと比べるため、親コミットも取得する。
       - name: Checkout code
         uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 2
 
       - name: Setup mise
         uses: jdx/mise-action@v5.2.1
@@ -76,11 +83,22 @@ jobs:
       - name: Install PHP Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
 
-      # 作者が開発を終えただけの廃止済みパッケージは、脆弱性ではないので表示だけにとどめる。
+      # 既にある脆弱性は security の issue で追い、無関係な変更を止めない。配備の可否は delivery が配備中の版と比べる。
+      # PR のマージ結果では直前のコミットが base になる。
+      # 作者が開発を終えただけの廃止済みパッケージは、脆弱性ではないので監査を失敗させない。
       - name: Audit Dependencies
+        env:
+          AUDIT_BASELINE: ${{ inputs.audit-baseline }}
         run: |
-          composer audit --locked --abandoned=report
-          pnpm audit
+          if [ -n "$AUDIT_BASELINE" ]; then
+            git fetch --no-tags --depth=1 origin "refs/heads/$AUDIT_BASELINE"
+            scripts/ci/security-audit.sh ratchet FETCH_HEAD
+          elif git rev-parse -q --verify 'HEAD^1' > /dev/null; then
+            scripts/ci/security-audit.sh ratchet 'HEAD^1'
+          else
+            composer audit --locked --abandoned=report
+            pnpm audit
+          fi
 
       - name: Generate Application Key
         run: php artisan key:generate

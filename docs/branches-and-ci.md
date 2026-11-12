@@ -29,23 +29,25 @@ the release merge.
 
 ## Dependency updates
 
-Mend Renovate Community Cloud opens the update pull requests. Updates that would rewrite a
+Mend Renovate Community Cloud opens routine update pull requests. Updates that would rewrite a
 declaration wait on the Dependency Dashboard, because shared constraints belong to
-`update-laravel-packages`; a vulnerability fix to the lowest fixed version is that skill's standing
-exception. GitHub Free cannot auto-merge in private repositories, so Renovate merges a pull request
-itself once every reported check passes; a check that never starts, such as a missing CircleCI E2E
-run, does not hold the merge, and `delivery` still requires the E2E proof or reruns it. Dependabot
-Alerts stay enabled as a vulnerability source.
+`update-laravel-packages`. GitHub Free cannot auto-merge in private repositories, so Renovate
+merges a pull request itself once every reported check passes; a check that never starts, such as a
+missing CircleCI E2E run, does not hold the merge, and `delivery` still requires the E2E proof or
+reruns it. Apps with `develop` add `"baseBranchPatterns": ["develop"]`, so updates reach Production
+through the release pull request. Renovate reads its configuration from the default branch, so an
+app's change to it takes effect at release.
 
-Apps with `develop` add `"baseBranchPatterns": ["develop", "main"]` and a rule disabling `main`, so
-routine updates reach Production through the release pull request while vulnerability fixes also
-open against `main`. `vulnerabilityAlerts.enabled` is explicit because only forced settings
-override that rule. If the release pull request then conflicts on a lockfile, merge `main` into
-`develop` and keep `develop`'s lockfile once its own fix has merged. Renovate reads its
-configuration from the default branch, so an app's change to it takes effect at release.
+Lock file maintenance refreshes indirect dependencies only when approved, because it skips the
+release-age wait and moves 0.x packages within their ranges. pnpm keeps its default one-day release
+age, because a longer one also rejects lockfiles holding a newer vulnerability fix.
 
-Renovate cannot target indirect Composer or pnpm dependencies. Lock file maintenance refreshes them
-only when approved, because it skips the release-age wait and moves 0.x packages within their
-ranges; until then, `audit` fails every pull request on an indirect advisory until an override or a
-parent update resolves it. pnpm keeps its default one-day release age, because a longer one also
-rejects lockfiles holding a newer vulnerability fix.
+## Vulnerability fixes
+
+`security` ([TADR-0018](adr/template/0018-audit-driven-security-fixes.md)) fixes vulnerable
+dependencies on `main` and `develop` and keeps one issue per branch for what needs a person. A
+protected branch rejects its fast-forward, so merge `security-fix/<branch>` through a pull request.
+A release carrying an advisory only `develop` has stops at `delivery`, so resolve the `develop`
+issue first. Fix the cause rather than closing the issue: the next scan closes it.
+
+Dependabot alerts stay enabled as an independent notice, and Dependabot security updates stay off.

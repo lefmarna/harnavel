@@ -5,6 +5,8 @@ on:
     branches:
       - develop
       - main
+  # GITHUB_TOKEN による push ではワークフローが起動しないため、security-fix が反映後に起動する。
+  workflow_dispatch:
 
 concurrency:
   group: delivery-${{ github.ref }}
@@ -15,7 +17,9 @@ permissions:
 
 jobs:
   provenance:
-    if: ${{ !github.event.repository.is_template }}
+    if: >-
+      ${{ !github.event.repository.is_template &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -66,7 +70,8 @@ jobs:
                 select(
                   .status == "completed" and .conclusion == "success" and
                   .head_repository.id == .repository.id and
-                  (.path == ".github/workflows/quality.yml" or .path == ".github/workflows/delivery.yml")
+                  (.path == ".github/workflows/quality.yml" or .path == ".github/workflows/delivery.yml" or
+                  .path == ".github/workflows/security-fix.yml")
                 ) | "\(.event) \(.head_sha) \(.html_url)"') || meta=
               [ -n "$meta" ] || continue
               read -r event head_sha url <<< "$meta"
@@ -115,11 +120,60 @@ jobs:
     if: needs.provenance.outputs.verified-run == ''
     uses: ./.github/workflows/reusable-quality.yml
 
+  # 直前のコミットと比べると、検証を省いたリリースや、拒まれた配備の次の push で脆弱性が増える。
+  audit:
+    needs: provenance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup mise
+        uses: jdx/mise-action@v5.2.1
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@2.40.0
+        with:
+          php-version: 8.5
+          tools: composer:v2
+          coverage: none
+
+      - name: Audit against the deployed release
+        id: audit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Develop' }}
+        run: |
+          deployments=$(gh api --paginate "repos/$GITHUB_REPOSITORY/deployments?environment=$ENVIRONMENT&per_page=100" \
+            --jq '.[] | "\(.id) \(.sha)"')
+          deployed=
+          while read -r id sha; do
+            [ -n "$id" ] || break
+            succeeded=$(gh api "repos/$GITHUB_REPOSITORY/deployments/$id/statuses?per_page=100" \
+              --jq 'any(.[]; .state == "success")')
+            if [ "$succeeded" = true ]; then
+              deployed=$sha
+              break
+            fi
+          done <<< "$deployments"
+
+          if [ -n "$deployed" ]; then
+            git fetch --no-tags --depth=1 origin "$deployed"
+            scripts/ci/security-audit.sh ratchet FETCH_HEAD
+          else
+            composer audit --locked --abandoned=report
+            pnpm audit
+          fi
+
   deploy:
     runs-on: ubuntu-latest
-    needs: [provenance, quality]
+    needs: [provenance, quality, audit]
     if: >-
-      !cancelled() && needs.provenance.result == 'success' &&
+      !cancelled() && needs.provenance.result == 'success' && needs.audit.result == 'success' &&
       (needs.quality.result == 'success' ||
       (needs.provenance.outputs.verified-run != '' && needs.quality.result == 'skipped'))
     permissions:
@@ -387,7 +441,7 @@ jobs:
 
   notify-failure:
     # bot の push で動いた実行は、失敗しても誰にも通知されない。
-    needs: [provenance, quality, deploy]
+    needs: [provenance, quality, audit, deploy]
     if: failure() && endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
     permissions:

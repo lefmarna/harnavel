@@ -8,10 +8,8 @@
   "internalChecksFilter": "strict",
   "platformAutomerge": false,
   "assignees": ["lefmarna"],
-  "osvVulnerabilityAlerts": true,
   "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security"]
+    "enabled": false
   },
   "lockFileMaintenance": {
     "enabled": true,

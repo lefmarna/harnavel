@@ -2,6 +2,10 @@
 node = "26.13.0"
 pnpm = "12.16.1"
 
+# laravel/pao はエージェントの環境変数を見て Pest と PHPStan の出力を要約するため、コンテナへ引き継ぐ。
+[vars]
+agent_env = "-e AI_AGENT -e CLAUDECODE -e CODEX_THREAD_ID -e ANTIGRAVITY_AGENT -e GEMINI_CLI"
+
 # depends は並列実行されるため、順序が要る処理は run で逐次に呼ぶ。
 [tasks.setup]
 description = "Setup entire project from scratch"
@@ -96,20 +100,20 @@ run = "docker compose exec app php artisan migrate:rollback"
 
 [tasks.test]
 description = "Run tests"
-run = "docker compose exec app scripts/run-pest-locked.sh php artisan test $@"
+run = "docker compose exec {{vars.agent_env}} app scripts/run-pest-locked.sh php artisan test $@"
 raw = true
 
 [tasks.mutate]
 description = "Run mutation testing on the classes their specs declare with mutates()"
 run = """
 docker compose exec app mkdir -p vendor/pestphp/pest-plugin-mutate/.temp/mutations
-docker compose exec app scripts/run-pest-locked.sh vendor/bin/pest --mutate --covered-only $@
+docker compose exec {{vars.agent_env}} app scripts/run-pest-locked.sh vendor/bin/pest --mutate --covered-only $@
 """
 raw = true
 
 [tasks.analyse]
 description = "Run static analysis (Larastan/PHPStan)"
-run = "docker compose exec app composer analyse"
+run = "docker compose exec {{vars.agent_env}} app composer analyse"
 
 [tasks.pint]
 description = "Run Laravel Pint formatter on changed PHP files"
@@ -119,8 +123,8 @@ run = "docker compose exec app vendor/bin/pint --dirty --format=agent"
 description = "Run backend quality checks (Pint + Larastan + Pest with coverage)"
 run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
-docker compose exec app composer analyse && \
-docker compose exec app scripts/run-pest-locked.sh php artisan test --compact --coverage --min=90
+docker compose exec {{vars.agent_env}} app composer analyse && \
+docker compose exec {{vars.agent_env}} app scripts/run-pest-locked.sh php artisan test --compact --coverage --min=90
 """
 
 [tasks."verify:backend:full"]

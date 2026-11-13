@@ -84,6 +84,15 @@ if (
   });
 }
 
+if (hasAnyPhpChange && !dockerReady) {
+  fixFailures.push({
+    title: "PHP checks",
+    output:
+      "The app container is not running, so Pint and Larastan were skipped. " +
+      "Start it with `mise run up` and stop again, or report that PHP checks did not run.",
+  });
+}
+
 if (dockerReady && phpExisting.length) {
   captureFailure(
     ["docker", "compose", "exec", "-T", "app", "vendor/bin/pint", "--format=agent", ...phpExisting],

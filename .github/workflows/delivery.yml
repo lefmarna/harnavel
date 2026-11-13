@@ -21,6 +21,7 @@ jobs:
       ${{ !github.event.repository.is_template &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       actions: read
       contents: read
@@ -124,6 +125,7 @@ jobs:
   audit:
     needs: provenance
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       deployments: read
@@ -171,6 +173,8 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    # 打ち切られた配備はメンテナンスモードのまま残るため、再試行を含めても届かない長さにする。
+    timeout-minutes: 45
     needs: [provenance, quality, audit]
     if: >-
       !cancelled() && needs.provenance.result == 'success' && needs.audit.result == 'success' &&

@@ -160,7 +160,7 @@ jobs:
           DB_DATABASE: app_testing
 
       - name: Run Tests
-        run: ./vendor/bin/pest --coverage --min=90
+        run: composer test:coverage
         env:
           DB_HOST: 127.0.0.1
           GOOGLE_CLIENT_ID: test-client-id

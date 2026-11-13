@@ -49,8 +49,8 @@ failure is not this update's regression, but report it.
 
 - Composer is a three-surface change: the image tag in `.docker/php/Dockerfile`, the
   `~/opt/bin/composer-<version>` PHAR provisioned manually on every XServer environment
-  (`docs/infrastructure.md`), and every path in `.github/workflows/delivery.yml`. Update the
-  Dockerfile and workflow together only after the user confirms the PHAR exists on every target.
+  (`docs/infrastructure.md`), and every path and `setup-php` pin in `.github/workflows/`. Update the
+  Dockerfile and workflows together only after the user confirms the PHAR exists on every target.
 - Keep the Dockerfile's unpinned `composer global require laravel/installer` so a no-cache rebuild
   installs the latest stable Installer.
 - Pin the latest Node LTS release and stable pnpm in `mise.toml`. Treat a Node or pnpm major as a

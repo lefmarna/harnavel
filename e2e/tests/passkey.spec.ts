@@ -51,7 +51,7 @@ test("設定した origin と異なる URL ではパスキー操作を隠し利�
   await page.goto("/login");
   await expect(page.locator('[data-test="passkey-verify-button"]')).toBeVisible();
 
-  await page.goto(loginURL.href, { waitUntil: "networkidle" });
+  await page.goto(loginURL.href);
 
   await expect(page.locator('[data-test="login-button"]')).toBeVisible();
   await expect(page.locator('[data-test="passkey-verify-button"]')).toBeHidden();

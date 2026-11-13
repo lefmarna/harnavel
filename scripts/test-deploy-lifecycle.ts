@@ -119,7 +119,7 @@ for (const command of [
   "pnpm run lint:check",
   "pnpm run types:check",
   "pnpm run test:unit",
-  "./vendor/bin/pest --coverage",
+  "composer test:coverage",
   "pnpm test:e2e",
 ]) {
   const at = qualitySteps.findIndex(

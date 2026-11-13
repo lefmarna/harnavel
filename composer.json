@@ -56,6 +56,10 @@
     "analyse": [
       "vendor/bin/phpstan analyse --memory-limit=2G"
     ],
+    "test:coverage": [
+      "Composer\\Config::disableProcessTimeout",
+      "pest --coverage --min=90"
+    ],
     "test": [
       "@php artisan config:clear --ansi",
       "@lint:check",

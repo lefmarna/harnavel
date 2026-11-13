@@ -124,7 +124,7 @@ description = "Run backend quality checks (Pint + Larastan + Pest with coverage)
 run = """
 docker compose exec app vendor/bin/pint --dirty --format=agent && \
 docker compose exec {{vars.agent_env}} app composer analyse && \
-docker compose exec {{vars.agent_env}} app scripts/run-pest-locked.sh php artisan test --compact --coverage --min=90
+docker compose exec {{vars.agent_env}} app scripts/run-pest-locked.sh composer test:coverage -- --compact
 """
 
 [tasks."verify:backend:full"]

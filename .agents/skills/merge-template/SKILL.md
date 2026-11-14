@@ -31,7 +31,9 @@ Special cases:
   description, features, usage, environment values, extra commands, app docs links, and notices
   into the matching blocks, with each marker pair exactly once and no placeholders left. App text
   later found outside the blocks moves into them rather than being dropped; compare with the
-  pre-pull scaffold to tell local additions from shared text being updated.
+  pre-pull scaffold to tell local additions from shared text being updated. Delete `README.en.md`,
+  Harnavel's English introduction: git adds it without a conflict on the first pull and reports a
+  modify/delete conflict on later ones.
 - **Calibration points**: shared specs reach app pages only through `home` in `config/fortify.php`,
   `HOME_URL`, `PROTECTED_PATH`, and `SETTINGS_PATHS` in `e2e/support/auth.ts`, and
   `getProtectedPage()` and `settingsUrl()` in `tests/Pest.php`, and `replaceSiteDescription()` in

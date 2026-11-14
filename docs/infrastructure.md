@@ -38,7 +38,7 @@ The only manual cron entry the template requires in each environment, replacing 
 ```
 
 Task constraints: [TADR-0017](adr/template/0017-hourly-scheduler.md). Apps add their own entries
-beside this one for tasks outside them.
+beside this one for tasks those constraints exclude.
 
 ## Response header size
 

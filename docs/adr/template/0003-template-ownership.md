@@ -6,7 +6,9 @@ domain or presentation requires. Domain, presentation, environment values, App A
 floors, and mutation selections stay app-owned; mutation eligibility and the blocking score are
 shared.
 
-Harnavel's root `README.md` introduces the template. Derived apps use the separate
+Harnavel's root `README.md` introduces the template, and `README.en.md` is its English translation;
+the user guide lives in the repository's GitHub Wiki, which derived apps do not inherit. Apps keep
+`README.en.md` deleted and use the separate
 [README scaffold](../../../.agents/skills/project-docs-init/assets/README.md): text outside the
 `app:overview`, `app:development`, and `app:notices` blocks is template-owned, and the block bodies
 are app-owned. `LICENSE`, `.github/SECURITY.md`, and the `license` field in `composer.json` describe

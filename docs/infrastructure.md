@@ -30,14 +30,15 @@ follow the server's own reload.
 
 Last confirmed: pending (scheduler registration and host cron timezone in Develop and Production).
 
-Required manual cron entry for each environment, replacing direct `cache:prune-expired` execution
-after the schedule definitions are deployed:
+The only manual cron entry the template requires in each environment, replacing direct
+`cache:prune-expired` execution after the schedule definitions are deployed:
 
 ```cron
 0 * * * * cd "<deploy-directory>" && /usr/bin/php8.5 artisan schedule:run >> /dev/null 2>&1
 ```
 
-Task constraints: [TADR-0017](adr/template/0017-hourly-scheduler.md).
+Task constraints: [TADR-0017](adr/template/0017-hourly-scheduler.md). Apps add their own entries
+beside this one for tasks outside them.
 
 ## Response header size
 

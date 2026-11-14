@@ -6,3 +6,7 @@ therefore restricted to minute zero.
 
 Missed cron invocations are unmonitored; tasks must catch up at their next scheduled run. Each
 invocation must finish in a short, bounded time.
+
+Tasks that need a minute other than zero, a sub-hourly interval, or a longer runtime get their own
+cron entries outside the scheduler; the app records those entries in its `docs/infrastructure.md`,
+since they exist only on the host.

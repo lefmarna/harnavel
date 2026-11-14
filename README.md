@@ -1,7 +1,11 @@
 # Harnavel
 
+**日本語** | [English](README.en.md)
+
 Harnavel（ハーナベル）は、Orca の worktree で AI エージェントと開発するための Laravel 13 + Inertia React テンプレートです。
 作者個人の開発基盤として随時更新しており、互換性や安定性は保証しません。
+
+**[利用ガイド（Wiki）](https://github.com/lefmarna/harnavel/wiki)** に、手元で動かす手順から派生アプリの作成、XServer への配備までをまとめています。
 
 ## 特徴
 
@@ -20,36 +24,35 @@ Harnavel（ハーナベル）は、Orca の worktree で AI エージェント�
 | Testing        | Pest v5, Playwright              |
 | Infrastructure | Docker (Nginx, MariaDB, Mailpit) |
 
-> [!IMPORTANT]
-> **OGP 画像はプロジェクトごとに追加してください。** SNS シェア用の既定画像は `public/opengraph-image.jpg`（推奨: 1200x630px）です。リポジトリには含まれないため、デプロイ前に作成してください。
+## クイックスタート
 
-## 前提環境
-
-- Orca / Docker Compose / `mise`
-
-## 新しい派生アプリの初期設定
-
-新しい派生アプリでは、clone した主 checkout でエージェントに [`project-docs-init`](.agents/skills/project-docs-init/SKILL.md) を依頼し、アプリの資料（既定は `old_docs/`）・アプリ名・DB 名・100 ポート単位の `DEV_PORT_BASE` を渡します。派生アプリの README はテンプレート紹介用のこのファイルではなく、ひな形から作られます。初期設定後、主 checkout で環境を用意して検証・コミットします（コミット時のフックは起動中の `app` コンテナを使います）。
+前提環境は Docker Compose と `mise` です。worktree の作成には Orca を使います（`git worktree` でも代用できます）。
 
 ```bash
+git clone https://github.com/lefmarna/harnavel.git
+cd harnavel
 mise run setup
-pnpm lint:docs
-```
-
-## Orca で開発する
-
-1. 主 checkout を Orca に登録します（共有 DB のデータ保存先のため移動・削除しない）。
-2. 作業ごとに worktree を作成します（分岐元は `develop`、ない場合は `main`）。`orca.yaml` が自動で `mise run setup` を実行します（手動実行も可）。
-3. 接続先 URL を確認し、フロントエンド変更時のみ Vite を起動します（二重起動は `public/hot` が消えるため避ける）。Cookie はポートで分離されないため、worktree ごとにブラウザプロファイルを分けます。
-
-```bash
 mise run dev:info
-pnpm dev
 ```
 
-追加 worktree を Orca でアーカイブすると、`mise run worktree:remove` がその DB とコンテナを削除します。残したいデータは先に退避してください。
+表示された URL を開き、確認用ユーザー（`test@example.com` / `Test1234`）でログインできます。派生アプリを作るときは、clone した主 checkout でエージェントに [`project-docs-init`](.agents/skills/project-docs-init/SKILL.md) を依頼します。手順はガイドの「[はじめに](https://github.com/lefmarna/harnavel/wiki/はじめに)」を参照してください。
 
-## ドキュメント
+## 利用ガイド
+
+| ページ                                                                                             | 内容                                             |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [はじめに](https://github.com/lefmarna/harnavel/wiki/はじめに)                                     | 手元で動かす、派生アプリを作る                   |
+| [開発環境とコマンド](https://github.com/lefmarna/harnavel/wiki/開発環境とコマンド)                 | worktree、ポート、日々使うコマンド               |
+| [同梱機能とカスタマイズ](https://github.com/lefmarna/harnavel/wiki/同梱機能とカスタマイズ)         | 認証などの同梱機能と、派生アプリで差し替える場所 |
+| [AI エージェントとの開発](https://github.com/lefmarna/harnavel/wiki/AIエージェントとの開発)        | スキル、MCP、検証フック、仕様駆動の進め方        |
+| [テストと品質チェック](https://github.com/lefmarna/harnavel/wiki/テストと品質チェック)             | テストの種類と実行方法、CI                       |
+| [デプロイと運用](https://github.com/lefmarna/harnavel/wiki/デプロイと運用)                         | XServer への初回配備と日々の運用                 |
+| [テンプレート更新の取り込み](https://github.com/lefmarna/harnavel/wiki/テンプレート更新の取り込み) | テンプレートの改善を派生アプリへ取り込む         |
+| [トラブルシューティング](https://github.com/lefmarna/harnavel/wiki/トラブルシューティング)         | よくあるエラーと対処                             |
+
+## リポジトリ内のドキュメント
+
+設計判断の理由と運用上の前提を記録した資料です。AI エージェントも参照し、派生アプリに引き継がれます。
 
 - [AGENTS.md](AGENTS.md): AI エージェント向けの起点
 - [GLOSSARY.md](GLOSSARY.md): ドメイン用語集

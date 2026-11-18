@@ -62,6 +62,8 @@ documentation rather than the template's.
    - The dependency graph and Dependabot Alerts enabled with Dependabot update pull requests left
      disabled, and Mend Renovate installed
      ([Dependency updates](../../../docs/branches-and-ci.md#dependency-updates)).
+   - Automatic head-branch deletion left off
+     ([Branches and CI](../../../docs/branches-and-ci.md)).
    - The server-side settings in [External infrastructure state](../../../docs/infrastructure.md)
      and an explicit `PASSKEYS_USER_HANDLE_SECRET`, independent of `APP_KEY`
      ([TADR-0013](../../../docs/adr/template/0013-passkey-credentials.md)).

@@ -63,6 +63,7 @@ const hasLintConfigChange = all.some((file) => LINT_CONFIG_FILES.has(file));
 const hasFormatConfigChange = all.some((file) => FORMAT_CONFIG_FILES.has(file));
 const hasTypeConfigChange = all.some(isTypeConfig);
 const hasFrontendToolchainChange = all.some((file) => FRONTEND_TOOLCHAIN_FILES.has(file));
+const hasCiChange = all.some((file) => /^(\.circleci|\.github|scripts)\//.test(file));
 const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0;
 const hasPnpm = hasCommand("pnpm");
 const dockerReady = hasAnyPhpChange && hasCommand("docker") && dockerAppRunning(repo);
@@ -76,11 +77,12 @@ if (
     hasLintConfigChange ||
     hasFormatConfigChange ||
     hasTypeConfigChange ||
-    hasFrontendToolchainChange)
+    hasFrontendToolchainChange ||
+    hasCiChange)
 ) {
   fixFailures.push({
     title: "Frontend tools",
-    output: "pnpm is required to verify frontend changes.",
+    output: "pnpm is required to verify these changes.",
   });
 }
 
@@ -161,8 +163,8 @@ if (hasPnpm && (hasTs || hasTypeConfigChange || hasFrontendToolchainChange)) {
   tasks.push(runAsync(["pnpm", "types:check"], repo, "Types"));
 }
 
-if (hasPnpm && (lintAll.length || hasFrontendToolchainChange)) {
-  tasks.push(runAsync(["pnpm", "test:unit"], repo, "Frontend unit tests"));
+if (hasPnpm && (lintAll.length || hasFrontendToolchainChange || hasCiChange)) {
+  tasks.push(runAsync(["pnpm", "test:unit"], repo, "Unit tests"));
 }
 
 if (hasMd && hasPnpm) {

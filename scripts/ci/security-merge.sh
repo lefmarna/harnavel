@@ -29,8 +29,10 @@ if ! gh api -X PATCH "repos/$repo/git/refs/heads/$BASE" -f sha="$GITHUB_SHA" -F 
     exit 0
   fi
   # workflow_dispatch の検証は PR の必須チェックにならないため、拒まれた反映は人が PR でマージする。
-  echo "::error::Could not fast-forward $BASE to $GITHUB_SHA; merge $branch through a pull request." >&2
-  exit 1
+  # 保護されたブランチでは毎回拒まれるため、失敗にはしない。
+  echo "refused=true" >> "$GITHUB_OUTPUT"
+  echo "Could not fast-forward $BASE to $GITHUB_SHA; $branch needs a pull request." >> "$GITHUB_STEP_SUMMARY"
+  exit 0
 fi
 echo "Applied $GITHUB_SHA to $BASE." >> "$GITHUB_STEP_SUMMARY"
 

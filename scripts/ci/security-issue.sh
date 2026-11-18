@@ -18,6 +18,16 @@ create() {
     gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$1" > /dev/null
 }
 
+# gh 内蔵の jq とは出力が揃う保証がないため、比べる相手と同じ jq で整える。
+latest() {
+  local text
+  text=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$number/comments?per_page=100" |
+    jq -s '[.[][].body] | last // empty | sub("\\s+$"; "")') || true
+  [ -n "$text" ] ||
+    text=$(gh api "repos/$GITHUB_REPOSITORY/issues/$number" | jq '.body // "" | sub("\\s+$"; "")') || true
+  printf '%s' "$text"
+}
+
 case "$action" in
   open)
     if [ -n "$number" ]; then
@@ -28,10 +38,11 @@ case "$action" in
     ;;
 
   comment)
-    if [ -n "$number" ]; then
-      gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body-file "${3:?}" > /dev/null
-    else
+    if [ -z "$number" ]; then
       create "${3:?}"
+    # 人が対応するまで、反映先が進むたびに同じ修正が出し直される。
+    elif [ "$(latest)" != "$(jq -Rs 'sub("\\s+$"; "")' < "${3:?}")" ]; then
+      gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body-file "$3" > /dev/null
     fi
     ;;
 

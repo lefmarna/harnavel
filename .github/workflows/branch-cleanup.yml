@@ -1,0 +1,52 @@
+name: branch-cleanup
+
+# GitHub Free の非公開リポジトリでは develop を保護できず、ブランチの自動削除を有効にすると
+# リリースのマージで develop が消えるため、作業ブランチだけをここで消す。
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  delete:
+    if: >-
+      github.event.pull_request.merged &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref != 'develop' &&
+      github.head_ref != 'main' &&
+      github.head_ref != github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Delete the merged branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          stays() {
+            echo "$HEAD_REF $1, so it stays." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+
+          listed=$(git ls-remote "$REMOTE" "refs/heads/$HEAD_REF")
+          [ -n "$listed" ] || exit 0
+          [ "${listed%%$'\t'*}" = "$HEAD_SHA" ] || stays "moved after the merge"
+
+          # ブランチを消すと、それを base や head にした PR を GitHub が閉じる。
+          for filter in "base=$HEAD_REF" "head=$GITHUB_REPOSITORY_OWNER:$HEAD_REF"; do
+            pulls=$(gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" -f state=open -f "$filter" --jq length)
+            [ "$pulls" = 0 ] || stays "still belongs to an open pull request"
+          done
+
+          # REST API の削除は SHA を条件にできないため、push で消す。
+          git init -q "$RUNNER_TEMP/branch-cleanup"
+          git -C "$RUNNER_TEMP/branch-cleanup" push -q \
+            --force-with-lease="refs/heads/$HEAD_REF:$HEAD_SHA" "$REMOTE" ":refs/heads/$HEAD_REF"

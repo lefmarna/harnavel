@@ -33,12 +33,15 @@ jobs:
     permissions:
       actions: write
       contents: write
+    outputs:
+      refused: ${{ steps.apply.outputs.refused }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
       - name: Apply the verified fix
+        id: apply
         env:
           GH_TOKEN: ${{ github.token }}
           BASE: ${{ inputs.base }}
@@ -48,7 +51,7 @@ jobs:
 
   report:
     needs: [verify, merge]
-    if: ${{ failure() }}
+    if: ${{ failure() || needs.merge.outputs.refused == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,11 +61,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
-      - name: Report the failed fix
+      - name: Report what needs a person
         env:
           GH_TOKEN: ${{ github.token }}
           BASE: ${{ inputs.base }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REFUSED: ${{ needs.merge.outputs.refused }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
-          echo "Verifying or applying \`$GITHUB_REF_NAME\` to \`$BASE\` failed: $RUN_URL" > "$RUNNER_TEMP/report.md"
+          if [ "$REFUSED" = true ]; then
+            echo "\`$BASE\` refused the fast-forward, as a protected branch does. \`$GITHUB_REF_NAME\` passed the quality run, so [open a pull request]($REPOSITORY_URL/compare/$BASE...$GITHUB_REF_NAME?expand=1) to merge it." > "$RUNNER_TEMP/report.md"
+          else
+            echo "Verifying or applying \`$GITHUB_REF_NAME\` to \`$BASE\` failed: $REPOSITORY_URL/actions/runs/$GITHUB_RUN_ID" > "$RUNNER_TEMP/report.md"
+          fi
           scripts/ci/security-issue.sh comment "$BASE" "$RUNNER_TEMP/report.md"

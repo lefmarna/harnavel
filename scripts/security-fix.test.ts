@@ -112,7 +112,7 @@ type Call = {
 let dir: string;
 let fixture: Record<string, unknown>;
 
-const merge = (env: { base: string; isTemplate?: boolean; fails?: boolean }) => {
+const merge = (env: { base: string; isTemplate?: boolean }) => {
   fs.writeFileSync(path.join(dir, "fixture.json"), JSON.stringify(fixture));
   const calls = path.join(dir, "calls");
   fs.writeFileSync(calls, "");
@@ -126,16 +126,13 @@ const merge = (env: { base: string; isTemplate?: boolean; fails?: boolean }) => 
       GITHUB_REPOSITORY: REPO,
       GITHUB_SHA: VERIFIED,
       GITHUB_STEP_SUMMARY: path.join(dir, "summary"),
+      GITHUB_OUTPUT: path.join(dir, "output"),
       BASE: env.base,
       DEFAULT_BRANCH: "main",
       IS_TEMPLATE: String(env.isTemplate ?? false),
     },
   });
-  if (env.fails) {
-    assert.notEqual(result.status, 0);
-  } else {
-    assert.equal(result.status, 0, result.stderr);
-  }
+  assert.equal(result.status, 0, result.stderr);
 
   const all = fs
     .readFileSync(calls, "utf8")
@@ -202,11 +199,11 @@ describe("security-fix の反映", function () {
     assert.deepEqual(merge({ base: "develop" }).dispatched, ["security.yml@main"]);
   });
 
-  it("対象ブランチが進んでいないのに早送りを拒まれたら、失敗として知らせて配備しない", function () {
+  it("対象ブランチが進んでいないのに早送りを拒まれたら、配備しない", function () {
     upToDate("main");
     delete fixture[`PATCH repos/${REPO}/git/refs/heads/main`];
 
-    assert.deepEqual(merge({ base: "main", fails: true }).dispatched, []);
+    assert.deepEqual(merge({ base: "main" }).dispatched, []);
   });
 
   it("main を更新したら本番へ配備し、develop へ取り込むため走査し直す", function () {
@@ -323,9 +320,11 @@ const ratchet = (audits: {
 }) => {
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "security-audit-repo-"));
   // コミットのフックから実行すると GIT_INDEX_FILE などを引き継ぎ、一時リポジトリの操作が作業ツリーの index を書き換える。
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")),
-  );
+  const env = {
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))),
+    GIT_CONFIG_GLOBAL: "/dev/null",
+    GIT_CONFIG_NOSYSTEM: "1",
+  };
   const git = (...args: string[]) =>
     spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@invalid", ...args], {
       cwd: repo,

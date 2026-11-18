@@ -28,16 +28,22 @@ follow the server's own reload.
 
 ## Scheduler
 
-Last confirmed: pending (scheduler registration and host cron timezone in Develop and Production).
+Last confirmed: November 2026, on Develop and Production of every app then derived from the template.
 
-Required manual cron entry for each environment, replacing direct `cache:prune-expired` execution
-after the schedule definitions are deployed:
+The only manual cron entry the template requires in each environment, replacing direct
+`cache:prune-expired` execution after the schedule definitions are deployed:
 
 ```cron
 0 * * * * cd "<deploy-directory>" && /usr/bin/php8.5 artisan schedule:run >> /dev/null 2>&1
 ```
 
-Task constraints: [TADR-0017](adr/template/0017-hourly-scheduler.md).
+Task constraints: [TADR-0017](adr/template/0017-hourly-scheduler.md). Apps add their own entries
+beside this one for tasks those constraints exclude.
+
+XServer's cron memo field (up to 127 full-width / 255 half-width characters) shares one list across
+every site on the account. Prefix memos with the app and environment, and point the scheduler memo
+to `routes/console.php` rather than listing tasks so schedule changes do not leave it stale
+(Japanese example: `<app> 本番|開発: Laravel スケジューラ（毎時0分）。実行内容は routes/console.php`).
 
 ## Response header size
 

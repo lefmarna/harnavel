@@ -19,8 +19,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('credential_id', 1364)->charset('ascii')->collation('ascii_bin')->unique();
             $table->json('credential');
-            $table->timestamp('last_used_at')->nullable();
-            $table->timestamps();
+            $table->dateTime('last_used_at')->nullable();
+            $table->dateTime('created_at')->nullable();
+            $table->dateTime('updated_at')->nullable();
 
             $table->index('user_id');
         });

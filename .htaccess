@@ -21,10 +21,22 @@
   RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
-<IfModule !mod_rewrite.c>
-  Require all denied
-</IfModule>
+# Cloudflare が付ける秘密は、public/ の rewrite に置き換えられない認可で照合する（TADR-0019）。
+# 最上位に別の Require を置くとこの照合と OR で結ばれるため、条件は RequireAll の中に足す。
+<RequireAll>
+  <IfModule !mod_rewrite.c>
+    Require all denied
+  </IfModule>
+
+  <RequireAny>
+    Require expr "%{REQUEST_URI} =~ m#^/\.well-known/acme-challenge(?:/|$)#"
+    Require expr "sha1(req_novary('X-Cloudflare-Proxy-Secret')) == '{CLOUDFLARE_PROXY_SECRET_SHA1}'"
+  </RequireAny>
+</RequireAll>
 
 <FilesMatch "^\.(?!well-known$)">
   Require all denied
 </FilesMatch>
+
+# XServer がキャッシュを切ったときに書く行。配備で .htaccess を置き換えても、Xアクセラレータとサーバーキャッシュを切ったままにする。
+SetEnvIf Request_URI ".*" Ngx_Cache_NoCacheMode

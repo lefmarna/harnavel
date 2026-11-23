@@ -10,7 +10,7 @@ use Symfony\Component\Process\Process;
 /**
  * 本物のエントリポイントを HTTP SAPI で動かし、メンテナンスファイルと子プロセスの書き込みはフィクスチャ内に閉じる。
  */
-function securityEntryPointResponse(Closure $prepare, string $path = '/', array $headers = [], array $ini = []): ResponseInterface
+function securityEntryPointResponse(Closure $prepare, string $path = '/', array $headers = [], array $ini = [], array $env = []): ResponseInterface
 {
     $directory = sys_get_temp_dir().'/security-headers-'.bin2hex(random_bytes(8));
     $server = null;
@@ -53,6 +53,7 @@ function securityEntryPointResponse(Closure $prepare, string $path = '/', array 
             'VIEW_COMPILED_PATH' => $directory.'/storage/framework/views',
             'LOG_CHANNEL' => 'stderr',
             'PHP_CLI_SERVER_WORKERS' => false,
+            ...$env,
         ], timeout: 60);
 
         $server->start();
@@ -212,3 +213,52 @@ it('事前描画メンテナンス中もJSON要求はLaravelの503へ引き継�
     expect($response->getHeader('Retry-After'))->toBe(['60']);
     assertLaravelEntryPointHeaders($response);
 });
+
+it('Cloudflare がオリジンの照合に付けた秘密を、照合の成否によらず Laravel とリクエスト変数へ渡さない', function (string $digest, string $ip) {
+    // CGI と FastCGI は、variables_order が E を含むとリクエストの変数を $_ENV にも入れる。
+    $response = securityEntryPointResponse(function (string $directory) use ($digest): void {
+        bootSecurityEntryPoint($directory);
+        File::put($directory.'/public/index.php', str_replace(
+            '{CLOUDFLARE_PROXY_SECRET_SHA1}',
+            $digest,
+            File::get($directory.'/public/index.php'),
+        ));
+        File::put($directory.'/bootstrap/app.php', str_replace(
+            "['entry_point' => true]",
+            "['header' => request()->headers->has('X-Cloudflare-Proxy-Secret'), 'server' => array_key_exists('HTTP_X_CLOUDFLARE_PROXY_SECRET', \$_SERVER), 'env' => array_key_exists('HTTP_X_CLOUDFLARE_PROXY_SECRET', \$_ENV), 'other' => request()->headers->get('X-Other'), 'ip' => request()->ip()]",
+            File::get($directory.'/bootstrap/app.php'),
+        ));
+    }, '/_testing/entry-point', ['X-Cloudflare-Proxy-Secret' => 'zone-secret', 'CF-Connecting-IP' => '198.51.100.7', 'X-Other' => 'kept'], ['variables_order=EGPCS'], ['HTTP_X_CLOUDFLARE_PROXY_SECRET' => 'zone-secret']);
+
+    expect($response->getStatusCode())->toBe(200);
+    expect(json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR))
+        ->toBe(['header' => false, 'server' => false, 'env' => false, 'other' => 'kept', 'ip' => $ip]);
+})->with([
+    '照合に成功' => [sha1('zone-secret'), '198.51.100.7'],
+    '配備済みの SHA-1 と不一致' => [sha1('other-secret'), '127.0.0.1'],
+]);
+
+it('Cloudflare の秘密が配備で書き込んだ SHA-1 と一致する要求だけ、CF-Connecting-IP を接続元にする', function (string $digest, array $headers, string $ip) {
+    $response = securityEntryPointResponse(function (string $directory) use ($digest): void {
+        bootSecurityEntryPoint($directory);
+        File::put($directory.'/public/index.php', str_replace(
+            '{CLOUDFLARE_PROXY_SECRET_SHA1}',
+            $digest,
+            File::get($directory.'/public/index.php'),
+        ));
+        File::put($directory.'/bootstrap/app.php', str_replace(
+            "['entry_point' => true]",
+            "['ip' => request()->ip()]",
+            File::get($directory.'/bootstrap/app.php'),
+        ));
+    }, '/_testing/entry-point', $headers);
+
+    expect($response->getStatusCode())->toBe(200);
+    expect(json_decode((string) $response->getBody(), true, flags: JSON_THROW_ON_ERROR))->toBe(['ip' => $ip]);
+})->with([
+    'IPv6 の利用者' => [sha1('zone-secret'), ['X-Cloudflare-Proxy-Secret' => 'zone-secret', 'CF-Connecting-IP' => '2001:db8::7'], '2001:db8::7'],
+    '秘密なし' => [sha1('zone-secret'), ['CF-Connecting-IP' => '198.51.100.7'], '127.0.0.1'],
+    '配備で SHA-1 を書き込む前' => ['{CLOUDFLARE_PROXY_SECRET_SHA1}', ['X-Cloudflare-Proxy-Secret' => 'zone-secret', 'CF-Connecting-IP' => '198.51.100.7'], '127.0.0.1'],
+    'IP として読めない値' => [sha1('zone-secret'), ['X-Cloudflare-Proxy-Secret' => 'zone-secret', 'CF-Connecting-IP' => 'unknown'], '127.0.0.1'],
+    '複数の値' => [sha1('zone-secret'), ['X-Cloudflare-Proxy-Secret' => 'zone-secret', 'CF-Connecting-IP' => '198.51.100.7, 203.0.113.1'], '127.0.0.1'],
+]);

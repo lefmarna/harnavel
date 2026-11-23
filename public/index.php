@@ -19,6 +19,10 @@ if (is_string($cloudflareSecret) && hash_equals('{CLOUDFLARE_PROXY_SECRET_SHA1}'
 
 unset($cloudflareSecret, $cloudflareClient, $_SERVER['HTTP_X_CLOUDFLARE_PROXY_SECRET'], $_ENV['HTTP_X_CLOUDFLARE_PROXY_SECRET']);
 
+if (function_exists('header_remove')) {
+    header_remove('X-Powered-By');
+}
+
 /** @var array<string, string> $securityHeaders */
 $securityHeaders = require __DIR__.'/../bootstrap/security-headers.php';
 

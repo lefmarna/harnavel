@@ -6,16 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <script nonce="{{ Vite::cspNonce() }}">
-        (function() {
+        (function () {
             const appearance = '{{ $appearance ?? 'system' }}';
+            const isDark = appearance === 'dark'
+                || (appearance === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-            if (appearance === 'system') {
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                if (prefersDark) {
-                    document.documentElement.classList.add('dark');
-                }
-            }
+            document.documentElement.classList.toggle('dark', isDark);
+            document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
         })();
     </script>
 

@@ -6,6 +6,7 @@
     $siteUrl = rtrim((string) config('app.url', url('/')), '/');
     $logoUrl = asset('apple-touch-icon.png');
     $author = config('app.author');
+    $featureList = __('pages.site.features');
     $inLanguage = str_replace('_', '-', app()->getLocale());
     $pageTitle = is_string($title ?? null) && $title !== '' ? $title : $siteName;
     $pageDescription = is_string($description ?? null) && $description !== '' ? $description : $siteDescription;
@@ -45,13 +46,7 @@
         'creator' => $authorSchema ? [
             '@id' => $authorSchema['@id'],
         ] : null,
-        'featureList' => [
-            'Laravel backend',
-            'Inertia.js and React frontend',
-            'Tailwind CSS v4 UI foundation',
-            'Docker local development environment',
-            'Authentication and application scaffolding',
-        ],
+        'featureList' => is_array($featureList) ? array_values($featureList) : null,
     ];
 
     $webPageSchema = [

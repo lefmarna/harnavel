@@ -73,6 +73,18 @@ function replaceSiteDescription(string $description): void
     config(['app.description' => $description]);
 }
 
+function replaceSiteFeatures(?array $features): void
+{
+    $translator = app('translator');
+
+    // 現在のロケールで未定義にしても、フォールバック先の訳文が返るため両方を差し替える。
+    foreach (array_unique([$translator->getLocale(), $translator->getFallback()]) as $locale) {
+        // addLines() は未読み込みのグループを読み込み済みにするため、先に読み込んで既存の訳文を残す。
+        $translator->load('*', 'pages', $locale);
+        $translator->addLines(['pages.site.features' => $features], $locale);
+    }
+}
+
 describe('SEO メタ契約', function () {
     it('ホームページはtitleとdescriptionを含むseo propsを返す', function () {
         $response = $this->get(route('home'));
@@ -244,6 +256,25 @@ describe('SEO メタ契約', function () {
         expect($payloads)->not->toBeEmpty()
             ->and($payloads[0])->toContain(str_replace('/', '\\/', $siteUrl))
             ->and($payloads[0])->not->toContain($siteUrl);
+    });
+
+    it('pages.site.featuresの機能一覧をキーを除いたリストとしてWebApplicationのfeatureListに出力する', function () {
+        replaceSiteFeatures(['a' => '機能A', 'b' => '機能B']);
+
+        $schemas = extractStructuredDataItems($this->get(route('home'))->getContent());
+
+        expect(findStructuredDataByType($schemas, 'WebApplication')['featureList'] ?? null)
+            ->toBe(['機能A', '機能B']);
+    });
+
+    it('pages.site.featuresが未定義ならWebApplicationにfeatureListを出力しない', function () {
+        replaceSiteFeatures(null);
+
+        $schemas = extractStructuredDataItems($this->get(route('home'))->getContent());
+
+        expect(findStructuredDataByType($schemas, 'WebApplication'))
+            ->toHaveKey('@type', 'WebApplication')
+            ->not->toHaveKey('featureList');
     });
 
     it('ページ固有のdescriptionはWebPage構造化データにだけ反映される', function () {

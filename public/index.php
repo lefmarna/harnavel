@@ -7,6 +7,18 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// .htaccess とは別に秘密を照合し、自ゾーンを経た要求でだけ Cloudflare が付けた接続元を使う。照合した秘密は、
+// ログや通知に渡さない（TADR-0019）。
+$cloudflareSecret = $_SERVER['HTTP_X_CLOUDFLARE_PROXY_SECRET'] ?? null;
+$cloudflareClient = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? null;
+
+if (is_string($cloudflareSecret) && hash_equals('{CLOUDFLARE_PROXY_SECRET_SHA1}', sha1($cloudflareSecret))
+    && filter_var($cloudflareClient, FILTER_VALIDATE_IP) !== false) {
+    $_SERVER['REMOTE_ADDR'] = $cloudflareClient;
+}
+
+unset($cloudflareSecret, $cloudflareClient, $_SERVER['HTTP_X_CLOUDFLARE_PROXY_SECRET'], $_ENV['HTTP_X_CLOUDFLARE_PROXY_SECRET']);
+
 /** @var array<string, string> $securityHeaders */
 $securityHeaders = require __DIR__.'/../bootstrap/security-headers.php';
 

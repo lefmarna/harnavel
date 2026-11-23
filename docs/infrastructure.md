@@ -7,8 +7,12 @@ Production facts outside repository configuration and the constraints they impos
 - **Composer PHARs**: provisioned manually at `~/opt/bin/composer-<version>` in Develop and
   Production before repository configuration selects that version; `delivery` verifies the binary
   and its version but does not install it.
-- **Web layers**: vendor-managed nginx fronts Apache (`.htaccess`). Production web-layer behavior
-  belongs in `.htaccess`; `.docker/nginx/` is local only.
+- **Web layers**: Cloudflare's proxy fronts vendor-managed nginx, which fronts Apache
+  (`.htaccess`). Production web-layer behavior belongs in `.htaccess`; `.docker/nginx/` is local
+  only.
+- **Subdomain directories**: a subdomain's document root, Develop's included, sits inside
+  Production's and inherits its `.htaccess` authorization unless its own authorizes requests, so a
+  subdomain without one is served only through the zone with Production's secret header.
 
 ## Server environment settings
 
@@ -25,6 +29,51 @@ follow the server's own reload.
 | `SESSION_SECURE_COOKIE` | `true`                       | Pins the `Secure` flag independently of HTTPS detection; an empty value turns it off.                           |
 | `LOG_LEVEL`             | `info`                       | `debug` is local-only (`docs/logging-guidelines.md`).                                                           |
 | PHP `display_errors`    | `Off`, per domain on XServer | Errors raised before Laravel handles them, such as at startup, reach the response where `APP_DEBUG` cannot act. |
+
+## Cloudflare
+
+Required on Develop and Production ([TADR-0019](adr/template/0019-cloudflare-in-front-of-xserver.md)),
+all on the free plans. Delivery refuses to deploy when it observes one of these missing, but sees
+only the paths it requests on `HEALTHCHECK_URL`'s host, and not the visitor IP settings, Bot Fight
+Mode, or Always Use HTTPS behind Access.
+
+| Setting                                                                                                                     | Value                                                                                                                                                     | Reason                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| DNS records of the environment's hosts                                                                                      | Proxied                                                                                                                                                   | The origin refuses requests without the zone's header.                                                                  |
+| SSL/TLS encryption mode                                                                                                     | Full (strict), and no Configuration Rule lowers it for the hosts                                                                                          | Flexible sends the secret over plain HTTP, and Full sends it to any certificate.                                        |
+| Always Use HTTPS                                                                                                            | On                                                                                                                                                        | The origin refuses plain HTTP requests, which carry no secret, before its own redirect.                                 |
+| Request Header Transform Rule                                                                                               | For `(http.host in {<the environment's hosts>} and ssl)`, set static `X-Cloudflare-Proxy-Secret` to the environment's secret                              | Each `.htaccess` accepts only the SHA-1 of its own environment's secret.                                                |
+| XServer サーバーキャッシュ and Xアクセラレータ                                                                              | Off for both environments' domains, サーバーキャッシュ first                                                                                              | XServer warns that its cache can serve content `.htaccess` restricts to anyone; Cloudflare caches static files instead. |
+| Pseudo IPv4                                                                                                                 | Not "Overwrite headers"                                                                                                                                   | It replaces `CF-Connecting-IP` with an address that is not the visitor's.                                               |
+| Managed Transform "Remove visitor IP headers"                                                                               | Off                                                                                                                                                       | It removes `CF-Connecting-IP`, so per-IP limits count Cloudflare's edges.                                               |
+| Bot Fight Mode                                                                                                              | Off                                                                                                                                                       | It can challenge delivery's checks, and rules cannot exempt them.                                                       |
+| Access application (Develop)                                                                                                | Every host the Transform Rule covers, with an Allow policy for its users and a Service Auth policy for delivery, and no application for a path under them | A covered host outside Access serves files to anyone, at least while a deploy replaces them.                            |
+| Access Managed OAuth, 401 Response for Service Auth policies, and the account's Return 401 response for non-browser traffic | Off                                                                                                                                                       | Delivery expects anonymous requests to redirect to the login, which each replaces with a 401.                           |
+
+GitHub environment secrets: `CLOUDFLARE_PROXY_SECRET` (`openssl rand -hex 32`, separate per
+environment) in both, and the Access service token as `CLOUDFLARE_ACCESS_CLIENT_ID` and
+`CLOUDFLARE_ACCESS_CLIENT_SECRET` in Develop. Production gets the token and the Access application
+only while it stays private before launch.
+
+Set up or migrate an environment in this order, Develop first, so no release is ever unprotected:
+
+1. With the records still DNS only, confirm that XServer serves HTTPS for the hosts. Turn off
+   サーバーキャッシュ and Xアクセラレータ, and set Full (strict) and Always Use HTTPS. Then add the
+   Transform Rule and proxy the DNS records.
+2. For an Access environment, add the application and the token secrets, confirm in Zero Trust that
+   no other application, Bypass policy, or public path override in the application's destinations
+   covers a path under the host.
+3. Add `CLOUDFLARE_PROXY_SECRET`, without which delivery refuses to deploy, and deploy. Confirm
+   that a logged request records the visitor's address and that the environment's other hosts, such
+   as `www`, still redirect to the canonical one.
+
+To rotate a secret, update the GitHub secret and the Transform Rule, then run `delivery` with
+`workflow_dispatch`; every request is refused until its `rsync` step replaces `.htaccess`, which until
+then still accepts the old secret, so close the origin first if it leaked.
+
+To close the origin, for a leaked secret or for a live `.htaccess` that broke and fails delivery's
+checks too, replace that `.htaccess` over SSH with only `Require all denied`; the checks' own
+`.htaccess` overrides it, so `delivery` for the environment it belongs to can still deploy.
 
 ## Scheduler
 
@@ -53,16 +102,17 @@ every time with a vendor-layer 500 (`Premature end of script headers` in the Apa
 the Laravel log). The cause was not confirmed, so treat any header line beyond 8 KB as unsafe.
 
 The template omits that middleware: `@vite` already emits `<link rel="modulepreload">` tags, and the
-hosting sends no `103 Early Hints` a `Link` header could feed. Recheck after adding a CDN that turns
-`Link` headers into Early Hints.
+hosting sends no `103 Early Hints` a `Link` header could feed. Cloudflare can turn `Link` headers
+into Early Hints, so recheck before sending any.
 
 ## Client address and HTTPS
 
-Last measured: October 2026, on one production domain. Without trusted proxies, `$request->ip()`
-returned each client's public address, even for a forged `X-Forwarded-For`, and pages carried the
-HSTS header the app adds only when `$request->isSecure()` holds. Per-IP rate limits therefore count
-real clients, and production configures no trusted proxies. Recheck after changing the host or
-adding a CDN or proxy, or when logged addresses collapse to one internal range.
+Last measured: October 2026, on one production domain before Cloudflare. Without trusted proxies,
+`$request->ip()` returned the connecting address, even for a forged `X-Forwarded-For`, and pages
+carried the HSTS header the app adds only when `$request->isSecure()` holds. Behind Cloudflare the
+connecting address is Cloudflare's edge ([TADR-0019](adr/template/0019-cloudflare-in-front-of-xserver.md)).
+Recheck after changing the host, or when logged addresses collapse to Cloudflare's or one internal
+range.
 
 ## OPcache
 

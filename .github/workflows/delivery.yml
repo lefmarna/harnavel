@@ -192,26 +192,34 @@ jobs:
       - name: Validate deployment configuration
         env:
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          CLOUDFLARE_PROXY_SECRET: ${{ secrets.CLOUDFLARE_PROXY_SECRET }}
+          CLOUDFLARE_ACCESS_CLIENT_ID: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_ID }}
+          CLOUDFLARE_ACCESS_CLIENT_SECRET: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_SECRET }}
         run: |
           node -e '
             const raw = process.env.HEALTHCHECK_URL ?? ""
             try {
-              const url = new URL(raw)
-              if (
-                url.protocol === "https:" &&
-                url.pathname === "/up" &&
-                url.username === "" &&
-                url.password === "" &&
-                url.search === "" &&
-                url.hash === "" &&
-                url.href === raw
-              ) process.exit(0)
+              if (raw === "https://" + new URL(raw).hostname + "/up") process.exit(0)
             } catch {}
             process.exit(1)
           ' || {
-            echo "HEALTHCHECK_URL must be a canonical HTTPS URL ending in /up." >&2
+            echo "HEALTHCHECK_URL must be exactly https://<host>/up, with the host in canonical form." >&2
             exit 1
           }
+
+          if [[ ! "${CLOUDFLARE_PROXY_SECRET:-}" =~ ^[A-Za-z0-9_-]{32,}$ ]]; then
+            echo "CLOUDFLARE_PROXY_SECRET must be at least 32 letters, digits, '-' or '_'." >&2
+            exit 1
+          fi
+
+          # Develop は Access だけで守るため、トークンなしに配備しない。
+          if [ "$GITHUB_REF_NAME" = develop ] ||
+            [ -n "${CLOUDFLARE_ACCESS_CLIENT_ID:-}${CLOUDFLARE_ACCESS_CLIENT_SECRET:-}" ]; then
+            if [ -z "${CLOUDFLARE_ACCESS_CLIENT_ID:-}" ] || [ -z "${CLOUDFLARE_ACCESS_CLIENT_SECRET:-}" ]; then
+              echo "CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET must both be set." >&2
+              exit 1
+            fi
+          fi
 
       # トークンがなければ run-id は無視され、この run から取得する。
       - name: Download build artifacts
@@ -251,7 +259,7 @@ jobs:
 
       - name: Create deployment package
         env:
-          XSERVER_USER: ${{ secrets.XSERVER_USER }}
+          CLOUDFLARE_PROXY_SECRET: ${{ secrets.CLOUDFLARE_PROXY_SECRET }}
         run: |
           mkdir -p .deploy
           rsync -av --exclude-from='.deployignore' ./ .deploy/
@@ -259,22 +267,19 @@ jobs:
           if [ "$GITHUB_REF_NAME" = "develop" ]; then
             test -f .htaccess.develop
             cp .htaccess.develop .deploy/.htaccess
-            if [[ -z "${XSERVER_USER:-}" ]]; then
-              echo "XSERVER_USER is required." >&2
-              exit 1
-            fi
-            if [[ ! "$XSERVER_USER" =~ ^[a-z][a-z0-9]{2,11}$ ]]; then
-              echo "XSERVER_USER must be a valid XServer server ID." >&2
-              exit 1
-            fi
-            if ! grep -Fq '{XSERVER_USER}' .deploy/.htaccess; then
-              echo "Deployment .htaccess is missing {XSERVER_USER}." >&2
-              exit 1
-            fi
-            sed -i "s/{XSERVER_USER}/${XSERVER_USER}/g" .deploy/.htaccess
             printf 'User-agent: *\nDisallow: /\n' > .deploy/public/robots.txt
             rm -f .deploy/public/sitemap.xml
           fi
+
+          # Require のない .htaccess は、配備前の確認では稼働中のリリースの認可を継いで通るため、照合の有無はここで確かめる。
+          digest=$(printf '%s' "$CLOUDFLARE_PROXY_SECRET" | sha1sum | cut -d ' ' -f 1)
+          for file in .deploy/.htaccess .deploy/public/index.php; do
+            if ! grep -Fq '{CLOUDFLARE_PROXY_SECRET_SHA1}' "$file"; then
+              echo "$file is missing {CLOUDFLARE_PROXY_SECRET_SHA1}." >&2
+              exit 1
+            fi
+            sed -i "s/{CLOUDFLARE_PROXY_SECRET_SHA1}/$digest/g" "$file"
+          done
 
       - name: Setup SSH key
         run: |
@@ -302,6 +307,133 @@ jobs:
             fi
           done
           exit 1
+
+      # 一時ディレクトリにリリースと同じ配置で置いた .htaccess は、親の rewrite と認可を置き換える。そのため、今の
+      # リリースと関係なく、配備するホストの規則と照合を確かめられる。ファイルは public/ にだけ置き、リリースが
+      # アプリのホストとして public/ へ書き換える場合にだけ届くようにする。
+      - name: Verify Cloudflare before the release
+        env:
+          DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          XSERVER_HOST: ${{ secrets.XSERVER_HOST }}
+          CLOUDFLARE_ACCESS_CLIENT_ID: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_ID }}
+          CLOUDFLARE_ACCESS_CLIENT_SECRET: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_SECRET }}
+        run: |
+          host=${HEALTHCHECK_URL#https://}
+          host=${host%/up}
+          token=$(openssl rand -hex 16)
+          dir=delivery-$token
+          origin=(--connect-to "$host:443:$XSERVER_HOST:443")
+          login='^https://[a-z0-9-]+\.cloudflareaccess\.com/'
+
+          access=()
+          if [ -n "${CLOUDFLARE_ACCESS_CLIENT_ID:-}" ]; then
+            access=(--header "CF-Access-Client-Id: $CLOUDFLARE_ACCESS_CLIENT_ID"
+              --header "CF-Access-Client-Secret: $CLOUDFLARE_ACCESS_CLIENT_SECRET")
+          fi
+
+          remote() {
+            for attempt in 1 2 3; do
+              if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+                ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} "$1" < "${2:-/dev/null}"; then
+                return 0
+              fi
+              if [ "$attempt" -lt 3 ]; then
+                sleep "$((attempt * 30))"
+              fi
+            done
+            return 1
+          }
+
+          fetch() {
+            curl --silent --show-error --connect-timeout 5 --max-time 10 --write-out ' %{http_code}' "$@" || :
+          }
+
+          redirect() {
+            curl --silent --show-error --connect-timeout 5 --max-time 10 \
+              --output /dev/null --write-out '%{redirect_url}' "$1" || :
+          }
+
+          mkdir -p "$RUNNER_TEMP/$dir/public"
+          # 先頭の規則は、秘密が平文の HTTP でオリジンに届いたときに 410 を返し、リリースの HTTPS への転送と見分ける。
+          {
+            printf '<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %%{HTTPS} off\n  RewriteRule ^gated\\.jpg$ - [G]\n</IfModule>\n'
+            cat .deploy/.htaccess
+            printf '<Files "open.jpg">\n  Require all granted\n</Files>\n'
+          } > "$RUNNER_TEMP/$dir/.htaccess"
+          cp .deploy/public/.htaccess "$RUNNER_TEMP/$dir/public/.htaccess"
+          # .jpg は XServer のキャッシュの対象になる。
+          printf '%s' "$token" > "$RUNNER_TEMP/$dir/public/gated.jpg"
+          printf '%s' "$token" > "$RUNNER_TEMP/$dir/public/open.jpg"
+          tar -C "$RUNNER_TEMP" -cf "$RUNNER_TEMP/probe.tar" "$dir"
+
+          trap 'remote "rm -rf -- \"$DEPLOY_DIRECTORY/$dir\"" || :' EXIT
+          remote "mkdir -p -- \"$DEPLOY_DIRECTORY\" && tar -xf - -C \"$DEPLOY_DIRECTORY\"" "$RUNNER_TEMP/probe.tar"
+
+          # トークンは、ホストがこの配備先のものであり、Access が匿名の要求を止めていると確かめてから送る。
+          response=$(fetch "${origin[@]}" "https://$host/$dir/open.jpg")
+          if [ "$response" != "$token 200" ]; then
+            echo "XSERVER_HOST does not serve $host's app from DEPLOY_DIRECTORY under the release's .htaccess" \
+              "(status ${response##* }); check that HEALTHCHECK_URL names this environment's canonical host" \
+              "and that XServer's certificate for it is valid, as Full (strict) requires." >&2
+            exit 1
+          fi
+
+          if [ ${#access[@]} -gt 0 ]; then
+            for path in /up / "/$dir/gated.jpg"; do
+              if [[ ! "$(redirect "https://$host$path")" =~ $login ]]; then
+                echo "https://$host$path answered an anonymous request without redirecting to Cloudflare Access." >&2
+                exit 1
+              fi
+            done
+          fi
+
+          response=$(fetch "${access[@]}" "https://$host/$dir/gated.jpg")
+          if [ "${response##* }" = 410 ]; then
+            echo "Cloudflare sent the secret to the origin over plain HTTP; set the SSL/TLS mode to Full (strict)" \
+              "and rotate the secret." >&2
+            exit 1
+          fi
+          if [ "$response" != "$token 200" ]; then
+            echo "Cloudflare did not serve the check file at https://$host/$dir/gated.jpg (status ${response##* });" \
+              "check that its DNS record is proxied to XSERVER_HOST, the Transform Rule value, the Access service token," \
+              "and that the origin's Apache accepts the check." >&2
+            exit 1
+          fi
+
+          # Cloudflare 自身が /up に答える設定（Access のポリシー、チャレンジ、キャッシュ、Worker）は、配備後の
+          # ヘルスチェックを失敗させるので、リリースを置き換える前に止める。オリジンの応答には、エラーでも
+          # DYNAMIC か BYPASS の cf-cache-status が付く。修復の配備は止めないよう、応答がない場合と 5xx は通す。
+          response=$(curl --silent --show-error --connect-timeout 5 --max-time 10 --output /dev/null --dump-header - \
+            --write-out '%{http_code}' "${access[@]}" "https://$host/up") || response=
+          status=${response: -3}
+          cache=$(grep -Eio '^cf-cache-status: *[a-z]+' <<< "$response") || cache=
+          if [[ "$status" =~ ^[1-4] ]] && ! grep -Eiq ': *(DYNAMIC|BYPASS)$' <<< "$cache"; then
+            echo "Cloudflare may answer https://$host/up itself (status $status, ${cache:-no cf-cache-status});" \
+              "keep Access policies that refuse delivery's token, challenges, Cache Rules, and Workers away from it." >&2
+            exit 1
+          fi
+
+          response=$(fetch "${origin[@]}" "https://$host/$dir/gated.jpg")
+          if [ "${response##* }" != 403 ]; then
+            echo "The origin answered ${response##* } to a direct request without the secret instead of 403;" \
+              "a 200 means Xアクセラレータ is on or the release's .htaccess admits requests without it." >&2
+            exit 1
+          fi
+
+          # Always Use HTTPS がないと、秘密のない HTTP の要求はオリジンの転送より先に拒まれる。資格情報は
+          # 平文で送らないので、Access が先にログインへ送る場合は、オリジンに届かないことだけを確かめる。
+          response=$(fetch --output /dev/null "http://$host/$dir/gated.jpg")
+          if [ "${response##* }" = 410 ]; then
+            echo "Cloudflare sent the secret to the origin over plain HTTP; turn on Always Use HTTPS," \
+              "keep ssl in the Transform Rule, and rotate the secret." >&2
+            exit 1
+          fi
+          location=$(redirect "http://$host/$dir/gated.jpg")
+          if [ "$location" != "https://$host/$dir/gated.jpg" ] && [[ ! "$location" =~ $login ]]; then
+            echo "Cloudflare does not redirect http://$host to HTTPS; turn on Always Use HTTPS." >&2
+            exit 1
+          fi
 
       - name: Enable maintenance mode
         env:
@@ -417,21 +549,26 @@ jobs:
       - name: Verify release health
         env:
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
-          HEALTHCHECK_BASIC_AUTH: ${{ secrets.HEALTHCHECK_BASIC_AUTH }}
+          CLOUDFLARE_ACCESS_CLIENT_ID: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_ID }}
+          CLOUDFLARE_ACCESS_CLIENT_SECRET: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_SECRET }}
         run: |
-          auth=()
-          if [ -n "${HEALTHCHECK_BASIC_AUTH:-}" ]; then
-            auth=(--user "$HEALTHCHECK_BASIC_AUTH")
+          access=()
+          if [ -n "${CLOUDFLARE_ACCESS_CLIENT_ID:-}" ]; then
+            access=(--header "CF-Access-Client-Id: $CLOUDFLARE_ACCESS_CLIENT_ID"
+              --header "CF-Access-Client-Secret: $CLOUDFLARE_ACCESS_CLIENT_SECRET")
           fi
 
           for attempt in 1 2 3; do
-            status=$(
-              curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            response=$(
+              curl --silent --show-error --output /dev/null --dump-header - --write-out '%{http_code}' \
                 --connect-timeout 5 --max-time 5 \
-                "${auth[@]}" "$HEALTHCHECK_URL"
-            ) || status=
+                "${access[@]}" "$HEALTHCHECK_URL"
+            ) || response=
+            status=${response: -3}
+            cache=$(grep -Eio '^cf-cache-status: *[a-z]+' <<< "$response") || cache=
 
-            if [ "$status" = "200" ]; then
+            # キャッシュの対象にした 200 や、Worker などがオリジンを通さずに返した 200 は、リリースの稼働を示さない。
+            if [ "$status" = 200 ] && grep -Eiq ': *(DYNAMIC|BYPASS)$' <<< "$cache"; then
               exit 0
             fi
 
@@ -440,7 +577,7 @@ jobs:
             fi
           done
 
-          echo "Release health check failed: $HEALTHCHECK_URL returned ${status:-no response}." >&2
+          echo "Release health check failed: $HEALTHCHECK_URL returned ${status:-no response} (${cache:-no cf-cache-status})." >&2
           exit 1
 
   notify-failure:

@@ -9,6 +9,10 @@
 
     RewriteEngine On
 
+    # /public/ への直接の要求は親の .htaccess のホストの照合と正規化を経ないので、public を外した URL へ転送する（TADR-0019）。
+    RewriteCond %{ENV:REDIRECT_STATUS} ^$
+    RewriteRule ^(.*)$ /$1 [R=308,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -18,8 +22,9 @@
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
     # Redirect Trailing Slashes If Not A Folder...
+    # 親が public/ へ内部リダイレクトした URI なので、公開 URL へ戻すため public を外す。
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteCond %{REQUEST_URI} ^/public(/.+)/$
     RewriteRule ^ %1 [L,R=301]
 
     # Send Requests To Front Controller...

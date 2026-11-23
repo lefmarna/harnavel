@@ -57,8 +57,9 @@ documentation rather than the template's.
 3. Tell the user which settings outside the repository the first deployment needs, for Develop and
    Production separately:
    - GitHub environment secrets `XSERVER_*` and `DEPLOY_DIRECTORY`, `HEALTHCHECK_URL` (the canonical
-     HTTPS URL of the Laravel health route, such as `https://example.com/up`), and
-     `HEALTHCHECK_BASIC_AUTH` only where Basic authentication protects the document root.
+     HTTPS URL of the Laravel health route, such as `https://example.com/up`), and the Cloudflare
+     secrets, with the zone and Access settings set up in the order given in
+     [Cloudflare](../../../docs/infrastructure.md#cloudflare).
    - The dependency graph and Dependabot Alerts enabled with Dependabot update pull requests left
      disabled, and Mend Renovate installed
      ([Dependency updates](../../../docs/branches-and-ci.md#dependency-updates)).

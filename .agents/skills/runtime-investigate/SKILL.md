@@ -37,9 +37,7 @@ to run instead of looking for another route. If `xserver` is not found, use
     skipped one left the files alone. When nothing settles it, report the live commit as
     undetermined.
 - **Hosts** come from the live commit, not the working tree: `git show <sha>:.htaccess` allows the
-  production apex, and `git show <sha>:.htaccess.develop` the single develop host. If that
-  `.htaccess.develop` has `require valid-user`, every request to develop, `/up` included, needs
-  `curl --user`.
+  production apex, and `git show <sha>:.htaccess.develop` the single develop host.
 
 ## 2. Query in order, stopping once answered
 
@@ -47,8 +45,14 @@ to run instead of looking for another route. If `xserver` is not found, use
    migrations, and `/up`, plus a health check that cannot hang:
 
    ```bash
-   curl -fsS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 10 https://<host>/up
+   curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 10 https://<host>/up | grep -iE '^(HTTP/|cf-cache-status:)'
    ```
+
+   Behind Cloudflare Access this meets the login instead. A 200 shows current health only with a
+   `cf-cache-status` of `DYNAMIC` or `BYPASS`, as in delivery's health check; otherwise, report the
+   current health as unverified, and a cache status such as `HIT` or `MISS` also as Cloudflare
+   caching `/up`, which delivery refuses. The service token exists only in delivery's secrets, and
+   the delivery run shows health only at deploy time.
 
 2. **XServer web error log**, for failures the application never saw (500s without a Laravel entry,
    TLS, rewrite, or permission problems). It answers `{"domain": …, "log": "…"}`:
@@ -65,9 +69,12 @@ to run instead of looking for another route. If `xserver` is not found, use
 ## 3. Attribute and limit log lines
 
 - XServer files a subdomain's web logs under its parent, so always pass the apex to `--domain`.
-- **Access log**: only the first field, the serving host, assigns a line to an environment.
+- **Access log**: only the first field, the serving host, assigns a line to an environment. Requests
+  through Cloudflare record its edge as the client; `.htaccess` refuses every other request with
+  403, ACME challenges aside
+  ([TADR-0019](../../../docs/adr/template/0019-cloudflare-in-front-of-xserver.md)).
 - **Error log**: the path `/home/<account>/<apex>/<site>/` names the site (`public_html` for the
-  apex, the hostname for a subdomain); siblings such as `cache` or `htpasswd` belong to none.
+  apex, the hostname for a subdomain); siblings such as `cache` belong to none.
 - A hostname elsewhere in a line (referer, URI, PHP output) never attributes it. `--keyword` matches
   the whole line, so it can narrow to a subdomain but never to the apex.
 - Start at `--lines 50`, prefer `--keyword` over more lines, and quote only the lines carrying the

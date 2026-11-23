@@ -17,7 +17,7 @@ The baseline is also sent from a
 [PHP header callback](https://www.php.net/manual/en/function.header-register-callback.php)
 registered before maintenance and autoloading, so pre-rendered maintenance and early errors carry
 it. An app replaces the policy instead of adding one, because
-[multiple enforced CSPs all apply](https://www.w3.org/TR/CSP3/#multiple-policies). Apache
-configuration alone was rejected: local nginx needs the same behavior, and a server-level CSP would
-override app-owned policies. Static files and responses produced before PHP runs stay outside this
-guarantee.
+[multiple enforced CSPs all apply](https://www.w3.org/TR/CSP3/#multiple-policies). Web-server
+configuration alone was rejected for PHP responses: local nginx needs the same behavior, and a
+server-level CSP would override app-owned policies. The web server therefore sets the fixed headers
+only on static files; responses produced before PHP runs stay outside this guarantee.

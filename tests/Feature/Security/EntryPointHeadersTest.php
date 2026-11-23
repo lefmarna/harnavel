@@ -131,18 +131,21 @@ function bootSecurityEntryPoint(string $directory, array $policy = []): void
     ));
 }
 
+function prepareSecurityEntryPointMaintenance(string $directory): void
+{
+    File::copy(
+        base_path('vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub'),
+        $directory.'/storage/framework/maintenance.php',
+    );
+    File::put($directory.'/storage/framework/down', json_encode([
+        'template' => '<h1>Maintenance fixture</h1>',
+        'status' => 503,
+        'retry' => 60,
+    ], JSON_THROW_ON_ERROR));
+}
+
 it('事前描画メンテナンスの503にも基本のヘッダーを一つずつ返す', function () {
-    $response = securityEntryPointResponse(function (string $directory): void {
-        File::copy(
-            base_path('vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub'),
-            $directory.'/storage/framework/maintenance.php',
-        );
-        File::put($directory.'/storage/framework/down', json_encode([
-            'template' => '<h1>Maintenance fixture</h1>',
-            'status' => 503,
-            'retry' => 60,
-        ], JSON_THROW_ON_ERROR));
-    });
+    $response = securityEntryPointResponse(prepareSecurityEntryPointMaintenance(...));
 
     expect($response->getStatusCode())->toBe(503);
     expect((string) $response->getBody())->toBe('<h1>Maintenance fixture</h1>');
@@ -171,6 +174,19 @@ it('Laravelの通常応答への引き継ぎで基本のヘッダーを重複さ
     assertLaravelEntryPointHeaders($response);
 });
 
+it('expose_php が有効でも X-Powered-By を露出しない', function (Closure $prepare, string $path, int $status) {
+    $response = securityEntryPointResponse($prepare, $path, ini: ['expose_php=1']);
+
+    expect($response->getStatusCode())->toBe($status);
+    expect($response->getHeader('X-Powered-By'))->toBe([]);
+})->with([
+    '通常応答' => [fn (string $directory) => bootSecurityEntryPoint($directory), '/_testing/entry-point', 200],
+    '事前描画メンテナンスの503' => [prepareSecurityEntryPointMaintenance(...), '/', 503],
+    '初期化に失敗した500' => [function (string $directory): void {
+        File::put($directory.'/vendor/autoload.php', '<?php throw new RuntimeException("Initialization fixture failure");');
+    }, '/', 500],
+]);
+
 it('アプリ独自の応答ポリシーに競合するフォールバックを残さない', function (array $ini) {
     $response = securityEntryPointResponse(
         fn (string $directory) => bootSecurityEntryPoint($directory, [
@@ -196,15 +212,7 @@ it('アプリ独自の応答ポリシーに競合するフォールバックを�
 it('事前描画メンテナンス中もJSON要求はLaravelの503へ引き継ぐ', function () {
     $response = securityEntryPointResponse(function (string $directory): void {
         bootSecurityEntryPoint($directory);
-        File::copy(
-            base_path('vendor/laravel/framework/src/Illuminate/Foundation/Console/stubs/maintenance-mode.stub'),
-            $directory.'/storage/framework/maintenance.php',
-        );
-        File::put($directory.'/storage/framework/down', json_encode([
-            'template' => '<h1>Maintenance fixture</h1>',
-            'status' => 503,
-            'retry' => 60,
-        ], JSON_THROW_ON_ERROR));
+        prepareSecurityEntryPointMaintenance($directory);
     }, '/_testing/entry-point', ['Accept' => 'application/json']);
 
     expect($response->getStatusCode())->toBe(503);

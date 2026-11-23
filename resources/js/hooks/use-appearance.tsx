@@ -9,7 +9,7 @@ export type UseAppearanceReturn = {
   readonly updateAppearance: (mode: Appearance) => void;
 };
 
-const STORAGE_KEY = "appearance";
+const COOKIE_NAME = "appearance";
 const listeners = new Set<() => void>();
 let currentAppearance: Appearance = "system";
 
@@ -24,8 +24,18 @@ const setCookie = (name: string, value: string, days = 365): void => {
   document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax`;
 };
 
+const getCookie = (name: string): string | null => {
+  const prefix = `${name}=`;
+  const entry = document.cookie
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(prefix));
+
+  return entry === undefined ? null : entry.slice(prefix.length);
+};
+
 const getStoredAppearance = (): Appearance => {
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = getCookie(COOKIE_NAME);
 
   return isAppearance(stored) ? stored : "system";
 };
@@ -52,11 +62,6 @@ const notify = (): void => listeners.forEach((listener) => listener());
 const handleSystemThemeChange = (): void => applyTheme(currentAppearance);
 
 export function initializeTheme(): void {
-  if (!localStorage.getItem(STORAGE_KEY)) {
-    localStorage.setItem(STORAGE_KEY, "system");
-    setCookie(STORAGE_KEY, "system");
-  }
-
   currentAppearance = getStoredAppearance();
   applyTheme(currentAppearance);
 
@@ -74,9 +79,7 @@ export function useAppearance(): UseAppearanceReturn {
   const updateAppearance = useCallback((mode: Appearance): void => {
     currentAppearance = mode;
 
-    localStorage.setItem(STORAGE_KEY, mode);
-    setCookie(STORAGE_KEY, mode);
-
+    setCookie(COOKIE_NAME, mode);
     applyTheme(mode);
     notify();
   }, []);

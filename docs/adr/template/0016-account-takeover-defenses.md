@@ -1,62 +1,42 @@
 # Account takeover defenses
 
 The apps hold little beyond an email address, so the template stops a stolen session or cookie from
-outliving the owner's response and stops a registrant of someone else's address from keeping the
-account, but accepts risks whose fixes would cost every owner usability.
+outliving the owner's response and stops a squatter of an unverified address from keeping the
+account, while accepting residual risks whose mitigations would hurt everyday usability.
 
-Resetting or changing the password, deleting a passkey, unlinking Google, logging out other devices,
-and reclaiming an unverified account advance the user's session generation and rotate
-`remember_token`; a session that recorded an older generation is logged out before `auth` runs.
-Deleting `sessions` rows was rejected because a login racing a reset writes its row afterwards, and
-Laravel's `AuthenticateSession` because it skips users without a password and adopts the current
-hash for a session that has none. Writes a stolen session could race (password and address changes,
-passkey registration, account deletion) lock the user row and refuse with 409 when the generation
-moved after the request began. A removed passkey or Google link may already have signed a thief in,
-so removing one also revokes the other sessions while the acting session continues under a new ID.
-Unlinking Google requires a password, so every account keeps a password or a Google link.
-Revocation covers sessions only; an app that issues API tokens revokes them on the same events.
+Credential changes, revoking another login method, logging out other devices, and reclaiming an
+unverified account advance the user's session generation and rotate `remember_token`; stale
+sessions are rejected before `auth` runs. Deleting `sessions` rows was rejected because a racing
+login writes afterwards, and Laravel's `AuthenticateSession` because it skips passwordless users
+and adopts the current hash when absent. Sensitive writes lock the user row and return 409 if the
+generation moved after the request began. Removing a passkey or Google link revokes other sessions
+in case it was already used by a thief; unlinking Google requires a password so an account always
+retains a password or Google link. API token revocation stays app-owned.
 
-Every sign-in is remembered. Signing out ends only the current device and keeps `remember_token`,
-because rotating it would end other devices' remembered sign-ins without ending their open sessions;
-a remember cookie stolen from the signing-out device stays usable until the owner logs out other
-devices.
+Every sign-in is remembered, and signing out keeps `remember_token` so other devices stay signed
+in; a remember cookie stolen from the signed-out device therefore remains valid until other devices
+are logged out.
 
-When the owner of an unverified account's address proves it through a Google link or a password
-reset, the account becomes verified and loses the registrant's password, passkeys, Google link, and
-sessions instead of merging into them. Passkey registration requires a verified email so the
-registrant cannot add one beforehand.
+Proving ownership of an unverified address via Google link or password reset verifies the account
+and wipes the registrant's password, passkeys, Google link, and sessions instead of merging.
+Passkey registration requires a verified email so a squatter cannot plant one beforehand.
 
-Changing the email address hands over password reset, so the profile page, its update, account
-deletion, and the security page require confirmation: the password, or for accounts without one a
-passkey or signing in again with Google through the existing callback URI. Laravel's three-hour
-window stays: a shorter one only narrows how long a cookie stolen after confirmation can act, at the
-cost of a prompt on most settings visits. Deletion asks nothing more, since a thief inside the
-window can take over by changing the address instead. Signing in again with Google proves only that
-the browser holds the linked Google session, because Google offers no forced reauthentication, so it
-is offered only to accounts without a password. Google's `auth_time` claim was rejected: Google
-returns it only to verified apps, only in the ID token Socialite does not verify, and a stale value
-could only be refused.
+Email changes control password reset, so settings and account deletion require confirmation within
+Laravel's three-hour window (a shorter window hurts usability more than it narrows post-confirm
+cookie theft, and deletion adds no extra prompt because an attacker inside the window could change
+the email instead). Re-authenticating with Google is limited to passwordless accounts because
+Google offers no forced reauthentication; `auth_time` was rejected as unverified by Socialite and
+limited to verified apps.
 
-A new address takes effect only after a link sent to it is opened; the previous address is told
-without a link to act on. There is no self-service restore, so an app holding more than an email
-address adds its own recovery. Address-change and Google-link links record the session generation,
-and address-change links also the verification time, so a change a thief requested cannot complete
-after the owner resets the password or switches the address back.
+New addresses activate only via a signed link sent to the new address, with a passive notice to the
+old address and no self-service restore; apps with richer data add their own recovery. Security
+action emails carry no signed links, send after commit, and ignore delivery failure; password reset
+is not announced because it originates from the same mailbox. Signed links bind the session
+generation (and verification time for email changes) so revocation invalidates pending links.
 
-Changing the password, adding a passkey, and linking Google mail the account's address after the
-change commits; the mail carries no signed action, and a delivery failure does not undo the change.
-Password reset is not announced because it starts from the mailbox that would receive the notice.
-
-Registration and address changes report an address already in use. Hiding it would need
-registration to continue from a mailed link, turning the form into a way to mail any address; the
-answer reveals only that the owner uses the app, sign-in and password reset respond the same either
-way, and registration is limited per IP address.
-
-Inertia encrypts the page data it keeps in browser history and clears it after logout, account
-deletion, and a revoked session's rejection. A revoked session first rejected on a JSON request can
-still redraw pages it already showed until its next page load; that data was already disclosed, so
-handling 401 in every fetch was rejected.
-
-URLs carrying a reset token, an email-verification hash, or a signature stay out of analytics,
-advertising scripts, logs, and Discord notifications, because each copy is a usable credential held
-by a third party.
+Registration and email changes report an already-used address rather than sending continuation
+links to arbitrary mailboxes; sign-in and password reset stay uniform and registration is
+IP-throttled. Inertia encrypts browser history and clears it on logout, deletion, and session
+revocation; a session first rejected on a JSON request may still redraw already-seen pages until
+the next navigation, which is accepted over intercepting every 401 fetch. URLs carrying tokens or
+signatures stay out of analytics, ads, logs, and Discord alerts.

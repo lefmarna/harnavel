@@ -51,28 +51,7 @@ describe('Google 認証サービス', function () {
         'unicode whitespace' => ["\u{3000}\u{3000}"],
     ]);
 
-    it('既存メールユーザーには確認メールを送信し即時連携しない', function () {
-        Mail::fake();
-
-        $existing = User::factory()->create([
-            'email' => 'existing@example.com',
-            'google_id' => null,
-        ]);
-
-        $service = app(GoogleAuthService::class);
-
-        expect(fn () => $service->findOrCreate('google-456', 'existing@example.com', 'Existing User'))
-            ->toThrow(GoogleLinkConfirmationPendingException::class);
-
-        $this->assertDatabaseHas('users', [
-            'id' => $existing->id,
-            'google_id' => null,
-        ]);
-
-        Mail::assertSent(LinkGoogleAccountMail::class);
-    });
-
-    it('既存メールユーザーへの確認メールURLに対象ユーザーとGoogle連携payloadを含められる', function () {
+    it('既存メールユーザーには確認メールを送信し即時連携せず、URL に連携 payload を含める', function () {
         Mail::fake();
 
         $existing = User::factory()->create([
@@ -85,6 +64,11 @@ describe('Google 認証サービス', function () {
 
         expect(fn () => $service->findOrCreate('google-456', 'existing@example.com', 'Existing User'))
             ->toThrow(GoogleLinkConfirmationPendingException::class);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $existing->id,
+            'google_id' => null,
+        ]);
 
         Mail::assertSent(LinkGoogleAccountMail::class, function (LinkGoogleAccountMail $mail) use ($existing): bool {
             $parts = parse_url($mail->url);
@@ -438,7 +422,7 @@ describe('Google 認証サービス', function () {
         expect($findCandidatesWithLock)->toBeTrue();
     });
 
-    describe('リンク確認の未仕様分岐', function () {
+    describe('リンク確認の競合と異常系', function () {
         it('別の google_id が既に連携済みの場合 false になる', function () {
             $existing = User::factory()->create([
                 'email' => 'already-linked@example.com',
@@ -478,7 +462,7 @@ describe('Google 認証サービス', function () {
         });
     });
 
-    describe('ユニーク制約競合の未仕様分岐', function () {
+    describe('ユニーク制約競合からの回復失敗', function () {
         it('既存ユーザーを回復できないユニーク制約競合が続く場合ログを出して GoogleAuthException になる', function () {
             $saveCount = 0;
             $googleIdLookupCount = 0;
@@ -521,7 +505,7 @@ describe('Google 認証サービス', function () {
         });
     });
 
-    describe('既存 Google アカウント同期の未仕様分岐', function () {
+    describe('既存 Google アカウントの同期', function () {
         it('既存 google_id ユーザーの email_verified_at が未設定の場合補完できる', function () {
             $existing = User::factory()->unverified()->create([
                 'email' => 'unverified-google@example.com',

@@ -12,21 +12,9 @@ import { edit as editSecurity } from "@/routes/security";
 import type { NavItem } from "@/types";
 
 const sidebarNavItems: NavItem[] = [
-  {
-    title: "プロフィール",
-    href: edit(),
-    icon: null,
-  },
-  {
-    title: "セキュリティ",
-    href: editSecurity(),
-    icon: null,
-  },
-  {
-    title: "表示設定",
-    href: editAppearance(),
-    icon: null,
-  },
+  { title: "プロフィール", href: edit() },
+  { title: "セキュリティ", href: editSecurity() },
+  { title: "表示設定", href: editAppearance() },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
@@ -49,10 +37,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                   "bg-muted": isCurrentUrl(item.href),
                 })}
               >
-                <Link href={item.href}>
-                  {item.icon && <item.icon className="h-4 w-4" />}
-                  {item.title}
-                </Link>
+                <Link href={item.href}>{item.title}</Link>
               </Button>
             ))}
           </nav>

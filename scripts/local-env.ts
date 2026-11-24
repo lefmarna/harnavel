@@ -20,13 +20,9 @@ export const readLocalEnv = (root: string, name = ".env"): Record<string, string
   );
 };
 
-export const envPort = (
-  values: Record<string, string>,
-  name: string,
-  fallback?: number,
-): number => {
+export const envPort = (values: Record<string, string>, name: string): number => {
   const value = process.env[name] ?? values[name];
-  const port = value === undefined ? fallback : Number(value);
+  const port = value === undefined ? undefined : Number(value);
 
   if (port === undefined || !Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error(`${name} に 1〜65535 のポート番号を設定してください。`);

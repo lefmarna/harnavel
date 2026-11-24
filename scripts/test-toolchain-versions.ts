@@ -3,85 +3,42 @@ import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
-const DOCKERFILE_PATH =
-  process.env.TOOLCHAIN_DOCKERFILE ?? path.join(ROOT, ".docker/php/Dockerfile");
-const WORKFLOW_PATH =
-  process.env.TOOLCHAIN_WORKFLOW ?? path.join(ROOT, ".github/workflows/delivery.yml");
-const CIRCLECI_PATH = process.env.TOOLCHAIN_CIRCLECI ?? path.join(ROOT, ".circleci/config.yml");
-
-function matchOne(content: string, re: RegExp, subject: string): string {
-  const match = content.match(re);
-  const value = match?.[1];
-
-  if (value === undefined) {
-    throw new Error(`Could not find ${subject} (pattern: ${re}).`);
-  }
-
-  return value;
-}
-
-function matchAll(content: string, re: RegExp, subject: string): string[] {
+function matchAll(file: string, re: RegExp): string[] {
+  const content = fs.readFileSync(path.join(ROOT, file), "utf8");
   const values = [...content.matchAll(re)].map((match) => match[1] ?? "");
 
   if (values.length === 0) {
-    throw new Error(`Could not find any ${subject} (pattern: ${re}).`);
+    throw new Error(`Could not find expected PHP series in ${file} (pattern: ${re}).`);
   }
 
   return values;
 }
 
-function assertAllEqual(values: string[], expected: string, subject: string, file: string): void {
-  const mismatches = values.filter((value) => value !== expected);
-
-  if (mismatches.length === 0) {
-    return;
-  }
-
-  throw new Error(
-    [
-      `${subject} mismatch: expected ${expected}, found ${mismatches.join(", ")}.`,
-      `Update .docker/php/Dockerfile and ${file} together,`,
-      "(docs/infrastructure.md, XServer toolchain).",
-    ].join("\n"),
-  );
-}
-
 function main(): void {
-  const dockerfile = fs.readFileSync(DOCKERFILE_PATH, "utf8");
-  const workflow = fs.readFileSync(WORKFLOW_PATH, "utf8");
+  const [phpSeries] = matchAll(".docker/php/Dockerfile", /^FROM php:(\d+\.\d+)\.\d+-fpm/gm);
 
-  const phpSeries = matchOne(
-    dockerfile,
-    /^FROM php:(\d+\.\d+)\.\d+-fpm/m,
-    "PHP image series in the Dockerfile",
-  );
-
-  const workflowPhpSeries = matchAll(
-    workflow,
-    /\/usr\/bin\/php(\d+\.\d+)/g,
-    "usr/bin/php<major.minor> references in delivery.yml",
-  );
-  assertAllEqual(workflowPhpSeries, phpSeries, "PHP series", ".github/workflows/delivery.yml");
-  console.log(`OK: delivery.yml uses the tested PHP series (${phpSeries}).`);
-
-  for (const name of ["reusable-quality.yml", "mutation.yml"]) {
-    const file = `.github/workflows/${name}`;
-    const testedPhpSeries = matchAll(
-      fs.readFileSync(path.join(ROOT, file), "utf8"),
-      /^\s+php-version:\s*["']?(\d+\.\d+)["']?\s*$/gm,
-      `php-version in ${file}`,
-    );
-    assertAllEqual(testedPhpSeries, phpSeries, "PHP series", file);
-    console.log(`OK: ${name} tests the deployed PHP series (${phpSeries}).`);
+  if (phpSeries === undefined) {
+    throw new Error("Could not determine PHP series from .docker/php/Dockerfile.");
   }
 
-  const circleciPhpSeries = matchAll(
-    fs.readFileSync(CIRCLECI_PATH, "utf8"),
-    /image: cimg\/php:(\d+\.\d+)\./g,
-    "cimg/php images in .circleci/config.yml",
-  );
-  assertAllEqual(circleciPhpSeries, phpSeries, "PHP series", ".circleci/config.yml");
-  console.log(`OK: CircleCI tests the deployed PHP series (${phpSeries}).`);
+  const targets: [string, RegExp][] = [
+    [".github/workflows/delivery.yml", /\/usr\/bin\/php(\d+\.\d+)/g],
+    [".github/workflows/reusable-quality.yml", /^\s+php-version:\s*["']?(\d+\.\d+)["']?\s*$/gm],
+    [".github/workflows/mutation.yml", /^\s+php-version:\s*["']?(\d+\.\d+)["']?\s*$/gm],
+    [".circleci/config.yml", /image: cimg\/php:(\d+\.\d+)\./g],
+  ];
+
+  for (const [file, pattern] of targets) {
+    const mismatches = matchAll(file, pattern).filter((value) => value !== phpSeries);
+
+    if (mismatches.length > 0) {
+      throw new Error(
+        `PHP series mismatch in ${file}: expected ${phpSeries}, found ${mismatches.join(", ")}.`,
+      );
+    }
+  }
+
+  console.log(`OK: Dockerfile, workflows, and CircleCI use PHP ${phpSeries}.`);
 }
 
 main();

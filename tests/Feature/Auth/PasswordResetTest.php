@@ -125,7 +125,6 @@ describe('パスワード再設定', function () {
         $token = Password::createToken($user);
 
         $changed = false;
-        // Fortify がトークン照合用にユーザーを読み込んだ直後、別のリクエストがメールを変えたことにする。
         User::retrieved(function (User $retrieved) use (&$changed): void {
             if ($changed) {
                 return;
@@ -180,7 +179,6 @@ describe('パスワード再設定', function () {
         $token = Password::createToken($user);
 
         $changed = false;
-        // 再設定を保存した直後に、別のリクエストがメールを変えたことにする。
         Event::listen(TransactionCommitted::class, function () use (&$changed, $user): void {
             if ($changed) {
                 return;

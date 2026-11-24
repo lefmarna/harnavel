@@ -70,19 +70,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 && ! $e instanceof ThrottleRequestsException,
         );
 
-        $exceptions->report(function (ThrottleRequestsException $e): bool {
+        $notify = static fn (Throwable $e) => app(ProductionExceptionNotifier::class)
+            ->report($e, app()->bound('request') ? request() : null);
+
+        $exceptions->report(function (ThrottleRequestsException $e) use ($notify): bool {
             Log::warning('Request was rate limited.');
-            app(ProductionExceptionNotifier::class)->report($e, app()->bound('request') ? request() : null);
+            $notify($e);
 
             return false;
         });
 
-        $exceptions->report(function (Throwable $e): void {
-            app(ProductionExceptionNotifier::class)->report(
-                $e,
-                app()->bound('request') ? request() : null,
-            );
-        });
+        $exceptions->report($notify);
 
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             $status = $response->getStatusCode();

@@ -1,4 +1,3 @@
-import { Transition } from "@headlessui/react";
 import { Form, usePage } from "@inertiajs/react";
 import { useRef } from "react";
 
@@ -132,15 +131,11 @@ export default function Security({
                       パスワードを保存
                     </Button>
 
-                    <Transition
-                      show={recentlySuccessful}
-                      enter="transition ease-in-out"
-                      enterFrom="opacity-0"
-                      leave="transition ease-in-out"
-                      leaveTo="opacity-0"
-                    >
-                      <p className="text-sm text-neutral-600 dark:text-neutral-400">保存しました</p>
-                    </Transition>
+                    {recentlySuccessful && (
+                      <p className="animate-in text-sm text-neutral-600 fade-in dark:text-neutral-400">
+                        保存しました
+                      </p>
+                    )}
                   </div>
                 </>
               )}

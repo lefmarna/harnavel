@@ -1,4 +1,3 @@
-import { Transition } from "@headlessui/react";
 import { router, usePage } from "@inertiajs/react";
 import { usePasskeyRegister } from "@laravel/passkeys/react";
 import { useState } from "react";
@@ -103,15 +102,11 @@ function AvailablePasskeyRegister({ onSuccess }: Props) {
           パスキーを追加
         </Button>
 
-        <Transition
-          show={recentlyAdded}
-          enter="transition ease-in-out"
-          enterFrom="opacity-0"
-          leave="transition ease-in-out"
-          leaveTo="opacity-0"
-        >
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">パスキーを追加しました</p>
-        </Transition>
+        {recentlyAdded && (
+          <p className="animate-in text-sm text-neutral-600 fade-in dark:text-neutral-400">
+            パスキーを追加しました
+          </p>
+        )}
       </div>
     );
   }

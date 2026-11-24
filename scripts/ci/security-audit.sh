@@ -27,7 +27,6 @@ pnpm_list() {
 
 list() {
   local composer pnpm
-  # コマンド置換の中では set -e が効かないため、失敗を明示的に返す。
   composer=$(composer_list "$1") || return
   pnpm=$(pnpm_list "$1") || return
   printf '%s\n%s\n' "$composer" "$pnpm" | sed '/^$/d' | sort -u
@@ -41,6 +40,7 @@ case "${1:-}" in
   ratchet)
     : "${2:?基準の ref がありません}"
     baseline=$(mktemp -d)
+    trap 'rm -rf "$baseline"' EXIT
     git archive "$2" | tar -x -C "$baseline"
 
     head=$(list .)

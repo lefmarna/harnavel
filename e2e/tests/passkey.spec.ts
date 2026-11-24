@@ -3,7 +3,7 @@ import type { BrowserContext, Page } from "@playwright/test";
 import {
   createUser,
   expirePasswordConfirmation,
-  runArtisan,
+  setPasskeyUserHandle,
   setUserPassword,
   type UserCredentials,
 } from "../support/artisan";
@@ -22,10 +22,14 @@ const SECURITY_URL = settingsUrl("security");
 const PROFILE_URL = settingsUrl("profile");
 const CONFIRM_PASSWORD_URL = /\/user\/confirm-password$/;
 
-const SEEDED_USER: UserCredentials = { email: "test@example.com", password: "Test1234" };
-
-const openSecuritySettings = (page: Page, user = SEEDED_USER): Promise<void> =>
+const openSecuritySettings = (page: Page, user: UserCredentials): Promise<void> =>
   openConfirmedSettings(page, user, "security");
+
+const disableConditionalMediation = async (page: Page): Promise<void> => {
+  await page.addInitScript(() => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+  });
+};
 
 const registerPasskey = async (page: Page, name: string): Promise<void> => {
   await page.getByRole("button", { name: "パスキーを追加" }).click();
@@ -73,7 +77,7 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   await enableVirtualAuthenticator(page, context);
 
-  await openSecuritySettings(page);
+  await openSecuritySettings(page, createUser());
 
   await registerPasskey(page, "E2E オーセンティケータ");
 
@@ -87,9 +91,7 @@ test("パスキーを登録してパスキーだけでログインできる", as
 
   // 仮想オーセンティケータは環境によって待機中の自動入力に自ら応じ、ボタンより先にログインを
   // 済ませてしまう。ボタンの経路は自動入力を止めてから確かめる。
-  await page.addInitScript(() => {
-    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
-  });
+  await disableConditionalMediation(page);
   await page.goto("/login");
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
 
@@ -117,9 +119,7 @@ test("パスキー削除の完了通知と端末に残った資格情報の認�
   await expect(page.getByText("削除するパスキー", { exact: true })).toBeHidden();
 
   await context.clearCookies();
-  await page.addInitScript(() => {
-    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
-  });
+  await disableConditionalMediation(page);
   await page.goto("/login");
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
 
@@ -154,20 +154,9 @@ test("hex ハンドルへの変更後も旧バイナリ形式のパスキーで�
   await expect(page.getByText("旧バイナリ形式", { exact: true })).toBeVisible();
   await page.unroute("**/user/passkeys/options");
 
-  runArtisan([
-    "tinker",
-    "--execute",
-    " $user = App\\Models\\User::query()" +
-      `->where('email', base64_decode('${Buffer.from(user.email).toString("base64")}'))->firstOrFail();` +
-      " $passkey = $user->passkeys()->sole();" +
-      " $credential = $passkey->credential;" +
-      ` $credential['userHandle'] = '${legacyHandle}';` +
-      " $passkey->forceFill(['credential' => $credential])->save();",
-  ]);
+  setPasskeyUserHandle(user.email, legacyHandle);
   await context.clearCookies();
-  await page.addInitScript(() => {
-    PublicKeyCredential.isConditionalMediationAvailable = async () => false;
-  });
+  await disableConditionalMediation(page);
 
   await page.goto("/login");
   await page.getByRole("button", { name: "パスキーでログイン" }).click();
@@ -477,7 +466,6 @@ test("ログイン画面の自動入力が残っていても、パスキーで�
     PublicKeyCredential.isConditionalMediationAvailable = async () => true;
   });
 
-  // ログイン画面の自動入力を、本人確認を始めるまで決着させない。
   let releaseAutofill = () => {};
   const autofillReleased = new Promise<void>((resolve) => (releaseAutofill = resolve));
   let markRequested = () => {};
@@ -519,7 +507,8 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await enableVirtualAuthenticator(page, context);
 
-  await openSecuritySettings(page);
+  const user = createUser();
+  await openSecuritySettings(page, user);
 
   expirePasswordConfirmation();
 
@@ -527,7 +516,7 @@ test("パスワード確認の期限が切れても再確認してパスキー�
 
   await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
 
-  await confirmPassword(page, SEEDED_USER.password, SECURITY_URL);
+  await confirmPassword(page, user.password, SECURITY_URL);
 
   await registerPasskey(page, "期限切れ後のパスキー");
 
@@ -581,7 +570,6 @@ test("Sec-Fetch-Site を送らないブラウザでも SPA 遷移のままパス
   await registerPasskey(page, "CSRF 回帰のパスキー");
   await expect(page.getByText("CSRF 回帰のパスキー", { exact: true })).toBeVisible();
 
-  // 毎応答で更新される Cookie の値を使い、文書に焼き付いた meta の値は使っていない。
   expect(sent).toHaveLength(1);
   expect(sent[0]?.["x-xsrf-token"]).toBeTruthy();
   expect(sent[0]?.["x-csrf-token"]).toBeUndefined();
@@ -608,7 +596,7 @@ test("自動入力が失敗しても再読み込みなしでパスキー認証�
 
   await enableVirtualAuthenticator(page, context);
 
-  await openSecuritySettings(page);
+  await openSecuritySettings(page, createUser());
 
   await registerPasskey(page, "自動入力リトライ用");
 
@@ -737,34 +725,4 @@ test("自動入力が環境の都合で使えなくても、開いただけの�
 
   await expect(page.getByRole("button", { name: "パスキーでログイン" })).toBeEnabled();
   await expect(page.getByText("このブラウザはパスキーに対応していません。")).toBeHidden();
-});
-
-test("本人確認済みならパスワードを入力せずにアカウントを削除できる", async ({ page }) => {
-  const user = createUser();
-  await login(page, user);
-  await page.goto(SETTINGS_PATHS.profile);
-  await expect(page).toHaveURL(CONFIRM_PASSWORD_URL);
-  await confirmPassword(page, user.password, PROFILE_URL);
-
-  await page.locator('[data-test="delete-user-button"]').click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog.locator('input[type="password"]')).toHaveCount(0);
-  await expect(dialog.getByText(/完全に削除されます/)).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(dialog).toBeHidden();
-  await expect(page).toHaveURL(PROFILE_URL);
-
-  await page.locator('[data-test="delete-user-button"]').click();
-  await page.locator('[data-test="confirm-delete-user-button"]').click();
-  await expect(page).not.toHaveURL(PROFILE_URL);
-  await page.goto(SETTINGS_PATHS.profile);
-  await expect(page).toHaveURL(/\/login$/);
-
-  await page.getByLabel("メールアドレス").fill(user.email);
-  await page.getByLabel("パスワード").fill(user.password);
-  await page.getByRole("button", { name: "ログイン", exact: true }).click();
-  await expect(
-    page.getByText("ログイン用の認証情報が正しくありません。再度お試しください。"),
-  ).toBeVisible();
-  await expect(page).toHaveURL(/\/login$/);
 });

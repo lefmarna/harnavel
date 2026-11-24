@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "node:test";
 import { runInNewContext } from "node:vm";
 
 import { parse } from "yaml";
@@ -158,6 +158,10 @@ beforeEach(function () {
   };
 });
 
+afterEach(function () {
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 const artifact = (name: string, runs: Record<number, Run>) => {
   fixture.api[`repos/${REPO}/actions/artifacts?name=${name}&per_page=100`] = {
     artifacts: Object.keys(runs).map((id) => ({
@@ -296,45 +300,50 @@ const auditAgainstDeployed = (
   pageSize = Infinity,
 ) => {
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "delivery-audit-"));
-  fs.mkdirSync(path.join(cwd, "scripts/ci"), { recursive: true });
-  fs.writeFileSync(path.join(cwd, "scripts/ci/security-audit.sh"), RECORD_STUB, { mode: 0o755 });
-  for (const command of ["git", "composer", "pnpm"]) {
-    fs.writeFileSync(path.join(dir, command), RECORD_STUB, { mode: 0o755 });
-  }
 
-  const list = `repos/${REPO}/deployments?environment=Production&per_page=100`;
-  if (deployments) {
-    const listed = deployments.map(({ sha }, index) => ({ id: index + 1, sha }));
-    const pages = [];
-    for (let start = 0; start < listed.length; start += Math.min(pageSize, listed.length)) {
-      pages.push(listed.slice(start, start + pageSize));
+  try {
+    fs.mkdirSync(path.join(cwd, "scripts/ci"), { recursive: true });
+    fs.writeFileSync(path.join(cwd, "scripts/ci/security-audit.sh"), RECORD_STUB, { mode: 0o755 });
+    for (const command of ["git", "composer", "pnpm"]) {
+      fs.writeFileSync(path.join(dir, command), RECORD_STUB, { mode: 0o755 });
     }
-    fixture.api[list] = { __pages: pages.length ? pages : [[]] };
-    deployments.forEach(({ states }, index) => {
-      if (index + 1 !== unreadable) {
-        fixture.api[`repos/${REPO}/deployments/${index + 1}/statuses?per_page=100`] = states.map(
-          (state) => ({ state }),
-        );
-      }
-    });
-  }
-  fs.writeFileSync(path.join(dir, "fixture.json"), JSON.stringify(fixture));
 
-  const calls = path.join(dir, "calls");
-  fs.writeFileSync(calls, "");
-  const result = spawnSync("bash", ["-e", "-c", auditStep?.run ?? "exit 1"], {
-    cwd,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      PATH: `${dir}:${process.env.PATH}`,
-      FIXTURE: path.join(dir, "fixture.json"),
-      CALLS: calls,
-      GITHUB_REPOSITORY: REPO,
-      ENVIRONMENT: "Production",
-    },
-  });
-  return { status: result.status, calls: fs.readFileSync(calls, "utf8").trim().split("\n") };
+    const list = `repos/${REPO}/deployments?environment=Production&per_page=100`;
+    if (deployments) {
+      const listed = deployments.map(({ sha }, index) => ({ id: index + 1, sha }));
+      const pages = [];
+      for (let start = 0; start < listed.length; start += Math.min(pageSize, listed.length)) {
+        pages.push(listed.slice(start, start + pageSize));
+      }
+      fixture.api[list] = { __pages: pages.length ? pages : [[]] };
+      deployments.forEach(({ states }, index) => {
+        if (index + 1 !== unreadable) {
+          fixture.api[`repos/${REPO}/deployments/${index + 1}/statuses?per_page=100`] = states.map(
+            (state) => ({ state }),
+          );
+        }
+      });
+    }
+    fs.writeFileSync(path.join(dir, "fixture.json"), JSON.stringify(fixture));
+
+    const calls = path.join(dir, "calls");
+    fs.writeFileSync(calls, "");
+    const result = spawnSync("bash", ["-e", "-c", auditStep?.run ?? "exit 1"], {
+      cwd,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${dir}:${process.env.PATH}`,
+        FIXTURE: path.join(dir, "fixture.json"),
+        CALLS: calls,
+        GITHUB_REPOSITORY: REPO,
+        ENVIRONMENT: "Production",
+      },
+    });
+    return { status: result.status, calls: fs.readFileSync(calls, "utf8").trim().split("\n") };
+  } finally {
+    fs.rmSync(cwd, { recursive: true, force: true });
+  }
 };
 
 describe("delivery が配備前に比べる脆弱性", function () {

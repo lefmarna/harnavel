@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { parse } from "yaml";
@@ -6,8 +8,7 @@ import { parse } from "yaml";
 // XServer の上書き配備では /up だけで途中状態の安全性を証明できないため、TADR-0001 の配備契約を検証する。
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const WORKFLOW =
-  process.env.DEPLOY_LIFECYCLE_WORKFLOW ?? path.join(ROOT, ".github/workflows/delivery.yml");
+const WORKFLOW = path.join(ROOT, ".github/workflows/delivery.yml");
 
 type Step = {
   name?: string;
@@ -118,6 +119,8 @@ for (const command of [
   "pnpm run format:check",
   "pnpm run lint:check",
   "pnpm run types:check",
+  "pnpm run test:deploy-rsync-excludes",
+  "pnpm run test:toolchain-versions",
   "pnpm run test:unit",
   "composer test:coverage",
   "pnpm test:e2e",
@@ -141,13 +144,6 @@ if (workflow.concurrency?.["cancel-in-progress"] !== false) {
 }
 
 requireText("Enable maintenance mode", "artisan down", "take the release into maintenance");
-
-// --render が空だと配備途中の Laravel が起動してしまうため、事前描画するビュー名を必須にする。
-for (const step of ["Enable maintenance mode", "Run post-deploy commands"]) {
-  if (!/artisan down[^\n]*--render=(?:'[^'\s]+'|"[^"\s]+"|[^\s'"]+)/.test(runOf(step))) {
-    fail(`step "${step}" must prerender a named maintenance view (artisan down --render=<view>)`);
-  }
-}
 requireText(
   "Enable maintenance mode",
   "vendor/autoload.php",
@@ -155,9 +151,6 @@ requireText(
 );
 requireText("Deploy to XServer via Rsync", "--delete", "replace the release");
 requireText("Disable maintenance mode", "artisan up", "lift maintenance");
-
-// 失敗した配備から復旧できるよう artisan down の失敗は許容するが、その場合はメンテナンス状態を再検証する。
-const enable = runOf("Enable maintenance mode");
 
 // /up はメンテナンス対象外なので、レスポンダー・描画済みテンプレート・除外設定を個別に確認する。
 const PROOF_OF_MAINTENANCE: [RegExp, string][] = [
@@ -168,25 +161,69 @@ const PROOF_OF_MAINTENANCE: [RegExp, string][] = [
   [/except/, "reject an exclusion list that would let requests through"],
 ];
 
-if (/artisan down[^\n]*\|\|/.test(enable.replaceAll(/'[^']*'/g, ""))) {
+// --render が空だと配備途中の Laravel が起動してしまうため、事前描画するビュー名を必須にする。
+for (const step of ["Enable maintenance mode", "Run post-deploy commands"]) {
+  const script = runOf(step);
+  if (!/artisan down[^\n]*--render=(?:'[^'\s]+'|"[^"\s]+"|[^\s'"]+)/.test(script)) {
+    fail(`step "${step}" must prerender a named maintenance view (artisan down --render=<view>)`);
+  }
+
   for (const [pattern, why] of PROOF_OF_MAINTENANCE) {
-    if (!pattern.test(enable)) {
-      fail(`an absorbed maintenance failure must ${why} before the release is replaced`);
+    if (!pattern.test(script)) {
+      fail(`step "${step}" must ${why} before continuing`);
     }
   }
 }
 
-// 待機時間は配備設定が定めるので、メンテナンス中に待つことだけを確かめる。
 if (!/\bsleep\s+[1-9]/.test(runOf("Wait for OPcache revalidation"))) {
   fail("the OPcache window must be waited out while maintenance is still active");
 }
 
-// リダイレクトや 204 を正常扱いにすると配備失敗を見逃すため、正常判定は HTTP 200 に限定する。
+// リダイレクトや 204、キャッシュ応答を正常扱いにすると配備失敗を見逃すため、HTTP 200 かつオリジン応答だけを受理する。
 const health = runOf("Verify release health");
-const accepted = [...health.matchAll(/=\s*"?(\d{2,3})"?/g)].map((match) => match[1]);
+const healthTmp = fs.mkdtempSync(path.join(os.tmpdir(), "deploy-health-"));
 
-if (accepted.length !== 1 || accepted[0] !== "200") {
-  fail("release health must be decided by an exact match on HTTP 200 and no other status");
+try {
+  fs.writeFileSync(
+    path.join(healthTmp, "curl"),
+    `#!/usr/bin/env bash
+printf '%s' "$STUB_RESPONSE"
+`,
+    { mode: 0o755 },
+  );
+  fs.writeFileSync(path.join(healthTmp, "sleep"), "#!/usr/bin/env bash\nexit 0\n", { mode: 0o755 });
+
+  const cases: [string, string, boolean][] = [
+    ["HTTP 200 + DYNAMIC", "HTTP/2 200\r\ncf-cache-status: DYNAMIC\r\n\r\n200", true],
+    ["HTTP 200 + BYPASS", "HTTP/2 200\r\ncf-cache-status: BYPASS\r\n\r\n200", true],
+    [
+      "HTTP 302 redirect (e.g. Access login)",
+      "HTTP/2 302\r\ncf-cache-status: DYNAMIC\r\n\r\n302",
+      false,
+    ],
+    ["HTTP 204", "HTTP/2 204\r\ncf-cache-status: DYNAMIC\r\n\r\n204", false],
+    ["HTTP 500", "HTTP/2 500\r\ncf-cache-status: DYNAMIC\r\n\r\n500", false],
+    ["HTTP 200 + HIT (cached)", "HTTP/2 200\r\ncf-cache-status: HIT\r\n\r\n200", false],
+    ["HTTP 200 without cf-cache-status", "HTTP/2 200\r\n\r\n200", false],
+  ];
+
+  for (const [label, stubResponse, shouldPass] of cases) {
+    const result = spawnSync("bash", ["-e", "-c", health], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${healthTmp}:${process.env.PATH}`,
+        HEALTHCHECK_URL: "https://example.com/up",
+        STUB_RESPONSE: stubResponse,
+      },
+    });
+    const passed = result.status === 0;
+    if (passed !== shouldPass) {
+      fail(`Verify release health should ${shouldPass ? "accept" : "reject"} ${label}`);
+    }
+  }
+} finally {
+  fs.rmSync(healthTmp, { recursive: true, force: true });
 }
 
 const postDeploy = runOf("Run post-deploy commands");

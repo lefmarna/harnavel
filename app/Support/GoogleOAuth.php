@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-class GoogleOAuth
+final class GoogleOAuth
 {
     public static function isConfigured(): bool
     {

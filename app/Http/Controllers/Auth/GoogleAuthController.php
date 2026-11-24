@@ -135,7 +135,7 @@ class GoogleAuthController extends Controller
         Auth::login($user, remember: true);
         $request->session()->regenerate();
 
-        return redirect()->intended(config('fortify.home'));
+        return redirect()->intended(Config::string('fortify.home'));
     }
 
     private function completeReauthentication(Request $request): RedirectResponse
@@ -175,7 +175,7 @@ class GoogleAuthController extends Controller
 
         Log::info('User confirmed identity with Google.', ['user_id' => $user->getKey()]);
 
-        return redirect()->intended(config('fortify.home'));
+        return redirect()->intended(Config::string('fortify.home'));
     }
 
     public function linkConfirm(): Response

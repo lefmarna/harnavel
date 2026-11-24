@@ -1,6 +1,6 @@
 name: security
 
-# main への push でも動き、その修正を develop へ取り込む。
+# main の修正を develop へ取り込むため push でも起動する。
 on:
   schedule:
     - cron: "17 18 * * *"

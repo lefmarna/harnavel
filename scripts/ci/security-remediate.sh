@@ -202,27 +202,30 @@ if [ -z "$findings" ] && [ ${#notes[@]} -eq 0 ] && [ "$(git rev-parse HEAD)" = "
   exit 0
 fi
 
-fix_composer "$findings"
-fix_pnpm "$findings"
+remaining=
+if [ -n "$findings" ]; then
+  fix_composer "$findings"
+  fix_pnpm "$findings"
 
-# 自動修正は lockfile だけに限る。宣言の変更はテンプレートかアプリで判断する。
-unexpected=$(git status --porcelain --untracked-files=no | awk '$2 != "composer.lock" && $2 != "pnpm-lock.yaml" { print $2 }')
-if [ -n "$unexpected" ]; then
-  git checkout -q -- .
-  notes+=("The automatic fix also changed $(paste -sd ' ' <<< "$unexpected"), so it was discarded.")
-fi
+  # 自動修正は lockfile だけに限る。宣言の変更はテンプレートかアプリで判断する。
+  unexpected=$(git status --porcelain --untracked-files=no | awk '$2 != "composer.lock" && $2 != "pnpm-lock.yaml" { print $2 }')
+  if [ -n "$unexpected" ]; then
+    git checkout -q -- .
+    notes+=("The automatic fix also changed $(paste -sd ' ' <<< "$unexpected"), so it was discarded.")
+  fi
 
-remaining=$("$audit" list .)
-fixed=$(comm -23 <(cut -f1 <<< "$findings" | sort -u) <(cut -f1 <<< "$remaining" | sort -u) | sed '/^$/d')
-if [ -n "$fixed" ]; then
-  git add composer.lock pnpm-lock.yaml
-  git commit -q -F - <<EOF
+  remaining=$("$audit" list .)
+  fixed=$(comm -23 <(cut -f1 <<< "$findings" | sort -u) <(cut -f1 <<< "$remaining" | sort -u) | sed '/^$/d')
+  if [ -n "$fixed" ]; then
+    git add composer.lock pnpm-lock.yaml
+    git commit -q -F - <<EOF
 fix(deps): resolve vulnerable dependencies on $base
 
 $(while read -r key; do echo "- $key"; done <<< "$fixed")
 EOF
-else
-  git checkout -q -- composer.lock pnpm-lock.yaml
+  else
+    git checkout -q -- composer.lock pnpm-lock.yaml
+  fi
 fi
 
 if [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/$base")" ]; then

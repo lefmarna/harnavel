@@ -6,8 +6,7 @@ use Tests\Support\AppSubprocess;
 
 describe('本番環境の起動時検査', function () {
     it('APP_DEBUG が有効だと起動しない', function (string $environment) {
-        $process = AppSubprocess::php(
-            'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();',
+        $process = AppSubprocess::boot(
             AppSubprocess::productionEnvironment(['APP_ENV' => $environment, 'APP_DEBUG' => 'true']),
         );
 

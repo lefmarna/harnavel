@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { beforeEach, describe, it } from "node:test";
+import { after, afterEach, before, beforeEach, describe, it } from "node:test";
 import { runInNewContext } from "node:vm";
 
 import { parse } from "yaml";
@@ -70,7 +70,6 @@ const fs = require("fs");
 const { spawnSync } = require("child_process");
 const args = process.argv.slice(2);
 const fixture = JSON.parse(fs.readFileSync(process.env.FIXTURE, "utf8"));
-const call = { args };
 if (args[0] === "workflow" && args[1] === "run") {
   fs.appendFileSync(process.env.CALLS, JSON.stringify({ workflow: args[2], ref: args[args.indexOf("--ref") + 1], args }) + "\\n");
   process.exit(0);
@@ -167,6 +166,10 @@ beforeEach(function () {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "security-fix-"));
   fs.writeFileSync(path.join(dir, "gh"), GH_STUB, { mode: 0o755 });
   fixture = {};
+});
+
+afterEach(function () {
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 describe("security-fix の反映", function () {
@@ -314,43 +317,52 @@ const pnpmAudit = (advisories: Record<string, readonly string[]>): AuditResult =
   };
 };
 
-const ratchet = (audits: {
-  composer: { head: AuditResult; base: AuditResult };
-  pnpm: { head: AuditResult; base: AuditResult };
-}) => {
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "security-audit-repo-"));
-  // コミットのフックから実行すると GIT_INDEX_FILE などを引き継ぎ、一時リポジトリの操作が作業ツリーの index を書き換える。
-  const env = {
-    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))),
-    GIT_CONFIG_GLOBAL: "/dev/null",
-    GIT_CONFIG_NOSYSTEM: "1",
-  };
-  const git = (...args: string[]) =>
-    spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@invalid", ...args], {
-      cwd: repo,
-      env,
-    });
-  git("init", "-q");
-  fs.writeFileSync(path.join(repo, "composer.lock"), "{}");
-  git("add", ".");
-  git("commit", "-q", "-m", "base");
-
-  fs.writeFileSync(path.join(dir, "composer"), AUDIT_STUB("composer", "-d"), { mode: 0o755 });
-  fs.writeFileSync(path.join(dir, "pnpm"), AUDIT_STUB("pnpm", "--dir"), { mode: 0o755 });
-  fs.writeFileSync(path.join(dir, "fixture.json"), JSON.stringify(audits));
-
-  return spawnSync("bash", [path.join(ROOT, "scripts/ci/security-audit.sh"), "ratchet", "HEAD"], {
-    cwd: repo,
-    encoding: "utf8",
-    env: {
-      ...env,
-      PATH: `${dir}:${process.env.PATH}`,
-      FIXTURE: path.join(dir, "fixture.json"),
-    },
-  });
+// コミットのフックから実行すると GIT_INDEX_FILE などを引き継ぎ、一時リポジトリの操作が作業ツリーの index を書き換える。
+const cleanGitEnv = {
+  ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))),
+  GIT_CONFIG_GLOBAL: "/dev/null",
+  GIT_CONFIG_NOSYSTEM: "1",
 };
 
 describe("修正の検証で許す脆弱性", function () {
+  let repo: string;
+
+  before(function () {
+    repo = fs.mkdtempSync(path.join(os.tmpdir(), "security-audit-repo-"));
+    const git = (...args: string[]) =>
+      spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@invalid", ...args], {
+        cwd: repo,
+        env: cleanGitEnv,
+      });
+    git("init", "-q");
+    fs.writeFileSync(path.join(repo, "composer.lock"), "{}");
+    git("add", ".");
+    git("commit", "-q", "-m", "base");
+  });
+
+  after(function () {
+    fs.rmSync(repo, { recursive: true, force: true });
+  });
+
+  const ratchet = (audits: {
+    composer: { head: AuditResult; base: AuditResult };
+    pnpm: { head: AuditResult; base: AuditResult };
+  }) => {
+    fs.writeFileSync(path.join(dir, "composer"), AUDIT_STUB("composer", "-d"), { mode: 0o755 });
+    fs.writeFileSync(path.join(dir, "pnpm"), AUDIT_STUB("pnpm", "--dir"), { mode: 0o755 });
+    fs.writeFileSync(path.join(dir, "fixture.json"), JSON.stringify(audits));
+
+    return spawnSync("bash", [path.join(ROOT, "scripts/ci/security-audit.sh"), "ratchet", "HEAD"], {
+      cwd: repo,
+      encoding: "utf8",
+      env: {
+        ...cleanGitEnv,
+        PATH: `${dir}:${process.env.PATH}`,
+        FIXTURE: path.join(dir, "fixture.json"),
+      },
+    });
+  };
+
   it("基準ブランチにも残っている脆弱性だけなら通す", function () {
     const result = ratchet({
       composer: {

@@ -30,6 +30,17 @@ final class AppSubprocess
     /**
      * @param  array<string, string>  $environment
      */
+    public static function boot(array $environment, string $afterBoot = ''): Process
+    {
+        return self::php(
+            'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();'.$afterBoot,
+            $environment,
+        );
+    }
+
+    /**
+     * @param  array<string, string>  $environment
+     */
     public static function php(string $script, array $environment): Process
     {
         return self::start([PHP_BINARY, '-r', $script], $environment);

@@ -3,12 +3,15 @@
 declare(strict_types=1);
 
 use App\Actions\Fortify\ResetUserPassword;
+use App\Actions\Passkeys\DeletePasskey;
 use App\Http\Middleware\RejectRevokedSessions;
 use App\Models\User;
+use App\Services\Account\SessionRevocation;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Validated;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Passkeys\Actions\StorePasskey;
+use Laravel\Passkeys\Passkey;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Uid\Uuid;
 use Webauthn\CredentialRecord;
@@ -342,5 +346,30 @@ describe('セッションの失効', function () {
         Auth::login($loadedBeforeRevocation, remember: true);
 
         expect($user->refresh()->getRememberToken())->toBe($owner->getRememberToken());
+    });
+
+    it('パスキー削除後のセッション更新に失敗しても、確定済みの削除をログに残す', function () {
+        Log::spy();
+        $user = User::factory()->create();
+        $passkey = $user->passkeys()->create([
+            'name' => 'iPhone',
+            'credential_id' => 'credential-1',
+            'credential' => ['id' => 'credential-1'],
+        ]);
+        $session = Mockery::mock(Session::class);
+        $session->shouldReceive('migrate')
+            ->once()
+            ->with(true)
+            ->andThrow(new RuntimeException('session lock timeout'));
+
+        expect(fn () => (new DeletePasskey(app(SessionRevocation::class), $session))($user, $passkey))
+            ->toThrow(RuntimeException::class, 'session lock timeout');
+
+        expect(Passkey::query()->find($passkey->getKey()))->toBeNull()
+            ->and($user->refresh()->session_generation)->toBe(1);
+        Log::shouldHaveReceived('info')->with('Passkey deleted.', [
+            'user_id' => $user->getKey(),
+            'passkey_id' => $passkey->getKey(),
+        ])->once();
     });
 });

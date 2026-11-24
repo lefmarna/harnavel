@@ -141,7 +141,7 @@ function writeEnv(values: Record<string, string>): void {
   }
   const content = lines.join("\n");
   // Linux の bind mount ではホスト所有のまま見えるため、PHP-FPM の www-data が読める権限にする。
-  fs.writeFileSync(envFile, content, { mode: 0o644 });
+  fs.writeFileSync(envFile, content);
   fs.chmodSync(envFile, 0o644);
 }
 
@@ -483,7 +483,9 @@ async function main(): Promise<void> {
       break;
     }
     default:
-      throw new Error("env / up / remove / info / infra-stop を指定してください。");
+      throw new Error(
+        "env / up / backend / initialize-app / remove / info / infra-stop を指定してください。",
+      );
   }
 }
 

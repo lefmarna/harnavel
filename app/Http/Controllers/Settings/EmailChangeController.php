@@ -23,8 +23,7 @@ class EmailChangeController extends Controller
 
     public function verify(Request $request): Response
     {
-        /** @var array{from: string, to: string, state: string}|null $payload */
-        $payload = SignedPayloadLink::read($request, ['from', 'to', 'state']);
+        $payload = $this->readPayload($request);
 
         return $payload === null
             ? $this->page('error')
@@ -33,8 +32,7 @@ class EmailChangeController extends Controller
 
     public function complete(Request $request, string $userId): RedirectResponse
     {
-        /** @var array{from: string, to: string, state: string}|null $payload */
-        $payload = SignedPayloadLink::read($request, ['from', 'to', 'state']);
+        $payload = $this->readPayload($request);
 
         $confirmed = $payload !== null
             && $this->emailChangeService->confirm($userId, $payload['from'], $payload['to'], $payload['state']);
@@ -50,6 +48,15 @@ class EmailChangeController extends Controller
     public function failed(): Response
     {
         return $this->page('error');
+    }
+
+    /**
+     * @return array{from: string, to: string, state: string}|null
+     */
+    private function readPayload(Request $request): ?array
+    {
+        /** @var array{from: string, to: string, state: string}|null */
+        return SignedPayloadLink::read($request, ['from', 'to', 'state']);
     }
 
     /**

@@ -27,18 +27,13 @@ describe('セキュリティ設定', function () {
         $response
             ->assertOk()
             ->assertInertia(
-                fn ($page) => assertInertiaShape($page, 'settings/security', [
-                    'canManagePasskeys',
-                    'canRegisterPasskey',
-                    'passkeys',
-                    'googleLinked',
-                    'canUnlinkGoogle',
-                    'seo.title',
-                    'seo.description',
-                ])
+                fn ($page) => $page
+                    ->component('settings/security')
                     ->where('canManagePasskeys', true)
                     ->where('canRegisterPasskey', true)
                     ->where('passkeys', [])
+                    ->where('googleLinked', false)
+                    ->where('canUnlinkGoogle', false)
                     ->where('seo.title', pageCopy('pages.settings.security.title'))
                     ->where('seo.description', pageCopy('pages.settings.security.description'))
             );

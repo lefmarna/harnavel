@@ -27,10 +27,9 @@ type Props = {
 export default function ConfirmPassword({ hasPasskeys, canConfirmWithGoogle, error }: Props) {
   const { auth } = usePage<SharedData>().props;
   const canUsePasskey = usePasskeyAvailable();
+  const showPasskey = hasPasskeys && canUsePasskey;
 
   if (!auth.hasPassword) {
-    const showPasskey = hasPasskeys && canUsePasskey;
-
     return (
       <AuthLayout description="セキュリティ保護のため、本人確認をしてください。">
         <div className="grid gap-3">
@@ -51,8 +50,6 @@ export default function ConfirmPassword({ hasPasskeys, canConfirmWithGoogle, err
       </AuthLayout>
     );
   }
-
-  const showPasskey = hasPasskeys && canUsePasskey;
 
   return (
     <AuthLayout

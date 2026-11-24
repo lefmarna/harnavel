@@ -47,19 +47,20 @@ export default function DeleteUser() {
               className="space-y-6"
             >
               {({ processing }) => (
-                <>
-                  <DialogFooter className="gap-2">
-                    <DialogClose asChild>
-                      <Button variant="secondary">キャンセル</Button>
-                    </DialogClose>
+                <DialogFooter className="gap-2">
+                  <DialogClose asChild>
+                    <Button variant="secondary">キャンセル</Button>
+                  </DialogClose>
 
-                    <Button variant="destructive" disabled={processing} asChild>
-                      <button type="submit" data-test="confirm-delete-user-button">
-                        アカウントを削除
-                      </button>
-                    </Button>
-                  </DialogFooter>
-                </>
+                  <Button
+                    type="submit"
+                    variant="destructive"
+                    disabled={processing}
+                    data-test="confirm-delete-user-button"
+                  >
+                    アカウントを削除
+                  </Button>
+                </DialogFooter>
               )}
             </Form>
           </DialogContent>

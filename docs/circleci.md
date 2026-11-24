@@ -69,9 +69,7 @@ echo "GCP_WORKLOAD_IDENTITY_PROVIDER=$POOLS/github/providers/github"
 
 ## Connecting a repository
 
-1. Merge the template's CircleCI support into the repository. Branches created before that merge
-   lack `.circleci/`, so their pipelines fail until they merge the base.
-2. Grant object access under the repository's prefix:
+1. Grant object access under the repository's prefix:
 
    ```bash
    REPO=<repository-name>
@@ -86,11 +84,11 @@ echo "GCP_WORKLOAD_IDENTITY_PROVIDER=$POOLS/github/providers/github"
      --member="$GITHUB" --condition="$ONLY_OWN"
    ```
 
-3. In CircleCI (up to 10 projects on Free), create the project with `.circleci/config.yml` and
+2. In CircleCI (up to 10 projects on Free), create the project with `.circleci/config.yml` and
    three triggers: **Non-draft PR opened**, **Pushes to open non-draft PRs**, and **PR marked ready
    for review**. Remove **All pushes**, and enable **Auto-cancel redundant workflows** under
    **Project Settings** > **Advanced**.
-4. Set the Actions variables last, because they switch pull request E2E and mutation testing to
+3. Set the Actions variables last, because they switch pull request E2E and mutation testing to
    CircleCI:
 
    ```bash

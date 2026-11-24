@@ -4,13 +4,7 @@ COPY --from=composer:2.10.3 /usr/bin/composer /usr/bin/composer
 
 RUN apt-get update \
   && apt-get install -y \
-  bash \
-  coreutils \
-  findutils \
-  gawk \
   git \
-  grep \
-  gzip \
   libfreetype6-dev \
   libicu-dev \
   libjpeg-dev \
@@ -31,11 +25,9 @@ RUN apt-get update \
   mbstring \
   pdo_mysql \
   zip \
-  && composer global require "laravel/installer" \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-ENV PATH=/root/.composer/vendor/bin:$PATH
 WORKDIR /app
 
 # 参照アプリ生成（update-laravel-packages スキル）専用の使い捨てステージ。
@@ -48,5 +40,8 @@ RUN apt-get update \
   && apt-get install -y nodejs \
   && npm install -g corepack \
   && corepack enable \
+  && composer global require "laravel/installer" \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
+
+ENV PATH=/root/.composer/vendor/bin:$PATH

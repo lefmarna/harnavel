@@ -7,9 +7,6 @@ use Illuminate\Support\Facades\DB;
 
 mutates(PruneExpiredCacheCommand::class);
 
-// database ストアは、期限切れの行を同じキーで読み直すまで消さない。RateLimiter のキーのように
-// 二度と読まれないキーは、消さなければ cache テーブルに残り続ける。
-
 beforeEach(function () {
     config(['cache.default' => 'database']);
     $this->freezeSecond();

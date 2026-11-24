@@ -4,7 +4,7 @@ executors:
   browsers:
     resource_class: medium
     docker:
-      - image: cimg/php:8.5.12-browsers
+      - image: cimg/php:8.5.13-browsers
       - &mariadb
         image: mariadb:10.11
         environment:
@@ -13,7 +13,7 @@ executors:
   php:
     resource_class: small
     docker:
-      - image: cimg/php:8.5.12
+      - image: cimg/php:8.5.13
       - *mariadb
 
 commands:

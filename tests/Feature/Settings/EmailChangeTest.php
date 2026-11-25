@@ -49,24 +49,19 @@ function completeEmailChange(string $verifyUrl, string $previousEmail): void
 }
 
 describe('メールアドレスの変更', function () {
-    it('新しいアドレスを確認するまでメールアドレスを変えない', function () {
-        $user = User::factory()->create(['email' => 'old@example.com']);
-
-        requestEmailChange($user, 'new@example.com');
-
-        expect($user->refresh()->email)->toBe('old@example.com')
-            ->and($user->email_verified_at)->not->toBeNull();
-    });
-
-    it('確認メールを送ったことを画面に伝える', function () {
+    it('確認メールを送ったことを画面に伝え、新しいアドレスを確認するまでメールアドレスを変えない', function () {
         Mail::fake();
-        $user = User::factory()->create();
+        $user = User::factory()->create(['email' => 'old@example.com']);
 
         $this->actingAs($user)
             ->withSession(['auth.password_confirmed_at' => now()->getTimestamp()])
             ->patch(route('profile.update'), ['name' => $user->name, 'email' => 'new@example.com'])
             ->assertRedirect(settingsUrl('profile'))
             ->assertSessionHas('status', 'email-change-link-sent');
+
+        Mail::assertSent(VerifyNewEmailMail::class, fn (VerifyNewEmailMail $mail): bool => $mail->hasTo('new@example.com'));
+        expect($user->refresh()->email)->toBe('old@example.com')
+            ->and($user->email_verified_at)->not->toBeNull();
     });
 
     it('確認メールを送れなかったときはエラーを表示し、個人情報を含めずに失敗を記録して Discord へ知らせる', function () {

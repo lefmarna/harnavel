@@ -42,7 +42,6 @@ if [ "$IS_TEMPLATE" != true ] && [ "$verified_tree" != "$parent_tree" ]; then
   gh workflow run delivery.yml --ref "$BASE"
 fi
 
-# main の修正を develop へ取り込む。
 if [ "$BASE" = "$DEFAULT_BRANCH" ]; then
   gh workflow run security.yml --ref "$DEFAULT_BRANCH"
 fi

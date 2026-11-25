@@ -7,7 +7,6 @@ vendor
 
 .docker
 compose*.yaml
-docker-compose.yml
 
 tests
 e2e
@@ -44,6 +43,8 @@ mise.toml
 tsconfig.json
 package.json
 pnpm-lock.yaml
+pnpm-workspace.yaml
+renovate.json
 .editorconfig
 .mcp.json
 boost.json
@@ -65,12 +66,9 @@ scripts
 resources/css
 resources/js
 
-database/database.sqlite
-
 storage/mariadb
 storage/logs/*
 storage/framework/cache/data/*
-storage/framework/cache/phpstan/*
 storage/framework/sessions/*
 storage/framework/testing/*
 storage/framework/views/*

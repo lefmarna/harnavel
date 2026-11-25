@@ -3,7 +3,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "mise exec -- node ../scripts/hooks/agy-stop-adapter.mjs",
+        "command": "mise exec -- node ../scripts/hooks/stop-verify.mjs --format=antigravity",
         "timeout": 120
       }
     ]

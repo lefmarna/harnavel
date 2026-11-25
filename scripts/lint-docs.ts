@@ -6,7 +6,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const DOCS_DIR = path.join(ROOT, "docs");
 
 const LINK_RE = /\[([^\]]*)\]\(([^)]+)\)/g;
-const IGNORED_PREFIXES = ["http://", "https://", "mailto:", "#"];
+const IGNORED_PREFIXES = ["http://", "https://", "mailto:"];
 
 interface LinkError {
   file: string;

@@ -1,31 +1,26 @@
 # Audit-driven security fixes
 
-Lockfile audits are the only check that sees indirect Composer and pnpm dependencies on every
-branch, and they gate every pull request. Renovate fixes only direct dependencies, one dependency
-per pull request, so an indirect or unrelated advisory failed each fix's audit and left apps
-exposed. Dependabot security updates target only the default branch, cannot update an indirect
-dependency whose parent must change outside npm, and never group ecosystems, so the same deadlock
-remains. The `security` workflow therefore fixes every advisory it can in one commit per branch, and
-Renovate keeps only routine updates.
+Lockfile audits are the only check covering indirect Composer and pnpm dependencies on every
+branch. Renovate updates only direct dependencies one PR at a time, and Dependabot security updates
+target only the default branch without cross-ecosystem grouping or reliable indirect-dependency
+fixes, so an unrelated advisory deadlocked fixes. The `security` workflow therefore fixes every
+resolvable advisory in one commit per branch while Renovate handles routine updates.
 
-Fixes move resolutions only within declared constraints, so shared constraints stay with the
-template; a fix that needs a declaration change becomes an issue. `security-fix` applies a fix only
-after the full quality run passes on that exact commit. Its audit rejects only advisories the
-target branch lacks, so one unfixable advisory cannot hold back the rest. Other quality runs reject
-only advisories the first parent lacks: failing every change over an existing advisory would stop
-unrelated merges and deployments, and invite ignore lists, without reducing exposure. `delivery`
-rejects advisories its environment's last successful deployment lacks, because a release can skip
-its checks and reuse a build, and a push can carry several commits or follow a refused one.
+Automated fixes change lockfiles only within declared constraints so shared constraints stay with
+the template; advisories requiring a declaration change open a branch issue. `security-fix` lands
+only after the full quality run passes on that exact commit. Audits compare against a baseline
+rather than failing on pre-existing advisories: `security-fix` rejects only advisories absent from
+the target branch (so one unfixable advisory cannot block the rest), quality runs compare against
+the first parent (so existing advisories do not stall unrelated work or encourage ignore lists),
+and `delivery` compares against the environment's last successful deployment.
 
-`GITHUB_TOKEN` events start no workflows, so `security-fix` fast-forwards the branch itself and
-dispatches `delivery`, which needs no stored credential. A dispatched run's checks do not count
-toward a pull request's required checks, so a protected branch keeps the verified fix on
-`security-fix/<branch>` for a person to merge. `develop` merges the default branch first, so a
-release cannot revert a fix; a lockfile conflict resolves automatically only when every
-default-branch lockfile change came from `security`, since keeping `develop`'s side drops the rest.
+Because `GITHUB_TOKEN` events trigger no workflows, `security-fix` fast-forwards the branch itself
+and dispatches `delivery` without extra secrets; protected branches keep the verified commit on
+`security-fix/<branch>` for manual merge. `develop` merges the default branch first so releases
+cannot revert fixes, auto-resolving lockfile conflicts only when all default-branch lockfile edits
+came from `security`.
 
-The trade-offs: fixes land without review; an unresolved advisory is kept visible only by its
-issue, and one that only `develop` has stops its release at deployment; the workflows are scripts
-the template maintains; the daily scan costs about one runner minute per private repository; and
-`GITHUB_TOKEN`, lacking a workflows permission, may be refused a merge that changes workflow files,
-which then needs a human.
+Trade-offs: fixes land unreviewed; unresolved advisories rely on their issue (and a `develop`-only
+advisory blocks release at `delivery`); the template maintains the remediation scripts; daily scans
+cost roughly one runner minute per private repository; and `GITHUB_TOKEN` cannot merge workflow
+file changes.

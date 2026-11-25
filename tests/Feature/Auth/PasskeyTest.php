@@ -7,7 +7,6 @@ use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 use Laravel\Passkeys\Passkey;
 use ParagonIE\ConstantTime\Base64UrlSafe;
-use Symfony\Component\Process\Process;
 use Tests\Support\AppSubprocess;
 
 mutates(RequireVerifiedEmailForPasskeyRegistration::class);
@@ -154,7 +153,7 @@ describe('パスキーの credential_id', function () {
 
 describe('パスキーのユーザーハンドル秘密鍵', function () {
     it('本番環境では PASSKEYS_USER_HANDLE_SECRET が未設定だと起動しない', function () {
-        $process = bootWithEnvironment(AppSubprocess::productionEnvironment(['PASSKEYS_USER_HANDLE_SECRET' => '']));
+        $process = AppSubprocess::boot(AppSubprocess::productionEnvironment(['PASSKEYS_USER_HANDLE_SECRET' => '']));
 
         expect($process->isSuccessful())->toBeFalse()
             ->and($process->getOutput().$process->getErrorOutput())->toContain('PASSKEYS_USER_HANDLE_SECRET');
@@ -163,7 +162,7 @@ describe('パスキーのユーザーハンドル秘密鍵', function () {
     it('フォールバック時代のパスキーを保つため APP_KEY と同じ値を明示しても起動する', function () {
         $appKey = 'base64:'.base64_encode(random_bytes(32));
 
-        $process = bootWithEnvironment(AppSubprocess::productionEnvironment([
+        $process = AppSubprocess::boot(AppSubprocess::productionEnvironment([
             'APP_KEY' => $appKey,
             'PASSKEYS_USER_HANDLE_SECRET' => $appKey,
         ]));
@@ -182,7 +181,7 @@ describe('パスキーのユーザーハンドル秘密鍵', function () {
     });
 
     it('本番以外では秘密鍵が未設定でも APP_KEY からユーザーハンドルを導出する', function () {
-        $process = bootWithEnvironment(
+        $process = AppSubprocess::boot(
             ['APP_ENV' => 'testing', 'PASSKEYS_USER_HANDLE_SECRET' => ''],
             'echo (new App\Models\User)->forceFill(["id" => 1])->getPasskeyUserHandle();',
         );
@@ -191,11 +190,3 @@ describe('パスキーのユーザーハンドル秘密鍵', function () {
             ->and($process->getOutput())->not->toBe('');
     });
 });
-
-function bootWithEnvironment(array $env, string $afterBoot = ''): Process
-{
-    return AppSubprocess::php(
-        'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();'.$afterBoot,
-        $env,
-    );
-}

@@ -3,20 +3,19 @@
 declare(strict_types=1);
 
 use App\Services\GoogleAuth\GoogleAuthServiceContract;
+use App\Support\SignedPayloadLink;
 use App\ViewModels\Auth\EmailLinkPageViewModel;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia as Assert;
+
+use function Pest\Laravel\mock;
 
 mutates(EmailLinkPageViewModel::class);
 
 describe('Google 連携リンク検証', function () {
     it('署名付き Google 連携リンクの GET は確認ページを表示する', function () {
-        $service = Mockery::mock(GoogleAuthServiceContract::class);
-        $service->shouldNotReceive('confirmLink');
-        app()->instance(GoogleAuthServiceContract::class, $service);
+        mock(GoogleAuthServiceContract::class)->shouldNotReceive('confirmLink');
 
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
@@ -36,12 +35,11 @@ describe('Google 連携リンク検証', function () {
     });
 
     it('署名付き Google 連携リンクの POST で連携を確定し、完了画面へ移る', function () {
-        $service = Mockery::mock(GoogleAuthServiceContract::class);
-        $service->shouldReceive('confirmLink')
+        mock(GoogleAuthServiceContract::class)
+            ->shouldReceive('confirmLink')
             ->once()
             ->with('1', 'google-123', 'existing@example.com', '0')
             ->andReturnTrue();
-        app()->instance(GoogleAuthServiceContract::class, $service);
 
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
@@ -63,9 +61,7 @@ describe('Google 連携リンク検証', function () {
     });
 
     it('Google 連携リンクの署名が改ざんされている場合は失敗画面へ移る', function () {
-        $service = Mockery::mock(GoogleAuthServiceContract::class);
-        $service->shouldNotReceive('confirmLink');
-        app()->instance(GoogleAuthServiceContract::class, $service);
+        mock(GoogleAuthServiceContract::class)->shouldNotReceive('confirmLink');
 
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
@@ -80,9 +76,7 @@ describe('Google 連携リンク検証', function () {
     });
 
     it('Google 連携リンクの payload に必須項目が欠けている場合はエラーページを表示する', function (array $payload) {
-        $service = Mockery::mock(GoogleAuthServiceContract::class);
-        $service->shouldNotReceive('confirmLink');
-        app()->instance(GoogleAuthServiceContract::class, $service);
+        mock(GoogleAuthServiceContract::class)->shouldNotReceive('confirmLink');
 
         $url = googleLinkVerifyUrl('1', $payload);
 
@@ -100,12 +94,11 @@ describe('Google 連携リンク検証', function () {
     it('Google 連携確定が失敗したときは失敗画面へ移る', function () {
         Log::spy();
 
-        $service = Mockery::mock(GoogleAuthServiceContract::class);
-        $service->shouldReceive('confirmLink')
+        mock(GoogleAuthServiceContract::class)
+            ->shouldReceive('confirmLink')
             ->once()
             ->with('1', 'google-123', 'existing@example.com', '0')
             ->andReturnFalse();
-        app()->instance(GoogleAuthServiceContract::class, $service);
 
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
@@ -126,8 +119,8 @@ describe('Google 連携リンク検証', function () {
     it('Google 連携確定が例外で失敗してもログにバインディング値が残らない', function () {
         Log::spy();
 
-        $service = Mockery::mock(GoogleAuthServiceContract::class);
-        $service->shouldReceive('confirmLink')
+        mock(GoogleAuthServiceContract::class)
+            ->shouldReceive('confirmLink')
             ->once()
             ->andThrow(new QueryException(
                 'mysql',
@@ -135,7 +128,6 @@ describe('Google 連携リンク検証', function () {
                 ['google-123', 'existing@example.com'],
                 new Exception('SQLSTATE[23000]: Integrity constraint violation'),
             ));
-        app()->instance(GoogleAuthServiceContract::class, $service);
 
         $url = googleLinkVerifyUrl('1', [
             'google_id' => 'google-123',
@@ -166,8 +158,5 @@ describe('Google 連携リンク検証', function () {
 
 function googleLinkVerifyUrl(string $userId, array $payload, ?DateTimeInterface $expiresAt = null): string
 {
-    return URL::temporarySignedRoute('auth.google.link.verify', $expiresAt ?? now()->addHour(), [
-        'userId' => $userId,
-        'payload' => Crypt::encryptString(json_encode($payload, JSON_THROW_ON_ERROR)),
-    ]);
+    return SignedPayloadLink::make('auth.google.link.verify', $expiresAt ?? now()->addHour(), $userId, $payload);
 }

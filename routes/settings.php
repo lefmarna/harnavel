@@ -14,32 +14,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('settings', fn () => redirect()->route('profile.edit'));
 
     // メールアドレスを書き換えられると、再設定メール経由でアカウントを奪われるため本人確認を求める。
-    Route::get('settings/profile', [ProfileController::class, 'edit'])
-        ->middleware('password.confirm')
-        ->name('profile.edit');
-    Route::patch('settings/profile', [ProfileController::class, 'update'])
-        ->middleware(['password.confirm', 'throttle:6,1,email-change'])
-        ->name('profile.update');
+    Route::middleware('password.confirm')->group(function () {
+        Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('settings/profile', [ProfileController::class, 'update'])
+            ->middleware('throttle:6,1,email-change')
+            ->name('profile.update');
+        Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::delete('settings/profile', [ProfileController::class, 'destroy'])
-        ->middleware('password.confirm')
-        ->name('profile.destroy');
-
-    Route::get('settings/security', [SecurityController::class, 'edit'])
-        ->middleware('password.confirm')
-        ->name('security.edit');
-
-    Route::delete('settings/google', [SecurityController::class, 'destroyGoogle'])
-        ->middleware('password.confirm')
-        ->name('security.google.destroy');
-
-    Route::delete('settings/sessions', [SecurityController::class, 'destroyOtherSessions'])
-        ->middleware('password.confirm')
-        ->name('security.sessions.destroy');
-
-    Route::put('settings/password', [SecurityController::class, 'update'])
-        ->middleware(['password.confirm', 'throttle:6,1,password-update'])
-        ->name('user-password.update');
+        Route::get('settings/security', [SecurityController::class, 'edit'])->name('security.edit');
+        Route::delete('settings/google', [SecurityController::class, 'destroyGoogle'])->name('security.google.destroy');
+        Route::delete('settings/sessions', [SecurityController::class, 'destroyOtherSessions'])->name('security.sessions.destroy');
+        Route::put('settings/password', [SecurityController::class, 'update'])
+            ->middleware('throttle:6,1,password-update')
+            ->name('user-password.update');
+    });
 
     Route::get('settings/appearance', function () {
         return Inertia::render(

@@ -32,7 +32,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
         $name = $this->normalizeName($name, $email);
 
         $lowercaseUsernames = (bool) config('fortify.lowercase_usernames');
-        $caseInsensitiveEmail = ! $lowercaseUsernames;
         $email = EmailAddress::normalize($email);
 
         try {
@@ -42,7 +41,6 @@ class GoogleAuthService implements GoogleAuthServiceContract
                         googleId: $googleId,
                         email: $email,
                         name: $name,
-                        caseInsensitiveEmail: $caseInsensitiveEmail,
                         lowercaseUsernames: $lowercaseUsernames,
                     ));
                 } catch (UniqueConstraintViolationException) {
@@ -133,7 +131,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
         } catch (UniqueConstraintViolationException) {
             $existingUser = $this->userRepository->findByGoogleId($googleId);
 
-            return $existingUser instanceof User && $this->userKey($existingUser) === $userId;
+            return $existingUser instanceof User && (string) $existingUser->id === $userId;
         }
 
         if ($linkedUser instanceof User) {
@@ -143,7 +141,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
         return $confirmed;
     }
 
-    private function findOrCreateWithinTransaction(string $googleId, string $email, string $name, bool $caseInsensitiveEmail, bool $lowercaseUsernames): User
+    private function findOrCreateWithinTransaction(string $googleId, string $email, string $name, bool $lowercaseUsernames): User
     {
         $candidates = $this->userRepository->findCandidates(
             $googleId,
@@ -151,7 +149,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
             lock: true,
         );
         $userByGoogleId = $candidates->firstWhere('google_id', $googleId);
-        $userByEmail = $this->findCandidateByEmail($candidates, $email, $caseInsensitiveEmail);
+        $userByEmail = $this->findCandidateByEmail($candidates, $email, $lowercaseUsernames);
 
         $user = $userByGoogleId ?? $userByEmail;
 
@@ -219,7 +217,7 @@ class GoogleAuthService implements GoogleAuthServiceContract
 
     private function sendLinkConfirmationEmail(User $user, string $googleId): void
     {
-        $signedUrl = SignedPayloadLink::make('auth.google.link.verify', now()->addHour(), $this->userKey($user), [
+        $signedUrl = SignedPayloadLink::make('auth.google.link.verify', now()->addHour(), (string) $user->id, [
             'google_id' => $googleId,
             'email' => $user->email,
             'session_generation' => (string) $user->session_generation,
@@ -235,17 +233,12 @@ class GoogleAuthService implements GoogleAuthServiceContract
         return $trimmed !== '' ? $trimmed : $email;
     }
 
-    private function userKey(User $user): string
-    {
-        return (string) $user->id;
-    }
-
     /**
      * @param  Collection<int, User>  $candidates
      */
-    private function findCandidateByEmail(Collection $candidates, string $email, bool $caseInsensitiveEmail): ?User
+    private function findCandidateByEmail(Collection $candidates, string $email, bool $lowercaseUsernames): ?User
     {
-        if (! $caseInsensitiveEmail) {
+        if ($lowercaseUsernames) {
             // 大小混在の既存値はDBのCI一意制約を経てリカバリ経路で照合される。
             return $candidates->firstWhere('email', $email);
         }

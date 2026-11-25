@@ -28,9 +28,9 @@ Route::get('dashboard', function () {
     );
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('guest')->group(function () {
-    Route::get('auth/google', [GoogleAuthController::class, 'redirect'])->name('auth.google');
-});
+Route::get('auth/google', [GoogleAuthController::class, 'redirect'])
+    ->middleware('guest')
+    ->name('auth.google');
 
 Route::get('auth/google/reauthenticate', [GoogleAuthController::class, 'reauthenticate'])
     ->middleware('auth')

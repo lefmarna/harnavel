@@ -136,7 +136,6 @@ describe('SPA遷移時の500エラーページ', function () {
         $response = $this->get('/_testing/errors/500', $this->inertiaHeaders);
 
         $response->assertInternalServerError();
-        // 汎用ページは例外メッセージを含まないので、メッセージが残ることで Ignition の応答を素通ししたと分かる。
         expect($response->getContent())->toContain('secret stack message');
     });
 });
@@ -145,7 +144,6 @@ describe('403・404・429 のエラーページ', function () {
     $request = function (string $uri, array $headers = []) {
         if ($uri === '/_testing/errors/429') {
             test()->get($uri);
-            // 前の要求で共有したデータを次の要求へ持ち越さない。
             app()->forgetInstance(ResponseFactory::class);
             Inertia::clearResolvedInstance(ResponseFactory::class);
         }

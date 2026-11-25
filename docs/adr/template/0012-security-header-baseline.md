@@ -1,23 +1,20 @@
 # Baseline security headers belong to the template
 
-The template ships a small header baseline as defense in depth whose maintenance and startup
-behavior would cost more to repeat in every app. External form submissions, intentional framing,
-`<object>`/`<embed>` content, or `<base>` usage need an app-owned exception, kept consistent with
-`X-Frame-Options`.
+The template ships a small header baseline whose startup behavior is costly to repeat per app.
+External form posts, framing, `<object>`/`<embed>`, or `<base>` require an app-owned override kept
+consistent with `X-Frame-Options`.
 
-`script-src` uses a per-request nonce and `'strict-dynamic'` because it needs no host allowlist and
-so holds for any app; it is also the
-[strict CSP AdSense supports](https://support.google.com/adsense/answer/16283098?hl=en-GB), which
-requires `'unsafe-eval'`. Every script tag an app adds carries the nonce. Other resource directives,
-reporting, and `Permissions-Policy` stay app-owned: they need per-app allowlists and would block
-styles and analytics beacons without stopping script execution. HSTS `includeSubDomains` and
-`preload` stay app-owned because the template cannot guarantee HTTPS for every subdomain.
+`script-src` uses a per-request nonce and `'strict-dynamic'` so it works without per-app host
+allowlists and matches the
+[strict CSP AdSense supports](https://support.google.com/adsense/answer/16283098?hl=en-GB) (which
+requires `'unsafe-eval'`). Other resource directives, reporting, `Permissions-Policy`, and HSTS
+`includeSubDomains`/`preload` stay app-owned because they depend on each app's third-party hosts
+and subdomain HTTPS coverage.
 
-The baseline is also sent from a
-[PHP header callback](https://www.php.net/manual/en/function.header-register-callback.php)
-registered before maintenance and autoloading, so pre-rendered maintenance and early errors carry
-it. An app replaces the policy instead of adding one, because
-[multiple enforced CSPs all apply](https://www.w3.org/TR/CSP3/#multiple-policies). Web-server
-configuration alone was rejected for PHP responses: local nginx needs the same behavior, and a
-server-level CSP would override app-owned policies. The web server therefore sets the fixed headers
-only on static files; responses produced before PHP runs stay outside this guarantee.
+A [PHP header callback](https://www.php.net/manual/en/function.header-register-callback.php)
+registered before maintenance and autoloading applies the same baseline to early errors and
+maintenance responses; apps replace rather than append CSP because
+[multiple enforced CSPs all apply](https://www.w3.org/TR/CSP3/#multiple-policies). Web-server-only
+headers were rejected for PHP responses because local nginx would have to mirror them and a
+server-level CSP would override app policies; the web server therefore covers static files only,
+leaving pre-PHP responses outside this guarantee.

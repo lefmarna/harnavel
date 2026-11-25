@@ -121,11 +121,11 @@ run = "docker compose exec app vendor/bin/pint --dirty --format=agent"
 
 [tasks."verify:backend"]
 description = "Run backend quality checks (Pint + Larastan + Pest with coverage)"
-run = """
-docker compose exec app vendor/bin/pint --dirty --format=agent && \
-docker compose exec {{vars.agent_env}} app composer analyse && \
-docker compose exec {{vars.agent_env}} app scripts/run-pest-locked.sh composer test:coverage -- --compact
-"""
+run = [
+  "mise run pint",
+  "mise run analyse",
+  "docker compose exec {{vars.agent_env}} app scripts/run-pest-locked.sh composer test:coverage -- --compact",
+]
 
 [tasks."verify:backend:full"]
 description = "Run backend quality checks plus mutation testing and Chromium E2E"

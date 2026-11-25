@@ -132,7 +132,7 @@ class ProductionExceptionNotifier
     }
 
     /**
-     * @param  array<string, mixed>  $values
+     * @param  array<string, string|int|null>  $values
      * @return list<array{name: string, value: string, inline: bool}>
      */
     private function fields(array $values): array
@@ -140,16 +140,14 @@ class ProductionExceptionNotifier
         $fields = [];
 
         foreach ($values as $name => $value) {
-            $stringValue = $this->stringFieldValue($value);
-
-            if ($stringValue === null || $stringValue === '') {
+            if ($value === null || $value === '') {
                 continue;
             }
 
             $fields[] = [
                 'name' => $name,
                 // Discord のフィールド値上限は1024文字。Str::limit が付ける省略記号のぶんを引く。
-                'value' => Str::limit($stringValue, 1021),
+                'value' => Str::limit((string) $value, 1021),
                 'inline' => true,
             ];
         }
@@ -212,19 +210,6 @@ class ProductionExceptionNotifier
         $userId = Auth::user()?->getAuthIdentifier();
 
         return is_int($userId) || is_string($userId) ? $userId : null;
-    }
-
-    private function stringFieldValue(mixed $value): ?string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        if (is_int($value) || is_float($value) || is_bool($value)) {
-            return (string) $value;
-        }
-
-        return null;
     }
 
     private function appName(): string

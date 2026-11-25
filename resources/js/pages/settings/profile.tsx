@@ -1,12 +1,13 @@
 import { Transition } from "@headlessui/react";
 import type { FormComponentRef } from "@inertiajs/core";
-import { Form, Link, usePage } from "@inertiajs/react";
+import { Form, usePage } from "@inertiajs/react";
 import { useRef } from "react";
 
 import { update } from "@/actions/App/Http/Controllers/Settings/ProfileController";
 import DeleteUser from "@/components/delete-user";
 import Heading from "@/components/heading";
 import InputError from "@/components/input-error";
+import TextLink from "@/components/text-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -110,13 +111,9 @@ export default function Profile({
                   <div>
                     <p className="-mt-4 text-sm text-muted-foreground">
                       メールアドレスが未認証です。{" "}
-                      <Link
-                        href={send()}
-                        as="button"
-                        className="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                      >
+                      <TextLink href={send()} as="button">
                         認証メールを再送する
-                      </Link>
+                      </TextLink>
                     </p>
 
                     {status === "verification-link-sent" && (

@@ -3,6 +3,8 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { delimiter, extname, join } from "node:path";
 
+const isAntigravity = process.argv.includes("--format=antigravity");
+
 const OXFMT_EXTS = new Set([
   ".cjs",
   ".css",
@@ -21,8 +23,6 @@ const OXFMT_EXTS = new Set([
   ".yml",
 ]);
 const LINT_EXTS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
-const LINT_CONFIG_FILES = new Set(["vite.config.ts"]);
-const FORMAT_CONFIG_FILES = new Set(["vite.config.ts"]);
 const FRONTEND_TOOLCHAIN_FILES = new Set([
   "mise.toml",
   "package.json",
@@ -33,172 +33,203 @@ const PHP_EXTS = new Set([".php"]);
 const TS_EXTS = new Set([".cts", ".mts", ".ts", ".tsx"]);
 const MD_EXTS = new Set([".md"]);
 
-const payload = JSON.parse(readFileSync(0, "utf8"));
-
-if (payload.stop_hook_active) {
-  process.exit(0);
-}
-
-const repo = run(["git", "rev-parse", "--show-toplevel"]).stdout.trim();
-const { all, existing } = changedFiles(repo);
-
-if (all.length === 0) {
-  process.exit(0);
-}
-
-const isBlade = (file) => file.endsWith(".blade.php");
-const isTypeConfig = (file) => /(^|\/)tsconfig(?:\.[^/]+)?\.json$/.test(file);
-
-const oxfmtAll = byExt(all, OXFMT_EXTS);
-const oxfmtFiles = byExt(existing, OXFMT_EXTS);
-const lintAll = byExt(all, LINT_EXTS);
-const lintFiles = byExt(existing, LINT_EXTS);
-const phpAll = byExt(all, PHP_EXTS).filter((file) => !isBlade(file));
-const phpExisting = byExt(existing, PHP_EXTS).filter((file) => !isBlade(file));
-const hasTs = byExt(all, TS_EXTS).length > 0;
-const hasMd = byExt(all, MD_EXTS).length > 0;
-const hasJsTsDeletions = lintAll.length > lintFiles.length;
-const hasOxfmtDeletions = oxfmtAll.length > oxfmtFiles.length;
-const hasLintConfigChange = all.some((file) => LINT_CONFIG_FILES.has(file));
-const hasFormatConfigChange = all.some((file) => FORMAT_CONFIG_FILES.has(file));
-const hasTypeConfigChange = all.some(isTypeConfig);
-const hasFrontendToolchainChange = all.some((file) => FRONTEND_TOOLCHAIN_FILES.has(file));
-const hasCiChange = all.some((file) => /^(\.circleci|\.github|scripts)\//.test(file));
-const hasAnyPhpChange = byExt(all, PHP_EXTS).length > 0;
-const hasPnpm = hasCommand("pnpm");
-const dockerReady = hasAnyPhpChange && hasCommand("docker") && dockerAppRunning(repo);
-
-const fixFailures = [];
-
-if (
-  !hasPnpm &&
-  (oxfmtAll.length ||
-    lintAll.length ||
-    hasLintConfigChange ||
-    hasFormatConfigChange ||
-    hasTypeConfigChange ||
-    hasFrontendToolchainChange ||
-    hasCiChange)
-) {
-  fixFailures.push({
-    title: "Frontend tools",
-    output: "pnpm is required to verify these changes.",
-  });
-}
-
-if (hasAnyPhpChange && !dockerReady) {
-  fixFailures.push({
-    title: "PHP checks",
-    output:
-      "The app container is not running, so Pint and Larastan were skipped. " +
-      "Start it with `mise run up` and stop again, or report that PHP checks did not run.",
-  });
-}
-
-if (dockerReady && phpExisting.length) {
-  captureFailure(
-    ["docker", "compose", "exec", "-T", "app", "vendor/bin/pint", "--format=agent", ...phpExisting],
-    repo,
-    "Pint format",
-    fixFailures,
-  );
-}
-
-if (lintFiles.length && hasPnpm) {
-  captureFailure(
-    ["pnpm", "exec", "vp", "lint", "--fix", "--no-error-on-unmatched-pattern", ...lintFiles],
-    repo,
-    "Oxlint safe fix",
-    fixFailures,
-  );
-}
-
-if (oxfmtFiles.length && hasPnpm) {
-  captureFailure(
-    ["pnpm", "exec", "vp", "fmt", "--no-error-on-unmatched-pattern", ...oxfmtFiles],
-    repo,
-    "Oxfmt format",
-    fixFailures,
-  );
-}
-
-const tasks = [];
-
-if (
-  hasPnpm &&
-  (lintAll.length || hasLintConfigChange || hasTypeConfigChange || hasFrontendToolchainChange)
-) {
-  if (
-    hasTs ||
-    hasJsTsDeletions ||
-    hasLintConfigChange ||
-    hasTypeConfigChange ||
-    hasFrontendToolchainChange
-  ) {
-    tasks.push(runAsync(["pnpm", "lint:check"], repo, "Frontend lint"));
-  } else {
-    tasks.push(
-      runAsync(
-        [
-          "pnpm",
-          "exec",
-          "vp",
-          "lint",
-          "--type-aware",
-          "--no-error-on-unmatched-pattern",
-          ...lintFiles,
-        ],
-        repo,
-        "Oxlint",
-      ),
-    );
+function emitOk() {
+  // Antigravity は {} で停止を許可し、Claude Code / Codex は空出力で許可する。
+  if (isAntigravity) {
+    console.log(JSON.stringify({}));
   }
 }
 
-if (hasPnpm && (hasOxfmtDeletions || hasFormatConfigChange || hasFrontendToolchainChange)) {
-  tasks.push(runAsync(["pnpm", "format:check"], repo, "Frontend format"));
-}
-
-if (hasPnpm && (hasTs || hasTypeConfigChange || hasFrontendToolchainChange)) {
-  tasks.push(runAsync(["pnpm", "types:check"], repo, "Types"));
-}
-
-if (hasPnpm && (lintAll.length || hasFrontendToolchainChange || hasCiChange)) {
-  tasks.push(runAsync(["pnpm", "test:unit"], repo, "Unit tests"));
-}
-
-if (hasMd && hasPnpm) {
-  tasks.push(runAsync(["pnpm", "lint:docs"], repo, "Markdown links"));
-}
-
-// 変更していない呼び出し側のエラーも拾い、結果キャッシュも使えるよう、全体を解析する。
-if (dockerReady && phpAll.length) {
-  tasks.push(
-    runAsync(
-      ["docker", "compose", "exec", "-T", "app", "composer", "analyse", "--", "--no-progress"],
-      repo,
-      "Larastan",
-    ),
-  );
-}
-
-const failures = [
-  ...fixFailures,
-  ...(await Promise.all(tasks)).filter((result) => result !== null),
-];
-
-if (failures.length) {
-  const reason = [
-    "Verification failed before completion. Fix these issues before completing the task.",
-    ...failures.map((f) => `\n[${f.title}]\n${f.output}`),
-  ].join("\n");
-
+function emitBlock(reason) {
   console.log(
     JSON.stringify({
-      decision: "block",
+      decision: isAntigravity ? "continue" : "block",
       reason,
     }),
   );
+}
+
+async function main() {
+  const payload = JSON.parse(readFileSync(0, "utf8"));
+
+  if (payload.stop_hook_active) {
+    emitOk();
+
+    return;
+  }
+
+  const repo = run(["git", "rev-parse", "--show-toplevel"]).stdout.trim();
+  const { all, existing } = changedFiles(repo);
+
+  if (all.length === 0) {
+    emitOk();
+
+    return;
+  }
+
+  const isBlade = (file) => file.endsWith(".blade.php");
+  const isTypeConfig = (file) => /(^|\/)tsconfig(?:\.[^/]+)?\.json$/.test(file);
+
+  const oxfmtAll = byExt(all, OXFMT_EXTS);
+  const oxfmtFiles = byExt(existing, OXFMT_EXTS);
+  const lintAll = byExt(all, LINT_EXTS);
+  const lintFiles = byExt(existing, LINT_EXTS);
+  const phpAll = byExt(all, PHP_EXTS).filter((file) => !isBlade(file));
+  const phpExisting = byExt(existing, PHP_EXTS).filter((file) => !isBlade(file));
+  const hasTs = byExt(all, TS_EXTS).length > 0;
+  const hasMd = byExt(all, MD_EXTS).length > 0;
+  const hasJsTsDeletions = lintAll.length > lintFiles.length;
+  const hasOxfmtDeletions = oxfmtAll.length > oxfmtFiles.length;
+  const hasViteConfigChange = all.includes("vite.config.ts");
+  const hasTypeConfigChange = all.some(isTypeConfig);
+  const hasFrontendToolchainChange = all.some((file) => FRONTEND_TOOLCHAIN_FILES.has(file));
+  const hasCiChange = all.some((file) => /^(\.circleci|\.github|scripts)\//.test(file));
+  const hasPhp = phpAll.length > 0;
+  const hasPnpm = hasCommand("pnpm");
+  const dockerReady = hasPhp && hasCommand("docker") && dockerAppRunning(repo);
+
+  const fixFailures = [];
+
+  if (!hasPnpm && (oxfmtAll.length || hasCiChange)) {
+    fixFailures.push({
+      title: "Frontend tools",
+      output: "pnpm is required to verify these changes.",
+    });
+  }
+
+  if (hasPhp && !dockerReady) {
+    fixFailures.push({
+      title: "PHP checks",
+      output:
+        "The app container is not running, so Pint and Larastan were skipped. " +
+        "Start it with `mise run up` and stop again, or report that PHP checks did not run.",
+    });
+  }
+
+  if (dockerReady && phpExisting.length) {
+    captureFailure(
+      [
+        "docker",
+        "compose",
+        "exec",
+        "-T",
+        "app",
+        "vendor/bin/pint",
+        "--format=agent",
+        ...phpExisting,
+      ],
+      repo,
+      "Pint format",
+      fixFailures,
+    );
+  }
+
+  if (lintFiles.length && hasPnpm) {
+    captureFailure(
+      ["pnpm", "exec", "vp", "lint", "--fix", "--no-error-on-unmatched-pattern", ...lintFiles],
+      repo,
+      "Oxlint safe fix",
+      fixFailures,
+    );
+  }
+
+  if (oxfmtFiles.length && hasPnpm) {
+    captureFailure(
+      ["pnpm", "exec", "vp", "fmt", "--no-error-on-unmatched-pattern", ...oxfmtFiles],
+      repo,
+      "Oxfmt format",
+      fixFailures,
+    );
+  }
+
+  const tasks = [];
+
+  if (
+    hasPnpm &&
+    (lintAll.length || hasViteConfigChange || hasTypeConfigChange || hasFrontendToolchainChange)
+  ) {
+    if (
+      hasTs ||
+      hasJsTsDeletions ||
+      hasViteConfigChange ||
+      hasTypeConfigChange ||
+      hasFrontendToolchainChange
+    ) {
+      tasks.push(runAsync(["pnpm", "lint:check"], repo, "Frontend lint"));
+    } else {
+      tasks.push(
+        runAsync(
+          [
+            "pnpm",
+            "exec",
+            "vp",
+            "lint",
+            "--type-aware",
+            "--no-error-on-unmatched-pattern",
+            ...lintFiles,
+          ],
+          repo,
+          "Oxlint",
+        ),
+      );
+    }
+  }
+
+  if (hasPnpm && (hasOxfmtDeletions || hasViteConfigChange || hasFrontendToolchainChange)) {
+    tasks.push(runAsync(["pnpm", "format:check"], repo, "Frontend format"));
+  }
+
+  if (hasPnpm && (hasTs || hasTypeConfigChange || hasFrontendToolchainChange)) {
+    tasks.push(runAsync(["pnpm", "types:check"], repo, "Types"));
+  }
+
+  if (hasPnpm && (lintAll.length || hasFrontendToolchainChange || hasCiChange)) {
+    tasks.push(runAsync(["pnpm", "test:unit"], repo, "Unit tests"));
+  }
+
+  if (hasMd && hasPnpm) {
+    tasks.push(runAsync(["pnpm", "lint:docs"], repo, "Markdown links"));
+  }
+
+  // 変更していない呼び出し側のエラーも拾い、結果キャッシュも使えるよう、全体を解析する。
+  if (dockerReady && hasPhp) {
+    tasks.push(
+      runAsync(
+        ["docker", "compose", "exec", "-T", "app", "composer", "analyse", "--", "--no-progress"],
+        repo,
+        "Larastan",
+      ),
+    );
+  }
+
+  const failures = [
+    ...fixFailures,
+    ...(await Promise.all(tasks)).filter((result) => result !== null),
+  ];
+
+  if (failures.length) {
+    const reason = [
+      "Verification failed before completion. Fix these issues before completing the task.",
+      ...failures.map((f) => `\n[${f.title}]\n${f.output}`),
+    ].join("\n");
+
+    emitBlock(reason);
+
+    return;
+  }
+
+  emitOk();
+}
+
+try {
+  await main();
+} catch (error) {
+  if (isAntigravity) {
+    const detail = error instanceof Error ? (error.stack ?? error.message) : String(error);
+    emitBlock(`stop-verify.mjs crashed. Blocking stop.\n${detail}`);
+  } else {
+    throw error;
+  }
 }
 
 function changedFiles(cwd) {

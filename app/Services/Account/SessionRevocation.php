@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Repositories\User\UserRepositoryContract;
 use App\Support\RememberCookie;
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Support\Facades\DB;
 
 class SessionRevocation
 {
@@ -28,6 +29,45 @@ class SessionRevocation
         }
 
         return $lockedUser;
+    }
+
+    /**
+     * @param  (callable(User): (bool|void))|null  $mutate
+     * @param  (callable(): void)|null  $afterCommit
+     */
+    public function revokeOtherSessions(
+        Session $session,
+        User $user,
+        ?callable $mutate = null,
+        ?callable $afterCommit = null,
+    ): bool {
+        $rememberToken = $user->getRememberToken();
+
+        $revoked = DB::transaction(function () use ($user, $mutate): bool {
+            $lockedUser = $this->lockUnrevoked($user);
+
+            if ($mutate !== null && $mutate($lockedUser) === false) {
+                return false;
+            }
+
+            $lockedUser->revokeSessions();
+            $this->userRepository->save($lockedUser);
+            $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
+
+            return true;
+        });
+
+        if (! $revoked) {
+            return false;
+        }
+
+        if ($afterCommit !== null) {
+            $afterCommit();
+        }
+
+        $this->keepCurrentSession($session, $user, $rememberToken);
+
+        return true;
     }
 
     /**

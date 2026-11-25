@@ -7,13 +7,11 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
-use App\Repositories\User\UserRepositoryContract;
 use App\Services\Account\SecurityNotifier;
 use App\Services\Account\SessionRevocation;
 use App\ViewModels\Settings\SecurityPageViewModel;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
@@ -25,7 +23,6 @@ use Laravel\Passkeys\Passkey;
 class SecurityController extends Controller
 {
     public function __construct(
-        private readonly UserRepositoryContract $userRepository,
         private readonly SecurityNotifier $securityNotifier,
         private readonly SessionRevocation $sessionRevocation,
     ) {}
@@ -51,23 +48,18 @@ class SecurityController extends Controller
     public function update(PasswordUpdateRequest $request): RedirectResponse
     {
         $user = $this->currentUser($request);
-        $rememberToken = $user->getRememberToken();
 
         /** @var array{password: string} $validated */
         $validated = $request->validated();
 
-        DB::transaction(function () use ($user, $validated): void {
-            $lockedUser = $this->sessionRevocation->lockUnrevoked($user);
-
-            $lockedUser->password = Hash::make($validated['password']);
-            $lockedUser->revokeSessions();
-            $this->userRepository->save($lockedUser);
-            Password::broker(config()->string('fortify.passwords'))->deleteToken($lockedUser);
-
-            $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
-        });
-
-        $this->sessionRevocation->keepCurrentSession($request->session(), $user, $rememberToken);
+        $this->sessionRevocation->revokeOtherSessions(
+            $request->session(),
+            $user,
+            static function (User $lockedUser) use ($validated): void {
+                $lockedUser->password = Hash::make($validated['password']);
+                Password::broker(config()->string('fortify.passwords'))->deleteToken($lockedUser);
+            },
+        );
 
         Log::info('User password was changed.', ['user_id' => $user->getKey()]);
         $this->securityNotifier->notify($user, 'password_changed');
@@ -78,18 +70,8 @@ class SecurityController extends Controller
     public function destroyOtherSessions(Request $request): RedirectResponse
     {
         $user = $this->currentUser($request);
-        $rememberToken = $user->getRememberToken();
 
-        DB::transaction(function () use ($user): void {
-            $lockedUser = $this->sessionRevocation->lockUnrevoked($user);
-
-            $lockedUser->revokeSessions();
-            $this->userRepository->save($lockedUser);
-
-            $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
-        });
-
-        $this->sessionRevocation->keepCurrentSession($request->session(), $user, $rememberToken);
+        $this->sessionRevocation->revokeOtherSessions($request->session(), $user);
 
         Log::info('Other sessions were logged out.', ['user_id' => $user->getKey()]);
 
@@ -102,29 +84,24 @@ class SecurityController extends Controller
     public function destroyGoogle(Request $request): RedirectResponse
     {
         $user = $this->currentUser($request);
-        $rememberToken = $user->getRememberToken();
 
-        $unlinked = DB::transaction(function () use ($user): bool {
-            $lockedUser = $this->sessionRevocation->lockUnrevoked($user);
+        $unlinked = $this->sessionRevocation->revokeOtherSessions(
+            $request->session(),
+            $user,
+            static function (User $lockedUser): bool {
+                if ($lockedUser->password === null) {
+                    return false;
+                }
 
-            if ($lockedUser->password === null) {
-                return false;
-            }
+                $lockedUser->google_id = null;
 
-            $lockedUser->google_id = null;
-            $lockedUser->revokeSessions();
-            $this->userRepository->save($lockedUser);
-
-            $user->setRawAttributes($lockedUser->getAttributes(), sync: true);
-
-            return true;
-        });
+                return true;
+            },
+        );
 
         if (! $unlinked) {
             return back()->withErrors(['google' => __('form.google_unlink.password_required')]);
         }
-
-        $this->sessionRevocation->keepCurrentSession($request->session(), $user, $rememberToken);
 
         Log::info('Google account was unlinked.', ['user_id' => $user->getKey()]);
 

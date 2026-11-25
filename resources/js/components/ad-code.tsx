@@ -18,26 +18,19 @@ declare global {
   }
 }
 
-export const AdCode = (props: AdCodeProps) => {
+export const AdCode = ({
+  slot,
+  style = { display: "block" },
+  format,
+  responsive,
+  layoutKey,
+}: AdCodeProps) => {
   const { tracking } = usePage<SharedData>().props;
-  const {
-    slot,
-    style = { display: "block" },
-    format = undefined,
-    responsive = undefined,
-    layoutKey = undefined,
-  } = props;
+  const canRender =
+    !import.meta.env.DEV && tracking.adsEnabled && Boolean(tracking.adsensePublisherId);
 
   useLayoutEffect(() => {
-    if (import.meta.env.DEV) {
-      return;
-    }
-
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (!tracking.adsEnabled || !tracking.adsensePublisherId) {
+    if (!canRender) {
       return;
     }
 
@@ -46,27 +39,21 @@ export const AdCode = (props: AdCodeProps) => {
     } catch (e) {
       console.error(e);
     }
-  }, [tracking.adsEnabled, tracking.adsensePublisherId]);
+  }, [canRender]);
 
-  if (import.meta.env.DEV) {
+  if (!canRender) {
     return null;
   }
-
-  if (!tracking.adsEnabled || !tracking.adsensePublisherId) {
-    return null;
-  }
-
-  const adTestMode = tracking.adsTestMode ? "on" : "off";
 
   return (
     <ins
       className="adsbygoogle"
       style={style}
-      data-ad-client={tracking.adsensePublisherId}
+      data-ad-client={tracking.adsensePublisherId ?? undefined}
       data-ad-slot={slot}
       data-ad-format={format}
       data-ad-layout-key={layoutKey}
-      data-adtest={adTestMode}
+      data-adtest={tracking.adsTestMode ? "on" : "off"}
       data-full-width-responsive={responsive}
     />
   );

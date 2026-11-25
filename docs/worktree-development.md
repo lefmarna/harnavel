@@ -10,10 +10,10 @@ block such as 20100 for each derived app. Keep `DB_URL` empty; it would override
 database. Do not share `.env`, `storage`, `vendor`, `node_modules`, caches, or build output between
 Worktrees, and give each Worktree its own browser profile.
 
-Hook-manager migrations must cover every Worktree: `core.hooksPath` is shared, but Vite+ dispatchers
-are local. An unprepared checkout silently skips hooks.
+`core.hooksPath` is shared across Worktrees, while Vite+ hook dispatchers are local to each
+checkout; an unprepared Worktree silently skips commit hooks.
 
-A MariaDB image upgrade updates system tables on start. Delete the resulting
+A MariaDB image upgrade updates system tables on start; delete the resulting
 `storage/mariadb/system_mysql_backup_*.sql.zst` once verified.
 
 Orca reads `orca.yaml` from the new checkout, so commit changes to it before creating a Worktree.

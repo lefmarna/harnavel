@@ -15,14 +15,6 @@ class ProfileUpdateRequest extends FormRequest
 {
     use ProfileValidationRules;
 
-    /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     protected function prepareForValidation(): void
     {
         $username = $this->input(Fortify::username());

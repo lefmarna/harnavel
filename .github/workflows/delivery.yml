@@ -282,6 +282,9 @@ jobs:
           done
 
       - name: Setup SSH key
+        env:
+          XSERVER_HOST: ${{ secrets.XSERVER_HOST }}
+          XSERVER_USER: ${{ secrets.XSERVER_USER }}
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -289,12 +292,22 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           test -n "${{ secrets.XSERVER_KNOWN_HOSTS }}"
           printf '%s\n' "${{ secrets.XSERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host xserver
+            HostName $XSERVER_HOST
+            User $XSERVER_USER
+            Port 10022
+            IdentityFile ~/.ssh/id_rsa
+            ConnectTimeout 30
+            ServerAliveInterval 15
+            ServerAliveCountMax 4
+          EOF
+          chmod 600 ~/.ssh/config
 
       - name: Verify XServer toolchain
         run: |
           for attempt in 1 2 3; do
-            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+            if ssh xserver \
               "test -x /usr/bin/php8.5 && \
               test -r ~/opt/bin/composer-2.10.3 && \
               composer_version=\$(/usr/bin/php8.5 ~/opt/bin/composer-2.10.3 --version --no-ansi) && \
@@ -334,8 +347,8 @@ jobs:
 
           remote() {
             for attempt in 1 2 3; do
-              if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-                ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} "$1" < "${2:-/dev/null}"; then
+              # shellcheck disable=SC2029
+              if ssh xserver "$1" < "${2:-/dev/null}"; then
                 return 0
               fi
               if [ "$attempt" -lt 3 ]; then
@@ -440,8 +453,8 @@ jobs:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
         run: |
           for attempt in 1 2 3; do
-            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+            # shellcheck disable=SC2029
+            if ssh xserver \
               "mkdir -p -- \"$DEPLOY_DIRECTORY\" && \
               if [ -f \"$DEPLOY_DIRECTORY/artisan\" ] && [ -r \"$DEPLOY_DIRECTORY/vendor/autoload.php\" ]; then \
                 cd -- \"$DEPLOY_DIRECTORY\" && \
@@ -464,10 +477,8 @@ jobs:
         env:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
         run: |
-          ssh_opts="ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4"
           for attempt in 1 2 3; do
             if rsync -avz --delete --timeout=60 \
-              -e "$ssh_opts" \
               --exclude='.env' \
               --exclude='.user.ini' \
               --exclude='/public/storage' \
@@ -481,7 +492,7 @@ jobs:
               --exclude='storage/framework/sessions/*' \
               --exclude='storage/framework/views/*' \
               --exclude='dev.example.com' \
-              .deploy/ "${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }}:$DEPLOY_DIRECTORY/"; then
+              .deploy/ "xserver:$DEPLOY_DIRECTORY/"; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then
@@ -500,8 +511,8 @@ jobs:
           # コマンドが再実行される可能性は残る。
           for attempt in 1 2 3; do
             status=0
-            ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
+            # shellcheck disable=SC2029
+            ssh xserver \
               "cd -- \"$DEPLOY_DIRECTORY\" && \
               /usr/bin/php8.5 ~/opt/bin/composer-2.10.3 install --no-dev --no-interaction --optimize-autoloader && \
               /usr/bin/php8.5 artisan down --render='errors::503' --retry=60 && \
@@ -535,9 +546,8 @@ jobs:
           DEPLOY_DIRECTORY: ${{ secrets.DEPLOY_DIRECTORY }}
         run: |
           for attempt in 1 2 3; do
-            if ssh -p 10022 -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
-              ${{ secrets.XSERVER_USER }}@${{ secrets.XSERVER_HOST }} \
-              "cd -- \"$DEPLOY_DIRECTORY\" && /usr/bin/php8.5 artisan up"; then
+            # shellcheck disable=SC2029
+            if ssh xserver "cd -- \"$DEPLOY_DIRECTORY\" && /usr/bin/php8.5 artisan up"; then
               exit 0
             fi
             if [ "$attempt" -lt 3 ]; then
@@ -585,6 +595,7 @@ jobs:
     needs: [provenance, quality, audit, deploy]
     if: failure() && endsWith(github.actor, '[bot]')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       issues: write
 

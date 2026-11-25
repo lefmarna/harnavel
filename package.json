@@ -29,6 +29,7 @@
     "playwright:install": "playwright install --with-deps"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.10",
     "@inertiajs/react": "^3.0.0",
     "@laravel/passkeys": "^0.4.0",
     "@radix-ui/react-avatar": "^1.1.3",

@@ -23,6 +23,7 @@ const PROTECTED_PATHS = [
   "storage/framework/sessions/session-id",
   "storage/framework/views/compiled.php",
   "dev.example.com/index.html",
+  ".well-known/acme-challenge/certificate-renewal-token",
 ];
 
 type Workflow = { jobs?: { deploy?: { steps?: { name?: string; run?: string }[] } } };

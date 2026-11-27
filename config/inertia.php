@@ -21,35 +21,10 @@ return [
     |
     */
 
+    // キーを消すと inertia-laravel 既定の ssr.enabled=true がマージされるため明示的に無効化する。
     'ssr' => [
 
-        'enabled' => (bool) env('INERTIA_SSR_ENABLED', false),
-
-        'runtime' => env('INERTIA_SSR_RUNTIME', 'node'),
-
-        'ensure_runtime_exists' => (bool) env('INERTIA_SSR_ENSURE_RUNTIME_EXISTS', false),
-
-        'url' => env('INERTIA_SSR_URL', 'http://127.0.0.1:13714'),
-
-        'ensure_bundle_exists' => (bool) env('INERTIA_SSR_ENSURE_BUNDLE_EXISTS', true),
-
-        // 'bundle' => base_path('bootstrap/ssr/ssr.mjs'),
-
-        /*
-        |--------------------------------------------------------------------------
-        | SSR Error Handling
-        |--------------------------------------------------------------------------
-        |
-        | When SSR rendering fails, Inertia gracefully falls back to client-side
-        | rendering. Set throw_on_error to true to throw an exception instead.
-        | This is useful for E2E testing where you want SSR errors to fail loudly.
-        |
-        | You can also listen for the Inertia\Ssr\SsrRenderFailed event to handle
-        | failures in your own way (e.g., logging, error tracking service).
-        |
-        */
-
-        'throw_on_error' => (bool) env('INERTIA_SSR_THROW_ON_ERROR', false),
+        'enabled' => false,
 
     ],
 
@@ -137,7 +112,7 @@ return [
 
     'history' => [
 
-        'encrypt' => (bool) env('INERTIA_ENCRYPT_HISTORY', true),
+        'encrypt' => true,
 
     ],
 

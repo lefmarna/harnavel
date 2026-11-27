@@ -49,7 +49,6 @@ function securityEntryPointResponse(Closure $prepare, string $path = '/', array 
         ], $directory, [
             'APP_ENV' => 'testing',
             'APP_DEBUG' => 'false',
-            'APP_MAINTENANCE_DRIVER' => 'file',
             'VIEW_COMPILED_PATH' => $directory.'/storage/framework/views',
             'LOG_CHANNEL' => 'stderr',
             'PHP_CLI_SERVER_WORKERS' => false,

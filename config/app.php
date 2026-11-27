@@ -92,9 +92,9 @@ return [
 
     // 原文は日本語なので、訳が無いキーの落とし先も日本語にする。既定の 'en' のままだと、
     // lang/en にないテンプレートのキーは APP_LOCALE を動かした瞬間に画面へキー名が出る。
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'ja'),
+    'fallback_locale' => 'ja',
 
-    'faker_locale' => env('APP_FAKER_LOCALE', 'ja_JP'),
+    'faker_locale' => 'ja_JP',
 
     /*
     |--------------------------------------------------------------------------
@@ -131,8 +131,7 @@ return [
     */
 
     'maintenance' => [
-        'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
-        'store' => env('APP_MAINTENANCE_STORE', 'database'),
+        'driver' => 'file',
     ],
 
 ];

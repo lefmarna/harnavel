@@ -6,13 +6,13 @@
 
 ## 技術構成
 
-| Layer          | Technology                       |
-| -------------- | -------------------------------- |
-| Backend        | Laravel 13, PHP 8.5, Fortify     |
-| Frontend       | React 19, Inertia v3, TypeScript |
-| Styling        | Tailwind CSS v4, Radix UI        |
-| Testing        | Pest v5, Playwright              |
-| Infrastructure | Docker (Nginx, MariaDB, Mailpit) |
+| Layer          | Technology                                                              |
+| -------------- | ----------------------------------------------------------------------- |
+| Backend        | Laravel 13, PHP 8.5, Fortify                                            |
+| Frontend       | React 19, Inertia v3, TypeScript                                        |
+| Styling        | Tailwind CSS v4, Radix UI                                               |
+| Testing        | Pest v5, Playwright                                                     |
+| Infrastructure | Local: Docker (Nginx, MariaDB, Mailpit) / Deploy: Cloudflare + XServer |
 
 ## 前提環境
 
@@ -55,7 +55,7 @@ pnpm test:e2e           # Playwright E2E
 - [GLOSSARY.md](GLOSSARY.md): ドメイン用語集
 - [docs/testing-as-spec.md](docs/testing-as-spec.md): テストの責務分担とミューテーション方針
 - [docs/logging-guidelines.md](docs/logging-guidelines.md): ログと通知の運用ルール
-- [docs/infrastructure.md](docs/infrastructure.md): XServer の運用前提とサーバー設定
+- [docs/infrastructure.md](docs/infrastructure.md): Cloudflare・XServer の運用前提とサーバー設定
 - [docs/worktree-development.md](docs/worktree-development.md): 共有開発環境と worktree の管理
 - [docs/branches-and-ci.md](docs/branches-and-ci.md): ブランチ運用・CI・依存関係と脆弱性の更新
 - [docs/circleci.md](docs/circleci.md): CircleCI 連携設定

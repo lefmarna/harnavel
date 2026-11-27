@@ -48,7 +48,8 @@ to run instead of looking for another route. If `xserver` is not found, use
    curl -sS -o /dev/null -D - --connect-timeout 5 --max-time 10 https://<host>/up | grep -iE '^(HTTP/|cf-cache-status:)'
    ```
 
-   Behind Cloudflare Access this meets the login instead. A 200 shows current health only with a
+   Behind Cloudflare Access (Develop, or pre-launch Production) this redirects to the login
+   instead, which is expected — never bypass `/up` in Access. A 200 shows current health only with a
    `cf-cache-status` of `DYNAMIC` or `BYPASS`, as in delivery's health check; otherwise, report the
    current health as unverified, and a cache status such as `HIT` or `MISS` also as Cloudflare
    caching `/up`, which delivery refuses. The service token exists only in delivery's secrets, and

@@ -3,7 +3,7 @@
 A Laravel + Inertia React starter template.
 
 - PHP/Composer/Artisan: Docker `app`. Node/pnpm/mise: host.
-- Production: XServer shared hosting; no queue workers, SSR, or long-running processes.
+- Develop/Production: Cloudflare in front of XServer shared hosting; no queue workers, SSR, or long-running processes (`docs/infrastructure.md`).
 - Behavior changes start with failing tests (`docs/testing-as-spec.md`).
 - No tests/checks for config/tooling/CI wiring except TADR-0001.
 - Generic improvements belong in the template. Code shared with it keeps its names and structure, so apps stay consistent through it.

@@ -45,11 +45,13 @@ provides it. If later history changes a capability, follow that evidence over th
 
 ## Skeleton ownership
 
-- **Template-preserved**: Docker development (nginx, PHP-FPM, MariaDB, Mailpit); XServer
-  constraints (no SSR, queue workers, or long-running processes; synchronous jobs; remote data
-  protected during `rsync --delete`; bounded logs, because the host has limited disk and no external
-  rotation, so `.env.example` deviates from upstream's unrotated default while tracking its rotation
-  mechanism); no `jobs`/`job_batches`/`failed_jobs` migrations; the host/container boundary;
+- **Template-preserved**: Docker development (nginx, PHP-FPM, MariaDB, Mailpit); Cloudflare +
+  XServer entry points (`.htaccess*`, `public/.htaccess`, `public/index.php` per TADR-0012 and
+  TADR-0019); XServer constraints (no SSR, queue workers, or long-running processes; synchronous
+  jobs; remote data protected during `rsync --delete`; bounded logs, because the host has limited
+  disk and no external rotation, so `.env.example` deviates from upstream's unrotated default while
+  tracking its rotation mechanism); no `jobs`/`job_batches`/`failed_jobs` migrations; the
+  host/container boundary;
   Japanese README and tests with English docs; Google authentication, SEO, observability,
   verification, CI, deployment, and test helpers; existing user-visible flows, including success
   feedback, unless a replacement and its derived-app rollout are approved; independently

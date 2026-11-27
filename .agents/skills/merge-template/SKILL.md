@@ -16,8 +16,9 @@ merge.
   infrastructure, architecture rules, CI actions, reusable workflows, Template ADRs, testing policy,
   and the vendored skills in `.claude/skills/` and `.agents/skills/`.
 - **Hybrid** (take template-origin changes, keep app content): `README.md`, `AGENTS.md`,
-  `delivery.yml`, `mise.toml`, `phpstan.neon.dist`, `renovate.json`, dependency manifests,
-  architecture tests, and other files mixing shared scaffolding with app behavior.
+  `docs/infrastructure.md`, `.htaccess`, `.htaccess.develop`, `delivery.yml`, `mise.toml`,
+  `phpstan.neon.dist`, `renovate.json`, dependency manifests, architecture tests, and other files
+  mixing shared scaffolding with app behavior.
 - **App-owned** (preserve the app): domain behavior, presentation, branding, environment values,
   lockfiles, `GLOSSARY.md`, flat App ADRs with the App ADRs index in `docs/adr/README.md`, and
   app-specific routes or deployment layout.
@@ -49,8 +50,20 @@ Special cases:
 - **Dependencies**: align shared requirements, keep app-specific consumers and constraints, and
   reconcile lockfiles from the pre-pull app lockfiles per the dependency reference, including when
   git merged them cleanly. Template lockfiles and routine full updates are not part of a merge.
-- **Delivery and analysis**: keep the app's `delivery.yml` rsync excludes, release-critical files,
-  secrets, and extra deploy steps while aligning the shared maintenance and `/up` health flow. Keep
+- **Delivery, Cloudflare, and analysis**: keep the app's hostnames, app-specific `delivery.yml`
+  excludes/steps/secrets, and app-owned `.htaccess` routing or deployment layout rules that do not
+  weaken shared protections. Take the template's Cloudflare/XServer baseline hunk by hunk
+  ([TADR-0019](../../../docs/adr/template/0019-cloudflare-in-front-of-xserver.md),
+  [docs/infrastructure.md](../../../docs/infrastructure.md)) across `delivery.yml`, `.htaccess*`,
+  `public/.htaccess`, and `public/index.php`, removing legacy Basic auth (`.htpasswd`) or
+  middleware-based IP/secret handling. Because `delivery.yml` checks neither the ACME path nor
+  non-canonical hosts, whenever a merge touches Cloudflare/delivery config, report as required
+  follow-ups: (1) before deploy when Access is enabled, anonymous requests to `/`, `/up`, and a
+  static file redirect to Access login on every Transform Rule host while Zero Trust has only the
+  `/.well-known/acme-challenge/*` Bypass (`Include Everyone`) exception active; and (2) after deploy
+  on every environment host, an unauthenticated `http://` request to a
+  `/.well-known/acme-challenge/` probe file returns its expected body under the new `.htaccess` and
+  WAF rules. Keep
   `parseModelCastsMethod: true` with the app's PHPStan paths and ignores, and the app's `mutates()`
   selections under the shared 100% score.
 - **E2E**: keep the app's dedicated E2E database; deleted E2E-only environment files and HTTP helper
@@ -72,9 +85,11 @@ Special cases:
    merge still stops before committing.
 3. For each path in `git diff --diff-filter=U --name-only`, read both sides and nearby tests,
    classify each hunk as shared, hybrid, or app-owned, and remove dead code the resolution leaves.
-4. Reconcile dependency inputs and required shared fixes per the dependency reference and README
-   against the scaffold, checking cleanly merged paths too. Regenerate Wayfinder output when its
-   inputs changed.
+4. Reconcile dependency inputs and required shared fixes per the dependency reference, README
+   against the scaffold, and the shared Cloudflare/XServer baseline across
+   `.github/workflows/delivery.yml`, `.htaccess`, `.htaccess.develop`, `public/.htaccess`,
+   `public/index.php`, and `docs/infrastructure.md`, checking cleanly merged paths too. Regenerate
+   Wayfinder output when its inputs changed.
 5. List app paths the template once deleted and still omits, then delete each template leftover or
    keep each app-owned path after checking its template history and current consumers:
 

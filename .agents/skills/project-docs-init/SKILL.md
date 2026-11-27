@@ -56,10 +56,10 @@ documentation rather than the template's.
    blocks matches the scaffold.
 3. Tell the user which settings outside the repository the first deployment needs, for Develop and
    Production separately:
-   - GitHub environment secrets `XSERVER_*` and `DEPLOY_DIRECTORY`, `HEALTHCHECK_URL` (the canonical
-     HTTPS URL of the Laravel health route, such as `https://example.com/up`), and the Cloudflare
-     secrets, with the zone and Access settings set up in the order given in
-     [Cloudflare](../../../docs/infrastructure.md#cloudflare).
+   - GitHub environment secrets `XSERVER_*`, `DEPLOY_DIRECTORY`, `HEALTHCHECK_URL` (canonical
+     `https://<host>/up`), and the Cloudflare secrets, with the zone, XServer cache, Access, and
+     ACME Bypass settings configured per [Cloudflare](../../../docs/infrastructure.md#cloudflare) and
+     the [Wiki](https://github.com/lefmarna/harnavel/wiki).
    - The dependency graph and Dependabot Alerts enabled with Dependabot update pull requests left
      disabled, and Mend Renovate installed
      ([Dependency updates](../../../docs/branches-and-ci.md#dependency-updates)).

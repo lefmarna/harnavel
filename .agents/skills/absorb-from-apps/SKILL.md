@@ -69,8 +69,9 @@ best practice, not majority vote:
   differently, pick one canonical version; the others converge downstream.
 - **Hybrid**: upstream only template-origin hunks.
 - **App-owned**: leave app-side (coverage floors, `mutates()` class lists, domain logic, custom
-  Params/ViewModels and columns, design tokens, i18n, app routes and deploy settings,
-  `GLOSSARY.md`, and App ADRs).
+  Params/ViewModels and columns, design tokens, i18n, app routes, hostnames, app-specific deploy or
+  optional Cloudflare rules such as Custom WAF, Rate Limiting, or asset cache rules, `GLOSSARY.md`,
+  and App ADRs).
 - Move shared tests only with the implementation they specify, so every upstreamed spec is green in
   the template. Add deterministic, observable logic to the mutation selection at 100%, simplifying
   equivalent mutations instead of upstreaming mutation-ignore annotations.

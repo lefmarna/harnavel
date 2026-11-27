@@ -20,6 +20,25 @@ describe('例外の詳細', function () {
         $this->fail('QueryException was not thrown.');
     });
 
+    it('Laravel 標準設定から補完される接続でも DB の例外メッセージにバインド値を含めない', function () {
+        config()->set('database.connections.sqlite.database', ':memory:');
+        DB::purge('sqlite');
+
+        try {
+            DB::connection('sqlite')->select('select * from users where email = ? and missing_column = 1', ['bound-secret@example.test']);
+        } catch (QueryException $exception) {
+            expect($exception->getMessage())
+                ->not->toContain('bound-secret@example.test')
+                ->toContain('where email = ?');
+
+            return;
+        } finally {
+            DB::purge('sqlite');
+        }
+
+        $this->fail('QueryException was not thrown.');
+    });
+
     it('例外のスタックトレースに関数の引数を残さない', function () {
         $exception = (fn (string $password): RuntimeException => new RuntimeException('failure'))('argument-secret');
 

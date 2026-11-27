@@ -109,6 +109,13 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
+        // Laravel が標準設定から補完する接続や追加接続も含め、未処理の QueryException へバインド値を展開させない（docs/logging-guidelines.md）。
+        foreach (Config::array('database.connections') as $name => $settings) {
+            if (is_array($settings)) {
+                Config::set("database.connections.{$name}.mask_bindings_in_exception_messages", true);
+            }
+        }
+
         // DockerのNginxはアドレスが固定されない。ローカルのComposeはNginxをloopbackに閉じ、FPMを公開しないため信頼する。
         if (config('app.trust_local_reverse_proxy')) {
             TrustProxies::at('REMOTE_ADDR');

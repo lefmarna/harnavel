@@ -1,8 +1,9 @@
 # Cloudflare in front of XServer
 
-Develop and Production are reachable only through Cloudflare's proxy on the Free and Zero Trust Free
-plans, with no paid add-ons and no non-Cloudflare fallback (Local does not use Cloudflare). Origin
-protection and user authentication stay separate: the origin admits only its own zone's traffic, and
+Develop and Production serve application traffic only through Cloudflare's proxy on the Free and
+Zero Trust Free plans, with no paid add-ons and no non-Cloudflare fallback (Local does not use
+Cloudflare). Origin protection and user authentication stay separate: the origin admits only its own
+zone's traffic (except `/.well-known/acme-challenge/*` for XServer certificate validation), and
 Cloudflare Access replaces Basic auth for human access to Develop (and optionally pre-launch
 Production; public Production does not use Access in principle).
 
@@ -16,16 +17,16 @@ validation. Because Apache cannot strip the header before internal redirects re-
 `public/index.php` drops it from `$_SERVER`/`$_ENV` (under FastCGI `getenv()` remains reachable only
 to code that can already read `.env`).
 
-Cloudflare uses Full (strict) mode with Always Use HTTPS enabled so the secret is sent only over
-HTTPS to a valid XServer free custom SSL certificate, and forwarded headers stay untrusted. On
-Access-protected hosts, a dedicated `/.well-known/acme-challenge/*` Bypass (`Include Everyone`)
-application is the sole Access exception so ACME HTTP-01 validation reaches the origin without
-exposing `/up` or other paths. Because XServer free SSL auto-renewal (and issuance while a valid
-origin certificate is present) can work behind proxied DNS and Full (strict) with this exception,
-periodic proxy toggling, lowering Full (strict), and custom cron or unofficial API renewal
-automation were rejected. Initial issuance without a valid origin certificate (handled while DNS is
-unproxied) and recovery after expiry cannot rely on Full (strict) HTTPS forwarding; because XServer
-does not officially guarantee auto-renewal behind Cloudflare's proxy, expiry monitoring and renewal
+Web DNS records stay Proxied at all times, and Cloudflare uses Full (strict) mode with Always Use
+HTTPS enabled so the secret is sent only over HTTPS to a valid XServer free custom SSL certificate,
+while forwarded headers stay untrusted. Initial XServer free SSL issuance and post-expiry recovery
+use XServer's DNS validation for external nameservers (`他社ネームサーバーでのDNS認証`), while
+routine auto-renewal uses the ACME HTTP-01 path (with a dedicated `/.well-known/acme-challenge/*`
+Bypass (`Include Everyone`) application as the sole Access exception on Access-protected hosts so
+`/up` and other paths stay protected). Switching Proxy off for issuance or renewal, periodic proxy
+toggling, lowering Full (strict) to Full or Flexible, and custom cron or unofficial API renewal
+automation were rejected. Because XServer does not officially guarantee auto-renewal behind
+Cloudflare's proxy and a lapsed certificate breaks Full (strict), expiry monitoring and renewal
 verification in each environment remain routine operational responsibilities.
 
 Shared hosting limits network-level origin isolation, and the origin does not verify Access JWTs
